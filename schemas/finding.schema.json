@@ -118,6 +118,7 @@
       "additionalProperties": {
         "type": "object",
         "required": ["summary", "detail"],
+        "additionalProperties": false,
         "properties": {
           "summary": { "type": "string" },
           "detail":  { "type": "string" }
