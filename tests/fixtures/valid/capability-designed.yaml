@@ -1,0 +1,16 @@
+capability:
+  schema_version: 1
+  id: conf-cap-7c2a4f91
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: "Field-level envelope encryption on PHI columns at rest"
+  description: "Per tech plan §5.3, PHI columns in member_demographics and claims tables are encrypted at the field level using envelope encryption."
+  maturity: designed
+  scope: "Confirmed for: member_demographics table (all PHI columns), claims table (member_id, drug_ndc, prescriber_npi). Not addressed: audit_log table, Kafka event payloads."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§5.3 paragraph 2"
+      excerpt: "Field-level envelope encryption for PHI columns with DEKs from KMS"
+  control_mappings:
+    nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]

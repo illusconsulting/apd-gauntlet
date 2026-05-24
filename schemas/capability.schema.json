@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json",
+  "title": "APD Gauntlet Capability",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "agent", "apd_tier", "apd_goal",
+    "title", "description", "maturity", "scope",
+    "evidence", "control_mappings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$"
+    },
+    "agent": { "$ref": "finding.schema.json#/properties/agent" },
+    "apd_tier": { "$ref": "finding.schema.json#/properties/apd_tier" },
+    "apd_goal": { "$ref": "finding.schema.json#/properties/apd_goal" },
+    "title":       { "type": "string", "minLength": 10, "maxLength": 200 },
+    "description": { "type": "string", "minLength": 20 },
+    "maturity":    { "type": "string", "enum": ["designed", "implemented", "tested", "operationalized"] },
+    "scope":       { "type": "string", "minLength": 20 },
+    "evidence":    { "$ref": "finding.schema.json#/properties/evidence" },
+    "control_mappings": {
+      "type": "object",
+      "required": ["nist_800_53r5"],
+      "additionalProperties": false,
+      "properties": {
+        "nist_800_53r5": { "$ref": "finding.schema.json#/properties/control_mappings/properties/nist_800_53r5" },
+        "mitre_attack_mitigations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "id":        { "type": "string", "pattern": "^M[0-9]{4}$" },
+              "rationale": { "type": "string", "minLength": 30 }
+            }
+          }
+        }
+      }
+    },
+    "caveats": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 5 }
+    },
+    "related_concerns": { "$ref": "finding.schema.json#/properties/related_concerns" }
+  }
+}
