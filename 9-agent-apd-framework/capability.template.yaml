@@ -1,0 +1,71 @@
+# APD Gauntlet — Capability Template
+#
+# Copy this template for each confirmed capability emitted by a specialist agent.
+# The validator rejects capabilities at maturity ≥ implemented without
+# at least one non-tech-plan evidence entry; review carefully before claiming maturity.
+
+capability:
+  # ─── identity ─────────────────────────────────────────────────────────────
+  id: conf-cap-7c2a4f91                                   # required
+  agent: confidentiality                                  # required
+  apd_tier: trustworthiness                               # required
+  apd_goal: confidentiality                               # required
+
+  # ─── content ──────────────────────────────────────────────────────────────
+  title: "Field-level envelope encryption on PHI columns at rest"   # required
+
+  description: |
+    Per tech plan §5.3, PHI columns in the member_demographics and claims
+    tables are encrypted at the field level using envelope encryption.
+    DEKs are issued by the KMS hierarchy described in §3.1, with the
+    KEK managed in AWS KMS under an admin-only access policy.
+
+    Decryption is performed at the application layer; the application
+    requests DEK decryption from KMS on read, holding the plaintext DEK
+    in memory only for the duration of the database query.
+
+  # ─── maturity ─────────────────────────────────────────────────────────────
+  maturity: designed                                      # designed | implemented | tested | operationalized
+  # Validator: maturity ≥ implemented requires at least one non-tech-plan evidence entry.
+  # For tech plan reviews, expect 'designed' to be most common.
+
+  # ─── scope honesty (required, explicit about what is and is not confirmed) ─
+  scope: |
+    Confirmed for: member_demographics table (all PHI columns),
+    claims table (member_id, drug_ndc, prescriber_npi).
+
+    Not addressed in tech plan: audit_log table, event payloads in
+    Kafka, file uploads in S3, backup encryption keys. See related
+    findings — particularly conf-1a2b3c4d for the Kafka concern.
+
+  # ─── evidence ─────────────────────────────────────────────────────────────
+  evidence:                                               # required: ≥1 entry
+    - artifact: tech_plan.md
+      locator: "§5.3 'Data at Rest', paragraph 2"
+      excerpt: "Field-level envelope encryption for PHI columns with DEKs from KMS"
+    - artifact: tech_plan.md
+      locator: "§3.1 'KMS Hierarchy', paragraphs 1-2"
+      excerpt: "Root key in AWS KMS, DEK-issuer service, DEK cache with 5-min TTL"
+
+  # ─── control mappings ─────────────────────────────────────────────────────
+  control_mappings:
+    nist_800_53r5:                                        # required
+      - "SC-12"
+      - "SC-12(1)"
+      - "SC-13"
+      - "SC-28"
+      - "SC-28(1)"
+    mitre_attack_mitigations:                             # optional, high-confidence only
+      - id: "M1041"                                       # Encrypt Sensitive Information
+        rationale: >
+          Field-level envelope encryption mitigates data collection from
+          data store compromise (covers T1005, T1530 within the confirmed scope).
+
+  # ─── caveats (recommended for nearly all tech plan reviews) ───────────────
+  caveats:
+    - "Key rotation cadence not specified in tech plan."
+    - "DEK access boundary on application side unconfirmed — which services may request decryption is not enumerated."
+    - "Crypto-shredding (key revocation as deletion mechanism) not addressed."
+
+  # ─── routing ──────────────────────────────────────────────────────────────
+  related_concerns: [non_repudiation]                     # other goals this capability also serves; default []

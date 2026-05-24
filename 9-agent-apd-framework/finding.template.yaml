@@ -1,0 +1,98 @@
+# APD Gauntlet — Finding Template
+#
+# Copy this template for each finding emitted by a specialist agent.
+# Required fields are noted; optional fields default per the apd-finding-schema skill.
+# Run the self-check checklist in the apd-evidence-discipline skill before emitting.
+#
+# Example below is a complete, illustrative finding — replace with your own content.
+
+finding:
+  # ─── identity ─────────────────────────────────────────────────────────────
+  id: conf-1a2b3c4d                                       # required
+  agent: confidentiality                                  # required
+  apd_tier: trustworthiness                               # required: trustworthiness | scalability | auditability
+  apd_goal: confidentiality                               # required
+
+  # ─── classification ───────────────────────────────────────────────────────
+  disposition: gap                                        # required: gap | risk | uncertainty | strength | blocked
+  severity: high                                          # required: critical | high | medium | low | informational
+  confidence: high                                        # required: high | medium | low
+
+  # ─── content ──────────────────────────────────────────────────────────────
+  title: "PHI fields in Kafka claim-events topic lack envelope encryption"   # required; component + concern
+
+  summary: >
+    The claim-events topic carries PHI in plaintext between producers and
+    consumers, with broker-level encryption only.
+
+  detail: |
+    The tech plan describes Kafka deployment with broker-side encryption at rest
+    (full-volume encryption on broker storage) and TLS between producers, brokers,
+    and consumers. PHI fields including member_id, drug_ndc, prescriber_npi, and
+    pharmacy_id are serialized into event payloads without field-level encryption.
+
+    A broker filesystem compromise — by an insider with broker access, a misconfigured
+    backup pipeline, or a vulnerability in the broker process — would expose PHI in
+    plaintext. The broker's encryption is intended for the storage layer, not for
+    in-application separation of trust.
+
+    This rises to high severity per the impact-to-PBM rubric clause
+    "PHI exposure beyond minimum-necessary internal audience" — Kafka broker access
+    is a privileged platform role, broader than minimum-necessary for any consumer
+    of the events.
+
+  # ─── evidence ─────────────────────────────────────────────────────────────
+  evidence:                                               # required: ≥1 entry
+    - artifact: tech_plan.md
+      locator: "§4.2 'Event Bus Architecture', paragraph 3"
+      excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
+    - artifact: claim-events.proto
+      locator: "lines 18-34"
+      excerpt: "message ClaimEvent { string member_id = 1; string drug_ndc = 2; ... }"
+
+  prerequisite_evidence: []                               # required only if disposition=blocked or confidence=low
+
+  # ─── control mappings ─────────────────────────────────────────────────────
+  control_mappings:
+    nist_800_53r5:                                        # required: list (may be empty with explanation)
+      - "SC-8(1)"
+      - "SC-13"
+      - "SC-28(1)"
+      - "AU-9(3)"
+    mitre_attack:                                         # high-confidence only; empty list otherwise
+      - technique: "T1530"
+        sub_technique: null
+        tactic: "TA0010"
+        rationale: >
+          Broker-level encryption leaves PHI in plaintext at the Kafka storage layer,
+          enabling collection if broker filesystem access is obtained.
+
+  # ─── recommendation ───────────────────────────────────────────────────────
+  recommendation:
+    posture: required                                     # required | recommended | consider
+    summary: >
+      Apply field-level envelope encryption to PHI fields before producer
+      serialization, with DEKs issued by the existing KMS hierarchy.
+
+    detail: |
+      Replace the broker-level encryption described in §4.2 with field-level
+      envelope encryption applied in the producer SDK before serialization:
+
+      1. Define a PHI field set per topic in the protocol buffer schema (e.g. via
+         a custom option) or in a side-channel schema registry.
+      2. In the producer SDK, intercept PHI fields, request a DEK from the KMS
+         hierarchy described in §3.1, encrypt the field, and serialize the
+         ciphertext plus the encrypted DEK reference.
+      3. In the consumer SDK, request DEK decryption from KMS and decrypt the
+         field before deserialization.
+
+      Broker-level encryption remains in place as a defense-in-depth control
+      against bulk storage compromise.
+
+    references:
+      - "internal: PHI_FIELD_CLASSIFICATION_GUIDE.md §6 (PHI taxonomy)"
+      - "external: NIST SP 800-57 Part 1 Rev. 5 §5.2 (envelope encryption)"
+
+  # ─── routing ──────────────────────────────────────────────────────────────
+  related_concerns: [integrity, non_repudiation]          # adjacent goals also implicated; default []
+  cross_references: []                                    # finding IDs from earlier tiers; default []
