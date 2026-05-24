@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradiction.schema.json",
+  "title": "APD Gauntlet Contradiction",
+  "type": "object",
+  "required": ["id", "finding_id", "capability_id", "finding_assertion", "capability_assertion", "evidence_comparison", "recommended_resolution"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^contra-[0-9a-f]{8}$" },
+    "finding_id": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-[0-9a-f]{8}$" },
+    "capability_id": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$" },
+    "finding_assertion":    { "type": "string", "minLength": 10 },
+    "capability_assertion": { "type": "string", "minLength": 10 },
+    "evidence_comparison":  { "type": "string", "minLength": 30 },
+    "recommended_resolution": { "type": "string", "minLength": 20 }
+  }
+}

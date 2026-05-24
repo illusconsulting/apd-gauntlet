@@ -1,0 +1,7 @@
+contradiction:
+  id: contra-1a2b3c4d
+  capability_id: conf-cap-7c2a4f91
+  finding_assertion: "PHI fields in Kafka topics lack envelope encryption."
+  capability_assertion: "Field-level envelope encryption on PHI columns at rest."
+  evidence_comparison: "Finding cites tech_plan.md §4.2 (Kafka). Capability cites tech_plan.md §5.3 (at-rest storage). Different scopes."
+  recommended_resolution: "Reviewer determine whether 'at rest' in §5.3 includes the Kafka log layer."
