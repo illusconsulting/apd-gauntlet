@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix.schema.json",
+  "title": "APD Gauntlet Coverage Matrix Row",
+  "type": "object",
+  "required": ["name", "cells"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "cells": {
+      "type": "object",
+      "required": ["confidentiality", "integrity", "availability", "distributed", "resilient", "ephemeral", "authenticity", "non_repudiation", "immutability"],
+      "additionalProperties": false,
+      "properties": {
+        "confidentiality": { "$ref": "#/$defs/cell" },
+        "integrity":       { "$ref": "#/$defs/cell" },
+        "availability":    { "$ref": "#/$defs/cell" },
+        "distributed":     { "$ref": "#/$defs/cell" },
+        "resilient":       { "$ref": "#/$defs/cell" },
+        "ephemeral":       { "$ref": "#/$defs/cell" },
+        "authenticity":    { "$ref": "#/$defs/cell" },
+        "non_repudiation": { "$ref": "#/$defs/cell" },
+        "immutability":    { "$ref": "#/$defs/cell" }
+      }
+    }
+  },
+  "$defs": {
+    "cell": {
+      "type": "object",
+      "required": ["findings", "capabilities", "posture"],
+      "additionalProperties": false,
+      "properties": {
+        "findings":     { "type": "array", "items": { "type": "string" } },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "posture":      { "type": "string", "enum": ["silent", "covered", "gapped", "gapped_and_covered"] }
+      }
+    }
+  }
+}

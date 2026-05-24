@@ -1,0 +1,11 @@
+component:
+  name: "Kafka claim-events topic"
+  cells:
+    confidentiality: { findings: ["conf-1a2b3c4d"], capabilities: [], posture: gapped }
+    integrity:       { findings: ["intg-9e8f7d6c"], capabilities: ["intg-cap-5d4c3b2a"], posture: gapped_and_covered }
+    availability:    { findings: [], capabilities: ["avail-cap-3b2a1d0e"], posture: covered }
+    distributed:     { findings: [], capabilities: [], posture: silent }
+    resilient:       { findings: [], capabilities: [], posture: silent }
+    ephemeral:       { findings: [], capabilities: [], posture: silent }
+    authenticity:    { findings: [], capabilities: [], posture: silent }
+    non_repudiation: { findings: [], capabilities: [], posture: silent }
