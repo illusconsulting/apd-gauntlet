@@ -1,0 +1,10 @@
+technique:
+  id: "T1530"
+  sub_technique: null
+  tactic: "TA0010"
+  name: "Data from Cloud Storage"
+  exposure_finding_count: 2
+  exposure_finding_ids: ["conf-1a2b3c4d", "intg-9e8f7d6c"]
+  mitigated_by_capabilities:
+    - capability_id: "conf-cap-7c2a4f91"
+      mitigation_id: "M1041"

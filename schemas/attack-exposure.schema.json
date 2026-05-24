@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure.schema.json",
+  "title": "APD Gauntlet ATT&CK Technique Exposure Row",
+  "type": "object",
+  "required": ["id", "sub_technique", "tactic", "name", "exposure_finding_count", "exposure_finding_ids", "mitigated_by_capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "id":             { "type": "string", "pattern": "^T[0-9]{4}$" },
+    "sub_technique":  { "type": ["string", "null"], "pattern": "^T[0-9]{4}\\.[0-9]{3}$" },
+    "tactic":         { "type": "string", "pattern": "^TA[0-9]{4}$" },
+    "name":           { "type": "string", "minLength": 3 },
+    "exposure_finding_count": { "type": "integer", "minimum": 0 },
+    "exposure_finding_ids":   { "type": "array", "items": { "type": "string" } },
+    "mitigated_by_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capability_id", "mitigation_id"],
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": { "type": "string" },
+          "mitigation_id": { "type": "string", "pattern": "^M[0-9]{4}$" }
+        }
+      }
+    }
+  }
+}
