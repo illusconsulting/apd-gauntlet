@@ -1,0 +1,9 @@
+control:
+  id: "SC-8(1)"
+  family: "X"
+  title: "Transmission Confidentiality and Integrity | Cryptographic Protection"
+  finding_count: 3
+  finding_ids: ["conf-1a2b3c4d", "intg-9e8f7d6c", "auth-5d4c3b2a"]
+  capability_count: 1
+  capability_ids: ["conf-cap-7c2a4f91"]
+  posture: gapped_and_covered
