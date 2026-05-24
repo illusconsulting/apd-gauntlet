@@ -1,0 +1,7 @@
+severity_disagreement:
+  finding_id: merged-7c2a4f91
+  agent_severities:
+    confidentiality: high
+    non_repudiation: critical
+  chosen_severity: critical
+  rationale: "Non-Repudiation's critical severity reflects HIPAA breach-notification triggering at >500-member exfiltration scope; Confidentiality's high reflects PHI-beyond-minimum-necessary."

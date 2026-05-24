@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreement.schema.json",
+  "title": "APD Gauntlet Severity Disagreement",
+  "type": "object",
+  "required": ["finding_id", "agent_severities", "chosen_severity", "rationale"],
+  "additionalProperties": false,
+  "properties": {
+    "finding_id": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-[0-9a-f]{8}$" },
+    "agent_severities": {
+      "type": "object",
+      "minProperties": 2,
+      "additionalProperties": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] }
+    },
+    "chosen_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+    "rationale": { "type": "string", "minLength": 30 }
+  }
+}

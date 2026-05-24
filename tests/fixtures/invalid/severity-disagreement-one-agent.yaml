@@ -1,0 +1,6 @@
+severity_disagreement:
+  finding_id: merged-7c2a4f91
+  agent_severities:
+    confidentiality: high
+  chosen_severity: high
+  rationale: "Only one agent reported severity, but minProperties requires at least two agents for a disagreement record."
