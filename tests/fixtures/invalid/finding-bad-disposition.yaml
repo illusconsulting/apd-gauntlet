@@ -1,0 +1,22 @@
+finding:
+  schema_version: 1
+  id: conf-1a2b3c4d
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: weakness
+  severity: high
+  confidence: high
+  title: "PHI fields in Kafka claim-events topic lack envelope encryption"
+  summary: "Broker-level encryption only; PHI in plaintext between producers and consumers."
+  detail: "Per the impact-to-PBM rubric clause 'PHI exposure beyond minimum-necessary internal audience.' Kafka broker access is a privileged role broader than minimum-necessary for any consumer."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§4.2 paragraph 3"
+      excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
+  control_mappings:
+    nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]
+  recommendation:
+    posture: required
+    summary: "Apply field-level envelope encryption to PHI fields before producer serialization."
+    detail: "Replace broker-level encryption with envelope encryption applied in the producer SDK before serialization, using DEKs issued by the existing KMS hierarchy in §3.1."
