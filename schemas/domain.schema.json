@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain.schema.json",
+  "title": "APD Gauntlet Domain Pack Metadata",
+  "type": "object",
+  "required": ["name", "display_name", "version", "framework_compat", "description", "includes", "regulatory_anchors"],
+  "additionalProperties": false,
+  "properties": {
+    "name":             { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "display_name":     { "type": "string", "minLength": 3 },
+    "version":          { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "framework_compat": { "type": "string", "minLength": 5 },
+    "description":      { "type": "string", "minLength": 20 },
+    "includes":         { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+    "regulatory_anchors": { "type": "array", "items": { "type": "string" } }
+  }
+}
