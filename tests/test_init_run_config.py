@@ -6,9 +6,8 @@ import pathlib
 
 import pytest
 import yaml
-from jsonschema import Draft202012Validator
-
 from apd_gauntlet.init_run import scaffold_run
+from jsonschema import Draft202012Validator
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 RUN_CONFIG_SCHEMA = json.loads((REPO / "schemas" / "run-config.schema.json").read_text())

@@ -160,8 +160,8 @@ def validate_domain_cmd(domain_name, domains_dir) -> None:  # type: ignore[no-un
 @main.command("validate-run-config")
 @click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
 def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def]
-    from jsonschema import Draft202012Validator
     import yaml as _yaml
+    from jsonschema import Draft202012Validator
 
     schema_path = (
         pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"

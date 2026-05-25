@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
-from apd_gauntlet.validate import run_schema_pass, run_cross_file_pass
+from apd_gauntlet.validate import run_cross_file_pass, run_schema_pass
 
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
 
@@ -22,7 +22,11 @@ def _make_run(tmp_path, include_index: bool, valid: bool = True):
         "# brief\n"
     )
     if include_index:
-        src = "valid/code-evidence-index.yaml" if valid else "invalid/code-evidence-index-malformed.yaml"
+        src = (
+            "valid/code-evidence-index.yaml"
+            if valid
+            else "invalid/code-evidence-index-malformed.yaml"
+        )
         (tmp_path / "00-context" / "code-evidence-index.yaml").write_text(
             (FIXTURES / src).read_text()
         )
@@ -59,12 +63,17 @@ def test_cross_file_pass_recognizes_index_as_known_artifact(tmp_path):
         "    evidence:\n"
         "      - artifact: code-evidence-index.yaml\n"
         "        locator: 'code:claim_bus.auth.jwt.JWTValidator.verify:L42-L51@a1b2c3d4'\n"
-        "        excerpt: 'def verify(self, token: str) -> Claims: return self._decode(token, self.signing_keys)'\n"
+        "        excerpt: 'def verify(self, token: str) -> Claims: "
+        "return self._decode(token, self.signing_keys)'\n"
         "    recommendation: '...'\n"
     )
     report = run_cross_file_pass(run_dir)
     # No 'artifact not in intake brief' error for code-evidence-index.yaml.
-    artifact_errors = [v for v in report.errors if "code-evidence-index.yaml" in v.message and "not in intake brief" in v.message]
+    artifact_errors = [
+        v for v in report.errors
+        if "code-evidence-index.yaml" in v.message
+        and "not in intake brief" in v.message
+    ]
     assert artifact_errors == []
 
 
@@ -89,4 +98,7 @@ def test_cross_file_pass_without_index_does_not_grant_implicit_artifact(tmp_path
         "    recommendation: '...'\n"
     )
     report = run_cross_file_pass(run_dir)
-    assert any("code-evidence-index.yaml" in v.message and "not in intake brief" in v.message for v in report.errors)
+    assert any(
+        "code-evidence-index.yaml" in v.message and "not in intake brief" in v.message
+        for v in report.errors
+    )
