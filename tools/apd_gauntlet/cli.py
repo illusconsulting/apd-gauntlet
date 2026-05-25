@@ -79,6 +79,37 @@ def init_run_cmd(run_id, inputs, domain, root):
     click.echo(f"Run scaffolded at {target}")
 
 
+@main.command("validate-domain")
+@click.argument("domain_name")
+@click.option("--domains-dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path), default=pathlib.Path("domains"))
+def validate_domain_cmd(domain_name, domains_dir):
+    from jsonschema import Draft202012Validator
+    schema_path = pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "domain.schema.json"
+    schema = _stdjson.loads(schema_path.read_text())
+    pack_dir = domains_dir / domain_name
+    meta_path = pack_dir / "domain.yaml"
+    if not meta_path.exists():
+        click.echo(f"Error: domain pack '{domain_name}' not found at {pack_dir}", err=True)
+        raise SystemExit(1)
+    import yaml as _yaml
+    meta = _yaml.safe_load(meta_path.read_text())
+    errors = list(Draft202012Validator(schema).iter_errors(meta))
+    if errors:
+        for e in errors:
+            click.echo(f"Schema error: {e.message}", err=True)
+        raise SystemExit(1)
+    missing = []
+    for include_glob in meta.get("includes", []):
+        matches = list(pack_dir.glob(include_glob))
+        if not matches:
+            missing.append(include_glob)
+    if missing:
+        for m in missing:
+            click.echo(f"Missing include: {m}", err=True)
+        raise SystemExit(1)
+    click.echo(f"Domain pack '{domain_name}' OK: schema valid, {len(meta.get('includes', []))} include patterns all resolved.")
+
+
 @main.command("check-ids")
 @click.argument("yaml_file", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
 def check_ids_cmd(yaml_file):
