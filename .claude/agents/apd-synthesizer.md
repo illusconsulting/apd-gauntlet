@@ -51,16 +51,16 @@ Write to `40-synthesis/`:
 - `nist-coverage.yaml` — 800-53r5 control coverage matrix
 - `attack-exposure.yaml` — ATT&CK technique exposure and mitigation rollup
 - `apd-coverage-matrix.yaml` — APD goal × architectural component coverage
+- `rejected-records.yaml` — records that failed structural validation, with the reason per record
 - `advisory-report.md` — the human-readable advisory document
 
 ## Process
 
 ### Step 1: Structural validation
 
-For each record across all 18 files:
+Invoke `apd-gauntlet validate <run-dir>`. The validator runs Pass 1 (schema), Pass 2 (semantic), and Pass 3 (cross-file) over every record. Records flagged with `errors` are written to `40-synthesis/rejected-records.yaml` with the validation message per record; they are excluded from clustering and downstream synthesis. Records flagged with `warnings` proceed but the warning is surfaced in the advisory report's executive summary.
 
-1. Validate against the schema in `apd-finding-schema`. Reject records missing required fields, with malformed IDs, with `disposition: blocked` lacking `prerequisite_evidence`, with `maturity ≥ implemented` lacking non-tech-plan evidence, or with `mitre_attack` entries lacking specific rationales.
-2. For rejected records, write them to `40-synthesis/rejected-records.yaml` with the validation error per record. Notify the orchestrator that records were rejected; do not include them in downstream synthesis.
+If the validator CLI is unavailable, fall back to LLM-judged structural review using the rules in `apd-finding-schema/SKILL.md`. Note the fallback in the run metadata.
 
 Proceed only with records that pass validation.
 
@@ -232,6 +232,21 @@ Write `advisory-report.md` in this exact section order:
 9. APD Coverage Matrix
 10. Severity Disagreement Annex
 ```
+
+The advisory report begins with a YAML frontmatter block:
+```yaml
+---
+framework_version: 1.0.0
+domain_pack:
+  name: pbm
+  version: 1.0.0
+run_id: apd-20260601-claim-event-bus
+synthesizer_version: 1.0.0
+specialists_skipped: []
+---
+```
+
+Then the human-readable section content follows.
 
 Use the template at `templates/advisory-report.template.md`. Detailed guidance per section:
 
