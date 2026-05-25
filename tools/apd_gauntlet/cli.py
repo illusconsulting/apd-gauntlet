@@ -7,6 +7,7 @@ from .validate import run_schema_pass, run_semantic_pass, run_cross_file_pass, V
 from .init_run import scaffold_run
 from .build_domain_skill import build_domain_skill
 from .summary import summarize_run, render_summary
+from .lint_agents import lint_agents_dir
 
 
 @click.group(
@@ -74,6 +75,19 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version):
 def init_run_cmd(run_id, inputs, domain, root):
     target = scaffold_run(run_id, inputs, domain, root)
     click.echo(f"Run scaffolded at {target}")
+
+
+@main.command("lint-agents")
+@click.option("--agent-dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
+              default=pathlib.Path(".claude/agents"), show_default=True)
+def lint_agents_cmd(agent_dir):
+    repo_root = pathlib.Path.cwd()
+    errors = lint_agents_dir(agent_dir, repo_root)
+    if errors:
+        for e in errors:
+            click.echo(e)
+        raise SystemExit(1)
+    click.echo(f"Lint clean: {len(list(agent_dir.glob('*.md')))} agents checked.")
 
 
 @main.command("summarize")
