@@ -41,6 +41,53 @@ apd-gauntlet init-run apd-20260601-claim-event-bus \
 
 This creates `runs/apd-20260601-claim-event-bus/` with subdirectories for each phase output, copies your artifacts into `inputs/`, and records the active domain.
 
+## Code reconnaissance (optional)
+
+The framework can include an optional code-grounded view of the system under review, produced by `apd-code-recon` using the DeusData [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (CBM) graph. When enabled, specialists may cite call-graph and symbol evidence in addition to document evidence, which is particularly load-bearing for findings under Non-Repudiation (audit log coverage), Authenticity (identity-verification call paths), and Distributed (outbound-edge topology).
+
+### When to enable
+
+Enable code recon when:
+
+- The artifact set includes a substantial codebase (more than ~20 source files), and
+- A CBM server is available and has indexed the same codebase, and
+- The reviewer wants findings grounded in actual call-graph behavior rather than design-doc intent only.
+
+Skip code recon (`code_recon: disabled`) for tech-plan-only reviews where no code is available yet.
+
+### Setup
+
+1. Install and run `codebase-memory-mcp` per its [project README](https://github.com/DeusData/codebase-memory-mcp).
+2. Index the codebase you intend to review.
+3. Register the CBM server in your Claude Code configuration so its tools (`mcp__codebase-memory-mcp__*`) are reachable from the agent runtime.
+
+### Configuration
+
+In `.apd-run.yaml`:
+
+```yaml
+code_recon: auto  # default — runs if CBM reachable, skips with note otherwise
+# code_recon: enabled  # hard-fail if CBM not reachable
+# code_recon: disabled # never dispatch
+cbm_project: <project-name>  # optional CBM project pointer
+```
+
+### Outputs
+
+When the agent runs successfully, two files appear under `00-context/`:
+
+- `code-architecture-brief.md` — human-readable narrative.
+- `code-evidence-index.yaml` — machine-readable index that specialists cite.
+
+The validator recognizes `code-evidence-index.yaml` as a known artifact source automatically; no manual amendment of the intake brief is required.
+
+### Skipping behaviour
+
+If CBM is unreachable when the recon agent runs:
+
+- Under `code_recon: enabled`, the run halts; surface the CBM availability issue, then either fix it or relax to `auto`.
+- Under `code_recon: auto`, the agent writes `00-context/code-recon-skipped.md` and the run proceeds without code-grounded evidence.
+
 ## Step 2: Invoke the orchestrator in Claude Code
 
 In Claude Code, invoke the `apd-orchestrator` agent against the run directory:
