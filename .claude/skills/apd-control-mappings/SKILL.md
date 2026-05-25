@@ -140,6 +140,13 @@ Common citations:
 
 ATT&CK mappings are emitted on findings (`mitre_attack`, techniques) and on capabilities (`mitre_attack_mitigations`, mitigations). Both require the high-confidence bar.
 
+### Crosswalk source
+
+The mitigation→technique crosswalk is derived from MITRE's enterprise-attack STIX bundle:
+`https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json`
+
+A projected JSON snapshot ships at `tools/apd_gauntlet/data/mitre-mitigations.json`. Refresh with `apd-gauntlet refresh-mitre`. The synthesizer's ATT&CK exposure rollup uses this snapshot to correlate mitigation IDs (M-numbers) with the technique IDs (T-numbers) they mitigate.
+
 ### The high-confidence bar
 
 A technique mapping is emitted only if you can complete this sentence non-trivially:
