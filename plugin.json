@@ -1,0 +1,10 @@
+{
+  "name": "apd-gauntlet",
+  "version": "1.0.0",
+  "description": "APD security architecture review framework — 9 specialist agents plus intake, orchestrator, and synthesizer.",
+  "author": "shoveleejoe",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/shoveleejoe/apd-gauntlet",
+  "agents": "./.claude/agents/",
+  "skills": "./.claude/skills/"
+}
