@@ -5,6 +5,7 @@ import click
 from . import __version__
 from .validate import run_schema_pass, run_semantic_pass, run_cross_file_pass, ValidationReport
 from .init_run import scaffold_run
+from .build_domain_skill import build_domain_skill
 
 
 @click.group(
@@ -48,6 +49,20 @@ def validate(run_dir, schema_only, strict, as_json):
     else:
         click.echo(merged.render())
     raise SystemExit(0 if merged.is_clean else 1)
+
+
+@main.command("build-domain-skill")
+@click.argument("domain_name")
+@click.option("--domains-dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path), default=pathlib.Path("domains"))
+@click.option("--out", type=click.Path(file_okay=False, path_type=pathlib.Path), default=pathlib.Path(".claude/skills/apd-domain"))
+@click.option("--framework-version", default="1.0.0")
+def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version):
+    try:
+        path = build_domain_skill(domain_name, domains_dir, out, framework_version)
+    except (FileNotFoundError, ValueError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+    click.echo(f"Wrote {path}")
 
 
 @main.command("init-run", help="Scaffold runs/<run-id>/ with subdirectories and copy input artifacts.")

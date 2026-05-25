@@ -1,0 +1,9 @@
+name: sample
+display_name: "Sample Test Domain"
+version: 0.1.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Minimal domain pack used only in tests."
+includes:
+  - severity-rubric.md
+  - common-patterns/confidentiality.md
+regulatory_anchors: []
