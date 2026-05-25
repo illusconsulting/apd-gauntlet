@@ -7,6 +7,7 @@ from typing import Any, Iterable
 import yaml
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
+from . import linters
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 SCHEMAS_DIR = REPO / "schemas"
@@ -104,5 +105,34 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         rid = record.get("id")
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
+    report.files_seen = len(seen_files)
+    return report
+
+
+def run_semantic_pass(run_dir: pathlib.Path, tech_plan_artifacts: set[str] | None = None) -> ValidationReport:
+    """Pass 2: semantic lints that JSON Schema cannot express."""
+    tech_plan_artifacts = tech_plan_artifacts or set()
+    report = ValidationReport()
+    seen_files: set[pathlib.Path] = set()
+    for path, kind, record in _iter_records(run_dir):
+        if "_parse_error" in record:
+            continue
+        seen_files.add(path)
+        rid = record.get("id")
+        report.records_seen += 1
+        if kind == "finding":
+            for msg in linters.check_excerpt_length(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_finding_id(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_hedge_words_in_attack_rationale(record):
+                report.warnings.append(Violation(path, rid, msg))
+        elif kind == "capability":
+            for msg in linters.check_excerpt_length(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_capability_id(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_capability_maturity_evidence(record, tech_plan_artifacts):
+                report.errors.append(Violation(path, rid, msg))
     report.files_seen = len(seen_files)
     return report

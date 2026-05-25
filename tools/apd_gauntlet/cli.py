@@ -3,7 +3,7 @@ from __future__ import annotations
 import pathlib
 import click
 from . import __version__
-from .validate import run_schema_pass, ValidationReport
+from .validate import run_schema_pass, run_semantic_pass, ValidationReport
 
 
 @click.group(
@@ -21,21 +21,31 @@ def main():
 @click.option("--strict", is_flag=True, help="Treat warnings as errors.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output for CI consumption.")
 def validate(run_dir, schema_only, strict, as_json):
-    report = run_schema_pass(run_dir)
+    schema_rep = run_schema_pass(run_dir)
+    if schema_only:
+        merged = schema_rep
+    else:
+        semantic_rep = run_semantic_pass(run_dir)
+        merged = ValidationReport(
+            errors=schema_rep.errors + semantic_rep.errors,
+            warnings=schema_rep.warnings + semantic_rep.warnings,
+            files_seen=max(schema_rep.files_seen, semantic_rep.files_seen),
+            records_seen=schema_rep.records_seen,
+        )
     if strict:
-        report.errors.extend(report.warnings)
-        report.warnings = []
+        merged.errors.extend(merged.warnings)
+        merged.warnings = []
     if as_json:
         import json as _json
         click.echo(_json.dumps({
-            "errors":   [{"file": str(v.file), "id": v.record_id, "message": v.message, "path": v.path} for v in report.errors],
-            "warnings": [{"file": str(v.file), "id": v.record_id, "message": v.message, "path": v.path} for v in report.warnings],
-            "records":  report.records_seen,
-            "files":    report.files_seen,
+            "errors":   [{"file": str(v.file), "id": v.record_id, "message": v.message, "path": v.path} for v in merged.errors],
+            "warnings": [{"file": str(v.file), "id": v.record_id, "message": v.message, "path": v.path} for v in merged.warnings],
+            "records":  merged.records_seen,
+            "files":    merged.files_seen,
         }, indent=2))
     else:
-        click.echo(report.render())
-    raise SystemExit(0 if report.is_clean else 1)
+        click.echo(merged.render())
+    raise SystemExit(0 if merged.is_clean else 1)
 
 
 if __name__ == "__main__":

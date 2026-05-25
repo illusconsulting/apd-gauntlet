@@ -1,6 +1,6 @@
 capability:
   schema_version: 1
-  id: conf-cap-7c2a4f91
+  id: conf-cap-53b6f810
   agent: confidentiality
   apd_tier: trustworthiness
   apd_goal: confidentiality
