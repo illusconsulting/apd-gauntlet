@@ -1,0 +1,19 @@
+syntax = "proto3";
+package pbm.claims.v1;
+
+message ClaimEvent {
+  string event_id      = 1;
+  string member_id     = 2;   // PHI identifier
+  string drug_ndc      = 3;   // PHI clinical
+  string prescriber_npi = 4;  // PHI clinical
+  string pharmacy_id   = 5;   // PHI clinical
+  int64  submitted_at  = 6;
+
+  enum Status {
+    PENDING  = 0;
+    APPROVED = 1;
+    DENIED   = 2;
+  }
+  Status status        = 7;
+  string adjudication_notes = 8;
+}
