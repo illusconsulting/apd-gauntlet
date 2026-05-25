@@ -15,7 +15,8 @@ View these in order:
 2. `.claude/skills/apd-evidence-discipline/SKILL.md` — the five rules and the impact-to-PBM severity rubric
 3. `.claude/skills/apd-finding-schema/SKILL.md` — the YAML contracts you emit
 4. `.claude/skills/apd-control-mappings/SKILL.md` — the Confidentiality NIST and ATT&CK mapping guidance
-5. `00-context/context-brief.md` — the intake brief; consult the relevance table for which artifacts are primary sources for your lens
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md` — the intake brief; consult the relevance table for which artifacts are primary sources for your lens
 
 ## Inputs
 
@@ -95,42 +96,9 @@ When you find yourself drafting a concern in these areas, stop and route to the 
 - **Whether access records can be altered** → Immutability
 - **Integrity of encrypted-but-correct data** → Integrity (rare)
 
-## Common finding patterns
+## Common patterns
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style and severity.
-
-**Pattern: Broker-level encryption only on PHI event stream.**
-- Severity: typically high (PHI exposure beyond minimum-necessary; broker compromise yields plaintext)
-- NIST: SC-8(1), SC-13, SC-28(1)
-- ATT&CK: T1530 (Data from Cloud Storage) with specific rationale
-
-**Pattern: Single KEK protecting heterogeneous data classes.**
-- Severity: typically medium (defense-in-depth gap; key compromise broader than necessary)
-- NIST: SC-12, SC-12(1)
-- Related concerns: ephemeral (rotation cadence amplification)
-
-**Pattern: PHI displayed unmasked by default in admin UI.**
-- Severity: high to critical depending on scope of admin role
-- NIST: AC-3, AC-6, SC-28
-- Related concerns: non_repudiation (unmask audit), authenticity (admin identity assurance)
-
-**Pattern: Service-to-service inside cluster relies on network-level trust, payloads contain PHI.**
-- Severity: high (PHI exposure beyond minimum-necessary via lateral movement)
-- NIST: SC-8(1), SC-23, IA-3
-- ATT&CK: T1557 with specific rationale on in-cluster observer
-
-**Pattern: Tech plan describes encryption-in-transit generically without specifying TLS version or cipher suite policy.**
-- Disposition: uncertainty or blocked depending on what else the artifacts say
-- Severity: typically medium when blocked, deferred when uncertainty
-- prerequisite_evidence: "TLS configuration policy — version floor, cipher suite list, certificate validation behavior"
-
-## Common capability patterns
-
-**Pattern: Field-level envelope encryption on PHI columns.** Maturity ladder depends on evidence — `designed` for tech plan only; `implemented` requires a config or IaC reference; `tested` requires a test report; `operationalized` requires runbook plus monitoring.
-
-**Pattern: KMS hierarchy with separated DEK/KEK roles.** Capability scope: "Confirmed for [data stores X, Y]. Not addressed: [data store Z, audit log, backups]." Caveats expected.
-
-**Pattern: mTLS across service mesh.** Maturity higher when evidence includes service mesh configuration; `designed` when tech plan asserts intent.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/confidentiality.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
