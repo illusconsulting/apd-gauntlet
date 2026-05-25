@@ -37,7 +37,14 @@ def scaffold_run(
             shutil.copytree(item, target, dirs_exist_ok=True)
         else:
             shutil.copy2(item, target)
-    (run_dir / ".apd-run.yaml").write_text(
-        f"run_id: {run_id}\ndomain: {domain}\nframework_version: 1.0.0\n"
+    config_text = (
+        f"run_id: {run_id}\n"
+        f"domain: {domain}\n"
+        f"framework_version: 1.1.0\n"
+        f"code_recon: auto\n"
+        "# code_recon: enabled  # hard-fail if CBM not reachable\n"
+        "# code_recon: disabled # skip code-recon entirely\n"
+        "# cbm_project: <project-name>  # optional CBM project pointer override\n"
     )
+    (run_dir / ".apd-run.yaml").write_text(config_text)
     return run_dir
