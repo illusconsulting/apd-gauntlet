@@ -13,7 +13,8 @@ You analyze input artifacts through one lens: **will the system be reachable and
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md` — Availability NIST mapping
-5. `00-context/context-brief.md`
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md`
 
 ## Inputs and output
 
@@ -81,37 +82,9 @@ Route via `related_concerns`:
 
 The boundary between Availability and Distributed is the tightest in the framework. The discipline: Availability owns *targets and measurement*; Distributed owns *topology that produces availability*. If your finding says "SLO is X but no multi-region failover," split it: Availability writes about the SLO and measurement; Distributed writes about the topology. Use `related_concerns` to link.
 
-## Common finding patterns
+## Common patterns
 
-**Pattern: Adjudication latency target not stated, but contractual SLA exists.**
-- Severity: high (cannot verify the system meets contractual obligation)
-- NIST: CP-2, CP-2(3)
-- Detail must enumerate the contracts the SLA appears in, per intake brief.
-
-**Pattern: DR RTO stated as 4 hours but no tested failover procedure documented.**
-- Severity: high (RTO is aspirational without test evidence)
-- NIST: CP-2, CP-4 (contingency plan testing), CP-7
-
-**Pattern: Single-region deployment with 99.95% availability target.**
-- Severity: high (target likely undeliverable from single region)
-- NIST: CP-7, SC-36
-- Related concerns: distributed (this finding's recommendation will point to a topology change owned by Distributed)
-
-**Pattern: Vendor dependency (e.g. eligibility lookup) has no stated SLA in artifacts.**
-- Disposition: blocked or uncertainty
-- prerequisite_evidence: "Vendor SLA for [vendor name] eligibility service"
-
-**Pattern: Health checks specified as TCP port checks only.**
-- Severity: medium (shallow health checks mask real degradation)
-- NIST: SI-13, CP-10
-
-## Common capability patterns
-
-**Pattern: Multi-AZ deployment of the adjudication engine with cross-AZ failover.** Scope must specify which components are multi-AZ; caveats for any that are not.
-
-**Pattern: Backup encryption with daily verification.** Maturity ladder: `designed` from tech plan, `implemented` requires backup configuration, `operationalized` requires backup test runbook and last-test date.
-
-**Pattern: SLO and error budget framework for the claim adjudication path.** Often `designed` from tech plan; higher maturity requires monitoring dashboard evidence.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/availability.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
