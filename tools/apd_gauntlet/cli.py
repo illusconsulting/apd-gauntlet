@@ -9,6 +9,7 @@ from .build_domain_skill import build_domain_skill
 from .summary import summarize_run, render_summary
 from .lint_agents import lint_agents_dir
 from .linters import check_finding_id, check_capability_id
+from .refresh_mitre import fetch_and_project
 import json as _stdjson
 
 
@@ -154,6 +155,16 @@ def summarize_cmd(run_dir, as_json):
         click.echo(_json.dumps(stats, indent=2))
     else:
         click.echo(render_summary(stats))
+
+
+@main.command("refresh-mitre")
+@click.option("--out", type=click.Path(dir_okay=False, path_type=pathlib.Path),
+              default=pathlib.Path(__file__).resolve().parent / "data" / "mitre-mitigations.json",
+              show_default=False)
+def refresh_mitre_cmd(out):
+    click.echo("Fetching MITRE ATT&CK bundle...")
+    fetch_and_project(out)
+    click.echo(f"Wrote {out}")
 
 
 if __name__ == "__main__":
