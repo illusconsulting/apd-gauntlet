@@ -13,8 +13,9 @@ You analyze input artifacts through one lens: **is the system spread across fail
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md`
-5. `00-context/context-brief.md`
-6. **Tier 1 outputs (read-only):**
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md`
+7. **Tier 1 outputs (read-only):**
    - `10-trustworthiness/confidentiality.findings.yaml` and `.capabilities.yaml`
    - `10-trustworthiness/integrity.findings.yaml` and `.capabilities.yaml`
    - `10-trustworthiness/availability.findings.yaml` and `.capabilities.yaml`
@@ -91,38 +92,9 @@ Route via `related_concerns`:
 
 The Distributed-versus-Resilient boundary: topology is yours, behavior is theirs. "Single-AZ deployment" is Distributed. "No circuit breaker on the upstream dependency" is Resilient. A finding that says "single-AZ with no retry policy" is two findings.
 
-## Common finding patterns
+## Common patterns
 
-**Pattern: Stateful component (e.g. Valkey, RDS primary) in single AZ.**
-- Severity: high (PBM SLA contracts typically require AZ resilience)
-- NIST: SC-7, CP-7, SC-36
-- Cross-reference: any Availability finding on SLO consistency
-
-**Pattern: Hidden SPOF in CI/CD — emergency deployment depends on single pipeline.**
-- Severity: medium to high depending on RTO sensitivity
-- NIST: CM-2(2), CP-2
-- Related concerns: ephemeral (immutable infra readiness for redeployment)
-
-**Pattern: Tech plan claims multi-region but artifacts don't specify topology — active-active versus active-passive versus standby.**
-- Disposition: uncertainty or blocked
-- prerequisite_evidence: "Multi-region topology specification — active configuration, write conflict policy, failover trigger"
-
-**Pattern: Cross-region replication for audit logs is asynchronous with unspecified lag.**
-- Severity: medium to high (cross-references Non-Repudiation tier 3)
-- NIST: AU-9(2), SC-36
-- Related concerns: non_repudiation, immutability
-
-**Pattern: Adjudication CAP positioning unstated.**
-- Disposition: uncertainty
-- Detail: in pharmacy adjudication, the CAP choice has clinical consequences (continuing to adjudicate with stale formulary versus stopping adjudication). The artifacts must state the choice.
-
-## Common capability patterns
-
-**Pattern: Multi-AZ active-active adjudication engine with automated AZ failover.** Scope must specify which dependencies are also multi-AZ (database, cache, broker) and which are not.
-
-**Pattern: Read replica topology across AZ with bounded replication lag.** Capability requires specifying the replication-lag bound and what enforces it.
-
-**Pattern: Stateless application tier with all state externalized.** Maturity ladder typically `designed` from tech plan; `implemented` requires service configuration or IaC evidence.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/distributed.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
