@@ -7,10 +7,27 @@ description: Canonical YAML schemas for APD gauntlet outputs — the `finding` r
 
 Every specialist agent emits two output streams:
 
-- **Findings** — gaps, risks, uncertainties, blocked-on-evidence items, and (optionally) strengths
+- **Findings** — gaps, risks, uncertainties, blocked-on-evidence items
 - **Capabilities** — confirmed security capabilities present in the design or implementation
 
 Both streams use strict YAML schemas. Validation is enforced by the synthesizer; records that fail validation are rejected and surfaced to the agent for correction.
+
+---
+
+## Canonical contract
+
+The authoritative contract for each record kind is the JSON Schema file:
+
+- `schemas/finding.schema.json`
+- `schemas/capability.schema.json`
+- `schemas/contradiction.schema.json`
+- `schemas/severity-disagreement.schema.json`
+- `schemas/coverage-matrix.schema.json`
+- `schemas/nist-coverage.schema.json`
+- `schemas/attack-exposure.schema.json`
+- `schemas/domain.schema.json`
+
+This skill is the human-readable companion. When they disagree, the JSON Schema wins. Run `apd-gauntlet validate <run-dir>` to enforce.
 
 ---
 
@@ -18,12 +35,13 @@ Both streams use strict YAML schemas. Validation is enforced by the synthesizer;
 
 ```yaml
 finding:
+  schema_version: 1
   id: <agent-shortcode>-<sha8>
   agent: confidentiality
   apd_tier: trustworthiness
   apd_goal: confidentiality
 
-  disposition: gap                # gap | risk | uncertainty | strength | blocked
+  disposition: gap                # gap | risk | uncertainty | blocked
   severity: high                  # critical | high | medium | low | informational
   confidence: medium              # high | medium | low
 
@@ -91,10 +109,21 @@ finding:
 
 **`disposition`** — what kind of finding this is.
 - `gap` — required control or property is absent.
-- `risk` — present but inadequate or with material weakness.
-- `uncertainty` — concern identified but evidence is incomplete; not yet `blocked` because partial reasoning is possible.
-- `strength` — confirmed property worth surfacing alongside findings (e.g. counterbalances a related concern). For pure affirmations not tied to a finding context, use a `capability` record instead.
+  - Example: "Audit log is not encrypted at rest." (Property absent.)
+  - Example: "No retry policy specified for the eligibility vendor call." (Control absent.)
+  - Example: "MFA not required on the admin portal." (Control absent.)
+- `risk` — present but inadequate, or with material weakness.
+  - Example: "TLS configured but cipher suite allows 3DES." (Present but weak.)
+  - Example: "Retries present but no jitter; thundering herd risk." (Present but inadequate.)
+  - Example: "Audit log written but actor attribution is the system account." (Present but inadequate.)
+- `uncertainty` — concern identified but evidence is incomplete; partial reasoning still possible.
+  - Example: "Tech plan mentions 'TLS' without specifying version." (Partial evidence — TLS is intended.)
+  - Example: "Retention is described as 'meets regulatory' without citation." (Partial.)
+  - Example: "Backup encryption mentioned generally without key-management detail." (Partial.)
 - `blocked` — cannot assess in this lens without prerequisite evidence. Must populate `prerequisite_evidence`.
+  - Example: "No documentation of KMS hierarchy at all; cannot assess key separation."
+  - Example: "Tech plan silent on vendor SLAs."
+  - Example: "Audit format unspecified; cannot evaluate ATNA conformance."
 
 **`severity`** — calibrated against the impact-to-PBM rubric (see `apd-evidence-discipline` skill). Justified in `detail`.
 
@@ -124,6 +153,7 @@ finding:
 
 ```yaml
 capability:
+  schema_version: 1
   id: <agent-shortcode>-cap-<sha8>
   agent: confidentiality
   apd_tier: trustworthiness
