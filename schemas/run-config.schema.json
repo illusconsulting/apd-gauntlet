@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/run-config.schema.json",
+  "title": "APD Gauntlet Run Configuration",
+  "type": "object",
+  "required": ["run_id", "domain", "framework_version"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id":            { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "domain":            { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "framework_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "code_recon":        { "type": "string", "enum": ["enabled", "auto", "disabled"] },
+    "cbm_project":       { "type": "string", "minLength": 1 }
+  }
+}
