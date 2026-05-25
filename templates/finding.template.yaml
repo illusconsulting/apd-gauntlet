@@ -8,13 +8,14 @@
 
 finding:
   # ─── identity ─────────────────────────────────────────────────────────────
+  schema_version: 1                                       # required: schema version (integer)
   id: conf-1a2b3c4d                                       # required
   agent: confidentiality                                  # required
   apd_tier: trustworthiness                               # required: trustworthiness | scalability | auditability
   apd_goal: confidentiality                               # required
 
   # ─── classification ───────────────────────────────────────────────────────
-  disposition: gap                                        # required: gap | risk | uncertainty | strength | blocked
+  disposition: gap                                        # required: gap | risk | uncertainty | blocked
   severity: high                                          # required: critical | high | medium | low | informational
   confidence: high                                        # required: high | medium | low
 

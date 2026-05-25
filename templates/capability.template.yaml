@@ -6,6 +6,7 @@
 
 capability:
   # ─── identity ─────────────────────────────────────────────────────────────
+  schema_version: 1                                       # required: schema version (integer)
   id: conf-cap-7c2a4f91                                   # required
   agent: confidentiality                                  # required
   apd_tier: trustworthiness                               # required

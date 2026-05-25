@@ -1,3 +1,14 @@
+---
+framework_version: 1.0.0
+run_id: <run-id>
+domain_pack: { name: pbm, version: 1.0.0 }
+artifacts:
+  - { filename: tech_plan.md,         type: tech_plan }
+  - { filename: claim-events.proto,   type: code }
+  - { filename: threat-model-v3.md,   type: threat_model }
+  # ... add one row per artifact in inputs/, using the type taxonomy in apd-intake.md
+---
+
 # APD Gauntlet Context Brief — Run `<run-id>`
 
 > Produced by `apd-intake` from the artifacts in `runs/<run-id>/inputs/`.

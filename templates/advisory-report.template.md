@@ -1,3 +1,11 @@
+---
+framework_version: 1.0.0
+domain_pack: { name: pbm, version: 1.0.0 }
+run_id: <run-id>
+synthesizer_version: 1.0.0
+specialists_skipped: []
+---
+
 # APD Gauntlet Advisory Report — Run `<run-id>`
 
 > Produced by `apd-synthesizer` from the nine specialist outputs.
