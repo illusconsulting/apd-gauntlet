@@ -91,6 +91,30 @@ def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, di
                 yield path, kind, payload
 
 
+CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
+
+
+def _code_evidence_index_path(run_dir: pathlib.Path) -> pathlib.Path:
+    return run_dir / "00-context" / CODE_EVIDENCE_INDEX_FILENAME
+
+
+def _validate_code_evidence_index(
+    run_dir: pathlib.Path, report: ValidationReport
+) -> None:
+    """If code-evidence-index.yaml exists, schema-validate it. Errors append to report."""
+    path = _code_evidence_index_path(run_dir)
+    if not path.exists():
+        return
+    schema = json.loads((SCHEMAS_DIR / "code-evidence-index.schema.json").read_text())
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError as e:
+        report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
+        return
+    for err in Draft202012Validator(schema).iter_errors(data):
+        report.errors.append(Violation(path, None, err.message, "/".join(map(str, err.path))))
+
+
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 1: validate every record against its JSON Schema."""
     registry = _build_registry()
@@ -115,6 +139,7 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         rid = record.get("id")
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
+    _validate_code_evidence_index(run_dir, report)
     report.files_seen = len(seen_files)
     return report
 
@@ -170,6 +195,8 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
     artifacts_meta = brief.get("artifacts") or []
     known_artifacts: set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}
+    if _code_evidence_index_path(run_dir).exists():
+        known_artifacts.add(CODE_EVIDENCE_INDEX_FILENAME)
     tech_plan_artifacts: set[str] = {
         a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"
     }
