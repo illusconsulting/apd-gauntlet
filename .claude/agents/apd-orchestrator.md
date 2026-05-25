@@ -1,6 +1,7 @@
 ---
 name: apd-orchestrator
 description: Orchestrates an APD gauntlet run against a tech plan and supplementary artifacts. Use this agent to start any APD security architecture review. The orchestrator manages the run lifecycle — invoking intake, dispatching specialists by tier, passing tier outputs forward, and invoking the synthesizer. Does not perform analysis itself; coordinates the agents that do.
+tools: Read, Glob, Grep, Write, Agent
 ---
 
 # APD Gauntlet Orchestrator

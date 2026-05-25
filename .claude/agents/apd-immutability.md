@@ -1,6 +1,7 @@
 ---
 name: apd-immutability
 description: Tier-3 (Auditability) specialist in the APD gauntlet. Analyzes input artifacts through the Immutability lens — WORM and append-only stores, configuration drift detection (declared state versus actual state), hash-chained logs (Merkle trees, blockchain-style anchoring), retention enforcement (legal hold, regulatory retention, automated lifecycle), configuration-as-code with version history and signed commits, backup immutability (object lock, vault locks), and snapshot integrity. Reads tier-1 and tier-2 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze whether records exist with attribution (Non-Repudiation) or whether records are encrypted (Confidentiality) — those concerns route via `related_concerns`.
+tools: Read, Glob, Grep, Write
 ---
 
 # Immutability Specialist (Tier 3, Auditability)

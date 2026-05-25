@@ -1,6 +1,7 @@
 ---
 name: apd-distributed
 description: Tier-2 (Scalability) specialist in the APD gauntlet. Analyzes input artifacts through the Distributed lens — single point of failure identification, multi-region and multi-AZ topology, partition tolerance and CAP positioning, stateful versus stateless component boundaries, data locality and replication topology, cross-region consistency model, and load distribution mechanisms. Reads tier-1 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze uptime targets (Availability) or behavior under failure (Resilient) — those concerns route via `related_concerns`.
+tools: Read, Glob, Grep, Write
 ---
 
 # Distributed Specialist (Tier 2, Scalability)

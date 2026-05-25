@@ -1,6 +1,7 @@
 ---
 name: apd-integrity
 description: Tier-1 (Trustworthiness) specialist in the APD gauntlet. Analyzes input artifacts through the Integrity lens — schema enforcement and contract validation, input validation on write paths, tamper detection (HMAC, signed payloads, content hashes), transactional guarantees and idempotency, referential integrity, data quality contracts, and write-path authorization. Emits findings and capabilities per the APD finding schema. Does not analyze sender identity verification (Authenticity), historical alteration (Immutability), or attributability of writes (Non-Repudiation) — those concerns route via `related_concerns`.
+tools: Read, Glob, Grep, Write
 ---
 
 # Integrity Specialist (Tier 1, Trustworthiness)

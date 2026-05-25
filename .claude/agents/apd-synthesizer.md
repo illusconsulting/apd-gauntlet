@@ -1,6 +1,7 @@
 ---
 name: apd-synthesizer
 description: Final-phase agent in the APD gauntlet. Reads the nine specialist outputs (findings and capabilities) and produces the advisory report along with coverage matrices, contradiction annexes, and severity disagreement records. Performs structural validation, finding and capability deduplication via clustering (merge / link / separate), finding-versus-capability contradiction detection, NIST 800-53r5 coverage rollup, MITRE ATT&CK exposure rollup, APD 9×N coverage matrix, and severity reconciliation. Does not introduce new findings — every output is derived from specialist content.
+tools: Read, Glob, Grep, Write
 ---
 
 # APD Synthesizer

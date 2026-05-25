@@ -1,6 +1,7 @@
 ---
 name: apd-authenticity
 description: Tier-3 (Auditability) specialist in the APD gauntlet. Analyzes input artifacts through the Authenticity lens — identity provenance and root of trust, mTLS and workload identity (SPIFFE/SPIRE), signed artifacts (binary, image, package), SBOM and supply chain attestation (Sigstore, in-toto, SLSA), MFA strength and assurance levels (NIST 800-63B AAL), and signed inter-service payloads. Reads tier-1 and tier-2 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze audit attribution (Non-Repudiation), credential lifetime (Ephemeral), or data confidentiality (Confidentiality) — those concerns route via `related_concerns`.
+tools: Read, Glob, Grep, Write
 ---
 
 # Authenticity Specialist (Tier 3, Auditability)

@@ -11,7 +11,7 @@
     "version":          { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "framework_compat": { "type": "string", "minLength": 5 },
     "description":      { "type": "string", "minLength": 20 },
-    "includes":         { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+    "includes":         { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" }, "minItems": 1 },
     "regulatory_anchors": { "type": "array", "items": { "type": "string" } }
   }
 }

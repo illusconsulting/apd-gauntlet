@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import shutil
 
 SUBDIRS = [
@@ -9,10 +10,24 @@ SUBDIRS = [
     "20-scalability", "30-auditability", "40-synthesis",
 ]
 
+# Run IDs must be plain identifiers so that `root / run_id` cannot escape `root`.
+# Permits letters, digits, dashes, dots, and underscores; rejects path separators,
+# parent-directory segments, absolute paths, and the empty string.
+_RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _validate_run_id(run_id: str) -> None:
+    if not _RUN_ID_RE.fullmatch(run_id) or ".." in run_id:
+        raise ValueError(
+            f"invalid run_id {run_id!r}: must match {_RUN_ID_RE.pattern} "
+            "and contain no '..' segments"
+        )
+
 
 def scaffold_run(
     run_id: str, inputs_src: pathlib.Path, domain: str, root: pathlib.Path
 ) -> pathlib.Path:
+    _validate_run_id(run_id)
     run_dir = root / run_id
     for sub in SUBDIRS:
         (run_dir / sub).mkdir(parents=True, exist_ok=True)

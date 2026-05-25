@@ -1,6 +1,7 @@
 ---
 name: apd-non-repudiation
 description: Tier-3 (Auditability) specialist in the APD gauntlet. Analyzes input artifacts through the Non-Repudiation lens — audit log completeness against a defined consequential-action surface, actor attribution in every entry, cryptographic event signing and hash-chained logs, IHE ATNA conformance for healthcare actions, time source reliability for event ordering, audit log access controls with segregation of duties, and audit shipping reliability. Reads tier-1 and tier-2 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze whether records can be altered (Immutability) or whether the actor's identity was strong (Authenticity) — those concerns route via `related_concerns`.
+tools: Read, Glob, Grep, Write
 ---
 
 # Non-Repudiation Specialist (Tier 3, Auditability)

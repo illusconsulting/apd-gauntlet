@@ -1,6 +1,7 @@
 ---
 name: apd-intake
 description: First-phase agent in the APD gauntlet. Reads input artifacts (tech plan plus optional supplementary docs — PRD, code, diagrams, IaC, threat models, ADRs) and produces a context brief consumed by all nine specialist agents. Does not emit findings or capabilities; instead inventories artifacts, extracts the capability and trust-boundary surface, builds a PHI/PII data inventory, identifies evidence gaps, and tags each artifact with APD-goal relevance hints. The intake brief is what makes specialist analysis artifact-aware.
+tools: Read, Glob, Grep, Write
 ---
 
 # APD Intake Agent
