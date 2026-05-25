@@ -27,6 +27,9 @@ env/
 
 # Run outputs (gauntlet runs)
 runs/
+# Allow test fixture runs
+!tests/fixtures/runs/
+!tests/fixtures/runs/**
 
 # Claude Code session-local config (do not commit; .claude/ contents that are part of the plugin payload, e.g. .claude/agents/ and .claude/skills/, are tracked explicitly)
 .claude/settings.json
