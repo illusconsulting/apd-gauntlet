@@ -1,0 +1,28 @@
+name: markdown-lint
+
+on:
+  pull_request:
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v15
+        with:
+          globs: |
+            docs/**/*.md
+            .claude/**/*.md
+            domains/**/*.md
+            README.md
+            CONTRIBUTING.md
+            CHANGELOG.md
+            CODE_OF_CONDUCT.md
+  lint-agents:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - run: apd-gauntlet lint-agents --agent-dir .claude/agents/
