@@ -157,6 +157,25 @@ def validate_domain_cmd(domain_name, domains_dir) -> None:  # type: ignore[no-un
     click.echo(f"Domain pack '{domain_name}' OK: schema valid, {n} include patterns all resolved.")
 
 
+@main.command("validate-run-config")
+@click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def]
+    from jsonschema import Draft202012Validator
+    import yaml as _yaml
+
+    schema_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"
+    )
+    schema = _stdjson.loads(schema_path.read_text())
+    data = _yaml.safe_load(config_path.read_text())
+    errors = list(Draft202012Validator(schema).iter_errors(data))
+    if errors:
+        for e in errors:
+            click.echo(f"Schema error: {e.message}", err=True)
+        raise SystemExit(1)
+    click.echo(f"Run config '{config_path}' OK.")
+
+
 @main.command("check-ids")
 @click.argument("yaml_file", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
 def check_ids_cmd(yaml_file) -> None:  # type: ignore[no-untyped-def]
