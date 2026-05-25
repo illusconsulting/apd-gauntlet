@@ -1,0 +1,24 @@
+name: pbm
+display_name: "Pharmacy Benefit Management"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "PBM-specialized severity rubric and pattern library. Anchored to HIPAA breach-notification thresholds, CMS Part D submission integrity, URAC accreditation requirements, and SOC 2."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - HIPAA
+  - "CMS Part D"
+  - URAC
+  - "SOC 2"
