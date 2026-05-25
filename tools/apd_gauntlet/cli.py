@@ -6,6 +6,7 @@ from . import __version__
 from .validate import run_schema_pass, run_semantic_pass, run_cross_file_pass, ValidationReport
 from .init_run import scaffold_run
 from .build_domain_skill import build_domain_skill
+from .summary import summarize_run, render_summary
 
 
 @click.group(
@@ -73,6 +74,18 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version):
 def init_run_cmd(run_id, inputs, domain, root):
     target = scaffold_run(run_id, inputs, domain, root)
     click.echo(f"Run scaffolded at {target}")
+
+
+@main.command("summarize")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+@click.option("--json", "as_json", is_flag=True)
+def summarize_cmd(run_dir, as_json):
+    stats = summarize_run(run_dir)
+    if as_json:
+        import json as _json
+        click.echo(_json.dumps(stats, indent=2))
+    else:
+        click.echo(render_summary(stats))
 
 
 if __name__ == "__main__":
