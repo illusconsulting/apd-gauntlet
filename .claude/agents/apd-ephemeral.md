@@ -13,8 +13,9 @@ You analyze input artifacts through one lens: **are credentials, infrastructure,
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md`
-5. `00-context/context-brief.md`
-6. Tier 1 findings and capabilities (read-only)
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md`
+7. Tier 1 findings and capabilities (read-only)
 
 ## Inputs and output
 
@@ -83,45 +84,9 @@ Route via `related_concerns`:
 
 The Ephemeral-Authenticity boundary: a short-lived weak credential (password rotated monthly) is Ephemeral-good, Authenticity-poor. A long-lived strong credential (5-year client certificate) is Authenticity-good, Ephemeral-poor. Both can have findings.
 
-## Common finding patterns
+## Common patterns
 
-**Pattern: Service account credentials are static long-lived secrets in application config.**
-- Severity: high (broad blast radius on credential leak, no automatic invalidation)
-- NIST: IA-5, IA-5(1), IA-5(7), SC-12(1)
-- ATT&CK: T1078 (Valid Accounts) with sub-technique by environment
-
-**Pattern: Database credentials shared across services; no rotation.**
-- Severity: high
-- NIST: IA-5, AC-2(2)
-- Related concerns: confidentiality (key management around the shared credential)
-
-**Pattern: Production access via standing admin role with no JIT.**
-- Severity: high (excessive standing privilege, no time-boxing)
-- NIST: AC-6, AC-2(2), AC-2(3)
-- Related concerns: non_repudiation (audit of admin actions), authenticity (admin identity strength)
-
-**Pattern: Container images mutable in production — `:latest` tags, in-place container updates.**
-- Severity: medium to high depending on what's mutable
-- NIST: CM-2, CM-3, SA-15(7)
-- Related concerns: authenticity (image signing), integrity (configuration drift)
-
-**Pattern: Tech plan mentions "secrets stored in vault" without rotation specifics.**
-- Disposition: uncertainty or blocked
-- prerequisite_evidence: "Secret rotation policy — cadence, mechanism, automation, exception process"
-
-**Pattern: Member portal session lifetime not specified.**
-- Disposition: uncertainty
-- prerequisite_evidence: "Session management policy — max lifetime, idle timeout, step-up bounds, logout behavior"
-
-## Common capability patterns
-
-**Pattern: Dynamic database credentials via vault.** Maturity depends on whether tech plan asserts (designed) or vault configuration is in evidence (implemented).
-
-**Pattern: Workload identity via SPIFFE for service-to-service authentication.** Caveats expected on which services are confirmed.
-
-**Pattern: JIT access for production via approval workflow with time-boxed grants.** Operational maturity requires runbook evidence; designed maturity from tech plan only.
-
-**Pattern: Immutable container deployment via signed image references in IaC.** Cross-cuts Authenticity for the signing aspect; Ephemeral confirms the replace-don't-patch posture.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/ephemeral.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
