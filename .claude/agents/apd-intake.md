@@ -34,6 +34,23 @@ A single markdown file at `00-context/context-brief.md`, structured per the temp
 
 ### Step 1: Inventory artifacts
 
+The brief MUST begin with a YAML frontmatter block listing every artifact with its type, so the validator can resolve `evidence[].artifact` references and the maturity-vs-evidence rule:
+
+```yaml
+---
+framework_version: 1.0.0
+run_id: <run-id>
+domain_pack: { name: <pack>, version: <pack-version> }
+artifacts:
+  - { filename: tech_plan.md,         type: tech_plan }
+  - { filename: claim-events.proto,   type: code }
+  - { filename: threat-model.md,      type: threat_model }
+  # ... one row per artifact
+---
+```
+
+The artifact `type` values come from the type taxonomy listed in the Inventory step below. Specialists never write outside this index — evidence references that don't appear here are caught by `apd-gauntlet validate`.
+
 For each file in `inputs/`, determine its type. Use file extension and content inspection — do not trust filenames alone. Type taxonomy:
 
 - `tech_plan` — primary architectural design document; the run's anchor artifact
