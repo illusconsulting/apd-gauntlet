@@ -32,7 +32,9 @@ The input directory must contain at minimum one tech plan or design document. Ot
 ### Phase 0 — Setup
 
 1. Validate the input directory exists and is non-empty.
-2. Create the run directory structure:
+2. Determine the active domain pack (default: `pbm`; overridable via scope hint such as `domain=<name>`).
+3. Build the domain skill: `apd-gauntlet build-domain-skill <domain> --framework-version <version>`. Verify `.claude/skills/apd-domain/SKILL.md` was written. Halt with a request-for-evidence finding if the pack is missing or incompatible.
+4. Create the run directory structure:
    ```
    runs/<run-id>/
    ├── inputs/                       # already populated by user
@@ -42,7 +44,8 @@ The input directory must contain at minimum one tech plan or design document. Ot
    ├── 30-auditability/
    └── 40-synthesis/
    ```
-3. If a tech plan is not identifiable in `inputs/`, ask the user to confirm or identify one before proceeding.
+5. Validate the active pack against `schemas/domain.schema.json` via `apd-gauntlet validate-domain <domain>`.
+6. If a tech plan is not identifiable in `inputs/`, ask the user to confirm or identify one before proceeding.
 
 ### Phase 1 — Intake
 
@@ -71,6 +74,8 @@ Each agent receives:
 
 Wait for all three to complete. Validate each output file conforms to the schemas defined in `apd-finding-schema`. Reject and re-dispatch on validation failure with the specific violation cited.
 
+**Tier-end validation.** Run `apd-gauntlet validate <run-dir>` over the just-completed tier's outputs. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the emitting agent with the specific violations cited. Allow up to two retries per agent. After two retries, surface the failure and proceed without that record.
+
 ### Phase 3 — Scalability tier (parallel, with tier 1 inputs)
 
 Invoke in parallel:
@@ -84,6 +89,8 @@ Each agent receives the same inputs as tier 1, plus:
 
 Tier 2 agents may reference tier 1 findings via `cross_references` when their concerns depend on tier 1 findings being resolved. They do not re-litigate tier 1 concerns inside their own lens.
 
+**Tier-end validation.** Run `apd-gauntlet validate <run-dir>` over the just-completed tier's outputs. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the emitting agent with the specific violations cited. Allow up to two retries per agent. After two retries, surface the failure and proceed without that record.
+
 ### Phase 4 — Auditability tier (parallel, with tier 1 and 2 inputs)
 
 Invoke in parallel:
@@ -94,6 +101,8 @@ Invoke in parallel:
 Each agent receives the same inputs as tier 2, plus:
 - Path to all three tier 2 finding files (read-only)
 - Path to all three tier 2 capability files (read-only)
+
+**Tier-end validation.** Run `apd-gauntlet validate <run-dir>` over the just-completed tier's outputs. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the emitting agent with the specific violations cited. Allow up to two retries per agent. After two retries, surface the failure and proceed without that record.
 
 ### Phase 5 — Synthesis
 
@@ -118,6 +127,18 @@ Report to the user:
 
 Do not summarize findings yourself. The advisory report is the authoritative summary.
 
+At the end of Phase 6, append a YAML frontmatter block to the advisory report's header:
+```yaml
+---
+framework_version: <version>
+domain_pack:
+  name: <pack>
+  version: <pack version>
+run_id: <id>
+specialists_skipped: [<list>]
+---
+```
+
 ## Disposition handling
 
 **`disposition: blocked` findings.** These are first-class output, not failures. The synthesizer aggregates them into a dedicated section of the advisory report. You do not retry a `blocked` finding by re-invoking the agent with the same inputs; that would not produce different output. If the user wants to close blocked findings, they provide additional artifacts and re-run.
@@ -130,7 +151,15 @@ Do not summarize findings yourself. The advisory report is the authoritative sum
 
 If the user specifies scope hints in the initial invocation:
 - "Emphasize PHI exposure" → no agent changes; pass-through to the advisory report's executive summary framing
-- "Skip Distributed" → omit `apd-distributed` from tier 2; note the skip in the run record
+- **"Skip <Specialist>"** — omit the named specialist from its tier dispatch and write stub files at the expected output paths so downstream tiers still find them. Stub format:
+  ```yaml
+  _meta:
+    skipped: true
+    reason: "<scope hint text>"
+    emitted_by: orchestrator
+  findings: []
+  ```
+  Same shape for capabilities. The synthesizer records the skip in run metadata; the advisory report includes a "Specialists skipped" note in the executive summary.
 - "Focus on the Kafka design" → pass the component focus to every specialist as additional context
 
 Do not let scope hints override the gauntlet's structural integrity. Skipping multiple specialists or restricting analysis to a single component produces a degraded advisory report; warn the user before proceeding.
