@@ -1,0 +1,21 @@
+code_evidence_index:
+  indexed_commit_sha: "0000000000000000000000000000000000000000"
+  cbm_project: "claim-event-bus"
+  generated_at: "2026-06-01T12:00:00Z"
+  entries:
+    - id: cev-1a2b3c4d
+      qualified_name: "claim_bus.auth.jwt.JWTValidator.verify"
+      kind: function
+      file_path: "src/claim_bus/auth/jwt.py"
+      line_range: "L42-L51"
+      excerpt: "def verify(self, token: str) -> Claims: return self._decode(token, self.signing_keys)"
+      apd_relevance: [authenticity, integrity]
+      notes: "Synthetic seed entry for the bundled example. Specialists do not cite this in the v1.1 example."
+    - id: cev-2b3c4d5e
+      qualified_name: "claim_bus.audit.emitter.emit_consequential"
+      kind: function
+      file_path: "src/claim_bus/audit/emitter.py"
+      line_range: "L18-L34"
+      excerpt: "def emit_consequential(actor, action, resource): log.write(audit_record(actor, action, resource))"
+      apd_relevance: [non_repudiation, immutability]
+      notes: "Synthetic seed entry for the bundled example. Specialists do not cite this in the v1.1 example."
