@@ -61,6 +61,12 @@ Phase 6  Closeout    → orchestrator returns summary; advisory report has front
                        domain_pack, run_id, specialists_skipped)
 ```
 
+### Phase 1.5 — Code reconnaissance (optional, v1.1+)
+
+When `.apd-run.yaml: code_recon` is `enabled` or `auto` and the codebase-memory-mcp (CBM) tools are reachable, the orchestrator dispatches the optional `apd-code-recon` agent between Phase 1 (Intake) and Phase 2 (Trustworthiness tier). The agent uses CBM's symbol graph and call-graph tracing to produce a code-grounded companion to the intake brief — `code-architecture-brief.md` for human reviewers and `code-evidence-index.yaml` for specialist citations.
+
+Phase 1.5 is **optional** by design: gauntlet runs without CBM still work end-to-end. Specialists treat code-evidence-index entries as ordinary `evidence[].artifact` references; the validator recognizes the filename automatically. See [ADR 0007](adrs/0007-optional-code-reconnaissance-via-cbm.md) for rationale.
+
 ## The validator's three passes
 
 The Python `apd-gauntlet` CLI runs three passes over a run directory:
