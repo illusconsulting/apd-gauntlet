@@ -61,6 +61,22 @@ Wait for completion. Verify `00-context/context-brief.md` exists and contains:
 
 If any of the required sections are missing, route back to `apd-intake` with the specific gap noted.
 
+### Phase 1.5 — Code reconnaissance (optional)
+
+Read `.apd-run.yaml`. Inspect the `code_recon` field:
+
+- `disabled` — skip this phase entirely; proceed to Phase 2.
+- `enabled` — dispatch `apd-code-recon`. On any failure (CBM unreachable, schema-invalid output, missing output files), surface the failure to the user and HALT. Do not proceed to Phase 2 until the operator either fixes CBM availability or flips `code_recon` to `auto` or `disabled`.
+- `auto` — dispatch `apd-code-recon`. If the agent writes `00-context/code-recon-skipped.md` instead of the two normal output files, log the skip in your run notes and proceed to Phase 2 without code-grounded evidence.
+
+When dispatching, pass the agent these inputs:
+
+- Path to `.apd-run.yaml` (root of the run directory)
+- Path to `00-context/context-brief.md` (intake's output)
+- Path to `00-context/` (output directory)
+
+Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
+
 ### Phase 2 — Trustworthiness tier (parallel)
 
 Invoke in parallel:
