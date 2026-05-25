@@ -1,0 +1,37 @@
+capability:
+  - schema_version: 1
+    id: conf-cap-89e19793
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Field-level envelope encryption on PHI columns at rest"
+    description: "PHI columns in member_demographics and claims tables use field-level envelope encryption with DEKs from the KMS hierarchy."
+    maturity: designed
+    scope: "Confirmed for: member_demographics table (all PHI columns), claims table (member_id, drug_ndc, prescriber_npi). Not addressed: audit_log table, Kafka event payloads."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.1 paragraph 2"
+        excerpt: "field-level envelope encryption applied to PHI columns in the member_demographics and claims tables"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]
+
+  - schema_version: 1
+    id: conf-cap-d0590471
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "MSK cluster with KMS-managed at-rest encryption"
+    description: "The AWS MSK cluster uses a customer-managed KMS key for at-rest encryption of the Kafka log layer, providing broker-level data protection."
+    maturity: implemented
+    scope: "Confirmed for: MSK cluster pbm-claim-events broker storage. Scope is broker-level only; payload-level PHI remains in plaintext at the application layer."
+    evidence:
+      - artifact: iac/kafka.tf
+        locator: "resource aws_msk_cluster encryption_info block"
+        excerpt: "encryption_at_rest_kms_key_arn = aws_kms_key.kafka.arn"
+      - artifact: tech_plan.md
+        locator: "§4.2 paragraph 3"
+        excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
+    control_mappings:
+      nist_800_53r5: ["SC-28", "SC-28(1)"]
+    caveats:
+      - "KMS key rotation is disabled (enable_key_rotation = false). This is a finding tracked separately."

@@ -1,0 +1,18 @@
+capability:
+  schema_version: 1
+  id: ephem-cap-32d883ee
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: "HashiCorp Vault centrally manages service-to-service token lifecycle"
+  description: "Bearer tokens for service-to-service authentication are stored and managed in HashiCorp Vault, providing a single control plane for token issuance and revocation."
+  maturity: designed
+  scope: "Confirmed for: service-to-service bearer token storage. Vault provides revocation capability; dynamic short-lived token issuance is not yet in use."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§8 paragraph 4"
+      excerpt: "shared bearer tokens stored in HashiCorp Vault"
+  control_mappings:
+    nist_800_53r5: ["IA-5", "SC-28"]
+  caveats:
+    - "Tokens are static and long-lived; Vault dynamic secrets not yet leveraged for short TTLs."

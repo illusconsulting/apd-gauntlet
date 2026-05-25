@@ -1,0 +1,25 @@
+finding:
+  schema_version: 1
+  id: dist-d697bb34
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: risk
+  severity: high
+  confidence: high
+  title: "Single-region active-passive topology limits availability under region failure"
+  summary: "The system is deployed exclusively in us-east-1 with no cross-region failover, creating a single point of failure at the AWS region level."
+  detail: "As documented in tech_plan.md §7, cross-region failover is not yet implemented. This conflicts with the 99.95% SLO target and means any us-east-1 regional incident would cause an unrecoverable outage beyond SLO bounds. The CAP decision (ADR-001) favoring consistency further means the system stops rather than degrades gracefully during partition events."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§7 paragraph 1"
+      excerpt: "system is deployed in a single AWS region (us-east-1) with multi-AZ active-passive"
+  cross_references:
+    - avail-4e08f6d8
+  control_mappings:
+    nist_800_53r5: ["CP-7", "CP-7(1)"]
+  recommendation:
+    posture: recommended
+    summary: "Implement cross-region failover or formally reduce SLO to match single-region risk."
+    detail: "Pilot a warm standby in us-west-2 using MSK replication and RDS Multi-Region read replicas. Alternatively, formally accept the single-region risk via documented exception with reduced SLO commitment."
+  related_concerns: [availability, resilient]

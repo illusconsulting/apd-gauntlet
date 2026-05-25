@@ -1,0 +1,16 @@
+capability:
+  schema_version: 1
+  id: auth-cap-53d41613
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: "Okta SAML SSO with mandatory MFA for internal admin tools"
+  description: "Internal admin tools require SAML SSO through Okta with MFA enforced at the identity provider level, providing a centralized authentication control point."
+  maturity: designed
+  scope: "Confirmed for: internal admin tools via SAML SSO with MFA required. Does not cover member portal (separate Okta application with SMS fallback) or service-to-service auth."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§8 paragraph 2"
+      excerpt: "Internal admin tools: SAML SSO with Okta, MFA required"
+  control_mappings:
+    nist_800_53r5: ["IA-2", "IA-2(1)", "IA-8"]

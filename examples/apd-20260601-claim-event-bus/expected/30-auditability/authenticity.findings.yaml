@@ -1,0 +1,53 @@
+finding:
+  - schema_version: 1
+    id: auth-dbba3dea
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: risk
+    severity: high
+    confidence: high
+    title: "SMS MFA fallback weakens authentication assurance for PHI-bearing surfaces"
+    summary: "SMS-based MFA is accepted as a fallback factor for member portal access, which bears PHI, reducing authentication assurance to NIST AAL1 equivalent."
+    detail: "NIST SP 800-63B designates SMS OTP as a restricted authenticator due to SIM-swap and SS7 interception vulnerabilities. Member portal access exposes PHI fields (member_id, drug_ndc, prescriber_npi). Accepting SMS as a fallback lowers effective AAL to AAL1 for any user who relies on it, below the AAL2 floor required for PHI-bearing applications under HIPAA."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 1"
+        excerpt: "MFA factors accepted: TOTP, push, SMS (fallback)"
+    control_mappings:
+      nist_800_53r5: ["IA-2(1)", "IA-2(2)", "IA-5(1)"]
+      mitre_attack:
+        - technique: "T1621"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "SMS OTP interception via SIM-swap or SS7 exploitation allows credential-free authentication bypass on PHI-bearing surfaces."
+    recommendation:
+      posture: required
+      summary: "Remove SMS as an accepted MFA factor for PHI-bearing surfaces or enforce TOTP/push-only enrollment."
+      detail: "Restrict Okta MFA policy for the member portal application to TOTP and push factors only. Provide a grace period for users currently enrolled with SMS to migrate. Document exceptions via risk acceptance if SMS must be retained."
+    related_concerns: [confidentiality]
+
+  - schema_version: 1
+    id: auth-8d386c2f
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Service-to-service authentication uses shared bearer tokens not mTLS"
+    summary: "Service-to-service calls use shared bearer tokens that do not provide cryptographic service identity verification, making service impersonation undetectable."
+    detail: "Shared bearer tokens cannot prove which specific service instance made a request. Unlike mTLS, where each service presents a certificate with its identity, bearer tokens are opaque to intermediaries and cannot distinguish between authorized services and an attacker who obtained the token. This gap is particularly significant because the claim-events producer holds a bearer token that grants access to write PHI to the event bus."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 4"
+        excerpt: "Service-to-service: shared bearer tokens stored in HashiCorp Vault"
+    cross_references:
+      - conf-e443de8b
+    control_mappings:
+      nist_800_53r5: ["IA-3", "IA-9", "SC-8(1)"]
+    recommendation:
+      posture: recommended
+      summary: "Migrate service-to-service authentication to mTLS or SPIFFE/SPIRE for cryptographic service identity."
+      detail: "Deploy Istio or SPIRE to issue per-service X.509 SVIDs. Retire shared bearer tokens once all services are enrolled. This also enables granular network policy enforcement at the service mesh layer."
+    related_concerns: [confidentiality, ephemeral]

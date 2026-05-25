@@ -1,0 +1,76 @@
+finding:
+  - schema_version: 1
+    id: conf-7aa376c5
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "PHI fields in Kafka claim-events topic lack envelope encryption"
+    summary: "Broker-level encryption only; PHI flows in plaintext between producers and consumers within the broker layer."
+    detail: "Per the PBM PHI exposure rubric, broker-managed encryption grants all platform admins and consumers access to cleartext PHI. The claim-events topic carries member_id, drug_ndc, prescriber_npi, and pharmacy_id in every event payload. Field-level envelope encryption in the producer SDK is needed to enforce minimum-necessary access at the payload level."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4.2 paragraph 3"
+        excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
+    control_mappings:
+      nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]
+      mitre_attack:
+        - technique: "T1530"
+          sub_technique: null
+          tactic: "TA0010"
+          rationale: "Broker-level encryption leaves PHI accessible in plaintext at the Kafka storage layer to any actor with broker filesystem access."
+    recommendation:
+      posture: required
+      summary: "Apply field-level envelope encryption to PHI fields before producer serialization."
+      detail: "Replace broker-level encryption with envelope encryption applied in the producer SDK before serialization, using DEKs issued by the KMS hierarchy in §3."
+    related_concerns: [integrity, non_repudiation]
+
+  - schema_version: 1
+    id: conf-98a543cd
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: high
+    confidence: low
+    title: "KMS DEK rotation cadence not specified"
+    summary: "The tech plan references a DEK-issuer service but does not specify rotation cadence, automation, or revocation procedures."
+    detail: "Without a defined rotation policy, long-lived DEKs increase the window of exposure if a key is compromised. HIPAA requires documented key management procedures. The tech plan explicitly calls out this gap at §3."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 paragraph 4"
+        excerpt: "rotation cadence, automation, and revocation procedure are NOT specified in this tech plan"
+    prerequisite_evidence:
+      - "DEK rotation policy document with cadence, automation trigger, and revocation runbook"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)"]
+    recommendation:
+      posture: required
+      summary: "Document and enforce a DEK rotation schedule with automated key revocation."
+      detail: "Define rotation cadence (e.g., 90-day maximum), automate rotation via KMS key aliases, and document a tested revocation runbook before GA."
+    related_concerns: [ephemeral]
+
+  - schema_version: 1
+    id: conf-e443de8b
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: risk
+    severity: medium
+    confidence: high
+    title: "Service-to-service authentication uses shared bearer tokens"
+    summary: "All service-to-service calls use shared bearer tokens from Vault rather than per-service mTLS identities."
+    detail: "Shared bearer tokens create broad blast-radius if a single token is exfiltrated. A compromised service can impersonate any other service that shares the same token. mTLS or per-service SPIFFE/SPIRE identities would enforce least-privilege service identity."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 4"
+        excerpt: "Service-to-service: shared bearer tokens stored in HashiCorp Vault"
+    control_mappings:
+      nist_800_53r5: ["IA-3", "SC-8(1)"]
+    recommendation:
+      posture: recommended
+      summary: "Replace shared bearer tokens with per-service mTLS certificates or SPIFFE identities."
+      detail: "Issue per-service X.509 certificates via a service mesh (e.g., Istio) or SPIRE. Revoke shared tokens once migration is validated."
+    related_concerns: [authenticity]

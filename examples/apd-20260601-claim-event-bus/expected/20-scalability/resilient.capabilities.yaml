@@ -1,0 +1,16 @@
+capability:
+  schema_version: 1
+  id: resil-cap-4a157ac3
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: "Kafka replication factor 3 provides broker-level fault tolerance"
+  description: "The claim-events topic is configured with replication factor 3 across 6 brokers, tolerating the loss of up to one broker without data loss or availability interruption."
+  maturity: designed
+  scope: "Confirmed for: claim-events topic broker replication. Covers broker-level failures; does not address AZ-level or region-level outages."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§4.1 paragraph 2"
+      excerpt: "claim-events topic has 12 partitions, replication factor 3, retention 7 days"
+  control_mappings:
+    nist_800_53r5: ["CP-9", "SI-13"]

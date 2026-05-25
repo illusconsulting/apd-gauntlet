@@ -1,0 +1,19 @@
+capability:
+  schema_version: 1
+  id: nonrep-cap-1ca07ca1
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  title: "Audit log captures authentication events and PHI access actions"
+  description: "The audit_log table records PHI access events, configuration changes, and authentication events, providing a baseline event record for regulatory audit purposes."
+  maturity: designed
+  scope: "Confirmed for: event types logged (PHI access, config changes, auth events). Does not include user-level attribution, integrity protection, or WORM enforcement."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§5.2 paragraph 1"
+      excerpt: "Audit entries (PHI access, configuration changes, authentication events) are written to a audit_log table"
+  control_mappings:
+    nist_800_53r5: ["AU-2", "AU-12"]
+  caveats:
+    - "Audit entries lack on-behalf-of user attribution; only service identity is recorded."
+    - "Table is mutable with no signing or WORM protection."

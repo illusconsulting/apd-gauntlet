@@ -1,0 +1,51 @@
+finding:
+  - schema_version: 1
+    id: nonrep-cf99a733
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Audit log omits on-behalf-of user identity for producer actions"
+    summary: "The audit log captures the producer service identity but not the end-user identity on whose behalf the action was taken, preventing attribution of PHI access to individual users."
+    detail: "The threat model explicitly notes that on-behalf-of user identity is NOT captured in audit entries. For HIPAA audit requirements, PHI access must be attributable to the individual user, not just the service. Without this attribution, a breach investigation cannot determine which user triggered a specific claim adjudication event, creating a regulatory gap."
+    evidence:
+      - artifact: threat-model.md
+        locator: "Repudiation paragraph 2"
+        excerpt: "Producer service identity captured in audit; on-behalf-of user identity is NOT captured"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-12", "AU-12(1)"]
+      mitre_attack:
+        - technique: "T1562"
+          sub_technique: null
+          tactic: "TA0005"
+          rationale: "Missing user attribution in audit logs prevents forensic reconstruction of PHI access chains, effectively impairing audit capability after a breach."
+    recommendation:
+      posture: required
+      summary: "Propagate authenticated user context through the producer call chain and include it in every audit log entry."
+      detail: "Implement JWT or SAML assertion forwarding from the edge authentication layer to the adjudication service. Include the user sub claim in the Kafka message header and audit log entry. This satisfies HIPAA audit trail requirements for individual user attribution."
+    related_concerns: [authenticity, immutability]
+
+  - schema_version: 1
+    id: nonrep-62124087
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Audit log entries are unsigned and stored in a mutable RDS table"
+    summary: "Audit log entries in the audit_log RDS table have no HMAC or digital signature, and the table is mutable, meaning records can be altered or deleted without detection."
+    detail: "The tech plan explicitly states there is 'no WORM enforcement at the database level' and the threat model confirms 'No HMAC or signing on audit entries; mutable table.' An insider threat or compromised admin can modify or delete audit records, destroying the evidentiary chain needed for HIPAA breach investigation and regulatory reporting. This is a merge candidate with the Immutability agent finding."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.2 paragraph 2"
+        excerpt: "normal append-only table with application-level discipline — no WORM enforcement"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(3)", "AU-10"]
+    recommendation:
+      posture: required
+      summary: "Add HMAC signing to audit log entries and enforce database-level WORM protection."
+      detail: "Sign each audit entry with a KMS-derived HMAC at write time. Migrate audit log storage to S3 with Object Lock (WORM) or use RDS with deletion protection and IAM-enforced append-only access. Verify integrity on a scheduled basis."
+    related_concerns: [immutability]

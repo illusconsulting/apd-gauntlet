@@ -1,0 +1,7 @@
+severity_disagreements:
+  - finding_id: merged-4dd83f6a
+    agent_severities:
+      non_repudiation: high
+      immutability: high
+    chosen_severity: critical
+    rationale: "Synthesizer elevates to critical because the combination of unsigned entries and mutable storage means the audit log cannot serve as evidence in HIPAA breach investigations, triggering regulatory breach-notification exposure beyond what either agent assessed in isolation."

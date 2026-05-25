@@ -1,0 +1,26 @@
+finding:
+  schema_version: 1
+  id: resil-0173b90b
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: "Consumer-side backpressure policy not specified for claim-events topic"
+  summary: "The threat model documents a producer rate limit but consumer-side backpressure and lag management are not specified, leaving unclear how the system handles consumer failures or slowdowns."
+  detail: "Without consumer backpressure controls, a lagging consumer (e.g., fraud detection service) can accumulate unbounded lag. Combined with 7-day topic retention, a sustained consumer outage will cause data loss once retention expires. The threat model explicitly calls out 'consumer side has no backpressure' but the tech plan does not address remediation."
+  evidence:
+    - artifact: threat-model.md
+      locator: "Denial of service paragraph 2"
+      excerpt: "Per-producer rate limit of 1000 msg/sec; consumer side has no backpressure"
+  prerequisite_evidence:
+    - "Consumer lag monitoring and alerting configuration"
+    - "Consumer group error handling and dead-letter topic policy"
+  control_mappings:
+    nist_800_53r5: ["SI-13", "SC-5"]
+  recommendation:
+    posture: recommended
+    summary: "Define consumer backpressure policy, lag alerting thresholds, and dead-letter topic strategy."
+    detail: "Configure consumer group lag alerting at 50% of retention window. Implement dead-letter topics for poison messages. Document the maximum acceptable consumer lag before manual intervention is required."
+  related_concerns: [availability]

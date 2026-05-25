@@ -1,0 +1,46 @@
+finding:
+  - schema_version: 1
+    id: avail-ce35b2ed
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "DR failover has not been tested in the past 12 months"
+    summary: "The tech plan documents RTO and RPO targets but acknowledges DR failover has not been exercised in over a year."
+    detail: "An untested DR procedure provides no assurance that RTO of 4 hours or RPO of 15 minutes can actually be met during an incident. NIST SP 800-34 requires periodic DR exercises. Without a tested runbook, the documented targets are aspirational rather than verified."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 paragraph 3"
+        excerpt: "DR failover has not been tested in the last 12 months"
+    control_mappings:
+      nist_800_53r5: ["CP-4", "CP-4(1)"]
+    recommendation:
+      posture: required
+      summary: "Execute a full DR failover test and update the runbook with observed RTO and RPO metrics."
+      detail: "Schedule a DR exercise within 90 days. Record actual RTO and RPO against targets. If targets are missed, update the SLO commitments or invest in automation to close the gap."
+    related_concerns: [resilient]
+
+  - schema_version: 1
+    id: avail-4e08f6d8
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: risk
+    severity: high
+    confidence: high
+    title: "99.95 percent SLO target with single-region active-passive topology"
+    summary: "The 99.95% availability SLO relies solely on multi-AZ within us-east-1; a regional AWS outage would breach this target."
+    detail: "us-east-1 experiences periodic multi-AZ outages that exceed the allowable downtime window for a 99.95% monthly SLO (approximately 22 minutes/month). The tech plan explicitly states cross-region failover is not yet implemented. The SLO target may be unachievable under realistic failure scenarios."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 paragraph 1"
+        excerpt: "system targets 99.95% uptime over a rolling 30-day window"
+    control_mappings:
+      nist_800_53r5: ["CP-7", "CP-9"]
+    recommendation:
+      posture: recommended
+      summary: "Implement cross-region active-passive or reduce the SLO commitment to match the single-region topology."
+      detail: "Either implement automated cross-region failover to a warm standby in us-west-2, or adjust the SLO to 99.9% to match demonstrated single-region resilience. Document the risk acceptance if adjusting the SLO."
+    related_concerns: [distributed]

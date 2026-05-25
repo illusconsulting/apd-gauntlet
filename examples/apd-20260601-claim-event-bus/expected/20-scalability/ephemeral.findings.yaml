@@ -1,0 +1,50 @@
+finding:
+  - schema_version: 1
+    id: ephem-bff0e958
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "KMS key rotation disabled in Terraform configuration"
+    summary: "The customer-managed KMS key for the MSK cluster has enable_key_rotation set to false, meaning the key material never rotates automatically."
+    detail: "A non-rotating KMS key accumulates cryptographic exposure over time. AWS best practice and NIST SP 800-57 recommend annual key rotation for symmetric keys protecting data at rest. The Terraform configuration explicitly sets this to false with a comment noting the intent. This compounds the risk identified in the Confidentiality agent regarding the KMS rotation gap."
+    evidence:
+      - artifact: iac/kafka.tf
+        locator: "resource aws_kms_key enable_key_rotation line"
+        excerpt: "enable_key_rotation = false # NOTE: rotation not enabled per current config"
+    cross_references:
+      - conf-98a543cd
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)"]
+    recommendation:
+      posture: required
+      summary: "Enable automatic KMS key rotation for the MSK cluster key."
+      detail: "Set enable_key_rotation = true in the aws_kms_key resource. AWS KMS will rotate the backing key material annually. Existing ciphertexts remain decryptable; no re-encryption is needed."
+    related_concerns: [confidentiality]
+
+  - schema_version: 1
+    id: ephem-eb51a236
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Service-to-service shared bearer tokens are static credentials"
+    summary: "Shared bearer tokens stored in HashiCorp Vault are long-lived static credentials with no documented rotation cadence."
+    detail: "Static long-lived credentials violate the ephemeral credential principle. A leaked token grants persistent access until manually revoked. Vault's dynamic secrets engine can issue short-lived tokens that expire automatically; the current architecture does not leverage this capability for service-to-service auth."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 4"
+        excerpt: "Service-to-service: shared bearer tokens stored in HashiCorp Vault"
+    cross_references:
+      - conf-e443de8b
+    control_mappings:
+      nist_800_53r5: ["IA-5(1)", "SC-12"]
+    recommendation:
+      posture: recommended
+      summary: "Migrate service-to-service auth to Vault dynamic secrets or mTLS with short-lived certificates."
+      detail: "Use Vault's AppRole or AWS IAM auth backend to issue short-lived tokens (TTL ≤ 1 hour). Alternatively, migrate to mTLS with certificates rotated via a service mesh CA."
+    related_concerns: [confidentiality, authenticity]

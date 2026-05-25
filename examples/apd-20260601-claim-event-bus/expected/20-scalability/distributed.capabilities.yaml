@@ -1,0 +1,19 @@
+capability:
+  schema_version: 1
+  id: dist-cap-f1542e43
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  title: "Multi-AZ active-passive deployment within us-east-1"
+  description: "The system uses multi-AZ active-passive within us-east-1, providing resilience against single-AZ failures for the Kafka cluster and RDS layer."
+  maturity: designed
+  scope: "Confirmed for: MSK cluster broker placement across AZs (6 brokers). Covers intra-region AZ failures only; cross-region failover not implemented."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§7 paragraph 1"
+      excerpt: "multi-AZ active-passive within that region"
+  control_mappings:
+    nist_800_53r5: ["CP-7", "CP-9"]
+  caveats:
+    - "Active-passive provides no protection against us-east-1 regional failures."
+    - "Cross-region failover explicitly noted as not yet implemented."

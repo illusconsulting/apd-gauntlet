@@ -1,0 +1,50 @@
+finding:
+  - schema_version: 1
+    id: immut-e09e4945
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Audit log table lacks WORM enforcement at the database level"
+    summary: "The audit_log RDS table is a mutable append-only table enforced only by application discipline, with no database-level or storage-level write-once protection."
+    detail: "Application-level append-only discipline can be bypassed by a DBA, compromised admin account, or SQL injection attack that escapes application controls. WORM enforcement at the database or storage layer (e.g., S3 Object Lock, RDS audit export to immutable storage) would prevent even privileged users from altering audit records. This is the storage-layer complement to the Non-Repudiation finding on audit log signing."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.2 paragraph 3"
+        excerpt: "application-level discipline — no WORM enforcement at the database level"
+    cross_references:
+      - nonrep-62124087
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(2)", "AU-9(3)"]
+    recommendation:
+      posture: required
+      summary: "Migrate audit log to immutable storage with object-lock or database-level WORM enforcement."
+      detail: "Export audit log entries to S3 with Object Lock in Compliance mode. Alternatively, enable RDS audit log export to CloudTrail or CloudWatch Logs with immutable retention. Remove DBA-level DELETE permissions on the audit_log table as an interim control."
+    related_concerns: [non_repudiation]
+
+  - schema_version: 1
+    id: immut-067a7391
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: low
+    title: "Backup immutability and object-lock policy not specified"
+    summary: "The tech plan does not specify whether database backups use immutable storage or object-lock policies, leaving the backup chain's integrity unverifiable."
+    detail: "Without knowing whether RDS snapshots or backup exports are stored with WORM protection, it is unclear if backup data can be altered or deleted by an attacker who gains S3 access. Immutable backups are a key control for ransomware resilience and forensic integrity."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.2 paragraph 1"
+        excerpt: "Adjudication outcomes are persisted to a PostgreSQL RDS cluster"
+    prerequisite_evidence:
+      - "Backup retention policy specifying storage location, immutability settings, and object-lock configuration"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "CP-9(8)"]
+    recommendation:
+      posture: recommended
+      summary: "Document and enforce immutable backup storage with object-lock for RDS snapshots."
+      detail: "Enable RDS automated backups with export to S3. Apply S3 Object Lock in Compliance mode with a retention period matching regulatory requirements (minimum 6 years for HIPAA). Document the policy in the DR runbook."
+    related_concerns: [availability, resilient]

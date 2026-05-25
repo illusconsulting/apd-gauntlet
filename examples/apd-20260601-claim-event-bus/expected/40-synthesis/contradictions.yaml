@@ -1,0 +1,8 @@
+contradictions:
+  - id: contra-a1b2c3d4
+    finding_id: conf-7aa376c5
+    capability_id: conf-cap-89e19793
+    finding_assertion: "PHI fields in the Kafka claim-events topic are protected only at the broker level; payload-level PHI is in plaintext."
+    capability_assertion: "Field-level envelope encryption is applied to PHI columns in member_demographics and claims tables at rest."
+    evidence_comparison: "Finding cites tech_plan.md §4.2 (Kafka broker encryption). Capability cites tech_plan.md §5.1 (RDS field-level encryption). The capability covers RDS storage; the finding covers Kafka topics. Different storage layers, different encryption postures."
+    recommended_resolution: "Reviewer confirm whether the field-level encryption capability's scope explicitly excludes Kafka payloads and update the capability scope statement accordingly. The finding and capability are not contradictory if scopes are clearly delimited."

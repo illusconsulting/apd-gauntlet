@@ -1,0 +1,21 @@
+capability:
+  schema_version: 1
+  id: intg-cap-d4ef7325
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: "TLS 1.2 or higher enforced on all Kafka transport paths"
+  description: "All communication between producers, brokers, and consumers uses TLS 1.2 or higher as configured in the MSK cluster, providing in-transit integrity protection at the transport layer."
+  maturity: implemented
+  scope: "Confirmed for: MSK cluster transport layer (client_broker=TLS, in_cluster=true). Does not cover payload-level end-to-end integrity."
+  evidence:
+    - artifact: iac/kafka.tf
+      locator: "resource aws_msk_cluster encryption_in_transit block"
+      excerpt: "client_broker = \"TLS\" in_cluster = true"
+    - artifact: tech_plan.md
+      locator: "§4.2 paragraph 4"
+      excerpt: "TLS 1.2+ in transit between producers, brokers, and consumers"
+  control_mappings:
+    nist_800_53r5: ["SC-8", "SC-8(1)"]
+  caveats:
+    - "Transport-layer TLS does not provide payload-level integrity; a compromised broker can still alter messages."

@@ -1,0 +1,78 @@
+components:
+  - name: "Kafka claim-events topic"
+    cells:
+      confidentiality:
+        findings: ["conf-7aa376c5"]
+        capabilities: ["conf-cap-d0590471"]
+        posture: gapped_and_covered
+      integrity:
+        findings: ["intg-42a3ebbd"]
+        capabilities: ["intg-cap-d4ef7325"]
+        posture: gapped_and_covered
+      availability:
+        findings: ["avail-ce35b2ed", "avail-4e08f6d8"]
+        capabilities: ["avail-cap-39c7f671"]
+        posture: gapped_and_covered
+      distributed:
+        findings: ["dist-d697bb34"]
+        capabilities: ["dist-cap-f1542e43"]
+        posture: gapped_and_covered
+      resilient:
+        findings: ["resil-0173b90b"]
+        capabilities: ["resil-cap-4a157ac3"]
+        posture: gapped_and_covered
+      ephemeral:
+        findings: ["ephem-bff0e958"]
+        capabilities: []
+        posture: gapped
+      authenticity:
+        findings: ["auth-dbba3dea", "auth-8d386c2f"]
+        capabilities: ["auth-cap-53d41613"]
+        posture: gapped_and_covered
+      non_repudiation:
+        findings: ["nonrep-cf99a733", "nonrep-62124087"]
+        capabilities: ["nonrep-cap-1ca07ca1"]
+        posture: gapped_and_covered
+      immutability:
+        findings: ["immut-e09e4945", "immut-067a7391"]
+        capabilities: ["immut-cap-3ce60962"]
+        posture: gapped_and_covered
+
+  - name: "RDS audit_log table"
+    cells:
+      confidentiality:
+        findings: []
+        capabilities: ["conf-cap-89e19793"]
+        posture: covered
+      integrity:
+        findings: ["intg-42a3ebbd"]
+        capabilities: []
+        posture: gapped
+      availability:
+        findings: ["immut-067a7391"]
+        capabilities: ["avail-cap-39c7f671"]
+        posture: gapped_and_covered
+      distributed:
+        findings: []
+        capabilities: []
+        posture: silent
+      resilient:
+        findings: []
+        capabilities: []
+        posture: silent
+      ephemeral:
+        findings: []
+        capabilities: []
+        posture: silent
+      authenticity:
+        findings: []
+        capabilities: []
+        posture: silent
+      non_repudiation:
+        findings: ["nonrep-cf99a733", "nonrep-62124087"]
+        capabilities: ["nonrep-cap-1ca07ca1"]
+        posture: gapped_and_covered
+      immutability:
+        findings: ["immut-e09e4945"]
+        capabilities: ["immut-cap-3ce60962"]
+        posture: gapped_and_covered

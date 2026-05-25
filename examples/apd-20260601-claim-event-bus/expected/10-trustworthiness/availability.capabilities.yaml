@@ -1,0 +1,18 @@
+capability:
+  schema_version: 1
+  id: avail-cap-39c7f671
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  title: "DR recovery time objective documented at four hours"
+  description: "The tech plan documents a 4-hour RTO and 15-minute RPO for the claim event bus system, providing a baseline for DR planning and SLO commitments."
+  maturity: designed
+  scope: "Confirmed as documented target for the claim event bus system. Not confirmed as tested or validated through DR exercise."
+  evidence:
+    - artifact: tech_plan.md
+      locator: "§6 paragraph 2"
+      excerpt: "RTO is 4 hours; RPO is 15 minutes"
+  control_mappings:
+    nist_800_53r5: ["CP-2", "CP-9"]
+  caveats:
+    - "DR procedure has not been tested in the last 12 months; RTO/RPO are design targets only."

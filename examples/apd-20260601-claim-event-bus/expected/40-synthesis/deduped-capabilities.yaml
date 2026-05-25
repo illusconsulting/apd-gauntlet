@@ -1,0 +1,183 @@
+capability:
+  - schema_version: 1
+    id: conf-cap-89e19793
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Field-level envelope encryption on PHI columns at rest"
+    description: "PHI columns in member_demographics and claims tables use field-level envelope encryption with DEKs from the KMS hierarchy."
+    maturity: designed
+    scope: "Confirmed for: member_demographics table (all PHI columns), claims table (member_id, drug_ndc, prescriber_npi). Not addressed: audit_log table, Kafka event payloads."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.1 paragraph 2"
+        excerpt: "field-level envelope encryption applied to PHI columns in the member_demographics and claims tables"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]
+
+  - schema_version: 1
+    id: conf-cap-d0590471
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "MSK cluster with KMS-managed at-rest encryption"
+    description: "The AWS MSK cluster uses a customer-managed KMS key for at-rest encryption of the Kafka log layer, providing broker-level data protection."
+    maturity: implemented
+    scope: "Confirmed for: MSK cluster pbm-claim-events broker storage. Scope is broker-level only; payload-level PHI remains in plaintext at the application layer."
+    evidence:
+      - artifact: iac/kafka.tf
+        locator: "resource aws_msk_cluster encryption_info block"
+        excerpt: "encryption_at_rest_kms_key_arn = aws_kms_key.kafka.arn"
+      - artifact: tech_plan.md
+        locator: "§4.2 paragraph 3"
+        excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
+    control_mappings:
+      nist_800_53r5: ["SC-28", "SC-28(1)"]
+    caveats:
+      - "KMS key rotation is disabled (enable_key_rotation = false). This is a finding tracked separately."
+
+  - schema_version: 1
+    id: intg-cap-d4ef7325
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "TLS 1.2 or higher enforced on all Kafka transport paths"
+    description: "All communication between producers, brokers, and consumers uses TLS 1.2 or higher as configured in the MSK cluster, providing in-transit integrity protection at the transport layer."
+    maturity: implemented
+    scope: "Confirmed for: MSK cluster transport layer (client_broker=TLS, in_cluster=true). Does not cover payload-level end-to-end integrity."
+    evidence:
+      - artifact: iac/kafka.tf
+        locator: "resource aws_msk_cluster encryption_in_transit block"
+        excerpt: "client_broker = \"TLS\" in_cluster = true"
+      - artifact: tech_plan.md
+        locator: "§4.2 paragraph 4"
+        excerpt: "TLS 1.2+ in transit between producers, brokers, and consumers"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "SC-8(1)"]
+    caveats:
+      - "Transport-layer TLS does not provide payload-level integrity; a compromised broker can still alter messages."
+
+  - schema_version: 1
+    id: avail-cap-39c7f671
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "DR recovery time objective documented at four hours"
+    description: "The tech plan documents a 4-hour RTO and 15-minute RPO for the claim event bus system, providing a baseline for DR planning and SLO commitments."
+    maturity: designed
+    scope: "Confirmed as documented target for the claim event bus system. Not confirmed as tested or validated through DR exercise."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 paragraph 2"
+        excerpt: "RTO is 4 hours; RPO is 15 minutes"
+    control_mappings:
+      nist_800_53r5: ["CP-2", "CP-9"]
+    caveats:
+      - "DR procedure has not been tested in the last 12 months; RTO/RPO are design targets only."
+
+  - schema_version: 1
+    id: dist-cap-f1542e43
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "Multi-AZ active-passive deployment within us-east-1"
+    description: "The system uses multi-AZ active-passive within us-east-1, providing resilience against single-AZ failures for the Kafka cluster and RDS layer."
+    maturity: designed
+    scope: "Confirmed for: MSK cluster broker placement across AZs (6 brokers). Covers intra-region AZ failures only; cross-region failover not implemented."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 paragraph 1"
+        excerpt: "multi-AZ active-passive within that region"
+    control_mappings:
+      nist_800_53r5: ["CP-7", "CP-9"]
+    caveats:
+      - "Active-passive provides no protection against us-east-1 regional failures."
+      - "Cross-region failover explicitly noted as not yet implemented."
+
+  - schema_version: 1
+    id: resil-cap-4a157ac3
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Kafka replication factor 3 provides broker-level fault tolerance"
+    description: "The claim-events topic is configured with replication factor 3 across 6 brokers, tolerating the loss of up to one broker without data loss or availability interruption."
+    maturity: designed
+    scope: "Confirmed for: claim-events topic broker replication. Covers broker-level failures; does not address AZ-level or region-level outages."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4.1 paragraph 2"
+        excerpt: "claim-events topic has 12 partitions, replication factor 3, retention 7 days"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "SI-13"]
+
+  - schema_version: 1
+    id: ephem-cap-32d883ee
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    title: "HashiCorp Vault centrally manages service-to-service token lifecycle"
+    description: "Bearer tokens for service-to-service authentication are stored and managed in HashiCorp Vault, providing a single control plane for token issuance and revocation."
+    maturity: designed
+    scope: "Confirmed for: service-to-service bearer token storage. Vault provides revocation capability; dynamic short-lived token issuance is not yet in use."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 4"
+        excerpt: "shared bearer tokens stored in HashiCorp Vault"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "SC-28"]
+    caveats:
+      - "Tokens are static and long-lived; Vault dynamic secrets not yet leveraged for short TTLs."
+
+  - schema_version: 1
+    id: auth-cap-53d41613
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "Okta SAML SSO with mandatory MFA for internal admin tools"
+    description: "Internal admin tools require SAML SSO through Okta with MFA enforced at the identity provider level, providing a centralized authentication control point."
+    maturity: designed
+    scope: "Confirmed for: internal admin tools via SAML SSO with MFA required. Does not cover member portal (separate Okta application with SMS fallback) or service-to-service auth."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 paragraph 2"
+        excerpt: "Internal admin tools: SAML SSO with Okta, MFA required"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-8"]
+
+  - schema_version: 1
+    id: nonrep-cap-1ca07ca1
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    title: "Audit log captures authentication events and PHI access actions"
+    description: "The audit_log table records PHI access events, configuration changes, and authentication events, providing a baseline event record for regulatory audit purposes."
+    maturity: designed
+    scope: "Confirmed for: event types logged (PHI access, config changes, auth events). Does not include user-level attribution, integrity protection, or WORM enforcement."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.2 paragraph 1"
+        excerpt: "Audit entries (PHI access, configuration changes, authentication events) are written to a audit_log table"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-12"]
+    caveats:
+      - "Audit entries lack on-behalf-of user attribution; only service identity is recorded."
+      - "Table is mutable with no signing or WORM protection."
+
+  - schema_version: 1
+    id: immut-cap-3ce60962
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    title: "RDS cluster with deletion protection enabled for adjudication data"
+    description: "The PostgreSQL RDS cluster stores adjudication outcomes with deletion protection preventing accidental or unauthorized cluster deletion, providing a baseline level of data persistence."
+    maturity: designed
+    scope: "Covers RDS cluster-level deletion protection only. Does not address table-level mutability, backup immutability, or audit log WORM protection."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5.1 paragraph 1"
+        excerpt: "Adjudication outcomes are persisted to a PostgreSQL RDS cluster"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "SI-12"]
+    caveats:
+      - "No evidence of RDS deletion protection configuration in IaC artifacts."
+      - "audit_log table has no WORM enforcement; mutable by privileged database users."
