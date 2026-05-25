@@ -1,14 +1,18 @@
 """Tests for the check-ids command."""
 from __future__ import annotations
+
 import pathlib
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 
 def test_check_ids_on_clean_finding(tmp_path):
     runner = CliRunner()
     # The clean-run fixture's finding has a deterministic id, so this should pass.
-    target = pathlib.Path("tests/fixtures/runs/clean-run/10-trustworthiness/confidentiality.findings.yaml")
+    target = pathlib.Path(
+        "tests/fixtures/runs/clean-run/10-trustworthiness/confidentiality.findings.yaml"
+    )
     result = runner.invoke(main, ["check-ids", str(target)])
     assert result.exit_code == 0, result.output
 

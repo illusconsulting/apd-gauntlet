@@ -1,5 +1,6 @@
 """Semantic lints — checks JSON Schema cannot express."""
 from __future__ import annotations
+
 import hashlib
 import re
 from typing import Any
@@ -75,11 +76,14 @@ def check_hedge_words_in_attack_rationale(record: dict[str, Any]) -> list[str]:
         rationale = entry.get("rationale", "")
         hits = HEDGE_WORDS.findall(rationale)
         if hits:
-            warnings.append(f"mitre_attack[{i}].rationale uses hedge words: {sorted(set(h.lower() for h in hits))}")
+            unique = sorted({h.lower() for h in hits})
+            warnings.append(f"mitre_attack[{i}].rationale uses hedge words: {unique}")
     return warnings
 
 
-def check_capability_maturity_evidence(record: dict[str, Any], tech_plan_artifacts: set[str]) -> list[str]:
+def check_capability_maturity_evidence(
+    record: dict[str, Any], tech_plan_artifacts: set[str]
+) -> list[str]:
     """Capability maturity >= implemented requires at least one non-tech-plan evidence entry."""
     if record.get("maturity") not in {"implemented", "tested", "operationalized"}:
         return []

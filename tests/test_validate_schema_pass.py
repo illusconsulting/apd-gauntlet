@@ -1,9 +1,11 @@
 """Pass-1 tests: schema validation of records in a run directory."""
 from __future__ import annotations
+
 import pathlib
 import shutil
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "runs"
 

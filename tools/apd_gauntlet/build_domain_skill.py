@@ -1,8 +1,10 @@
 """Compose .claude/skills/apd-domain/SKILL.md from a domain pack."""
 from __future__ import annotations
+
 import datetime
 import json
 import pathlib
+
 import yaml
 from jsonschema import Draft202012Validator
 
@@ -10,10 +12,13 @@ REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 DOMAIN_SCHEMA = json.loads((REPO / "schemas" / "domain.schema.json").read_text())
 
 
-def _parse_semver_range(spec: str) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
+SemverTuple = tuple[int, int, int]
+
+
+def _parse_semver_range(spec: str) -> tuple[SemverTuple | None, SemverTuple | None]:
     """Minimal '>=1.0.0,<2.0.0'-style range parser."""
-    lo: tuple[int, int, int] | None = None
-    hi: tuple[int, int, int] | None = None
+    lo: SemverTuple | None = None
+    hi: SemverTuple | None = None
     for tok in spec.split(","):
         tok = tok.strip()
         if tok.startswith(">="):
@@ -31,9 +36,7 @@ def _version_in_range(version: str, spec: str) -> bool:
     lo, hi = _parse_semver_range(spec)
     if lo is not None and v < lo:
         return False
-    if hi is not None and v >= hi:
-        return False
-    return True
+    return not (hi is not None and v >= hi)
 
 
 def build_domain_skill(
@@ -61,12 +64,12 @@ def build_domain_skill(
             sections.append(f"\n\n## Source: `{f.relative_to(pack_dir)}`\n\n")
             sections.append(f.read_text())
 
-    timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     frontmatter = (
         "---\n"
         "name: apd-domain\n"
-        "description: Active domain pack content — severity rubric, consequential actions, common patterns. "
-        "Generated from a domain pack at build time; do not edit by hand.\n"
+        "description: Active domain pack content — severity rubric, consequential actions,"
+        " common patterns. Generated from a domain pack at build time; do not edit by hand.\n"
         "metadata:\n"
         f"  pack: {meta['name']}\n"
         f"  pack_version: {meta['version']}\n"

@@ -1,7 +1,10 @@
-"""Schema validation tests for contradiction, severity-disagreement, coverage-matrix, nist-coverage, attack-exposure, and domain records."""
+"""Schema validation tests for contradiction, severity-disagreement, coverage-matrix,
+nist-coverage, attack-exposure, and domain records."""
 from __future__ import annotations
+
 import json
 import pathlib
+
 import pytest
 import yaml
 from jsonschema import Draft202012Validator
@@ -17,7 +20,7 @@ KINDS = {
     "coverage-matrix":       ("coverage-matrix.schema.json",       "component"),
     "nist-coverage":         ("nist-coverage.schema.json",         "control"),
     "attack-exposure":       ("attack-exposure.schema.json",       "technique"),
-    "domain":                ("domain.schema.json",                None),  # root-level, no wrapping key
+    "domain": ("domain.schema.json", None),  # root-level, no wrapping key
 }
 
 

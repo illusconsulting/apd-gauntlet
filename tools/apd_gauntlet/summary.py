@@ -1,8 +1,10 @@
 """Run summary statistics."""
 from __future__ import annotations
+
 import pathlib
 from collections import Counter
 from typing import Any
+
 import yaml
 
 from .validate import _iter_records

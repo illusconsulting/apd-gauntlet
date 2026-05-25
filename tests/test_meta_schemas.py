@@ -1,7 +1,9 @@
 """Verify every schema under schemas/ is itself a valid JSON Schema draft 2020-12 document."""
 from __future__ import annotations
+
 import json
 import pathlib
+
 import pytest
 from jsonschema import Draft202012Validator
 

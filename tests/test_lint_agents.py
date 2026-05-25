@@ -1,8 +1,10 @@
 """Tests for the lint-agents command."""
 from __future__ import annotations
+
 import pathlib
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 REPO = pathlib.Path(__file__).parent.parent
 

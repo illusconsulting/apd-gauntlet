@@ -1,11 +1,21 @@
 """Pass-2 tests: semantic lints (excerpt length, id determinism, hedge words, maturity)."""
 from __future__ import annotations
+
 import pathlib
 import shutil
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "runs"
+
+_MITRE_SNIPPET = (
+    'nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]\n    mitre_attack:\n'
+    "      - technique: \"T1530\"\n        sub_technique: null\n"
+    "        tactic: \"TA0010\"\n"
+    "        rationale: \"Broker compromise could potentially enable"
+    " data exfiltration in theory.\""
+)
 
 
 def _copy_clean_run(tmp_path):
@@ -54,27 +64,22 @@ def test_hedge_word_warned(tmp_path):
     f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
     text = f.read_text()
     # Append a mitre_attack entry under control_mappings.
-    text = text.replace(
-        'nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]',
-        'nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]\n    mitre_attack:\n      - technique: "T1530"\n        sub_technique: null\n        tactic: "TA0010"\n        rationale: "Broker compromise could potentially enable data exfiltration in theory."',
-    )
+    text = text.replace('nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]', _MITRE_SNIPPET)
     f.write_text(text)
     runner = CliRunner()
     # Default: hedge words are warnings, not errors → exit 0.
     result = runner.invoke(main, ["validate", str(dst)])
     assert result.exit_code == 0
     assert "warning" in result.output.lower()
-    assert "hedge" in result.output.lower() or "could" in result.output.lower() or "potentially" in result.output.lower()
+    out = result.output.lower()
+    assert "hedge" in out or "could" in out or "potentially" in out
 
 
 def test_strict_promotes_hedge_warning_to_error(tmp_path):
     dst = _copy_clean_run(tmp_path)
     f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
     text = f.read_text()
-    text = text.replace(
-        'nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]',
-        'nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]\n    mitre_attack:\n      - technique: "T1530"\n        sub_technique: null\n        tactic: "TA0010"\n        rationale: "Broker compromise could potentially enable data exfiltration in theory."',
-    )
+    text = text.replace('nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]', _MITRE_SNIPPET)
     f.write_text(text)
     runner = CliRunner()
     result = runner.invoke(main, ["validate", "--strict", str(dst)])
@@ -82,7 +87,7 @@ def test_strict_promotes_hedge_warning_to_error(tmp_path):
 
 
 def test_capability_maturity_implemented_requires_non_tech_plan_evidence(tmp_path):
-    """When a capability declares maturity=implemented but cites only tech_plan evidence, Pass 2 flags it."""
+    """maturity=implemented with only tech_plan evidence — Pass 2 flags it."""
     dst = _copy_clean_run(tmp_path)
     f = dst / "10-trustworthiness" / "confidentiality.capabilities.yaml"
     text = f.read_text()
@@ -90,6 +95,7 @@ def test_capability_maturity_implemented_requires_non_tech_plan_evidence(tmp_pat
     f.write_text(text)
     runner = CliRunner()
     # Pass 2 alone doesn't have tech_plan_artifacts set, so this won't fire until Pass 3.
-    # Run --schema-only to confirm Pass 1 alone doesn't catch it; Pass 3 is tested in test_validate_cross_file.py.
+    # Run --schema-only to confirm Pass 1 alone doesn't catch it;
+    # Pass 3 is tested in test_validate_cross_file.py.
     result = runner.invoke(main, ["validate", "--schema-only", str(dst)])
     assert result.exit_code == 0  # schema allows maturity=implemented at the schema level

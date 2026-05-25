@@ -1,9 +1,10 @@
 """Tests for the refresh-mitre command (network mocked)."""
 from __future__ import annotations
-import json
-from unittest.mock import patch, MagicMock
-from apd_gauntlet.refresh_mitre import fetch_and_project
 
+import json
+from unittest.mock import MagicMock, patch
+
+from apd_gauntlet.refresh_mitre import fetch_and_project
 
 FAKE_BUNDLE = {
     "created": "2026-01-01",

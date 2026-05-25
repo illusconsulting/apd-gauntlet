@@ -1,9 +1,10 @@
 """Lint agent files for valid frontmatter and resolved Required reading paths."""
 from __future__ import annotations
+
 import pathlib
 import re
-import yaml
 
+import yaml
 
 FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 REQUIRED_READING_PATTERN = re.compile(r"`([^`]+\.md)`")

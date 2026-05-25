@@ -1,12 +1,18 @@
 """Scaffold a runs/<run-id>/ directory."""
 from __future__ import annotations
+
 import pathlib
 import shutil
 
-SUBDIRS = ["inputs", "00-context", "10-trustworthiness", "20-scalability", "30-auditability", "40-synthesis"]
+SUBDIRS = [
+    "inputs", "00-context", "10-trustworthiness",
+    "20-scalability", "30-auditability", "40-synthesis",
+]
 
 
-def scaffold_run(run_id: str, inputs_src: pathlib.Path, domain: str, root: pathlib.Path) -> pathlib.Path:
+def scaffold_run(
+    run_id: str, inputs_src: pathlib.Path, domain: str, root: pathlib.Path
+) -> pathlib.Path:
     run_dir = root / run_id
     for sub in SUBDIRS:
         (run_dir / sub).mkdir(parents=True, exist_ok=True)

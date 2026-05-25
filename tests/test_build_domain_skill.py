@@ -1,7 +1,8 @@
 """Tests for the build-domain-skill command."""
 from __future__ import annotations
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 
 def test_build_domain_skill_emits_expected_file(tmp_path):

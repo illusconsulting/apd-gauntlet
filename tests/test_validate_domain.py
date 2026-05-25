@@ -1,8 +1,8 @@
 """Tests for the validate-domain command."""
 from __future__ import annotations
-import pathlib
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 
 def test_validate_domain_sample_fixture():

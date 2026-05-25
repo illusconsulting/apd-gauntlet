@@ -1,7 +1,9 @@
 """Schema validation tests for capability records."""
 from __future__ import annotations
+
 import json
 import pathlib
+
 import pytest
 import yaml
 from jsonschema import Draft202012Validator

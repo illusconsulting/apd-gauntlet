@@ -1,5 +1,6 @@
 """Refresh the cached MITRE ATT&CK mitigation→technique crosswalk."""
 from __future__ import annotations
+
 import json
 import pathlib
 import urllib.request
@@ -20,11 +21,19 @@ def fetch_and_project(out_path: pathlib.Path) -> None:
         src = by_id.get(obj.get("source_ref")) or {}
         tgt = by_id.get(obj.get("target_ref")) or {}
         mit_id = next(
-            (r["external_id"] for r in src.get("external_references", []) if r.get("source_name") == "mitre-attack"),
+            (
+                r["external_id"]
+                for r in src.get("external_references", [])
+                if r.get("source_name") == "mitre-attack"
+            ),
             None,
         )
         tech_id = next(
-            (r["external_id"] for r in tgt.get("external_references", []) if r.get("source_name") == "mitre-attack"),
+            (
+                r["external_id"]
+                for r in tgt.get("external_references", [])
+                if r.get("source_name") == "mitre-attack"
+            ),
             None,
         )
         if mit_id and tech_id:

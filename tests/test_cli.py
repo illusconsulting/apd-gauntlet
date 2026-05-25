@@ -1,7 +1,8 @@
 """Smoke tests for the apd-gauntlet CLI entry point."""
 from __future__ import annotations
-from click.testing import CliRunner
+
 from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 
 def test_cli_shows_help():

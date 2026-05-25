@@ -1,12 +1,16 @@
 """Validation engine — Pass 1 (schema), Pass 2 (semantic lints), Pass 3 (cross-file)."""
 from __future__ import annotations
+
 import json
 import pathlib
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
+
 import yaml
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
+
 from . import linters
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -58,10 +62,14 @@ class ValidationReport:
 
 
 def _build_registry() -> Registry:
-    finding    = Resource.from_contents(json.loads((SCHEMAS_DIR / "finding.schema.json").read_text()))
-    capability = Resource.from_contents(json.loads((SCHEMAS_DIR / "capability.schema.json").read_text()))
+    finding = Resource.from_contents(
+        json.loads((SCHEMAS_DIR / "finding.schema.json").read_text())
+    )
+    capability = Resource.from_contents(
+        json.loads((SCHEMAS_DIR / "capability.schema.json").read_text())
+    )
     return Registry().with_resources([
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json",    finding),
+        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json", finding),
         ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability),
     ])
 
@@ -98,7 +106,9 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     for path, kind, record in _iter_records(run_dir):
         seen_files.add(path)
         if "_parse_error" in record:
-            report.errors.append(Violation(path, None, f"YAML parse error: {record['_parse_error']}"))
+            report.errors.append(
+                Violation(path, None, f"YAML parse error: {record['_parse_error']}")
+            )
             continue
         report.records_seen += 1
         validator = validators[kind]
@@ -122,7 +132,10 @@ def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:
     return yaml.safe_load(text[4:end]) or {}
 
 
-def run_semantic_pass(run_dir: pathlib.Path, tech_plan_artifacts: set[str] | None = None) -> ValidationReport:
+def run_semantic_pass(
+    run_dir: pathlib.Path,
+    tech_plan_artifacts: set[str] | None = None,
+) -> ValidationReport:
     """Pass 2: semantic lints that JSON Schema cannot express."""
     tech_plan_artifacts = tech_plan_artifacts or set()
     report = ValidationReport()
@@ -156,8 +169,10 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     report = ValidationReport()
     brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
     artifacts_meta = brief.get("artifacts") or []
-    known_artifacts:    set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}
-    tech_plan_artifacts: set[str] = {a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"}
+    known_artifacts: set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}
+    tech_plan_artifacts: set[str] = {
+        a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"
+    }
 
     # Collect all finding/capability IDs.
     finding_ids:    set[str] = set()
@@ -183,7 +198,9 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
         for i, ev in enumerate(record.get("evidence", [])):
             art = ev.get("artifact")
             if known_artifacts and art not in known_artifacts:
-                report.errors.append(Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief"))
+                report.errors.append(
+                    Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief")
+                )
         for ref in record.get("cross_references", []):
             if ref not in finding_ids:
                 report.errors.append(Violation(path, rid, f"cross_reference {ref} not found"))
@@ -206,9 +223,15 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
             fid = entry.get("finding_id")
             cid = entry.get("capability_id")
             if fid and fid not in finding_ids:
-                report.errors.append(Violation(contradictions_path, entry.get("id"), f"finding_id {fid} not found"))
+                report.errors.append(
+                    Violation(contradictions_path, entry.get("id"), f"finding_id {fid} not found")
+                )
             if cid and cid not in capability_ids:
-                report.errors.append(Violation(contradictions_path, entry.get("id"), f"capability_id {cid} not found"))
+                report.errors.append(
+                    Violation(
+                        contradictions_path, entry.get("id"), f"capability_id {cid} not found"
+                    )
+                )
 
     report.files_seen = len(seen_files)
     return report
