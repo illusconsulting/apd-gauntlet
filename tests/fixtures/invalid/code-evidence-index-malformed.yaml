@@ -1,0 +1,12 @@
+code_evidence_index:
+  indexed_commit_sha: "not-a-sha"
+  cbm_project: "claim-event-bus"
+  generated_at: "yesterday"
+  entries:
+    - id: "wrong-prefix-12345678"
+      qualified_name: "x"
+      kind: "not-a-real-kind"
+      file_path: "../escape/attempt.py"
+      line_range: "lines 1 through 5"
+      excerpt: ""
+      apd_relevance: [made_up_lens]
