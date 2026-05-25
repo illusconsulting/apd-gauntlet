@@ -3,7 +3,7 @@ from __future__ import annotations
 import pathlib
 import click
 from . import __version__
-from .validate import run_schema_pass, run_semantic_pass, ValidationReport
+from .validate import run_schema_pass, run_semantic_pass, run_cross_file_pass, ValidationReport
 
 
 @click.group(
@@ -25,11 +25,12 @@ def validate(run_dir, schema_only, strict, as_json):
     if schema_only:
         merged = schema_rep
     else:
-        semantic_rep = run_semantic_pass(run_dir)
+        semantic_rep   = run_semantic_pass(run_dir)
+        cross_file_rep = run_cross_file_pass(run_dir)
         merged = ValidationReport(
-            errors=schema_rep.errors + semantic_rep.errors,
-            warnings=schema_rep.warnings + semantic_rep.warnings,
-            files_seen=max(schema_rep.files_seen, semantic_rep.files_seen),
+            errors=schema_rep.errors + semantic_rep.errors + cross_file_rep.errors,
+            warnings=schema_rep.warnings + semantic_rep.warnings + cross_file_rep.warnings,
+            files_seen=max(schema_rep.files_seen, semantic_rep.files_seen, cross_file_rep.files_seen),
             records_seen=schema_rep.records_seen,
         )
     if strict:

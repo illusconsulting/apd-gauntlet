@@ -109,6 +109,19 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     return report
 
 
+def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:
+    """Extract the YAML frontmatter block from context-brief.md."""
+    if not brief_path.exists():
+        return {}
+    text = brief_path.read_text()
+    if not text.startswith("---\n"):
+        return {}
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        return {}
+    return yaml.safe_load(text[4:end]) or {}
+
+
 def run_semantic_pass(run_dir: pathlib.Path, tech_plan_artifacts: set[str] | None = None) -> ValidationReport:
     """Pass 2: semantic lints that JSON Schema cannot express."""
     tech_plan_artifacts = tech_plan_artifacts or set()
@@ -134,5 +147,68 @@ def run_semantic_pass(run_dir: pathlib.Path, tech_plan_artifacts: set[str] | Non
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_capability_maturity_evidence(record, tech_plan_artifacts):
                 report.errors.append(Violation(path, rid, msg))
+    report.files_seen = len(seen_files)
+    return report
+
+
+def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
+    """Pass 3: cross-file ID and artifact resolution."""
+    report = ValidationReport()
+    brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
+    artifacts_meta = brief.get("artifacts") or []
+    known_artifacts:    set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}
+    tech_plan_artifacts: set[str] = {a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"}
+
+    # Collect all finding/capability IDs.
+    finding_ids:    set[str] = set()
+    capability_ids: set[str] = set()
+    for _path, kind, record in _iter_records(run_dir):
+        if "_parse_error" in record:
+            continue
+        rid = record.get("id")
+        if not rid:
+            continue
+        if kind == "finding":
+            finding_ids.add(rid)
+        else:
+            capability_ids.add(rid)
+
+    # Verify cross_references, merged_from, and evidence artifacts.
+    seen_files: set[pathlib.Path] = set()
+    for path, _kind, record in _iter_records(run_dir):
+        if "_parse_error" in record:
+            continue
+        seen_files.add(path)
+        rid = record.get("id")
+        for i, ev in enumerate(record.get("evidence", [])):
+            art = ev.get("artifact")
+            if known_artifacts and art not in known_artifacts:
+                report.errors.append(Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief"))
+        for ref in record.get("cross_references", []):
+            if ref not in finding_ids:
+                report.errors.append(Violation(path, rid, f"cross_reference {ref} not found"))
+        for ref in record.get("merged_from", []):
+            if ref not in finding_ids:
+                report.errors.append(Violation(path, rid, f"merged_from {ref} not found"))
+
+    # Re-run the maturity-vs-evidence lint with the real tech-plan set.
+    if tech_plan_artifacts:
+        sem = run_semantic_pass(run_dir, tech_plan_artifacts=tech_plan_artifacts)
+        for v in sem.errors:
+            if "non-tech-plan evidence" in v.message:
+                report.errors.append(v)
+
+    # Contradictions reference real IDs.
+    contradictions_path = run_dir / "40-synthesis" / "contradictions.yaml"
+    if contradictions_path.exists():
+        data = yaml.safe_load(contradictions_path.read_text()) or {}
+        for entry in (data.get("contradictions") or []):
+            fid = entry.get("finding_id")
+            cid = entry.get("capability_id")
+            if fid and fid not in finding_ids:
+                report.errors.append(Violation(contradictions_path, entry.get("id"), f"finding_id {fid} not found"))
+            if cid and cid not in capability_ids:
+                report.errors.append(Violation(contradictions_path, entry.get("id"), f"capability_id {cid} not found"))
+
     report.files_seen = len(seen_files)
     return report
