@@ -4,6 +4,7 @@ import pathlib
 import click
 from . import __version__
 from .validate import run_schema_pass, run_semantic_pass, run_cross_file_pass, ValidationReport
+from .init_run import scaffold_run
 
 
 @click.group(
@@ -47,6 +48,16 @@ def validate(run_dir, schema_only, strict, as_json):
     else:
         click.echo(merged.render())
     raise SystemExit(0 if merged.is_clean else 1)
+
+
+@main.command("init-run", help="Scaffold runs/<run-id>/ with subdirectories and copy input artifacts.")
+@click.argument("run_id")
+@click.option("--inputs", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path), required=True)
+@click.option("--domain", default="pbm", show_default=True)
+@click.option("--root", type=click.Path(file_okay=False, path_type=pathlib.Path), default=pathlib.Path("runs"), show_default=True)
+def init_run_cmd(run_id, inputs, domain, root):
+    target = scaffold_run(run_id, inputs, domain, root)
+    click.echo(f"Run scaffolded at {target}")
 
 
 if __name__ == "__main__":
