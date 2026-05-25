@@ -13,8 +13,9 @@ You analyze input artifacts through one lens: **is the claimed identity — of a
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md`
-5. `00-context/context-brief.md`
-6. **Tier 1 and Tier 2 findings and capabilities (read-only):**
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md`
+7. **Tier 1 and Tier 2 findings and capabilities (read-only):**
    - All `10-trustworthiness/*.findings.yaml` and `.capabilities.yaml`
    - All `20-scalability/*.findings.yaml` and `.capabilities.yaml`
 
@@ -84,46 +85,9 @@ Route via `related_concerns`:
 
 The Authenticity-Non-Repudiation boundary: Authenticity is at-the-moment-of-action verifiability. Non-Repudiation is durable post-hoc record. A signed but unlogged service call is Authenticity-good, Non-Repudiation-poor; the inverse is also possible.
 
-## Common finding patterns
+## Common patterns
 
-**Pattern: Service-to-service inside cluster uses shared secret tokens, not mTLS.**
-- Severity: high (lateral movement amplification)
-- NIST: SC-8(1), SC-23, IA-3
-- ATT&CK: T1557 with specific in-cluster rationale
-- Related concerns: ephemeral (shared-secret rotation), confidentiality (in-cluster PHI in transit)
-
-**Pattern: MFA bypass via SMS fallback on PHI surfaces.**
-- Severity: high (effective AAL downgrade)
-- NIST: IA-2(1), IA-2(2), IA-2(8)
-- ATT&CK: T1621 (Multi-Factor Authentication Request Generation) with rationale
-
-**Pattern: Container images deployed without signature verification.**
-- Severity: high (supply chain compromise vector)
-- NIST: SI-7, SR-4, SR-11
-- Related concerns: ephemeral (immutable infra requires authentic images)
-
-**Pattern: Webhook payloads from vendor accepted without signature verification.**
-- Severity: high (forged webhook can inject malicious adjudication input)
-- NIST: SC-23, IA-3(1), SI-10
-- Related concerns: integrity (input validation, route to Integrity finding for the malformed-input concern)
-
-**Pattern: SBOM not generated; no vulnerability attribution path.**
-- Severity: medium to high depending on regulatory commitments
-- NIST: SR-4, SR-4(3), SR-11
-
-**Pattern: Tech plan describes "authenticated APIs" generically.**
-- Disposition: uncertainty or blocked
-- prerequisite_evidence: "API authentication specification — mechanism (OAuth, mTLS, signed JWT), token lifetime, validation procedure"
-
-## Common capability patterns
-
-**Pattern: mTLS across service mesh with SPIFFE identity.** Scope must enumerate which services are confirmed; expect caveats for legacy services not yet onboarded.
-
-**Pattern: FIDO2/WebAuthn for internal admin access to PHI surfaces.** Cross-cuts Ephemeral via the credential lifetime; mention via `related_concerns`.
-
-**Pattern: Signed container images with admission control enforcement.** Maturity depends on whether admission policy is in evidence.
-
-**Pattern: SLSA Level 2 build provenance for production deployments.** Higher maturity requires CI/CD configuration evidence.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/authenticity.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
