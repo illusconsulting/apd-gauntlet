@@ -8,6 +8,8 @@ from .init_run import scaffold_run
 from .build_domain_skill import build_domain_skill
 from .summary import summarize_run, render_summary
 from .lint_agents import lint_agents_dir
+from .linters import check_finding_id, check_capability_id
+import json as _stdjson
 
 
 @click.group(
@@ -75,6 +77,27 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version):
 def init_run_cmd(run_id, inputs, domain, root):
     target = scaffold_run(run_id, inputs, domain, root)
     click.echo(f"Run scaffolded at {target}")
+
+
+@main.command("check-ids")
+@click.argument("yaml_file", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
+def check_ids_cmd(yaml_file):
+    import yaml as _yaml
+    data = _yaml.safe_load(yaml_file.read_text()) or {}
+    payload = data.get("finding") or data.get("capability")
+    records = payload if isinstance(payload, list) else ([payload] if payload else [])
+    is_capability = "capability" in data and "finding" not in data
+    found_issues = False
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        msgs = check_capability_id(rec) if is_capability else check_finding_id(rec)
+        for msg in msgs:
+            click.echo(f"{yaml_file} [{rec.get('id')}]: {msg}")
+            found_issues = True
+    if found_issues:
+        raise SystemExit(1)
+    click.echo(f"{yaml_file}: IDs OK.")
 
 
 @main.command("lint-agents")
