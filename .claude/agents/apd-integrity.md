@@ -13,7 +13,8 @@ You analyze input artifacts through one lens: **is the data what it should be, a
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md` — Integrity NIST and ATT&CK mapping
-5. `00-context/context-brief.md`
+5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+6. `00-context/context-brief.md`
 
 ## Inputs and output
 
@@ -80,41 +81,9 @@ Route via `related_concerns`:
 - **Can the write or its target be altered after the fact undetectably?** → Immutability
 - **What encryption protects the data being written?** → Confidentiality (rare; usually a separate lens)
 
-## Common finding patterns
+## Common patterns
 
-**Pattern: Event bus messages lack producer signatures; consumers trust payload contents.**
-- Severity: high if PHI or adjudication input is involved; medium otherwise
-- NIST: SI-7, SI-7(1), SC-8(1), SC-16
-- Related concerns: authenticity (producer identity)
-
-**Pattern: Idempotency claimed at API but key derivation is request-body hash.**
-- Severity: medium to high depending on adjudication impact (a malicious or accidental change to a single field defeats dedup)
-- NIST: SI-10, SI-7
-- Detail must call out the specific risk: client retry under transient network failure produces double-adjudication if the body changed between attempts.
-
-**Pattern: NCPDP D.0 transactions accepted without field-level validation beyond standard syntax.**
-- Severity: medium (downstream errors, possible adjudication errors)
-- NIST: SI-10
-- Related concerns: availability (malformed input causing cascading failure)
-
-**Pattern: Formulary configuration is application-managed with no integrity check.**
-- Severity: critical to high (corruption affects therapeutic decisions)
-- NIST: SI-7(7), CM-3, CM-5
-- Related concerns: immutability (historical configuration drift), non_repudiation (who changed configuration)
-
-**Pattern: Tech plan describes "data validation" generically without specifying which fields, what rules, or what error handling.**
-- Disposition: blocked or uncertainty
-- prerequisite_evidence: "Validation rule specification — fields, rules, error handling, dead-letter policy"
-
-## Common capability patterns
-
-**Pattern: Typed schema (Protobuf or GraphQL) enforced at every service boundary.** Capability scope must enumerate which boundaries are confirmed.
-
-**Pattern: Idempotent claim adjudication keyed by claim ID and submission sequence.** Maturity tied to whether the idempotency window and key retention are specified.
-
-**Pattern: HMAC-signed event payloads on the claim event bus.** Capability scope must specify which topics are confirmed; caveats for any topics not in evidence.
-
-**Pattern: Configuration-as-code for plan rules with reviewed PRs gating changes.** Often `designed` from tech plan; `implemented` or higher requires repository or pipeline evidence.
+Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/integrity.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
 ## Self-check before emitting
 
