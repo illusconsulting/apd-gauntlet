@@ -1,0 +1,50 @@
+name: Domain pack proposal
+description: Propose a new domain pack (e.g. SaaS, banking, healthcare)
+labels: ["domain-pack", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new domain pack. Please describe the target domain and outline the calibration content you plan to provide.
+  - type: input
+    id: pack-name
+    attributes:
+      label: Pack name
+      description: Kebab-case slug for the pack (e.g. `saas`, `banking`, `healthcare`).
+    validations:
+      required: true
+  - type: input
+    id: pack-display-name
+    attributes:
+      label: Display name
+      placeholder: "Software-as-a-Service"
+    validations:
+      required: true
+  - type: textarea
+    id: regulatory-anchors
+    attributes:
+      label: Regulatory anchors
+      description: Compliance frameworks the rubric will anchor to (e.g. SOC 2, GDPR, PCI-DSS).
+    validations:
+      required: true
+  - type: textarea
+    id: severity-rubric-draft
+    attributes:
+      label: Severity rubric draft (or link)
+      description: Critical/High/Medium/Low thresholds calibrated to this domain.
+    validations:
+      required: true
+  - type: textarea
+    id: pattern-coverage
+    attributes:
+      label: Pattern coverage plan
+      description: For each of the nine APD goals, briefly state how the patterns will differ from PBM.
+    validations:
+      required: true
+  - type: textarea
+    id: why-separate
+    attributes:
+      label: Why does this domain need a separate pack?
+      description: What does the existing PBM pack fail to express?
+    validations:
+      required: true
