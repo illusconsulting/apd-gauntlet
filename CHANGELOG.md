@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-XX
+
+### Added
+
+- Optional `apd-code-recon` intake-tier agent that uses the DeusData [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) graph to produce a code-grounded view of the system under review. Gated by `code_recon` setting in `.apd-run.yaml` (`enabled` / `auto` / `disabled`). See [ADR 0007](docs/adrs/0007-optional-code-reconnaissance-via-cbm.md).
+- New schemas: `schemas/run-config.schema.json` (validates `.apd-run.yaml`) and `schemas/code-evidence-index.schema.json` (validates the code-evidence index).
+- New template: `templates/code-architecture-brief.template.md`.
+- CLI: `apd-gauntlet validate-run-config <path>` for operator parity with `validate-domain`.
+- Validator now schema-validates `00-context/code-evidence-index.yaml` when present and treats it as a known artifact source for specialist evidence pointers.
+
+### Changed
+
+- `scaffold_run` emits `code_recon: auto` and `framework_version: 1.1.0` in the generated `.apd-run.yaml`.
+- `apd-evidence-discipline` skill documents code-evidence pointer format and restates the input-trust boundary for CBM-returned content.
+- `apd-orchestrator` agent gains a conditional Phase 1.5 dispatching `apd-code-recon`.
+
+### Compatibility
+
+- Backwards-compatible with v1.0 run directories: runs without a `.apd-run.yaml` skip Phase 1.5 entirely.
+- Domain packs declaring `framework_compat: ">=1.0.0,<2.0.0"` (e.g. PBM) continue to work unchanged.
+
 ## [1.0.0] - 2026-05-XX
 
 First public release.
