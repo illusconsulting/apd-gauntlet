@@ -55,7 +55,9 @@ def validate(run_dir, schema_only, strict, as_json) -> None:  # type: ignore[no-
     if as_json:
         import json as _json
 
-        def _ser(v):  # type: ignore[no-untyped-def]
+        from .validate import Violation as _Violation
+
+        def _ser(v: _Violation) -> dict[str, object]:
             return {"file": str(v.file), "id": v.record_id, "message": v.message, "path": v.path}
 
         click.echo(

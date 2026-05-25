@@ -64,7 +64,7 @@ def build_domain_skill(
             sections.append(f"\n\n## Source: `{f.relative_to(pack_dir)}`\n\n")
             sections.append(f.read_text())
 
-    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     frontmatter = (
         "---\n"
         "name: apd-domain\n"

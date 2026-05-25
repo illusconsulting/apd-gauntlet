@@ -35,7 +35,7 @@ def check_excerpt_length(record: dict[str, Any]) -> list[str]:
 
 def check_finding_id(record: dict[str, Any]) -> list[str]:
     """Finding ID must equal sha8(title + '|' + first_evidence_locator)."""
-    agent = record.get("agent")
+    agent = record.get("agent") or ""
     prefix = _PREFIX_BY_AGENT.get(agent, "")
     if not prefix:
         return []
@@ -52,7 +52,7 @@ def check_finding_id(record: dict[str, Any]) -> list[str]:
 
 def check_capability_id(record: dict[str, Any]) -> list[str]:
     """Capability ID must equal sha8(...) with -cap- infix."""
-    agent = record.get("agent")
+    agent = record.get("agent") or ""
     prefix = _PREFIX_BY_AGENT.get(agent, "")
     if not prefix:
         return []
