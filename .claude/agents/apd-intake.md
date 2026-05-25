@@ -31,6 +31,10 @@ A single markdown file at `00-context/context-brief.md`, structured per the temp
 6. Evidence gaps
 7. Per-goal relevance table
 
+## Optional successor — `apd-code-recon`
+
+If `.apd-run.yaml` opts into code reconnaissance (`code_recon: enabled` or `auto`) and the CBM tools are reachable, the orchestrator will dispatch `apd-code-recon` after you complete. That agent does NOT modify your brief; it writes its own `00-context/code-architecture-brief.md` and `00-context/code-evidence-index.yaml`. You do not need to plan for it.
+
 ## Process
 
 ### Step 1: Inventory artifacts
