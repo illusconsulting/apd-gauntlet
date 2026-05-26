@@ -77,6 +77,16 @@ When dispatching, pass the agent these inputs:
 
 Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
 
+### Phase 1.6 — Threat Model Recon (optional, v1.3+)
+
+After `apd-code-recon` (if it ran), invoke `apd-threat-model-recon`. The
+agent self-skips if no threat model is declared/detected, so always invoke
+it — the activation contract is internal to the agent.
+
+Expected outputs: `00-context/threat-model-normalized.yaml` (if activated)
+or `00-context/threat-model-skip.txt` (if skipped). Either is acceptable;
+downstream agents tolerate both.
+
 ### Phase 2 — Trustworthiness tier (parallel)
 
 Invoke in parallel:
