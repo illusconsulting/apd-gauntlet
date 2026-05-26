@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/threat-model-normalized.schema.json",
+  "title": "APD Gauntlet Normalized Threat Model",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "source_artifact", "methodology", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["threat_model_recon"] },
+    "source_artifact": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative path to the supplied threat model artifact."
+    },
+    "methodology": {
+      "type": "string",
+      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"]
+    },
+    "extraction_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_count", "high_confidence_count", "low_confidence_count"],
+      "properties": {
+        "entry_count":             { "type": "integer", "minimum": 0 },
+        "high_confidence_count":   { "type": "integer", "minimum": 0 },
+        "medium_confidence_count": { "type": "integer", "minimum": 0 },
+        "low_confidence_count":    { "type": "integer", "minimum": 0 },
+        "parser_used":             { "type": "string" }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entry_id", "asset", "threat", "extraction_confidence", "methodology", "framework_refs", "inferred_apd_goals"],
+        "additionalProperties": false,
+        "properties": {
+          "entry_id":              { "type": "string", "pattern": "^tm-[0-9a-f]{8}$" },
+          "asset":                 { "type": "string", "minLength": 1 },
+          "threat":                { "type": "string", "minLength": 1 },
+          "mitigation":            { "type": ["string", "null"] },
+          "methodology":           { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"] },
+          "source_locator":        { "type": "string" },
+          "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "framework_refs": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "stride_letter":        { "type": ["string", "null"], "enum": ["S", "T", "R", "I", "D", "E", null] },
+              "linddun_letter":       { "type": ["string", "null"], "enum": ["L", "I", "N_repudiation", "D_etectability", "D_isclosure", "U", "N_compliance", null] },
+              "attack_tree_position": { "type": ["string", "null"] },
+              "mitre_attack":         {
+                "type": "array",
+                "items": { "$ref": "_defs.schema.json#/$defs/attack_technique_id" }
+              }
+            }
+          },
+          "inferred_apd_goals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["confidentiality", "integrity", "availability", "distributed", "resilient", "ephemeral", "authenticity", "non_repudiation", "immutability"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

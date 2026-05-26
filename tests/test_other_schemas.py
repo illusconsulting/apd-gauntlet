@@ -104,3 +104,11 @@ def test_owasp_coverage_schema_validates() -> None:
 def test_d3fend_coverage_schema_validates() -> None:
     errors = _validate_whole_doc_schema("d3fend-coverage-valid.yaml", "d3fend-coverage.schema.json")
     assert errors == [], errors
+
+
+def test_threat_model_normalized_schema_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-normalized-valid.yaml",
+        "threat-model-normalized.schema.json",
+    )
+    assert errors == [], errors
