@@ -126,6 +126,67 @@ def check_d3fend_counters_attack(record: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _looks_like_tm_evidence(artifact: str) -> bool:
+    """True if the evidence artifact field points at the normalized TM or a TM source file."""
+    if artifact == "00-context/threat-model-normalized.yaml":
+        return True
+    tm_patterns = (
+        ".tm7", ".adtool.xml", "threat-model.", "-threat-model.",
+        "threat_model.",
+    )
+    lower = artifact.lower()
+    return any(pat in lower for pat in tm_patterns)
+
+
+def check_tmeval_evidence_pointer(record: dict[str, Any]) -> list[str]:
+    """Every tmeval- finding must cite the normalized TM or the source artifact in evidence.
+
+    Triggers only when ``record["id"]`` starts with ``"tmeval-"`` — non-tmeval
+    findings are untouched by this check.
+    """
+    errors: list[str] = []
+    record_id = record.get("id") or ""
+    if not record_id.startswith("tmeval-"):
+        return errors
+    evidence = record.get("evidence") or []
+    has_tm_evidence = any(
+        _looks_like_tm_evidence(item.get("artifact") or "")
+        for item in evidence
+    )
+    if not has_tm_evidence:
+        errors.append(
+            f"{record_id}: tmeval- findings must have at least one evidence entry "
+            f"pointing at 00-context/threat-model-normalized.yaml or a recognized "
+            f"threat-model artifact path. None found in {len(evidence)} evidence "
+            f"entries. (missing tm evidence)"
+        )
+    return errors
+
+
+def check_tmeval_contradiction_cross_reference(record: dict[str, Any]) -> list[str]:
+    """Every tmeval- finding with disposition: risk must have non-empty cross_references.
+
+    Per Rule 6 in apd-threat-model-methodologies: contradictions cross-reference
+    the specialist finding they contradict; an empty list is structurally
+    incomplete (contradiction without cross_references).
+    """
+    errors: list[str] = []
+    record_id = record.get("id") or ""
+    if not record_id.startswith("tmeval-"):
+        return errors
+    if record.get("disposition") != "risk":
+        return errors
+    cross_refs = record.get("cross_references") or []
+    if not cross_refs:
+        errors.append(
+            f"{record_id}: tmeval- contradiction (disposition: risk) must have at "
+            f"least one entry in cross_references pointing to the specialist finding "
+            f"it contradicts. Empty cross_references is structurally incomplete per "
+            f"apd-threat-model-methodologies Rule 6."
+        )
+    return errors
+
+
 def check_capability_maturity_evidence(
     record: dict[str, Any], tech_plan_artifacts: set[str]
 ) -> list[str]:

@@ -225,6 +225,10 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_hedge_words_in_attack_rationale(record):
                 report.warnings.append(Violation(path, rid, msg))
+            for msg in linters.check_tmeval_evidence_pointer(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_tmeval_contradiction_cross_reference(record):
+                report.errors.append(Violation(path, rid, msg))
         elif kind == "capability":
             for msg in linters.check_excerpt_length(record):
                 report.errors.append(Violation(path, rid, msg))
