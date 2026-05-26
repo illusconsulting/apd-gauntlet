@@ -14,7 +14,7 @@
     "schema_version": { "type": "integer", "const": 1 },
     "id": {
       "type": "string",
-      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$"
+      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$"
     },
     "agent": {
       "type": "string",
@@ -22,7 +22,7 @@
         "confidentiality", "integrity", "availability",
         "distributed", "resilient", "ephemeral",
         "authenticity", "non_repudiation", "immutability",
-        "synthesizer", "threat_model_evaluator"
+        "synthesizer", "threat_model_evaluator", "attack_path_analyzer"
       ]
     },
     "apd_tier": { "type": "string", "enum": ["trustworthiness", "scalability", "auditability"] },
@@ -123,11 +123,11 @@
     },
     "cross_references": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$" }
+      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" }
     },
     "merged_from": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$" }
+      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" }
     },
     "lens_perspectives": {
       "type": "object",

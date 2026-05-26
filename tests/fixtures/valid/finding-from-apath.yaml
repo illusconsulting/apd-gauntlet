@@ -1,0 +1,30 @@
+finding:
+  schema_version: 1
+  id: apath-c0ffee01
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: critical
+  confidence: high
+  title: "Compromised pharmacy credential reaches PHI store in 3 hops with no capability coverage"
+  summary: "Path from attacker position compromised_pharmacy_credential to crown jewel phi_store traverses claim-ingress-API → adjudication-service → member-record-store with no D3FEND-backed capability on any edge."
+  detail: "Path: compromised_pharmacy_credential --[authn_required:low_confidence]--> claim-ingress-API --[compromisable_via_finding:auth-9e8d7c6b]--> adjudication-service --[data_resides_on:high]--> member-record-store (crown jewel). Feasibility floor = low (one low-confidence authn edge). Severity sum = high. No capability_mitigates edges encountered."
+  evidence:
+    - artifact: "40-synthesis/asset-graph.yaml"
+      locator: "paths[0]"
+      excerpt: "from: compromised_pharmacy_credential to: phi_store hops: 3 feasibility: low"
+    - artifact: "40-synthesis/attack-paths.yaml"
+      locator: "paths[0].edges"
+      excerpt: "edge_type: compromisable_via_finding finding_id: auth-9e8d7c6b confidence: high"
+  control_mappings:
+    nist_800_53r5: ["AC-3", "AC-6", "SC-7"]
+    mitre_attack:
+      - technique: "T1078"
+        tactic: "TA0001"
+        rationale: "Path begins with valid credential abuse; T1078 (Valid Accounts) is the entry technique."
+  cross_references: [auth-9e8d7c6b]
+  recommendation:
+    posture: required
+    summary: "Add D3-NTSA (Network Traffic Signature Analysis) or equivalent boundary control on claim-ingress-API"
+    detail: "Three D3FEND techniques counter T1078 and would mitigate this path: D3-NTSA, D3-IBCA (Inbound Authentication), D3-CSPP (Credential Strong Password Policy). None are implemented by existing capabilities. Adding any one breaks this and 4 other paths sharing the claim-ingress-API edge (bottleneck threshold)."
