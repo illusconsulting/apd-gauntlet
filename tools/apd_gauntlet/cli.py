@@ -11,7 +11,10 @@ from .build_domain_skill import build_domain_skill
 from .init_run import scaffold_run
 from .lint_agents import lint_agents_dir
 from .linters import check_capability_id, check_finding_id
+from .refresh_cwe import refresh_cwe
+from .refresh_d3fend import refresh_d3fend
 from .refresh_mitre import fetch_and_project
+from .refresh_owasp import refresh_owasp
 from .summary import render_summary, summarize_run
 from .validate import ValidationReport, run_cross_file_pass, run_schema_pass, run_semantic_pass
 
@@ -239,6 +242,27 @@ def refresh_mitre_cmd(out) -> None:  # type: ignore[no-untyped-def]
     click.echo("Fetching MITRE ATT&CK bundle...")
     fetch_and_project(out)
     click.echo(f"Wrote {out}")
+
+
+@main.command("refresh-cwe")
+def refresh_cwe_cmd() -> None:
+    """Refresh MITRE CWE reference data (writes to package data dir)."""
+    path = refresh_cwe()
+    click.echo(f"Wrote {path}")
+
+
+@main.command("refresh-owasp")
+def refresh_owasp_cmd() -> None:
+    """Refresh OWASP Top 10 / API Top 10 / LLM Top 10 reference data."""
+    for name, path in refresh_owasp().items():
+        click.echo(f"Wrote {name}: {path}")
+
+
+@main.command("refresh-d3fend")
+def refresh_d3fend_cmd() -> None:
+    """Refresh MITRE D3FEND reference data."""
+    path = refresh_d3fend()
+    click.echo(f"Wrote {path}")
 
 
 if __name__ == "__main__":
