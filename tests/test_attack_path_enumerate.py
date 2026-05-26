@@ -38,6 +38,38 @@ def _two_hop_graph() -> Graph:
     return g
 
 
+def _three_way_fan_graph() -> Graph:
+    """Build a graph with three 2-hop paths whose sort-key fields are all
+    identical except ``path_id`` — exercises the ``path_id`` tiebreak in
+    the enumeration sort key.
+
+    Layout: one attacker, three intermediate assets, one crown jewel. All
+    edges are ``high`` confidence with ``traversal_cost=1`` and no finding
+    or capability edges, so every resulting path has
+    ``severity_sum=0``, ``hop_count=2``, and ``feasibility="high"``.
+    """
+    g = Graph()
+    atk = Node("atk-aaaaaaaa", "attacker_position", "ext",
+               {"source": "domain_default"}, "high")
+    jwl = Node("jewel-aaaaaaaa", "crown_jewel", "phi",
+               {"source": "domain_default"}, "high")
+    g.add_node(atk)
+    g.add_node(jwl)
+    for i in range(3):
+        mid_id = stable_id("asset", f"mid-{i}")
+        g.add_node(Node(mid_id, "asset", f"mid-{i}",
+                        {"source": "artifact"}, "high"))
+        g.add_edge(Edge(stable_id("edge", f"atk-to-mid-{i}"),
+                        "network_reachable",
+                        "atk-aaaaaaaa", mid_id,
+                        {"source": "artifact"}, "high", 1))
+        g.add_edge(Edge(stable_id("edge", f"mid-{i}-to-jewel"),
+                        "data_resides_on",
+                        mid_id, "jewel-aaaaaaaa",
+                        {"source": "artifact"}, "high", 1))
+    return g
+
+
 def test_enumerate_finds_simple_two_hop_path() -> None:
     g = _two_hop_graph()
     paths = enumerate_paths(
@@ -260,14 +292,14 @@ def test_enumerate_orders_paths_descending_severity_then_ascending_hops_then_des
                  {"source": "artifact"}, "high")
     for n in (atk, jwl, a_mid, b_mid1, b_mid2, c_mid):
         g.add_node(n)
-    # Path A: atk -> a_mid -> jwl (2 hops, both compromisable, severity 5+5=10)
+    # Path A: atk -> a_mid -> jwl (2 hops, both compromisable, critical+critical=8)
     g.add_edge(Edge("edge-aaaaaaa1", "compromisable_via_finding",
                     "atk-aaaaaaaa", "asset-aaaaaaaa",
                     {"source": "artifact"}, "high", 1, finding_id="F-A1"))
     g.add_edge(Edge("edge-aaaaaaa2", "compromisable_via_finding",
                     "asset-aaaaaaaa", "jewel-aaaaaaaa",
                     {"source": "artifact"}, "high", 1, finding_id="F-A2"))
-    # Path B: atk -> b_mid1 -> b_mid2 -> jwl (3 hops, last two compromisable, severity 5+5=10)
+    # Path B: atk -> b_mid1 -> b_mid2 -> jwl (3 hops, last two compromisable, critical+critical=8)
     g.add_edge(Edge("edge-bbbbbbb1", "network_reachable",
                     "atk-aaaaaaaa", "asset-bbbbbbb1",
                     {"source": "artifact"}, "high", 1))
@@ -277,7 +309,7 @@ def test_enumerate_orders_paths_descending_severity_then_ascending_hops_then_des
     g.add_edge(Edge("edge-bbbbbbb3", "compromisable_via_finding",
                     "asset-bbbbbbb2", "jewel-aaaaaaaa",
                     {"source": "artifact"}, "high", 1, finding_id="F-B2"))
-    # Path C: atk -> c_mid -> jwl (2 hops, one compromisable severity 5)
+    # Path C: atk -> c_mid -> jwl (2 hops, one compromisable critical=4)
     g.add_edge(Edge("edge-ccccccc1", "compromisable_via_finding",
                     "atk-aaaaaaaa", "asset-cccccccc",
                     {"source": "artifact"}, "high", 1, finding_id="F-C1"))
@@ -362,12 +394,33 @@ def test_enumerate_returns_empty_when_no_path_exists() -> None:
 
 
 def test_enumerate_deterministic_across_runs() -> None:
-    # Same input -> identical path_id sequence
+    # Smoke check: trivial single-path graph -> identical path_id sequence.
     g = _two_hop_graph()
     params = _params()
     p1 = enumerate_paths(g, "atk-aaaaaaaa", "jewel-aaaaaaaa", params)
     p2 = enumerate_paths(g, "atk-aaaaaaaa", "jewel-aaaaaaaa", params)
     assert [p.path_id for p in p1] == [p.path_id for p in p2]
+
+
+def test_enumerate_deterministic_when_sort_key_components_tie() -> None:
+    # Stronger guard: when ``-severity_sum``, ``hop_count`` and
+    # ``-CONFIDENCE_RANK[feasibility]`` all tie across multiple paths, the
+    # ``path_id`` component of the sort key determines order. This test
+    # fails if ``path_id`` is removed from the sort tuple.
+    g = _three_way_fan_graph()
+    params = _params()
+    p1 = enumerate_paths(g, "atk-aaaaaaaa", "jewel-aaaaaaaa", params)
+    p2 = enumerate_paths(g, "atk-aaaaaaaa", "jewel-aaaaaaaa", params)
+    assert len(p1) == 3
+    # All non-path_id sort-key components are identical across the 3 paths.
+    assert {p.severity_sum for p in p1} == {0}
+    assert {p.hop_count for p in p1} == {2}
+    assert {p.feasibility for p in p1} == {"high"}
+    # Run-to-run determinism.
+    assert [p.path_id for p in p1] == [p.path_id for p in p2]
+    # Ordering is determined by ``path_id`` ascending (the 4th sort key).
+    ids = [p.path_id for p in p1]
+    assert ids == sorted(ids)
 
 
 def test_compute_bottleneck_edges_returns_edges_meeting_threshold() -> None:
