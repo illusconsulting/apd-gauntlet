@@ -1,0 +1,31 @@
+name: test-domain
+display_name: "Test Domain with Attack Path"
+version: "1.0.0"
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Test domain with attack path analysis defaults (crown jewels, attacker positions, trust boundaries)"
+includes:
+  - severity-rubric.md
+regulatory_anchors:
+  - Test
+
+crown_jewels:
+  - pattern: phi_store
+    description: "Any data store holding PHI"
+  - pattern: pde_submission_pipeline
+    description: "CMS Part D Prescription Drug Event submission pipeline"
+  - pattern: claim_adjudication_engine
+    description: "Core adjudication decision system"
+
+attacker_positions:
+  - position: external_internet
+    description: "Unauthenticated network attacker on public internet"
+  - position: compromised_pharmacy_credential
+    description: "Attacker has stolen credentials of a legitimate pharmacy submitter"
+  - position: insider_with_member_service_role
+    description: "Authorized member-services agent acting maliciously"
+
+default_trust_boundaries:
+  - boundary: pharmacy_submission_ingress
+    description: "External pharmacy systems to internal claim intake"
+  - boundary: member_portal_ingress
+    description: "Plan member browser to member-services API"

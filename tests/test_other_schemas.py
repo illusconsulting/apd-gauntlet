@@ -120,3 +120,64 @@ def test_threat_model_coverage_schema_validates() -> None:
         "threat-model-coverage.schema.json",
     )
     assert errors == [], errors
+
+
+def test_domain_accepts_crown_jewels_and_attacker_positions():
+    """Domain with all three attack-path arrays should validate."""
+    validator = _validator_for("domain")
+    d = _record("domain", "valid/domain-with-attack-path.yaml")
+    errors = list(validator.iter_errors(d))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+    jewels = [j["pattern"] for j in d["crown_jewels"]]
+    assert "phi_store" in jewels
+
+
+def test_domain_crown_jewel_requires_pattern_and_description():
+    """Crown jewel without description should fail."""
+    validator = _validator_for("domain")
+    bad = {
+        "name": "test",
+        "display_name": "Test",
+        "version": "1.0.0",
+        "framework_compat": ">=1.0.0",
+        "description": "Test domain for validation",
+        "includes": ["test.md"],
+        "regulatory_anchors": [],
+        "crown_jewels": [{"pattern": "foo"}],  # missing description
+    }
+    errors = list(validator.iter_errors(bad))
+    assert errors, "Expected validation error for missing description"
+
+
+def test_domain_attacker_position_requires_position_and_description():
+    """Attacker position without description should fail."""
+    validator = _validator_for("domain")
+    bad = {
+        "name": "test",
+        "display_name": "Test",
+        "version": "1.0.0",
+        "framework_compat": ">=1.0.0",
+        "description": "Test domain for validation",
+        "includes": ["test.md"],
+        "regulatory_anchors": [],
+        "attacker_positions": [{"position": "foo"}],  # missing description
+    }
+    errors = list(validator.iter_errors(bad))
+    assert errors, "Expected validation error for missing description"
+
+
+def test_domain_default_trust_boundary_requires_boundary_and_description():
+    """Trust boundary without description should fail."""
+    validator = _validator_for("domain")
+    bad = {
+        "name": "test",
+        "display_name": "Test",
+        "version": "1.0.0",
+        "framework_compat": ">=1.0.0",
+        "description": "Test domain for validation",
+        "includes": ["test.md"],
+        "regulatory_anchors": [],
+        "default_trust_boundaries": [{"boundary": "foo"}],  # missing description
+    }
+    errors = list(validator.iter_errors(bad))
+    assert errors, "Expected validation error for missing description"
