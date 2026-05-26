@@ -37,6 +37,7 @@ This spec describes the additions to address all three, sequenced as three inter
 ## 3. Goals & non-goals
 
 **Goals.**
+
 - Make every finding/capability carry the framework IDs (CWE / OWASP / D3FEND) that match what the system under review actually exposes, in addition to the existing NIST 800-53r5 + ATT&CK mappings.
 - When the operator supplies a threat model, evaluate it methodology-aware: surface coverage gaps (which STRIDE/LINDDUN categories are absent for which surfaces), contradictions (TM claim vs. specialist finding), and silences (TM mute where specialists found risk).
 - When crown jewels are declared, enumerate plausible attack paths from declared attacker positions to crown jewels, identify bottleneck edges, and emit a D3FEND-tagged "highest-leverage defensive investments" view.
@@ -45,6 +46,7 @@ This spec describes the additions to address all three, sequenced as three inter
 - Ship reference-data refresh scripts for the new taxonomies with the same security hardening already applied to `refresh_mitre.py` (60s timeout, 200 MiB cap, `source_sha256` in projected payload).
 
 **Non-goals (this epic).**
+
 - Native parsing for PASTA, VAST, Trike, or other narrative methodologies. Accepted as free-form prose with reduced extraction confidence; native support deferred.
 - Active threat-model augmentation (the gauntlet inventing threats the user's TM should have included). The evaluator is comparator-only; never generates threats not grounded in specialist findings.
 - Graph-database backing for the asset graph. In-memory graph; export to JSON/YAML; downstream tooling can ingest if desired.
@@ -95,6 +97,7 @@ Three phases, each ship-able independently. Each phase ships with full tests, do
 All schema changes additive. Existing v1.x schemas extend with **optional** fields only; new schemas introduced for new artifacts. No required field added to any existing schema. No enum value removed. The `framework_compat: ">=1.0.0,<2.0.0"` constraint in the PBM domain pack continues to accept v1.2.0, v1.3.0, and v1.4.0 without changes.
 
 The only enum-extension changes are:
+
 - `finding.schema.json#agent` — add `threat_model_evaluator`, `attack_path_analyzer`
 - `finding.schema.json#id` pattern — relax to also accept `tmeval-[0-9a-f]{8}` and `apath-[0-9a-f]{8}` prefixes
 
@@ -447,9 +450,11 @@ default_trust_boundaries:
 TDD-first per project convention. Preserve the existing 85% coverage gate; target 90%+ on the new modules.
 
 ### 9.1 Schema validation tests
+
 Every new schema gets a validator + valid/invalid fixtures. Roughly six new schemas → twelve new test files.
 
 ### 9.2 Methodology parser tests (Track 2)
+
 Fixtures covering each supported format:
 
 - Threat Dragon JSON (with all six STRIDE letters represented across multiple components)
@@ -463,6 +468,7 @@ Fixtures covering each supported format:
 - Malformed inputs → expected `disposition: blocked` outputs
 
 ### 9.3 Mapping discipline tests
+
 Assert STRIDE→APD-goal and LINDDUN→APD-goal mapping tables in `apd-threat-model-methodologies` skill match a canonical Python constant — single source of truth, prevents drift.
 
 ### 9.4 Path-enumeration unit tests (Track 3)
@@ -477,6 +483,7 @@ Assert STRIDE→APD-goal and LINDDUN→APD-goal mapping tables in `apd-threat-mo
 - Path-count caps honored
 
 ### 9.5 Integration test
+
 Extend `examples/apd-20260601-claim-event-bus/` with:
 
 - A Threat Dragon JSON threat model covering the claim event bus

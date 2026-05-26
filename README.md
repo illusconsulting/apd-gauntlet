@@ -4,7 +4,7 @@ Multi-agent security architecture review built on the APD framework — **A**ssu
 
 This is **advisory input to architecture review**, not a gate. The output is structured to help an architect make better decisions, not to replace one.
 
-```
+```text
 Trustworthiness   →  Confidentiality · Integrity · Availability
 Scalability       →  Distributed · Resilient · Ephemeral
 Auditability      →  Authenticity · Non-Repudiation · Immutability

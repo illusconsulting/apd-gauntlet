@@ -59,11 +59,13 @@ When activated, emits:
 ### Step 1 — Load inputs
 
 Read:
+
 - `00-context/threat-model-normalized.yaml` (the TM)
 - All `20-findings/**/*.yaml` files (dedup'd by synthesizer)
 - All `10-capabilities/**/*.yaml` files
 
 Build in-memory indices:
+
 - `tm_entries_by_surface: dict[str, list[entry]]` — surfaces are inferred from
   entry `asset` field; if the asset string doesn't match any specialist
   finding's evidence locator, the entry isn't bound to a known surface (still
@@ -76,6 +78,7 @@ Build in-memory indices:
 ### Step 2 — Blocked path
 
 If TM has `methodology: unknown` AND `entries: []`:
+
 - Skip Steps 3-6
 - Go to Step 7 (emit blocked finding)
 - Skip Steps 8-9 (no coverage report when blocked)
@@ -83,6 +86,7 @@ If TM has `methodology: unknown` AND `entries: []`:
 ### Step 3 — Coverage gap detection (Rule 5)
 
 For each (surface, goal) in `apd_goals_flagged_by_surface`:
+
 - Check whether any TM entry on this surface has `inferred_apd_goals`
   containing `goal`
 - If not: emit a coverage-gap finding
@@ -120,6 +124,7 @@ recommendation:
 ### Step 4 — Contradiction detection (Rule 6)
 
 For each TM entry with a non-null `mitigation`:
+
 1. Identify the surface (from `asset` field)
 2. Parse the mitigation claim for asserted controls (LLM judgment — e.g.,
    "TLS 1.3 enforced" asserts encryption-in-transit on this surface)
@@ -155,6 +160,7 @@ recommendation:
 ```
 
 **Confidence demotion (Rule 6 + Rule 3):**
+
 - TM entry `extraction_confidence: high` → contradiction finding `confidence: high`
 - TM entry `extraction_confidence: medium` → contradiction finding `confidence: medium`
 - TM entry `extraction_confidence: low` → DO NOT emit as contradiction; emit as
@@ -164,6 +170,7 @@ recommendation:
 
 For each surface in `findings_by_surface` (i.e., surfaces that specialists
 flagged):
+
 - If `tm_entries_by_surface[surface]` is empty: emit a silence finding
 
 Silence finding template:
@@ -196,6 +203,7 @@ recommendation:
 ### Step 6 — Build coverage matrix
 
 For each surface in `tm_entries_by_surface ∪ findings_by_surface`:
+
 - Determine `categories_present`: STRIDE letters / LINDDUN compound keys /
   attack-tree positions present in TM entries for this surface
 - Determine `categories_absent`: complement of `categories_present` within
@@ -238,6 +246,7 @@ recommendation:
 
 Render `40-synthesis/threat-model-coverage-report.md` using the template at
 `templates/threat-model-coverage-report.template.md`. Include:
+
 - TM summary (methodology, entry count, confidence breakdown)
 - Per-surface coverage table
 - Lists of emitted findings (coverage gaps, contradictions, silences)

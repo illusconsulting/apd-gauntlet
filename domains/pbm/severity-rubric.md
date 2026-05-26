@@ -2,7 +2,7 @@
 
 Calibrated against impact-to-PBM, not against generic CVSS. The specialist agent cites the matching clause in finding `detail` fields. Cited examples in each tier are illustrative, not exhaustive.
 
-### Critical
+## Critical
 
 Any of the following:
 
@@ -13,7 +13,7 @@ Any of the following:
 - **Total adjudication outage exceeding contractual SLA** — sustained inability to adjudicate claims affecting all plan sponsors simultaneously.
 - **Loss of CMS Part D submission integrity** — PDE (Prescription Drug Event) data submission failures or corruption that exposes the PBM to CMS enforcement action.
 
-### High
+## High
 
 Any of the following:
 
@@ -25,7 +25,7 @@ Any of the following:
 - **CMS Part D compliance gap not affecting member dispensing** — formulary update lag, prior authorization workflow gap, transition fill logic gap, that does not currently affect a dispensing decision but is required by CMS-4201-F or equivalent.
 - **URAC accreditation-relevant gap** — control absence in a domain URAC evaluates, where the absence would be findable in an accreditation audit.
 
-### Medium
+## Medium
 
 Any of the following:
 
@@ -36,7 +36,7 @@ Any of the following:
 - **Configuration drift detection gap** on systems where compensating attestation exists.
 - **Documentation gap with security-relevant content missing** — architecture decision records, runbooks, or threat models absent in ways that impair operations or future review.
 
-### Low
+## Low
 
 Any of the following:
 
@@ -45,7 +45,7 @@ Any of the following:
 - **Defense-in-depth gap fully compensated** by upstream controls — useful to know but architecturally non-urgent.
 - **Configuration drift on non-critical path** — dev environment, ephemeral test infrastructure.
 
-### Informational
+## Informational
 
 Observations that do not rise to remediation but are worth surfacing for the architecture record. Used sparingly. Examples: notable architectural choices with security implications worth documenting, parity gaps with industry peers that are not actually risks.
 

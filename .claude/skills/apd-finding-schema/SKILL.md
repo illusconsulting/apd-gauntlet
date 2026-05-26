@@ -96,6 +96,7 @@ finding:
 **Always required:** `id`, `agent`, `apd_tier`, `apd_goal`, `disposition`, `severity`, `confidence`, `title`, `summary`, `detail`, `evidence` (≥1 entry), `control_mappings.nist_800_53r5` (may be empty list with rationale in detail), `recommendation`.
 
 **Required conditionally:**
+
 - `prerequisite_evidence` — required when `disposition: blocked` or `confidence: low`
 - `control_mappings.mitre_attack` — emit only when the agent is highly confident the technique applies; empty list is the default
 - `cross_references` — required for tier 2 and tier 3 findings that build on tier 1/2 findings
@@ -108,6 +109,7 @@ finding:
 **`id`** — deterministic identifier of the form `<shortcode>-<sha8>`. Shortcodes by agent: `conf` (Confidentiality), `intg` (Integrity), `avail` (Availability), `dist` (Distributed), `resil` (Resilient), `ephem` (Ephemeral), `auth` (Authenticity), `nonrep` (Non-Repudiation), `immut` (Immutability). The sha8 is the first 8 hex characters of SHA-256 over `title + first evidence locator`.
 
 **`disposition`** — what kind of finding this is.
+
 - `gap` — required control or property is absent.
   - Example: "Audit log is not encrypted at rest." (Property absent.)
   - Example: "No retry policy specified for the eligibility vendor call." (Control absent.)
@@ -128,6 +130,7 @@ finding:
 **`severity`** — calibrated against the impact-to-PBM rubric (see `apd-evidence-discipline` skill). Justified in `detail`.
 
 **`confidence`** — agent's confidence in the finding given available evidence.
+
 - `high` — direct evidence in artifacts, unambiguous interpretation.
 - `medium` — strong inference from artifacts, minor interpretive judgment.
 - `low` — significant inference required; consider `disposition: uncertainty` instead.
@@ -141,6 +144,7 @@ finding:
 **`control_mappings.mitre_attack`** — high-confidence only. The `rationale` field must justify the mapping in one sentence; vague mappings ("could enable lateral movement") are rejected. If the agent cannot write a specific rationale, the technique does not belong on the finding.
 
 **`recommendation.posture`** —
+
 - `required` — without this, the system fails a compliance obligation or carries unacceptable PBM risk.
 - `recommended` — material risk reduction with reasonable cost.
 - `consider` — defense-in-depth or hardening that the architect should weigh against effort.
@@ -192,6 +196,7 @@ capability:
 **Always required:** `id`, `agent`, `apd_tier`, `apd_goal`, `title`, `description`, `maturity`, `scope`, `evidence` (≥1 entry), `control_mappings.nist_800_53r5`.
 
 **Required conditionally:**
+
 - `caveats` — required when any aspect of the capability is unconfirmed or partially scoped; recommended in nearly all cases for tech plan reviews.
 
 **Optional:** `control_mappings.mitre_attack_mitigations`, `related_concerns`.

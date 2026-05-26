@@ -27,6 +27,7 @@ This spec describes the v1.0 release that turns the framework content into a pro
 ## 3. Goals & non-goals
 
 **Goals.**
+
 - Move from flat content layout to a Claude Code-native plugin layout (`.claude/agents/`, `.claude/skills/`).
 - Make the finding and capability schemas machine-enforced via JSON Schema + a Python validator.
 - Extract PBM-specific content from agents and skills into a pluggable `domains/pbm/` pack.
@@ -36,6 +37,7 @@ This spec describes the v1.0 release that turns the framework content into a pro
 - Tag v1.0.0 with a published Python package, a stable plugin manifest, and a credible README.
 
 **Non-goals (v1).**
+
 - A second domain pack (e.g. `domains/saas/`). Mechanism ships; second pack proves the abstraction in v1.1.
 - LLM-driven clustering as a separate runnable script. The synthesizer's merge/link/separate logic remains LLM-driven; the validator only enforces structure.
 - Runtime telemetry or usage analytics.
@@ -203,11 +205,13 @@ apd-gauntlet validate-domain <domain-name>          # structural check on a pack
 ### 6.2 The `validate` command — three passes
 
 **Pass 1: Per-record JSON Schema validation** (using `jsonschema`).
+
 - Reads every YAML file under the run directory.
 - Validates each record against its schema.
 - Collects violations per record with JSON Pointer paths.
 
 **Pass 2: Custom semantic lints** (cannot be expressed declaratively in JSON Schema).
+
 - `evidence[].excerpt` token count ≤ 25 (whitespace-split).
 - ID matches the deterministic derivation: first 8 hex characters of SHA-256 over `title + "|" + first_evidence_locator`. (Capability IDs use the same derivation with the `-cap-` infix per `apd-finding-schema`.)
 - Capability `maturity ≥ implemented` ⇒ at least one `evidence[].artifact` is not in the run's tech_plan set (resolved by parsing the intake artifact index).
@@ -215,6 +219,7 @@ apd-gauntlet validate-domain <domain-name>          # structural check on a pack
 - `recommendation.posture: required` ⇒ severity ∈ {critical, high} — warning, not error (legitimate exceptions exist).
 
 **Pass 3: Cross-file resolution.**
+
 - `cross_references[]` IDs exist in lower-tier files.
 - `merged_from[]` IDs exist in pre-synthesis files.
 - `evidence[].artifact` appears in the intake artifact index.
@@ -255,27 +260,32 @@ The current agent and skill content carries inconsistencies that v1 resolves. Ea
 ### 7.2 Domain-pack refactor
 
 For each specialist agent file (`apd-<goal>.md`):
+
 - "Common finding patterns" section is **removed**; content moves to `domains/pbm/common-patterns/<goal>.md`.
 - "Common capability patterns" section is **removed**; content also moves.
 - New "Required reading" entry added: `.claude/skills/apd-domain/SKILL.md` — for active-domain severity rubric, consequential actions, and pattern library.
 
 For `apd-evidence-discipline/SKILL.md`:
+
 - The impact-to-PBM severity rubric is **removed**; content moves to `domains/pbm/severity-rubric.md`.
 - The five rules + severity-calibration discipline + maturity discipline + self-check **stay** (all domain-neutral).
 - Add: "Cite the matching clause from the active domain's severity-rubric.md in your finding's `detail`."
 
 For `apd-orchestrator.md`:
+
 - New Phase 0 step: `apd-gauntlet build-domain-skill <name>` materializes `apd-domain/SKILL.md` before intake.
 - New step at end of Phase 2, 3, 4: `apd-gauntlet validate <run-dir>` over tier outputs before proceeding.
 - Explicit skip-specialist handling (emit stub file).
 - Records active domain pack version in run metadata.
 
 For `apd-synthesizer.md`:
+
 - Step 1 explicitly invokes the validator (or LLM fallback if unavailable).
 - `rejected-records.yaml` added to canonical outputs list.
 - Advisory report header records `framework_version` and `domain_pack: { name, version }`.
 
 For `apd-finding-schema/SKILL.md`:
+
 - Points at `schemas/finding.schema.json` as the canonical contract; the skill is its documentation.
 - Drops `disposition: strength` from documented enum.
 - Adds `schema_version` field documentation.
@@ -342,6 +352,7 @@ regulatory_anchors:
 3. Check `framework_compat` against current framework version; refuse if outside range.
 4. Concatenate file contents with section headers reflecting the source path.
 5. Write generated skill with frontmatter:
+
    ```yaml
    ---
    name: apd-domain
@@ -463,6 +474,7 @@ Three independent semvers:
 | Domain pack version | `version` in each pack's `domain.yaml` | Rubric thresholds, consequential-action surface, or common patterns shift |
 
 **Schema breaking-change semantics** (in `docs/schema-evolution.md`):
+
 - Renaming a required field → major bump.
 - Adding a required field → major bump.
 - Adding an optional field → minor bump.

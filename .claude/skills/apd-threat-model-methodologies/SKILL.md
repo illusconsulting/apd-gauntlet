@@ -155,6 +155,7 @@ and skips coverage/contradiction/silence evaluation entirely.
 ### Rule 5 — Coverage gap (`disposition: gap`)
 
 **Algorithm:**
+
 1. Build a per-surface map: `surface → {APD goals flagged by specialist
    findings}`. Use evidence locators in specialist findings to identify
    surfaces.
@@ -178,6 +179,7 @@ summary: "Specialist non-repudiation finding nonrep-... flagged audit-log-writer
 ### Rule 6 — Contradiction (`disposition: risk`)
 
 **Algorithm:**
+
 1. For each TM entry with a `mitigation` claim (e.g., "TLS 1.3 enforced on
    pricing-service traffic"), parse the claim for asserted controls.
 2. Search specialist findings for the SAME surface AND the SAME control area.
@@ -213,6 +215,7 @@ extractions are too fallible to assert contradiction.
 ### Rule 7 — Silence (`disposition: uncertainty`)
 
 **Algorithm:**
+
 1. Identify surfaces that specialist findings flagged as risky.
 2. For each such surface, check whether the TM has ANY entries (regardless
    of methodology category).

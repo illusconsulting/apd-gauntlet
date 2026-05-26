@@ -97,7 +97,7 @@ existing) emits:
 ### The three finding flavors
 
 | Disposition | Flavor | What it means |
-|---|---|---|
+| --- | --- | --- |
 | `gap` | **Coverage gap** | TM omits methodology category for a surface a specialist flagged (e.g., TM has no Repudiation analysis for audit-log-writer but a Non-Repudiation specialist found a gap there) |
 | `risk` | **Contradiction** | TM asserts a mitigation a specialist showed broken (e.g., TM claims TLS but specialist found plaintext) |
 | `uncertainty` | **Silence** | TM has no entries for a surface a specialist flagged (e.g., specialist flagged vendor-API integration, TM never mentions it) |
@@ -112,7 +112,7 @@ absence as "(no entries for surface=X)".
 The evaluator's discipline (Rule 6 in `apd-threat-model-methodologies` skill):
 
 | TM entry `extraction_confidence` | Maximum contradiction finding `confidence` |
-|---|---|
+| --- | --- |
 | `high` | `high` |
 | `medium` | `medium` |
 | `low` | (Cannot emit as contradiction; emitted as silence-style uncertainty instead) |

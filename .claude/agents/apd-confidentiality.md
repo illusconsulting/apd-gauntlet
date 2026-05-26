@@ -27,6 +27,7 @@ View these in order:
 ## Output
 
 Two YAML files:
+
 - `10-trustworthiness/confidentiality.findings.yaml` — a list of `finding:` records
 - `10-trustworthiness/confidentiality.capabilities.yaml` — a list of `capability:` records
 

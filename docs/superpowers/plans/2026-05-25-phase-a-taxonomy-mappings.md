@@ -32,6 +32,7 @@ If any of the above fail, stop and investigate before starting the plan.
 ## Task 1: Pre-flight version bump (1.1.0 → 1.2.0-dev)
 
 **Files:**
+
 - Modify: `pyproject.toml:7`
 - Modify: `tools/apd_gauntlet/__init__.py`
 - Modify: `plugin.json`
@@ -72,6 +73,7 @@ git commit -m "chore: bump version to 1.2.0.dev0 for Phase A work"
 **Goal:** Add optional `cwe[]`, `owasp_top10[]`, `owasp_api_top10[]`, `owasp_llm_top10[]` arrays inside `control_mappings`, each with strict regex validation.
 
 **Files:**
+
 - Modify: `schemas/finding.schema.json` (extend `control_mappings.properties`)
 - Modify: `tests/test_finding_schema.py` (add validation tests)
 - Add: `tests/fixtures/findings/finding-with-cwe.yaml`
@@ -109,6 +111,7 @@ def test_finding_without_new_taxonomies_still_valid():
 Create fixtures:
 
 `tests/fixtures/findings/finding-with-cwe.yaml`:
+
 ```yaml
 schema_version: 1
 id: conf-a1b2c3d4
@@ -180,6 +183,7 @@ pytest -q
 ruff check tools/ tests/
 mypy tools/
 ```
+
 Expected: all pass.
 
 - [ ] **Step 6: Commit**
@@ -196,6 +200,7 @@ git commit -m "feat(schema): finding.control_mappings gains optional cwe/owasp_t
 **Goal:** Add optional `d3fend[]` array inside `control_mappings` on capability records. Each entry requires `technique`, `counters_attack` (list of ATT&CK technique IDs from the same record's `mitre_attack` block), and `rationale`. Schema-level validation enforces the format; cross-reference validation (`counters_attack` must intersect `mitre_attack`) is added in the validator module (Task 17 — `validate.py`).
 
 **Files:**
+
 - Modify: `schemas/capability.schema.json`
 - Modify: `tests/test_capability_schema.py`
 - Add: `tests/fixtures/capabilities/capability-with-d3fend.yaml`
@@ -224,6 +229,7 @@ def test_capability_without_d3fend_still_valid():
 ```
 
 `tests/fixtures/capabilities/capability-with-d3fend.yaml`:
+
 ```yaml
 schema_version: 1
 id: cap-1a2b3c4d
@@ -299,6 +305,7 @@ git commit -m "feat(schema): capability.control_mappings gains optional d3fend[]
 **Goal:** Add optional `taxonomies` field that lists which framework taxonomies the run has in scope. Allowed values: `cwe`, `mitre_attack`, `d3fend`, `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`.
 
 **Files:**
+
 - Modify: `schemas/run-config.schema.json`
 - Modify: `tests/test_run_config_schema.py`
 - Add: `tests/fixtures/run-configs/run-config-with-taxonomies.yaml`
@@ -372,6 +379,7 @@ git commit -m "feat(schema): run-config gains optional taxonomies[] declaration"
 **Goal:** Schema for synthesizer-emitted CWE coverage rollup, analogous to existing `attack-exposure.schema.json`.
 
 **Files:**
+
 - Create: `schemas/cwe-coverage.schema.json`
 - Modify: `tests/test_other_schemas.py`
 - Add: `tests/fixtures/rollups/cwe-coverage-valid.yaml`
@@ -388,6 +396,7 @@ def test_cwe_coverage_schema_validates():
 ```
 
 Fixture `tests/fixtures/rollups/cwe-coverage-valid.yaml`:
+
 ```yaml
 schema_version: 1
 generated_by: synthesizer
@@ -476,6 +485,7 @@ git commit -m "feat(schema): add cwe-coverage rollup schema"
 **Goal:** Schema for OWASP coverage rollup. Covers all three OWASP variants (Top 10, API Top 10, LLM Top 10) in one rollup, with `taxonomy` discriminator per entry.
 
 **Files:**
+
 - Create: `schemas/owasp-coverage.schema.json`
 - Modify: `tests/test_other_schemas.py`
 - Add: `tests/fixtures/rollups/owasp-coverage-valid.yaml`
@@ -603,6 +613,7 @@ git commit -m "feat(schema): add owasp-coverage rollup schema (covers Top 10 / A
 **Goal:** Schema for D3FEND coverage rollup. Lists D3FEND techniques referenced by capabilities, plus a counter-coverage view (which exposed ATT&CK techniques have D3FEND-backed capabilities vs. which don't — feeds Phase C bottleneck analysis).
 
 **Files:**
+
 - Create: `schemas/d3fend-coverage.schema.json`
 - Modify: `tests/test_other_schemas.py`
 - Add: `tests/fixtures/rollups/d3fend-coverage-valid.yaml`
@@ -720,6 +731,7 @@ git commit -m "feat(schema): add d3fend-coverage rollup schema with counter-cove
 **Goal:** Python module that fetches MITRE CWE XML, projects to a compact JSON shape, writes to `tools/apd_gauntlet/data/cwe.json` with `source_sha256` and `fetched_at`. Mirrors `refresh_mitre.py` security hardening (timeout=60s, max=200 MiB, no shell-injection).
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/refresh_cwe.py`
 - Create: `tools/apd_gauntlet/data/cwe.json` (initial seeded copy committed to repo so first-time install has working data)
 - Create: `tests/test_refresh_cwe.py`
@@ -942,6 +954,7 @@ git commit -m "feat: refresh_cwe script + seeded CWE reference data"
 **Goal:** One module that fetches three OWASP Top 10 lists (web, API, LLM) and projects each to JSON. Same security hardening as `refresh_cwe`. Edition versioning preserved (a finding mapped to A03:2021 stays A03:2021 even after A03:2024 ships).
 
 **Sources** (GitHub-hosted JSONs maintained by the OWASP project; URLs may need verification at execution time):
+
 - Top 10 (web): `https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/A00_2021.json` (or whichever consolidated source the OWASP project currently maintains; engineer should verify at execution time)
 - API Top 10: `https://raw.githubusercontent.com/OWASP/API-Security/master/editions/2023/en/0xx-introduction.json` (similar — verify at execution time)
 - LLM Top 10: `https://raw.githubusercontent.com/OWASP/www-project-top-10-for-large-language-model-applications/main/2_0_vulns/translations/en-US/LLM01_PromptInjection.md` etc. (the LLM project ships per-category markdown; engineer parses titles + IDs)
@@ -949,6 +962,7 @@ git commit -m "feat: refresh_cwe script + seeded CWE reference data"
 If live sources are unreachable or the engineer determines the URLs above are out of date, seed `data/owasp_*.json` from the current published edition by hand (10 categories per list = 30 entries total — small) and document the seed approach in each file's `source_url` field.
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/refresh_owasp.py`
 - Create: `tools/apd_gauntlet/data/owasp_top10.json`
 - Create: `tools/apd_gauntlet/data/owasp_api_top10.json`
@@ -1137,6 +1151,7 @@ git commit -m "feat: refresh_owasp script + seeded OWASP Top 10 / API / LLM refe
 **Source:** MITRE D3FEND publishes JSON-LD at `https://d3fend.mitre.org/api/ontology/inference/d3fend-full-mappings.json`. Each technique has `d3fend:Technique` records with `d3fend:d3f-counters` relations to ATT&CK technique IDs.
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/refresh_d3fend.py`
 - Create: `tools/apd_gauntlet/data/d3fend.json`
 - Create: `tests/test_refresh_d3fend.py`
@@ -1357,6 +1372,7 @@ git commit -m "feat: refresh_d3fend script + seeded D3FEND reference data with c
 **Goal:** Expose three new `apd-gauntlet` subcommands that wrap the refresh modules, mirroring the existing `refresh-mitre` subcommand pattern.
 
 **Files:**
+
 - Modify: `tools/apd_gauntlet/cli.py`
 - Modify: `tests/test_cli.py`
 
@@ -1463,6 +1479,7 @@ git commit -m "feat(cli): add refresh-cwe, refresh-owasp, refresh-d3fend subcomm
 **Goal:** Extend the existing `.claude/skills/apd-control-mappings/SKILL.md` with five new discipline sections (CWE, OWASP Top 10 web, OWASP API, OWASP LLM, D3FEND). Same authority style as the existing NIST 800-53r5 and ATT&CK sections.
 
 **Files:**
+
 - Modify: `.claude/skills/apd-control-mappings/SKILL.md`
 
 - [ ] **Step 1: Read the existing skill to understand its current shape**
@@ -1537,6 +1554,7 @@ git commit -m "feat(skill): apd-control-mappings gains per-taxonomy discipline f
 **Goal:** Extend the intake agent's authoring contract to inspect supplied artifacts and write a `taxonomy_suggestions:` block into its context brief, distinguishing taxonomies declared in run-config from taxonomies intake auto-detects as relevant. Specialists honor only the operator-accepted set (declared in run-config) — auto-suggestions are advisory.
 
 **Files:**
+
 - Modify: `.claude/agents/apd-intake.md`
 - Modify: `templates/context-brief.template.md`
 - Modify: `tests/test_lint_agents.py` (extend frontmatter / contract checks if needed)
@@ -1621,6 +1639,7 @@ git commit -m "feat(agent): apd-intake emits taxonomy_suggestions block with aut
 **Goal:** Extend the synthesizer's authoring contract to emit three new rollup artifacts (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`) into `40-synthesis/` when the relevant taxonomies are declared in run-config and findings/capabilities carry the relevant mappings.
 
 **Files:**
+
 - Modify: `.claude/agents/apd-synthesizer.md`
 - Modify: `templates/advisory-report.template.md`
 - Modify: `tests/test_lint_agents.py` (if needed)
@@ -1695,6 +1714,7 @@ git commit -m "feat(agent): apd-synthesizer emits cwe/owasp/d3fend coverage roll
 **Goal:** Each of the 9 specialist agents needs a short pointer in its frontmatter or process steps noting that taxonomy mappings beyond NIST 800-53r5 and ATT&CK are now possible per run-config. The actual mapping discipline lives in the `apd-control-mappings` skill (updated in Task 12); the agent files just need to point readers there.
 
 **Files:**
+
 - Modify each of:
   - `.claude/agents/apd-confidentiality.md`
   - `.claude/agents/apd-integrity.md`
@@ -1744,6 +1764,7 @@ git commit -m "feat(agents): specialists reference v1.2 taxonomy scope in apd-co
 **Goal:** Extend the `init-run` subcommand to accept a `--taxonomies` comma-separated list (or repeated `--taxonomies` flag) that pre-populates the `taxonomies:` field in the scaffolded `.apd-run.yaml`.
 
 **Files:**
+
 - Modify: `tools/apd_gauntlet/init_run.py`
 - Modify: `tools/apd_gauntlet/cli.py` (the `init-run` Click command)
 - Modify: `tests/test_init_run.py` and/or `tests/test_init_run_config.py`
@@ -1877,6 +1898,7 @@ git commit -m "feat(cli): init-run accepts --taxonomies flag to pre-populate run
 **Goal:** Add a semantic validation check (not schema-level) that every D3FEND entry on a capability has at least one `counters_attack` ID that also appears in the same capability's `mitre_attack[].technique` list. Schema-level constraints can't express cross-property references; this lives in `validate.py`.
 
 **Files:**
+
 - Modify: `tools/apd_gauntlet/validate.py`
 - Modify: `tests/test_validate_semantic.py` (or `tests/test_validate_cross_file.py`)
 - Add: `tests/fixtures/capabilities/capability-d3fend-counters-mismatch.yaml`
@@ -1917,6 +1939,7 @@ def test_validate_accepts_d3fend_counters_attack_intersects_mitre_attack(tmp_pat
 ```
 
 Fixture `tests/fixtures/capabilities/capability-d3fend-counters-mismatch.yaml`:
+
 ```yaml
 schema_version: 1
 id: cap-1a2b3c4d
@@ -1998,6 +2021,7 @@ git commit -m "feat(validate): enforce D3FEND counters_attack ⊆ capability's m
 **Goal:** `apd-gauntlet lint-agents` already validates frontmatter; no contract changes were introduced that require new lint rules. This task confirms the lint still passes after Tasks 12–15. If lint-agents has any heuristic checks on agent content (e.g., "must reference the apd-control-mappings skill"), extend them; otherwise this is a verification task only.
 
 **Files:**
+
 - Verify only — modify `tools/apd_gauntlet/lint_agents.py` and `tests/test_lint_agents.py` only if existing checks need updating.
 
 - [ ] **Step 1: Run lint-agents to confirm current pass**
@@ -2045,6 +2069,7 @@ If no changes were needed, no commit. Move to Task 19.
 **Goal:** Extend the existing `examples/apd-20260601-claim-event-bus/` sample run to exercise the v1.2 taxonomies end-to-end. Add `taxonomies:` to its `.apd-run.yaml`, add CWE/OWASP/D3FEND mappings to a handful of expected findings/capabilities, and add the three new rollup files. The `apd-gauntlet validate examples/.../expected/` invocation continues to pass.
 
 **Files:**
+
 - Modify: `examples/apd-20260601-claim-event-bus/.apd-run.yaml` (or wherever the example's run config lives)
 - Modify: 3–5 findings under `examples/apd-20260601-claim-event-bus/expected/20-findings/` — add `cwe`, `owasp_api_top10`, etc. to `control_mappings`
 - Modify: 2–3 capabilities under `examples/apd-20260601-claim-event-bus/expected/10-capabilities/` — add `d3fend` to `control_mappings`
@@ -2133,6 +2158,7 @@ git commit -m "feat(example): claim-event-bus exercises v1.2 CWE/OWASP API/D3FEN
 **Goal:** Document the design decisions captured in §2 of the design spec.
 
 **Files:**
+
 - Create: `docs/adrs/0008-multi-framework-taxonomy-mappings.md`
 
 - [ ] **Step 1: Read an existing ADR to match the format**
@@ -2204,6 +2230,7 @@ git commit -m "docs(adr): 0008 multi-framework taxonomy mappings"
 **Goal:** Operator-facing guide explaining the new taxonomies, how to enable them per run, how to read the new rollups, and the reference-data refresh cadence.
 
 **Files:**
+
 - Create: `docs/taxonomy-mappings.md`
 
 - [ ] **Step 1: Write the doc**
@@ -2282,6 +2309,7 @@ apd-gauntlet refresh-d3fend
 ```
 
 Each script applies a 60-second HTTP timeout, a 200 MiB response cap, and records a `source_sha256` and `fetched_at` in the projected JSON. Recommended cadence: **quarterly**, or whenever a taxonomy publishes a new edition you intend to adopt.
+
 ```
 
 - [ ] **Step 2: Commit**
@@ -2298,6 +2326,7 @@ git commit -m "docs: add docs/taxonomy-mappings.md operator guide for v1.2 taxon
 **Goal:** Refresh `docs/architecture.md`, `docs/running-the-gauntlet.md`, and `docs/schema-evolution.md` to mention the v1.2 additions.
 
 **Files:**
+
 - Modify: `docs/architecture.md`
 - Modify: `docs/running-the-gauntlet.md`
 - Modify: `docs/schema-evolution.md`
@@ -2384,6 +2413,7 @@ git commit -m "docs: refresh architecture/running/schema-evolution/README for v1
 **Goal:** Finalize the v1.2.0 release artifact.
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 - Modify: `pyproject.toml`
 - Modify: `tools/apd_gauntlet/__init__.py`

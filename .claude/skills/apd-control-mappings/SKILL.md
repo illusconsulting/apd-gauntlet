@@ -18,6 +18,7 @@ Use enhancement notation when an enhancement is the right citation: `SC-8(1)` fo
 Primary families: **SC** (System and Communications Protection), **AC** (Access Control), **MP** (Media Protection).
 
 Common citations:
+
 - `SC-8`, `SC-8(1)` — transmission confidentiality
 - `SC-12`, `SC-12(1)`, `SC-12(2)`, `SC-12(3)` — key establishment and management
 - `SC-13` — cryptographic protection
@@ -33,6 +34,7 @@ Common citations:
 Primary families: **SI** (System and Information Integrity), **SC** (System and Communications Protection), **CM** (Configuration Management).
 
 Common citations:
+
 - `SI-7`, `SI-7(1)`, `SI-7(7)` — software, firmware, and information integrity
 - `SI-10` — information input validation
 - `SI-15` — information output filtering
@@ -45,6 +47,7 @@ Common citations:
 Primary families: **CP** (Contingency Planning), **SC** (System and Communications Protection), **SI** (System and Information Integrity).
 
 Common citations:
+
 - `CP-2`, `CP-2(3)`, `CP-2(5)` — contingency plan, resume essential missions
 - `CP-7`, `CP-7(1)` — alternate processing site
 - `CP-9`, `CP-9(1)`, `CP-9(8)` — system backup, cryptographic protection
@@ -57,6 +60,7 @@ Common citations:
 Primary families: **SC** (System and Communications Protection), **CP** (Contingency Planning), **CM** (Configuration Management).
 
 Common citations:
+
 - `SC-7`, `SC-7(5)`, `SC-7(21)` — boundary protection, isolation of components
 - `SC-22` — architecture and provisioning for name/address resolution
 - `SC-36`, `SC-36(1)` — distributed processing and storage
@@ -68,6 +72,7 @@ Common citations:
 Primary families: **SI** (System and Information Integrity), **CP** (Contingency Planning), **SC**.
 
 Common citations:
+
 - `SI-13`, `SI-13(1)`, `SI-13(4)` — predictable failure prevention
 - `SI-17` — fail-safe procedures
 - `CP-12` — safe mode
@@ -80,6 +85,7 @@ Common citations:
 Primary families: **IA** (Identification and Authentication), **AC** (Access Control), **SA** (System and Services Acquisition).
 
 Common citations:
+
 - `IA-5`, `IA-5(1)`, `IA-5(7)`, `IA-5(13)` — authenticator management, rotation
 - `AC-2`, `AC-2(2)`, `AC-2(3)` — account management, automated removal of temporary accounts
 - `AC-12`, `AC-12(1)` — session termination
@@ -92,6 +98,7 @@ Common citations:
 Primary families: **IA** (Identification and Authentication), **SC** (System and Communications Protection), **SR** (Supply Chain Risk Management).
 
 Common citations:
+
 - `IA-2`, `IA-2(1)`, `IA-2(2)`, `IA-2(6)`, `IA-2(8)` — identification and authentication, MFA, replay-resistant
 - `IA-3`, `IA-3(1)` — device identification and authentication
 - `IA-5(2)` — PKI-based authentication
@@ -106,6 +113,7 @@ Common citations:
 Primary families: **AU** (Audit and Accountability), **IA** (Identification and Authentication).
 
 Common citations:
+
 - `AU-2` — event logging
 - `AU-3`, `AU-3(1)`, `AU-3(3)` — content of audit records, additional information
 - `AU-6`, `AU-6(1)`, `AU-6(3)` — audit review, analysis, and reporting
@@ -119,6 +127,7 @@ Common citations:
 Primary families: **AU** (Audit and Accountability), **CM** (Configuration Management), **MP** (Media Protection), **SI**.
 
 Common citations:
+
 - `AU-9(2)` — store on separate physical systems or components
 - `AU-9(3)` — cryptographic protection
 - `AU-11`, `AU-11(1)` — audit record retention, long-term retrieval
@@ -158,6 +167,7 @@ If the rationale you can write is vague ("could enable lateral movement", "may a
 ### Examples — accepted mappings
 
 **Finding: Unencrypted PHI in Kafka topics with broker-level encryption only.**
+
 ```yaml
 mitre_attack:
   - technique: "T1530"           # Data from Cloud Storage
@@ -165,9 +175,11 @@ mitre_attack:
     tactic: "TA0010"             # Exfiltration
     rationale: "Broker-level encryption leaves PHI in plaintext at the Kafka storage layer, enabling collection if broker filesystem access is obtained."
 ```
+
 Accepted: the rationale ties the specific architectural choice (broker-level encryption) to the specific technique (data collected from the storage system).
 
 **Finding: Service-to-service calls inside the cluster lack mTLS, payloads contain PHI.**
+
 ```yaml
 mitre_attack:
   - technique: "T1557"           # Adversary-in-the-Middle
@@ -179,9 +191,11 @@ mitre_attack:
 ### Examples — rejected mappings
 
 **Finding: Audit log retention is 90 days instead of required 6 years.**
+
 - Rejected mapping: `T1070 - Indicator Removal`. The architectural choice (short retention) does not *enable* the adversary technique; it limits the defender's evidence horizon. Map to NIST `AU-11` instead and explain in `detail` why no ATT&CK technique applies.
 
 **Finding: No multi-region failover for the adjudication engine.**
+
 - Rejected mapping: `T1499 - Endpoint Denial of Service`. Availability gaps are not adversary-enabling unless the architectural choice specifically aids DoS. Map to NIST `CP-7` instead.
 
 ### Sub-techniques

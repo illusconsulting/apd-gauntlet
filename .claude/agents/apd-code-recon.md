@@ -20,6 +20,7 @@ You only run if both conditions hold:
 If condition 1 fails: do not run; the orchestrator will not dispatch you.
 
 If condition 1 holds but condition 2 fails:
+
 - Under `code_recon: enabled`, write `00-context/code-recon-skipped.md` with "CBM not reachable; recon cannot complete" and exit signaling a soft failure to the orchestrator.
 - Under `code_recon: auto`, write the same skip note and exit cleanly.
 

@@ -30,6 +30,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Is the data hidden from parties not authorized to see it?
 
 **In scope.**
+
 - Encryption at rest (TDE, full-disk, field-level, envelope encryption)
 - Encryption in transit (TLS configuration, mTLS, certificate pinning)
 - Encryption in use (TEE, confidential computing, homomorphic schemes)
@@ -40,6 +41,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Access scoping at data-element granularity
 
 **Out of scope (route to adjacent goal).**
+
 - "Is the identity claiming access verified?" → **Authenticity**
 - "Will the credentials granting access expire promptly?" → **Ephemeral**
 - "Was the access logged with attribution?" → **Non-Repudiation**
@@ -54,6 +56,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Is the data what it should be, and unchanged in transit and at rest?
 
 **In scope.**
+
 - Schema enforcement (typed schemas, contract validation)
 - Input validation on write paths (range, type, semantic constraints)
 - Tamper detection (HMAC, signed payloads, content hashes)
@@ -63,6 +66,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Write-path authorization (who may mutate what)
 
 **Out of scope (route to adjacent goal).**
+
 - "Is the writer's identity verified?" → **Authenticity**
 - "Is the write attributable in audit?" → **Non-Repudiation**
 - "Are historical states preserved against alteration?" → **Immutability**
@@ -76,6 +80,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Will the system be reachable and responsive when needed, within stated targets?
 
 **In scope.**
+
 - SLO/SLI definitions and measurement
 - Failure-domain analysis (what's the blast radius of one failure?)
 - DR/BCP posture (RTO, RPO, runbooks, backup verification)
@@ -85,6 +90,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Adjudication-specific timing constraints (claim response latency targets)
 
 **Out of scope (route to adjacent goal).**
+
 - "Is the system spread across failure domains?" → **Distributed**
 - "How does the system behave under partial failure?" → **Resilient**
 
@@ -99,6 +105,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Is the system spread across failure domains and capable of partition tolerance?
 
 **In scope.**
+
 - Single point of failure (SPOF) identification
 - Multi-region, multi-AZ topology
 - Partition tolerance positioning (CAP-tradeoff explicitness)
@@ -108,6 +115,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Load distribution mechanism (DNS, anycast, service mesh)
 
 **Out of scope (route to adjacent goal).**
+
 - "What's the uptime target?" → **Availability**
 - "What happens when a partition occurs?" → **Resilient**
 - "Are the distributed components ephemeral?" → **Ephemeral**
@@ -119,6 +127,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Does the system degrade gracefully under failure and recover automatically?
 
 **In scope.**
+
 - Failure-mode catalog (what fails, how, what's the user-visible effect)
 - Retry policies (backoff, jitter, retry budgets)
 - Circuit breakers and their thresholds
@@ -129,6 +138,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Backpressure handling
 
 **Out of scope (route to adjacent goal).**
+
 - "How is the system spread out?" → **Distributed**
 - "What's the SLO?" → **Availability**
 
@@ -137,6 +147,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Are credentials, infrastructure, and access short-lived by design?
 
 **In scope.**
+
 - Credential lifecycle (creation, rotation, revocation)
 - Immutable infrastructure (no in-place mutation, no SSH-to-fix)
 - Just-in-time access patterns for human operators
@@ -146,6 +157,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Service account credential expiry
 
 **Out of scope (route to adjacent goal).**
+
 - "Are credentials cryptographically verifiable?" → **Authenticity**
 - "What's the encryption posture of the credentials?" → **Confidentiality**
 
@@ -160,6 +172,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Is the claimed identity (of a user, a service, a payload, an artifact) cryptographically verifiable?
 
 **In scope.**
+
 - Identity provenance (who issues identity, what root of trust)
 - mTLS, SPIFFE/SPIRE, workload identity
 - Signed artifacts (binary signing, container image signing, package signing)
@@ -169,6 +182,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Signed payloads on inter-service messages
 
 **Out of scope (route to adjacent goal).**
+
 - "Is the action attributable in audit?" → **Non-Repudiation**
 - "Is the credential short-lived?" → **Ephemeral**
 - "Is the data hidden from unauthorized identities?" → **Confidentiality**
@@ -180,6 +194,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Can every consequential action be tied to an actor, with sufficient durability and detail to withstand later denial?
 
 **In scope.**
+
 - Audit log completeness (what's logged, what's not, against a defined "consequential action" surface)
 - Actor attribution in every entry (subject, on-behalf-of, source)
 - Cryptographic event signing (signed audit, hash-chained logs)
@@ -189,6 +204,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Audit log shipping reliability (no silent loss)
 
 **Out of scope (route to adjacent goal).**
+
 - "Can the audit record be altered after the fact?" → **Immutability**
 - "Was the actor's identity verified?" → **Authenticity**
 
@@ -199,6 +215,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 **Lens.** Are records that must not change protected against alteration, with detection if they are?
 
 **In scope.**
+
 - WORM / append-only stores
 - Configuration drift detection (declared state vs actual state)
 - Hash-chained logs (Merkle trees, blockchain-style anchoring)
@@ -208,6 +225,7 @@ The boundary calls in each section below are the operative resolutions for ambig
 - Snapshot integrity
 
 **Out of scope (route to adjacent goal).**
+
 - "Is the record attributable to an actor?" → **Non-Repudiation**
 - "Is the record encrypted at rest?" → **Confidentiality**
 

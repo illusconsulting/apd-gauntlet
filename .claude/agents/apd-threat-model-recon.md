@@ -83,18 +83,21 @@ and `entries` count.
 For each entry, apply enrichment passes as appropriate to its methodology:
 
 **STRIDE entries** (Threat Dragon, Microsoft TMT, STRIDE tables):
+
 - Verify `framework_refs.stride_letter` is set
 - `inferred_apd_goals` should already be populated by the parser via the
   canonical mapping table; verify it matches (S→[authenticity], etc.)
 - No further enrichment needed for these — parsers are deterministic
 
 **LINDDUN entries:**
+
 - Same as STRIDE: verify the canonical mapping was applied
 - Special case: if the entry's `linddun_letter` is `N_compliance` AND the
   domain pack defines an N_compliance override (e.g., PBM maps it to HIPAA),
   add the domain-specific APD goals to `inferred_apd_goals`
 
 **Attack-tree entries:**
+
 - Leaves come with a shallow keyword-based `framework_refs.mitre_attack`
   list. Refine using your judgment: read the leaf text, identify likely
   ATT&CK techniques beyond the keyword match, add them to the list.
@@ -104,6 +107,7 @@ For each entry, apply enrichment passes as appropriate to its methodology:
 
 **Free-form entries** (parser output had `methodology: free_form` and
 `entries: []`):
+
 - Read the source artifact directly
 - Identify each (asset, threat, mitigation) claim in the prose
 - For each claim, construct an entry with:
@@ -119,6 +123,7 @@ For each entry, apply enrichment passes as appropriate to its methodology:
 
 Validate the enriched envelope against `schemas/threat-model-normalized.schema.json`.
 If validation fails:
+
 - Log specific errors
 - DO NOT write the file
 - Emit a STATUS line on stderr: `"validation failed: <error count> errors;
@@ -134,6 +139,7 @@ toward `low_confidence_count`).
 ### Step 7 — Self-check before exit
 
 Confirm:
+
 - [ ] File exists at `00-context/threat-model-normalized.yaml`
 - [ ] File validates against `schemas/threat-model-normalized.schema.json`
 - [ ] `extraction_summary.entry_count` matches `len(entries)`

@@ -62,7 +62,10 @@ def build_domain_skill(
     for include_glob in meta["includes"]:
         for f in sorted(pack_dir.glob(include_glob)):
             sections.append(f"\n\n## Source: `{f.relative_to(pack_dir)}`\n\n")
-            sections.append(f.read_text())
+            # rstrip so each source contribution ends cleanly; otherwise the
+            # next section's leading "\n\n" stacks on the source's trailing
+            # newline and trips MD012 (multiple consecutive blank lines).
+            sections.append(f.read_text().rstrip())
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     frontmatter = (
@@ -80,5 +83,5 @@ def build_domain_skill(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "SKILL.md"
-    out_path.write_text(frontmatter + "".join(sections))
+    out_path.write_text(frontmatter + "".join(sections) + "\n")
     return out_path
