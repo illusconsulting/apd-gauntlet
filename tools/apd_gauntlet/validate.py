@@ -185,6 +185,8 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_capability_maturity_evidence(record, tech_plan_artifacts):
                 report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_d3fend_counters_attack(record):
+                report.errors.append(Violation(path, rid, msg))
     report.files_seen = len(seen_files)
     return report
 

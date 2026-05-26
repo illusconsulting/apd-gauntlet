@@ -99,3 +99,101 @@ def test_capability_maturity_implemented_requires_non_tech_plan_evidence(tmp_pat
     # Pass 3 is tested in test_validate_cross_file.py.
     result = runner.invoke(main, ["validate", "--schema-only", str(dst)])
     assert result.exit_code == 0  # schema allows maturity=implemented at the schema level
+
+
+# ----------------------------------------------------------------------------
+# Task 17: D3FEND counters_attack ⊆ capability's mitre_attack cross-reference.
+# ----------------------------------------------------------------------------
+
+# A control_mappings block with d3fend whose counters_attack does NOT intersect
+# the (also-provided) mitre_attack[].technique list. The clean-run capability
+# starts with only `nist_800_53r5`; we replace that line with this block.
+_D3FEND_MISMATCH_BLOCK = (
+    'nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]\n'
+    "    mitre_attack:\n"
+    "      - technique: T1078\n"
+    "        tactic: TA0001\n"
+    "        rationale: \"Capability defends against valid-account abuse"
+    " via field-level encryption boundary.\"\n"
+    "    d3fend:\n"
+    "      - technique: D3-NTA\n"
+    "        counters_attack: [\"T9999\"]\n"
+    "        rationale: \"Network traffic analysis with mTLS-enforced"
+    " identity detects unauthorized traversal.\""
+)
+
+# Same shape but counters_attack overlaps mitre_attack exactly.
+_D3FEND_EXACT_MATCH_BLOCK = (
+    'nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]\n'
+    "    mitre_attack:\n"
+    "      - technique: T1078\n"
+    "        tactic: TA0001\n"
+    "        rationale: \"Capability defends against valid-account abuse"
+    " via field-level encryption boundary.\"\n"
+    "    d3fend:\n"
+    "      - technique: D3-NTA\n"
+    "        counters_attack: [\"T1078\"]\n"
+    "        rationale: \"Network traffic analysis with mTLS-enforced"
+    " identity detects unauthorized traversal.\""
+)
+
+# counters_attack is a sub-technique whose parent appears in mitre_attack[].technique.
+_D3FEND_SUBTECH_PARENT_BLOCK = (
+    'nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]\n'
+    "    mitre_attack:\n"
+    "      - technique: T1110\n"
+    "        tactic: TA0006\n"
+    "        rationale: \"Capability defends against brute-force credential"
+    " attacks via rate limiting and MFA on the IAM boundary.\"\n"
+    "    d3fend:\n"
+    "      - technique: D3-MFA\n"
+    "        counters_attack: [\"T1110.001\"]\n"
+    "        rationale: \"Multi-factor authentication blocks password"
+    " guessing variants of brute-force credential attacks.\""
+)
+
+
+def _mutate_capability_controls(run_dir, replacement_block: str) -> None:
+    """Replace the clean-run capability's `nist_800_53r5: [...]` line with the
+    supplied control_mappings block."""
+    f = run_dir / "10-trustworthiness" / "confidentiality.capabilities.yaml"
+    text = f.read_text()
+    text = text.replace(
+        'nist_800_53r5: ["SC-12", "SC-12(1)", "SC-13", "SC-28", "SC-28(1)"]',
+        replacement_block,
+    )
+    f.write_text(text)
+
+
+def test_validate_rejects_d3fend_counters_attack_not_in_mitre_attack(tmp_path):
+    """D3FEND counters_attack must intersect the capability's mitre_attack."""
+    dst = _copy_clean_run(tmp_path)
+    _mutate_capability_controls(dst, _D3FEND_MISMATCH_BLOCK)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1, result.output
+    out = result.output.lower()
+    assert "counters_attack" in out
+    assert "t9999" in out
+
+
+def test_validate_accepts_d3fend_counters_attack_intersects_mitre_attack(tmp_path):
+    """Cross-reference satisfied when there's at least one exact overlap."""
+    dst = _copy_clean_run(tmp_path)
+    _mutate_capability_controls(dst, _D3FEND_EXACT_MATCH_BLOCK)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    # No counters_attack errors should be raised by the cross-reference check.
+    assert "counters_attack" not in result.output.lower(), result.output
+    # And the run as a whole should be clean (other lints unaffected).
+    assert result.exit_code == 0, result.output
+
+
+def test_validate_accepts_d3fend_subtechnique_when_parent_in_mitre_attack(tmp_path):
+    """Sub-technique counters_attack (T1110.001) satisfied by parent T1110 in mitre_attack."""
+    dst = _copy_clean_run(tmp_path)
+    _mutate_capability_controls(dst, _D3FEND_SUBTECH_PARENT_BLOCK)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert "counters_attack" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output

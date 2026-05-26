@@ -81,6 +81,51 @@ def check_hedge_words_in_attack_rationale(record: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def check_d3fend_counters_attack(record: dict[str, Any]) -> list[str]:
+    """Every d3fend.counters_attack ID on a capability must appear in the same
+    capability's `mitre_attack[].technique` list — either exactly, or (for
+    sub-technique IDs like ``T1110.001``) via its parent technique (``T1110``).
+
+    The schema validates the format of `counters_attack` entries; this lint
+    enforces the semantic intent: a D3FEND mapping that doesn't counter
+    anything the capability itself claims to defend against is an
+    evidence-discipline violation (D3FEND-by-name-similarity).
+
+    Returns one error string per d3fend entry that has any unmatched
+    `counters_attack` ID. Returns ``[]`` when no `d3fend` block is present.
+    """
+    errors: list[str] = []
+    control_mappings = record.get("control_mappings") or {}
+    d3fend_entries = control_mappings.get("d3fend") or []
+    if not d3fend_entries:
+        return errors
+    declared_techniques: set[str] = {
+        entry["technique"]
+        for entry in (control_mappings.get("mitre_attack") or [])
+        if isinstance(entry, dict) and "technique" in entry
+    }
+    for i, d3_entry in enumerate(d3fend_entries):
+        if not isinstance(d3_entry, dict):
+            continue
+        unmatched: list[str] = []
+        for counter_id in d3_entry.get("counters_attack", []) or []:
+            if counter_id in declared_techniques:
+                continue
+            parent = counter_id.split(".", 1)[0] if "." in counter_id else None
+            if parent and parent in declared_techniques:
+                continue
+            unmatched.append(counter_id)
+        if unmatched:
+            errors.append(
+                f"control_mappings.d3fend[{i}] (technique="
+                f"{d3_entry.get('technique')}) counters_attack {unmatched} "
+                f"not in mitre_attack[].technique; D3FEND mappings require "
+                f"the countered ATT&CK technique (or its parent) to also "
+                f"appear in mitre_attack[]"
+            )
+    return errors
+
+
 def check_capability_maturity_evidence(
     record: dict[str, Any], tech_plan_artifacts: set[str]
 ) -> list[str]:
