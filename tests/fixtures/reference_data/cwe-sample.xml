@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Weakness_Catalog Name="CWE" Version="4.20-test" Date="2026-05-25"
+                  xmlns="http://cwe.mitre.org/cwe-7"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <Weaknesses>
+    <Weakness ID="79" Name="Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+              Abstraction="Base" Structure="Simple" Status="Stable">
+      <Description>Test fixture description for CWE-79.</Description>
+      <Related_Weaknesses>
+        <Related_Weakness Nature="ChildOf" CWE_ID="74" View_ID="1000" Ordinal="Primary"/>
+        <Related_Weakness Nature="PeerOf" CWE_ID="352" View_ID="1000"/>
+      </Related_Weaknesses>
+      <Demonstrative_Examples>
+        <Demonstrative_Example>
+          <Intro_Text>Example XSS sink.</Intro_Text>
+        </Demonstrative_Example>
+      </Demonstrative_Examples>
+      <Observed_Examples>
+        <Observed_Example>
+          <Reference>CVE-2024-00079</Reference>
+          <Description>Example observed XSS instance.</Description>
+        </Observed_Example>
+      </Observed_Examples>
+    </Weakness>
+    <Weakness ID="89" Name="Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+              Abstraction="Base" Structure="Simple" Status="Stable">
+      <Description>Test fixture description for CWE-89.</Description>
+      <Related_Weaknesses>
+        <Related_Weakness Nature="ChildOf" CWE_ID="74" View_ID="1000" Ordinal="Primary"/>
+      </Related_Weaknesses>
+    </Weakness>
+  </Weaknesses>
+</Weakness_Catalog>
