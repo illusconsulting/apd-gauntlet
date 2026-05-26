@@ -1,0 +1,47 @@
+{
+  "entries": [
+    {
+      "category_id": "A01:2021",
+      "name": "Broken Access Control"
+    },
+    {
+      "category_id": "A02:2021",
+      "name": "Cryptographic Failures"
+    },
+    {
+      "category_id": "A03:2021",
+      "name": "Injection"
+    },
+    {
+      "category_id": "A04:2021",
+      "name": "Insecure Design"
+    },
+    {
+      "category_id": "A05:2021",
+      "name": "Security Misconfiguration"
+    },
+    {
+      "category_id": "A06:2021",
+      "name": "Vulnerable and Outdated Components"
+    },
+    {
+      "category_id": "A07:2021",
+      "name": "Identification and Authentication Failures"
+    },
+    {
+      "category_id": "A08:2021",
+      "name": "Software and Data Integrity Failures"
+    },
+    {
+      "category_id": "A09:2021",
+      "name": "Security Logging and Monitoring Failures"
+    },
+    {
+      "category_id": "A10:2021",
+      "name": "Server-Side Request Forgery"
+    }
+  ],
+  "fetched_at": "2026-05-26T01:35:27.893692+00:00",
+  "source_sha256": "241836c10e09738a2d84deda81545fbb6aee6212dad476036e4c3d3644784fd5",
+  "source_url": "seed_only"
+}

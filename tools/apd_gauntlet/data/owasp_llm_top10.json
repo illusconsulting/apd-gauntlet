@@ -1,0 +1,47 @@
+{
+  "entries": [
+    {
+      "category_id": "LLM01",
+      "name": "Prompt Injection"
+    },
+    {
+      "category_id": "LLM02",
+      "name": "Insecure Output Handling"
+    },
+    {
+      "category_id": "LLM03",
+      "name": "Training Data Poisoning"
+    },
+    {
+      "category_id": "LLM04",
+      "name": "Model Denial of Service"
+    },
+    {
+      "category_id": "LLM05",
+      "name": "Supply Chain Vulnerabilities"
+    },
+    {
+      "category_id": "LLM06",
+      "name": "Sensitive Information Disclosure"
+    },
+    {
+      "category_id": "LLM07",
+      "name": "Insecure Plugin Design"
+    },
+    {
+      "category_id": "LLM08",
+      "name": "Excessive Agency"
+    },
+    {
+      "category_id": "LLM09",
+      "name": "Overreliance"
+    },
+    {
+      "category_id": "LLM10",
+      "name": "Model Theft"
+    }
+  ],
+  "fetched_at": "2026-05-26T01:35:27.893692+00:00",
+  "source_sha256": "71b1d38090f7bccff7d4c318d109f7b34c0f6e4ccc6ab1bf3caf146e88bbe532",
+  "source_url": "seed_only"
+}
