@@ -16,6 +16,7 @@ finding:
       excerpt: "TLS in transit; no end-to-end payload integrity check"
   control_mappings:
     nist_800_53r5: ["SC-8(1)", "SI-7", "SI-7(1)"]
+    cwe: ["CWE-345"]
     mitre_attack:
       - technique: "T1565"
         sub_technique: null

@@ -17,5 +17,14 @@ capability:
       excerpt: "TLS 1.2+ in transit between producers, brokers, and consumers"
   control_mappings:
     nist_800_53r5: ["SC-8", "SC-8(1)"]
+    mitre_attack:
+      - technique: "T1557"
+        sub_technique: null
+        tactic: "TA0006"
+        rationale: "TLS 1.2+ on every Kafka transport path defeats Adversary-in-the-Middle interception and alteration between producers, brokers, and consumers at the transport layer."
+    d3fend:
+      - technique: "D3-NTSA"
+        counters_attack: ["T1557"]
+        rationale: "Network Traffic Signature Analysis combined with TLS 1.2+ enforcement on the MSK transport makes Adversary-in-the-Middle attempts on broker connections detectable and prevents plaintext interception of in-flight Kafka payloads."
   caveats:
     - "Transport-layer TLS does not provide payload-level integrity; a compromised broker can still alter messages."

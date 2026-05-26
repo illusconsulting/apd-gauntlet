@@ -16,6 +16,7 @@ finding:
         excerpt: "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
     control_mappings:
       nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]
+      cwe: ["CWE-319"]
       mitre_attack:
         - technique: "T1530"
           sub_technique: null
@@ -69,6 +70,7 @@ finding:
         excerpt: "Service-to-service: shared bearer tokens stored in HashiCorp Vault"
     control_mappings:
       nist_800_53r5: ["IA-3", "SC-8(1)"]
+      owasp_api_top10: ["API2:2023"]
     recommendation:
       posture: recommended
       summary: "Replace shared bearer tokens with per-service mTLS certificates or SPIFFE identities."

@@ -1,0 +1,36 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+  - cwe_id: CWE-287
+    name: "Improper Authentication"
+    abstraction: class
+    parent_pillar: CWE-284
+    finding_count: 2
+    finding_ids: [auth-dbba3dea, auth-8d386c2f]
+    surfaces:
+      - "member-portal/mfa"
+      - "internal/service-to-service-auth"
+  - cwe_id: CWE-308
+    name: "Use of Single-factor Authentication"
+    abstraction: base
+    parent_pillar: CWE-1390
+    finding_count: 1
+    finding_ids: [auth-dbba3dea]
+    surfaces:
+      - "member-portal/mfa"
+  - cwe_id: CWE-319
+    name: "Cleartext Transmission of Sensitive Information"
+    abstraction: base
+    parent_pillar: CWE-311
+    finding_count: 1
+    finding_ids: [conf-7aa376c5]
+    surfaces:
+      - "kafka/claim-events-topic"
+  - cwe_id: CWE-345
+    name: "Insufficient Verification of Data Authenticity"
+    abstraction: class
+    parent_pillar: CWE-693
+    finding_count: 1
+    finding_ids: [intg-42a3ebbd]
+    surfaces:
+      - "kafka/claim-events-topic"

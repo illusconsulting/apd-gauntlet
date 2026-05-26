@@ -16,6 +16,8 @@ finding:
         excerpt: "MFA factors accepted: TOTP, push, SMS (fallback)"
     control_mappings:
       nist_800_53r5: ["IA-2(1)", "IA-2(2)", "IA-5(1)"]
+      cwe: ["CWE-287", "CWE-308"]
+      owasp_api_top10: ["API2:2023"]
       mitre_attack:
         - technique: "T1621"
           sub_technique: null
@@ -46,6 +48,8 @@ finding:
       - conf-e443de8b
     control_mappings:
       nist_800_53r5: ["IA-3", "IA-9", "SC-8(1)"]
+      cwe: ["CWE-287"]
+      owasp_api_top10: ["API2:2023"]
     recommendation:
       posture: recommended
       summary: "Migrate service-to-service authentication to mTLS or SPIFFE/SPIRE for cryptographic service identity."
