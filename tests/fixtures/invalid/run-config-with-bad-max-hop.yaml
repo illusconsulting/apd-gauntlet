@@ -1,0 +1,5 @@
+run_id: pbm-bad-attack-path
+domain: pbm
+framework_version: 1.4.0
+attack_path_analysis:
+  max_hop: 20

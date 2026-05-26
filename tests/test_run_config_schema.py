@@ -91,3 +91,47 @@ def test_run_config_rejects_unknown_methodology_hint():
     )
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors  # truthy: rejected by the enum
+
+
+def test_run_config_accepts_crown_jewels_and_attacker_positions():
+    """A run-config with crown_jewels and attacker_positions passes."""
+    data = yaml.safe_load(
+        (FIXTURES / "valid/run-config-with-attack-path.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+    assert data["crown_jewels"] == ["phi_store", "pde_submission_pipeline"]
+    assert "compromised_pharmacy_credential" in data["attacker_positions"]
+
+
+def test_run_config_accepts_attack_path_analysis_tuning_block():
+    """A run-config with attack_path_analysis tuning passes."""
+    data = yaml.safe_load(
+        (FIXTURES / "valid/run-config-with-attack-path.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+    assert data["attack_path_analysis"]["max_hop"] == 6
+    assert data["attack_path_analysis"]["max_paths_per_pair"] == 25
+    assert data["attack_path_analysis"]["bottleneck_threshold"] == 4
+
+
+def test_run_config_rejects_max_hop_above_cap():
+    """max_hop=20 should violate maximum=12."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-with-bad-max-hop.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "max_hop=20 should violate maximum=12"
+
+
+def test_run_config_rejects_max_paths_per_pair_above_cap():
+    """max_paths_per_pair=500 should violate maximum=200."""
+    data = {
+        "run_id": "test-run",
+        "domain": "pbm",
+        "framework_version": "1.4.0",
+        "attack_path_analysis": {"max_paths_per_pair": 500},
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "max_paths_per_pair=500 should violate maximum=200"
