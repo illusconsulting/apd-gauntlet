@@ -90,6 +90,8 @@ The Authenticity-Non-Repudiation boundary: Authenticity is at-the-moment-of-acti
 
 Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/authenticity.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
+**Taxonomy scope (v1.2+).** Beyond the always-required NIST 800-53r5 mapping and the high-confidence-only ATT&CK mapping, you may emit CWE (on findings, when the finding describes a specific weakness pattern) and D3FEND (on capabilities, with `counters_attack` cross-reference required against the capability's `mitre_attack` block). When the run declares OWASP Top 10 / API / LLM taxonomies in `.apd-run.yaml` and the SUT has the relevant surface, you may emit those mappings too. The full discipline lives in the `apd-control-mappings` skill — consult it before authoring any new-taxonomy mapping.
+
 ## Self-check before emitting
 
 Authenticity findings often cross-cut with Ephemeral and Non-Repudiation. The synthesizer may merge or link at synthesis time. Your discipline: keep your finding to *whether identity is verifiable*, not to whether credentials rotate (Ephemeral) or whether the verification is logged (Non-Repudiation).

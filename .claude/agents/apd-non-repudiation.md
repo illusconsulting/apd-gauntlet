@@ -100,6 +100,8 @@ The Non-Repudiation-Immutability boundary: Non-Repudiation ensures the record ex
 
 Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/non-repudiation.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
+**Taxonomy scope (v1.2+).** Beyond the always-required NIST 800-53r5 mapping and the high-confidence-only ATT&CK mapping, you may emit CWE (on findings, when the finding describes a specific weakness pattern) and D3FEND (on capabilities, with `counters_attack` cross-reference required against the capability's `mitre_attack` block). When the run declares OWASP Top 10 / API / LLM taxonomies in `.apd-run.yaml` and the SUT has the relevant surface, you may emit those mappings too. The full discipline lives in the `apd-control-mappings` skill — consult it before authoring any new-taxonomy mapping.
+
 ## Self-check before emitting
 
 Non-Repudiation findings frequently pair with Immutability findings on the same evidence. The lens discipline: are you writing about *whether the record exists with attribution* (yours) or *whether the record can be altered later* (Immutability)? If both, you write the former, link via `related_concerns`, and trust Immutability to write its own finding.

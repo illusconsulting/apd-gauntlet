@@ -101,6 +101,8 @@ The Immutability-Non-Repudiation boundary: a complete log written to a mutable d
 
 Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/immutability.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
+**Taxonomy scope (v1.2+).** Beyond the always-required NIST 800-53r5 mapping and the high-confidence-only ATT&CK mapping, you may emit CWE (on findings, when the finding describes a specific weakness pattern) and D3FEND (on capabilities, with `counters_attack` cross-reference required against the capability's `mitre_attack` block). When the run declares OWASP Top 10 / API / LLM taxonomies in `.apd-run.yaml` and the SUT has the relevant surface, you may emit those mappings too. The full discipline lives in the `apd-control-mappings` skill — consult it before authoring any new-taxonomy mapping.
+
 ## Self-check before emitting
 
 The Immutability lens often produces high-severity findings on systems that look well-architected from other lenses. A system with strong Confidentiality, Integrity, and Non-Repudiation but a mutable audit store has a critical Immutability gap — alone, the gap may look operational, but in combination it defeats the other controls' value. Calibrate severity accordingly, and use `related_concerns` to surface the combination effect to the synthesizer.

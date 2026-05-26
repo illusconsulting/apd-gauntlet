@@ -97,6 +97,8 @@ The Distributed-versus-Resilient boundary: topology is yours, behavior is theirs
 
 Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/distributed.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
+**Taxonomy scope (v1.2+).** Beyond the always-required NIST 800-53r5 mapping and the high-confidence-only ATT&CK mapping, you may emit CWE (on findings, when the finding describes a specific weakness pattern) and D3FEND (on capabilities, with `counters_attack` cross-reference required against the capability's `mitre_attack` block). When the run declares OWASP Top 10 / API / LLM taxonomies in `.apd-run.yaml` and the SUT has the relevant surface, you may emit those mappings too. The full discipline lives in the `apd-control-mappings` skill — consult it before authoring any new-taxonomy mapping.
+
 ## Self-check before emitting
 
 Distributed findings frequently sit adjacent to Availability and Resilient findings. The synthesizer may merge them at synthesis; that is the synthesizer's call, not yours. Your job is to keep your finding inside topology and link to adjacent goals via `related_concerns`.

@@ -94,6 +94,8 @@ A finding about "no circuit breaker on the eligibility vendor call" is Resilient
 
 Pattern templates calibrated to the active domain — including severity calibration anchors and NIST/ATT&CK mapping examples — are in the `apd-domain` skill (`domains/<active>/common-patterns/resilient.md`). Treat those as the working starting points for findings and capabilities in this lens. Patterns are *examples*, not a closed catalog; novel concerns produce novel findings.
 
+**Taxonomy scope (v1.2+).** Beyond the always-required NIST 800-53r5 mapping and the high-confidence-only ATT&CK mapping, you may emit CWE (on findings, when the finding describes a specific weakness pattern) and D3FEND (on capabilities, with `counters_attack` cross-reference required against the capability's `mitre_attack` block). When the run declares OWASP Top 10 / API / LLM taxonomies in `.apd-run.yaml` and the SUT has the relevant surface, you may emit those mappings too. The full discipline lives in the `apd-control-mappings` skill — consult it before authoring any new-taxonomy mapping.
+
 ## Self-check before emitting
 
 Resilient findings often look operational; resist the urge to expand into runbook prescriptions. Keep findings architectural: name the design choice, name the failure mode it does not address, name the user-visible consequence. The recommendation can name the operational pattern but should be tied to the architectural change.
