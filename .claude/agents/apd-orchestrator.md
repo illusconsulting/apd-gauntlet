@@ -145,6 +145,16 @@ Wait for completion. Verify the synthesis directory contains:
 - `apd-coverage-matrix.yaml`
 - `advisory-report.md`
 
+### Phase 5.5 — Threat Model Evaluation (optional, v1.3+)
+
+After `apd-synthesizer` completes, invoke `apd-threat-model-evaluator`. The
+agent self-skips if `00-context/threat-model-normalized.yaml` is absent.
+
+Expected outputs (when activated):
+- Finding files at `20-findings/40-threat-model/tmeval-*.yaml`
+- `40-synthesis/threat-model-coverage-report.md`
+- `40-synthesis/threat-model-coverage.yaml`
+
 ### Phase 6 — Closeout
 
 Report to the user:
