@@ -90,9 +90,11 @@ def build_graph(run_dir: Path) -> BuildResult:
 
     _add_inventory_trust_edges(g, inventory)
     _add_finding_edges(g, findings)
-    sources.append("findings")
+    if findings:
+        sources.append("findings")
     _add_capability_edges(g, capabilities)
-    sources.append("capabilities")
+    if capabilities:
+        sources.append("capabilities")
 
     if tm_norm:
         _add_threat_model_edges(g, tm_norm)
@@ -326,8 +328,24 @@ def _add_inventory_trust_edges(g: Graph, inv: dict[str, Any]) -> None:
 
 
 def _node_name_index(g: Graph) -> dict[str, str]:
-    """Map lower-cased node name -> node_id, for text-based heuristic matching."""
-    return {g.get_node(nid).name.lower(): nid for nid in g._nodes}
+    """Map lower-cased node name -> node_id, for text-based heuristic matching.
+
+    Raises `BuilderBlocked` when two nodes share the same lowercased name —
+    case-insensitive matching downstream (finding/capability/TM edges,
+    DFS in Task C-11) cannot disambiguate them, so the graph is unusable
+    for path enumeration.
+    """
+    index: dict[str, str] = {}
+    for nid in g._nodes:
+        name = g.get_node(nid).name.lower()
+        if name in index:
+            raise BuilderBlocked(
+                f"duplicate case-insensitive node name {name!r} — "
+                f"at least two nodes share this lowercased name "
+                f"({index[name]!r}, {nid!r})"
+            )
+        index[name] = nid
+    return index
 
 
 def _add_finding_edges(g: Graph, findings: list[dict[str, Any]]) -> None:

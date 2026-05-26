@@ -86,3 +86,39 @@ def test_builder_skips_when_no_attacker_positions_declared(tmp_path: Path) -> No
     dom.write_text(dom.read_text().replace("- position: external", "# (removed)"))
     with pytest.raises(BuilderBlocked, match="no attacker positions"):
         build_graph(run)
+
+
+def test_builder_result_reports_all_sources_used() -> None:
+    """`BuildResult.sources_used` must enumerate every artifact that
+    contributed to the graph — downstream consumers (Task C-11, C-17 agent)
+    rely on it for attribution.
+    """
+    result = build_graph(FIXTURE_ROOT)
+    assert set(result.sources_used) >= {
+        "asset_inventory",
+        "findings",
+        "capabilities",
+        "threat_model_normalized",
+        "code_evidence_index",
+    }
+
+
+def test_builder_raises_on_case_insensitive_node_name_collision(
+    tmp_path: Path,
+) -> None:
+    """Two nodes whose names differ only in case make case-insensitive
+    text matching ambiguous — the builder must raise rather than silently
+    collapse them in `_node_name_index`.
+    """
+    run = tmp_path / "run"
+    shutil.copytree(FIXTURE_ROOT, run)
+    inv = run / "00-context" / "asset-inventory.yaml"
+    inv.write_text(
+        inv.read_text().replace(
+            'name: "adjudication-service"',
+            'name: "Claim-Ingress"',
+            1,
+        )
+    )
+    with pytest.raises(BuilderBlocked, match="case-insensitive"):
+        build_graph(run)
