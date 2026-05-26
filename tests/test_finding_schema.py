@@ -100,3 +100,19 @@ def test_finding_without_new_taxonomies_still_valid():
     validator = _build_validator(schema)
     errors = list(validator.iter_errors(data["finding"]))
     assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_accepts_threat_model_evaluator_agent():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-from-tmeval.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_id_pattern_accepts_tmeval_prefix():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-from-tmeval.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
