@@ -1,8 +1,7 @@
-# ADR 0007 — Optional code reconnaissance via codebase-memory-mcp
+# ADR-0007: Optional code reconnaissance via codebase-memory-mcp
 
-- **Status:** Accepted
-- **Date:** 2026-05-25
-- **Deciders:** APD Gauntlet maintainers
+**Status:** Accepted
+**Date:** 2026-05-25
 
 ## Context
 
