@@ -1,0 +1,167 @@
+schema_version: 1
+generated_by: threat_model_recon
+source_artifact: examples/apd-20260601-claim-event-bus/inputs/threat-model.json
+methodology: stride
+extraction_summary:
+  entry_count: 11
+  high_confidence_count: 11
+  medium_confidence_count: 0
+  low_confidence_count: 0
+  parser_used: threat_dragon
+entries:
+- entry_id: tm-43625e57
+  asset: claim-ingress-API
+  threat: Pharmacy credential theft via phishing
+  mitigation: MFA required on pharmacy portal; rotating short-lived tokens
+  methodology: stride
+  source_locator: diagrams[0].cells[0].threats[0]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - authenticity
+- entry_id: tm-b9c3c1b5
+  asset: claim-ingress-API
+  threat: Replay of submitted claim with altered NDC
+  mitigation: Payload signing with HMAC over canonical JSON
+  methodology: stride
+  source_locator: diagrams[0].cells[0].threats[1]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - integrity
+- entry_id: tm-5eadb570
+  asset: claim-ingress-API
+  threat: Token in CloudFront access logs
+  mitigation: CloudFront logging filters strip Authorization header
+  methodology: stride
+  source_locator: diagrams[0].cells[0].threats[2]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - confidentiality
+- entry_id: tm-f2d83cb5
+  asset: claim-ingress-API
+  threat: High-volume duplicate submission DoS
+  mitigation: Rate limiting at API gateway
+  methodology: stride
+  source_locator: diagrams[0].cells[0].threats[3]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: D
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - availability
+- entry_id: tm-4d037558
+  asset: claim-ingress-API
+  threat: Pharmacy account elevated via missing tenant check
+  mitigation: Tenant ID validated on every claim against pharmacy-to-tenant mapping
+  methodology: stride
+  source_locator: diagrams[0].cells[0].threats[4]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+- entry_id: tm-1a799f16
+  asset: adjudication-to-pricing
+  threat: PHI in transit between adjudication and pricing services
+  mitigation: TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing
+  methodology: stride
+  source_locator: diagrams[0].cells[1].threats[0]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - confidentiality
+- entry_id: tm-04b76ff1
+  asset: audit-log-writer
+  threat: Service account compromise allows audit write impersonation
+  mitigation: Service account isolation per writer process
+  methodology: stride
+  source_locator: diagrams[0].cells[2].threats[0]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - authenticity
+- entry_id: tm-9a8c9ce4
+  asset: audit-log-writer
+  threat: Audit entry modification after write
+  mitigation: Write-once storage on DynamoDB with deny-update IAM policy
+  methodology: stride
+  source_locator: diagrams[0].cells[2].threats[1]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - integrity
+- entry_id: tm-99aa91ca
+  asset: audit-log-writer
+  threat: Audit entries leak PHI in error fields
+  mitigation: Error redaction in audit serializer
+  methodology: stride
+  source_locator: diagrams[0].cells[2].threats[2]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - confidentiality
+- entry_id: tm-6dc432fd
+  asset: audit-log-writer
+  threat: Audit writer DOS via flood
+  mitigation: Per-source rate limit
+  methodology: stride
+  source_locator: diagrams[0].cells[2].threats[3]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: D
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - availability
+- entry_id: tm-8df8b2f3
+  asset: audit-log-writer
+  threat: Direct DynamoDB write bypasses audit serializer
+  mitigation: IAM policy restricts table writes to audit-writer role
+  methodology: stride
+  source_locator: diagrams[0].cells[2].threats[4]
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+    linddun_letter: null
+    attack_tree_position: null
+    mitre_attack: []
+  inferred_apd_goals:
+  - authenticity
+  - integrity

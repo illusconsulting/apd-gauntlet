@@ -8,6 +8,8 @@ artifacts:
   - { filename: threat-model.md,            type: threat_model }
   - { filename: adr-001-cap-positioning.md, type: adr }
   - { filename: iac/kafka.tf,               type: iac }
+  - { filename: threat-model.json,          type: threat_model }
+  - { filename: 00-context/threat-model-normalized.yaml, type: threat_model }
 ---
 
 # APD Gauntlet Context Brief — Run `apd-20260601-claim-event-bus`
