@@ -15,7 +15,7 @@
         "required": ["d3fend_id", "name", "capability_count", "capability_ids", "counters_attack"],
         "additionalProperties": false,
         "properties": {
-          "d3fend_id":         { "type": "string", "pattern": "^D3-[A-Z]{2,5}$" },
+          "d3fend_id":         { "type": "string", "pattern": "^D3-[A-Z]{2,7}$" },
           "name":              { "type": "string", "minLength": 3 },
           "capability_count":  { "type": "integer", "minimum": 0 },
           "capability_ids":    { "type": "array", "items": { "type": "string" } },
@@ -33,7 +33,7 @@
           "attack_technique":             { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
           "exposed_by_finding_count":     { "type": "integer", "minimum": 0 },
           "exposed_by_finding_ids":       { "type": "array", "items": { "type": "string" } },
-          "countered_by_d3fend":          { "type": "array", "items": { "type": "string", "pattern": "^D3-[A-Z]{2,5}$" } },
+          "countered_by_d3fend":          { "type": "array", "items": { "type": "string", "pattern": "^D3-[A-Z]{2,7}$" } },
           "countered_by_capability_ids":  { "type": "array", "items": { "type": "string" } },
           "has_capability_coverage":      { "type": "boolean" }
         }
