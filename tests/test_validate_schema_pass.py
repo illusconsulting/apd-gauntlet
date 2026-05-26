@@ -157,3 +157,96 @@ def test_validate_rejects_malformed_d3fend_coverage(tmp_path):
     result = runner.invoke(main, ["validate", str(dst)])
     assert result.exit_code == 1
     assert "d3fend-coverage.yaml" in result.output
+
+
+def test_validate_picks_up_valid_threat_model_coverage_rollup(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    (dst / "40-synthesis" / "threat-model-coverage.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: threat_model_evaluator
+        methodology: stride
+        surface_coverage:
+          - surface: test-surface
+            categories_present: [S, T]
+            categories_absent: [R, I, D, E]
+            tm_entry_count: 2
+            tm_entry_ids: [tm-deadbeef, tm-cafebabe]
+        summary:
+          total_entries: 2
+          contradictions_emitted: 0
+          silences_emitted: 0
+          coverage_gaps_emitted: 0
+          surfaces_examined: 1
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 0, result.output
+    # Baseline clean-run scans 2 files; the rollup adds 1.
+    assert "Files scanned: 3" in result.output
+
+
+def test_validate_picks_up_valid_threat_model_normalized_rollup(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    (dst / "00-context" / "threat-model-normalized.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: threat_model_recon
+        source_artifact: inputs/threat-model.json
+        methodology: stride
+        extraction_summary:
+          entry_count: 1
+          high_confidence_count: 1
+          low_confidence_count: 0
+        entries:
+          - entry_id: tm-deadbeef
+            asset: test-asset
+            threat: test-threat
+            extraction_confidence: high
+            methodology: stride
+            framework_refs:
+              stride_letter: S
+              linddun_letter: null
+              attack_tree_position: null
+              mitre_attack: []
+            inferred_apd_goals: [confidentiality]
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 0, result.output
+    # Baseline clean-run scans 2 files; the rollup adds 1.
+    assert "Files scanned: 3" in result.output
+
+
+def test_validate_rejects_malformed_threat_model_coverage(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    # Invalid generated_by value
+    (dst / "40-synthesis" / "threat-model-coverage.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: invalid_agent
+        methodology: stride
+        surface_coverage: []
+        summary:
+          total_entries: 0
+          contradictions_emitted: 0
+          silences_emitted: 0
+          coverage_gaps_emitted: 0
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "threat-model-coverage.yaml" in result.output
+
+
+def test_validate_rejects_malformed_threat_model_normalized(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    # Invalid generated_by value
+    (dst / "00-context" / "threat-model-normalized.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: invalid_agent
+        source_artifact: inputs/threat-model.json
+        methodology: stride
+        entries: []
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "threat-model-normalized.yaml" in result.output
