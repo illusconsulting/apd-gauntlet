@@ -1,0 +1,20 @@
+capability:
+  schema_version: 1
+  id: auth-cap-1a2b3c4d
+  agent: authenticity
+  apd_tier: trustworthiness
+  apd_goal: authenticity
+  title: "mTLS mutual authentication for service-to-service calls"
+  description: "All internal service-to-service communication uses mTLS with certificates issued by the internal CA, preventing unauthorized lateral movement."
+  maturity: implemented
+  scope: "Confirmed for all microservices within the data-plane namespace. Not addressed: batch jobs, admin tooling, and external egress paths."
+  evidence:
+    - artifact: infra/mtls-policy.yaml
+      locator: "spec.mtls.mode"
+      excerpt: "STRICT mode enforces mTLS on all inbound connections within the mesh"
+  control_mappings:
+    nist_800_53r5: ["AC-3", "IA-5", "SC-8", "SC-8(1)"]
+    d3fend:
+      - technique: D3-NTA
+        counters_attack: ["T1078"]
+        rationale: "Network traffic analysis with mTLS-enforced identity detects and prevents unauthorized service-to-service traversal."

@@ -40,6 +40,23 @@
               "rationale": { "type": "string", "minLength": 30 }
             }
           }
+        },
+        "d3fend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["technique", "counters_attack", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "technique":       { "type": "string", "pattern": "^D3-[A-Z]{2,5}$" },
+              "counters_attack": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" }
+              },
+              "rationale":       { "type": "string", "minLength": 30 }
+            }
+          }
         }
       }
     },

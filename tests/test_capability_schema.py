@@ -51,3 +51,24 @@ def test_invalid_capability_fixtures_fail(fixture):
     data = _load_yaml(FIXTURES / "invalid" / fixture)
     errors = list(validator.iter_errors(data["capability"]))
     assert errors, f"Expected validation errors for {fixture}, got none"
+
+
+def test_capability_accepts_optional_d3fend():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "valid" / "capability-with-d3fend.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_capability_rejects_d3fend_without_counters_attack():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "invalid" / "capability-with-malformed-d3fend.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors, "Expected validation errors for missing counters_attack, got none"
+
+
+def test_capability_without_d3fend_still_valid():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "valid" / "capability-designed.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
