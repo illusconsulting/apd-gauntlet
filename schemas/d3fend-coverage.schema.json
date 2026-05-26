@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/d3fend-coverage.schema.json",
+  "title": "APD Gauntlet D3FEND Coverage Rollup",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "defensive_entries", "counter_coverage"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "defensive_entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["d3fend_id", "name", "capability_count", "capability_ids", "counters_attack"],
+        "additionalProperties": false,
+        "properties": {
+          "d3fend_id":         { "type": "string", "pattern": "^D3-[A-Z]{2,5}$" },
+          "name":              { "type": "string", "minLength": 3 },
+          "capability_count":  { "type": "integer", "minimum": 0 },
+          "capability_ids":    { "type": "array", "items": { "type": "string" } },
+          "counters_attack":   { "type": "array", "items": { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" } }
+        }
+      }
+    },
+    "counter_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["attack_technique", "exposed_by_finding_count", "exposed_by_finding_ids", "countered_by_d3fend", "countered_by_capability_ids", "has_capability_coverage"],
+        "additionalProperties": false,
+        "properties": {
+          "attack_technique":             { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
+          "exposed_by_finding_count":     { "type": "integer", "minimum": 0 },
+          "exposed_by_finding_ids":       { "type": "array", "items": { "type": "string" } },
+          "countered_by_d3fend":          { "type": "array", "items": { "type": "string", "pattern": "^D3-[A-Z]{2,5}$" } },
+          "countered_by_capability_ids":  { "type": "array", "items": { "type": "string" } },
+          "has_capability_coverage":      { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

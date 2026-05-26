@@ -65,21 +65,31 @@ def test_invalid_fixtures_fail(kind, fixture):
     assert errors, f"Expected validation errors for {fixture}, got none"
 
 
-def test_cwe_coverage_schema_validates():
-    """CWE coverage rollup is a whole-document schema, not a per-record schema."""
-    rollup = yaml.safe_load(
-        (FIXTURES / "valid" / "cwe-coverage-valid.yaml").read_text()
-    )
-    schema = json.loads((SCHEMA_DIR / "cwe-coverage.schema.json").read_text())
-    errors = list(Draft202012Validator(schema).iter_errors(rollup))
-    assert errors == [], [e.message for e in errors]
+def _validate_whole_doc_schema(fixture_name: str, schema_name: str) -> list:
+    """Validate a whole-document YAML fixture against a top-level schema.
+
+    Returns the list of jsonschema errors (empty if valid). Used for rollup
+    schemas (cwe-coverage, owasp-coverage, d3fend-coverage) that validate
+    the whole document rather than a record extracted by a root key (those
+    use the KINDS parametrized pattern instead).
+    """
+    fixture_path = FIXTURES / "valid" / fixture_name
+    schema_path = SCHEMA_DIR / schema_name
+    data = yaml.safe_load(fixture_path.read_text())
+    schema = json.loads(schema_path.read_text())
+    return list(Draft202012Validator(schema).iter_errors(data))
 
 
-def test_owasp_coverage_schema_validates():
-    """OWASP coverage rollup is a whole-document schema covering Top 10, API Top 10, LLM Top 10."""
-    rollup = yaml.safe_load(
-        (FIXTURES / "valid" / "owasp-coverage-valid.yaml").read_text()
-    )
-    schema = json.loads((SCHEMA_DIR / "owasp-coverage.schema.json").read_text())
-    errors = list(Draft202012Validator(schema).iter_errors(rollup))
-    assert errors == [], [e.message for e in errors]
+def test_cwe_coverage_schema_validates() -> None:
+    errors = _validate_whole_doc_schema("cwe-coverage-valid.yaml", "cwe-coverage.schema.json")
+    assert errors == [], errors
+
+
+def test_owasp_coverage_schema_validates() -> None:
+    errors = _validate_whole_doc_schema("owasp-coverage-valid.yaml", "owasp-coverage.schema.json")
+    assert errors == [], errors
+
+
+def test_d3fend_coverage_schema_validates() -> None:
+    errors = _validate_whole_doc_schema("d3fend-coverage-valid.yaml", "d3fend-coverage.schema.json")
+    assert errors == [], errors

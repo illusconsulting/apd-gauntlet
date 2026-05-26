@@ -1,0 +1,21 @@
+schema_version: 1
+generated_by: synthesizer
+defensive_entries:
+  - d3fend_id: D3-NTA
+    name: "Network Traffic Analysis"
+    capability_count: 2
+    capability_ids: [auth-cap-1a2b3c4d, auth-cap-5e6f7g8h]
+    counters_attack: ["T1078", "T1190"]
+counter_coverage:
+  - attack_technique: T1078
+    exposed_by_finding_count: 3
+    exposed_by_finding_ids: [auth-9f8e7d6c, auth-7g8h9i0j, auth-1k2l3m4n]
+    countered_by_d3fend: ["D3-NTA"]
+    countered_by_capability_ids: [auth-cap-1a2b3c4d]
+    has_capability_coverage: true
+  - attack_technique: T1486
+    exposed_by_finding_count: 1
+    exposed_by_finding_ids: [intg-9f8e7d6c]
+    countered_by_d3fend: []
+    countered_by_capability_ids: []
+    has_capability_coverage: false
