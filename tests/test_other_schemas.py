@@ -197,3 +197,11 @@ def test_domain_default_trust_boundary_requires_boundary_and_description():
     }
     errors = list(validator.iter_errors(bad))
     assert errors, "Expected validation error for missing description"
+
+
+def test_attack_path_valid_fixture_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "attack-paths-valid.yaml",
+        "attack-path.schema.json",
+    )
+    assert errors == [], errors

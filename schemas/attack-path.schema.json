@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-path.schema.json",
+  "title": "APD Gauntlet Attack Paths",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "enumeration_parameters", "paths", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["attack_path_analyzer"] },
+    "enumeration_parameters": {
+      "type": "object",
+      "required": ["max_hop", "max_paths_per_pair", "bottleneck_threshold"],
+      "additionalProperties": false,
+      "properties": {
+        "max_hop":              { "type": "integer", "minimum": 2, "maximum": 12 },
+        "max_paths_per_pair":   { "type": "integer", "minimum": 1, "maximum": 200 },
+        "bottleneck_threshold": { "type": "integer", "minimum": 2, "maximum": 50 }
+      }
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path_id", "attacker_position", "crown_jewel", "edges", "hop_count", "feasibility", "severity_sum", "mitigation_count", "bottleneck_edges"],
+        "additionalProperties": false,
+        "properties": {
+          "path_id":           { "type": "string", "pattern": "^path-[0-9a-f]{8}$" },
+          "attacker_position": { "type": "string", "pattern": "^atk-[0-9a-f]{8}$" },
+          "crown_jewel":       { "type": "string", "pattern": "^jewel-[0-9a-f]{8}$" },
+          "edges":             {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^edge-[0-9a-f]{8}$" }
+          },
+          "hop_count":        { "type": "integer", "minimum": 1, "maximum": 12 },
+          "feasibility":      { "type": "string", "enum": ["high", "medium", "low"] },
+          "severity_sum":     { "type": "integer", "minimum": 0 },
+          "mitigation_count": { "type": "integer", "minimum": 0 },
+          "bottleneck_edges": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^edge-[0-9a-f]{8}$" }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["pairs_enumerated", "total_paths", "truncated_pairs", "bottleneck_edge_count"],
+      "additionalProperties": false,
+      "properties": {
+        "pairs_enumerated":     { "type": "integer", "minimum": 0 },
+        "total_paths":          { "type": "integer", "minimum": 0 },
+        "truncated_pairs":      { "type": "integer", "minimum": 0 },
+        "bottleneck_edge_count":{ "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

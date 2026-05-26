@@ -1,0 +1,38 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+enumeration_parameters:
+  max_hop: 8
+  max_paths_per_pair: 50
+  bottleneck_threshold: 5
+paths:
+  - path_id: path-aaaaaaaa
+    attacker_position: atk-11111111
+    crown_jewel: jewel-99999999
+    edges:
+      - edge-bbbbbbbb
+      - edge-cccccccc
+      - edge-dddddddd
+    hop_count: 3
+    feasibility: high
+    severity_sum: 6
+    mitigation_count: 0
+    bottleneck_edges:
+      - edge-cccccccc
+  - path_id: path-eeeeeeee
+    attacker_position: atk-22222222
+    crown_jewel: jewel-99999999
+    edges:
+      - edge-ffffffff
+      - edge-cccccccc
+      - edge-12345678
+    hop_count: 3
+    feasibility: medium
+    severity_sum: 4
+    mitigation_count: 0
+    bottleneck_edges:
+      - edge-cccccccc
+summary:
+  pairs_enumerated: 2
+  total_paths: 2
+  truncated_pairs: 0
+  bottleneck_edge_count: 1
