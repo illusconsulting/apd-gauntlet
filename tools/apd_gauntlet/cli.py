@@ -88,7 +88,7 @@ def validate(run_dir, schema_only, strict, as_json) -> None:  # type: ignore[no-
     type=click.Path(file_okay=False, path_type=pathlib.Path),
     default=pathlib.Path(".claude/skills/apd-domain"),
 )
-@click.option("--framework-version", default="1.1.0")
+@click.option("--framework-version", default=__version__)
 def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> None:  # type: ignore[no-untyped-def]
     try:
         path = build_domain_skill(domain_name, domains_dir, out, framework_version)
