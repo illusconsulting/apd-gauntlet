@@ -70,6 +70,14 @@ def test_finding_rejects_invalid_cwe_format():
     assert errors, "Expected validation errors for invalid CWE format, got none"
 
 
+def test_finding_rejects_owasp_llm_top10_outside_published_range():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "invalid" / "finding-with-invalid-owasp-llm.yaml")
+    validator = Draft202012Validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors, "Expected validation errors for owasp_llm_top10 outside LLM01..LLM10"
+
+
 def test_finding_without_new_taxonomies_still_valid():
     schema = _load_schema()
     data = _load_yaml(FIXTURES / "valid" / "finding-minimal.yaml")

@@ -1,0 +1,23 @@
+finding:
+  schema_version: 1
+  id: conf-a1b2c3d4
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: "Adjudication LLM allows prompt-injection-driven data exposure"
+  summary: "Member-facing chat surface relays unvetted user content to a downstream LLM with PHI in context."
+  detail: "The chat handler concatenates raw user input into the system prompt; an attacker can override the role and exfiltrate PHI."
+  evidence:
+    - artifact: services/chat/llm_handler.py
+      locator: "L88"
+      excerpt: 'prompt = SYSTEM_PROMPT + "\n" + user_message'
+  control_mappings:
+    nist_800_53r5: ["SI-10"]
+    owasp_llm_top10: ["LLM00"]  # invalid — outside published LLM01..LLM10 range
+  recommendation:
+    posture: required
+    summary: "Separate user input from system prompt; apply input validation against prompt-injection patterns."
+    detail: "Use structured prompt assembly with user content placed in user-role messages only; add a defensive layer that detects role-override tokens."
