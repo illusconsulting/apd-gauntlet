@@ -1,0 +1,20 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+surface_coverage:
+  - surface: "claim-ingress-API"
+    categories_present: [S, T, I, D]
+    categories_absent: [R, E]
+    tm_entry_count: 4
+    tm_entry_ids: [tm-a1b2c3d4, tm-5e6f7a8b, tm-9c0d1e2f, tm-3a4b5c6d]
+  - surface: "audit-log-write-path"
+    categories_present: [T, I]
+    categories_absent: [S, R, D, E]
+    tm_entry_count: 2
+    tm_entry_ids: [tm-aaaaaaaa, tm-bbbbbbbb]
+summary:
+  total_entries: 6
+  contradictions_emitted: 1
+  silences_emitted: 2
+  coverage_gaps_emitted: 3
+  surfaces_examined: 2

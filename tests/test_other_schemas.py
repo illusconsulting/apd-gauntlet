@@ -112,3 +112,11 @@ def test_threat_model_normalized_schema_validates() -> None:
         "threat-model-normalized.schema.json",
     )
     assert errors == [], errors
+
+
+def test_threat_model_coverage_schema_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-coverage-valid.yaml",
+        "threat-model-coverage.schema.json",
+    )
+    assert errors == [], errors
