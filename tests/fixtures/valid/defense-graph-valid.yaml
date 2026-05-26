@@ -1,0 +1,28 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+bottleneck_overlays:
+  - edge_id: edge-aaaaaaaa
+    paths_traversing: 6
+    exposed_attack_techniques:
+      - T1078
+    candidate_d3fend:
+      - d3fend_id: D3-NTSA
+        counters: [T1078]
+        rationale: "D3-NTSA (Network Traffic Signature Analysis) counters T1078 (Valid Accounts) per MITRE D3FEND attack-counter mapping"
+      - d3fend_id: D3-IBCA
+        counters: [T1078]
+        rationale: "D3-IBCA (Inbound Session Volume Analysis) counters T1078 per MITRE D3FEND attack-counter mapping"
+      - d3fend_id: D3-MFA
+        counters: [T1078]
+        rationale: "D3-MFA (Multi-factor Authentication) counters T1078 per MITRE D3FEND attack-counter mapping"
+    existing_capability_backing:
+      - d3fend_id: D3-MFA
+        capability_ids:
+          - cap-12345678
+    net_new_d3fend:
+      - D3-IBCA
+      - D3-NTSA
+summary:
+  bottleneck_edge_count: 1
+  total_candidate_d3fend: 3
+  total_net_new_d3fend: 2

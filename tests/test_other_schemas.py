@@ -205,3 +205,11 @@ def test_attack_path_valid_fixture_validates() -> None:
         "attack-path.schema.json",
     )
     assert errors == [], errors
+
+
+def test_defense_graph_valid_fixture_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "defense-graph-valid.yaml",
+        "defense-graph.schema.json",
+    )
+    assert errors == [], errors
