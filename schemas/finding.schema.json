@@ -74,16 +74,16 @@
             "required": ["technique", "tactic", "rationale"],
             "additionalProperties": false,
             "properties": {
-              "technique":     { "type": "string", "pattern": "^T[0-9]{4}$" },
-              "sub_technique": { "type": ["string", "null"], "pattern": "^T[0-9]{4}\\.[0-9]{3}$" },
-              "tactic":        { "type": "string", "pattern": "^TA[0-9]{4}$" },
+              "technique":     { "$ref": "_defs.schema.json#/$defs/attack_technique_id_topline" },
+              "sub_technique": { "$ref": "_defs.schema.json#/$defs/attack_sub_technique_id" },
+              "tactic":        { "$ref": "_defs.schema.json#/$defs/attack_tactic_id" },
               "rationale":     { "type": "string", "minLength": 30 }
             }
           }
         },
         "cwe": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^CWE-[0-9]+$" }
+          "items": { "$ref": "_defs.schema.json#/$defs/cwe_id" }
         },
         "owasp_top10": {
           "type": "array",

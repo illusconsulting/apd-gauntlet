@@ -62,16 +62,19 @@ class ValidationReport:
 
 
 def _build_registry() -> Registry:
-    finding = Resource.from_contents(
-        json.loads((SCHEMAS_DIR / "finding.schema.json").read_text())
-    )
-    capability = Resource.from_contents(
-        json.loads((SCHEMAS_DIR / "capability.schema.json").read_text())
-    )
-    return Registry().with_resources([
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json", finding),
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability),
-    ])
+    """Build a referencing Registry covering every schema in schemas/.
+
+    Each schema is registered under its declared ``$id``. This lets cross-schema
+    ``$ref`` resolve — notably the shared patterns in ``_defs.schema.json``.
+    """
+    resources: list[tuple[str, Resource[Any]]] = []
+    for schema_path in sorted(SCHEMAS_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        schema_id = schema.get("$id")
+        if not schema_id:
+            continue
+        resources.append((schema_id, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
 
 
 def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, dict[str, Any]]]:

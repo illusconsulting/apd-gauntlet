@@ -14,15 +14,15 @@ FIXTURES = REPO / "tests" / "fixtures"
 
 
 def _build_validator():
-    finding = Resource.from_contents(
-        json.loads((REPO / "schemas" / "finding.schema.json").read_text())
-    )
-    capability_schema = json.loads((REPO / "schemas" / "capability.schema.json").read_text())
-    capability = Resource.from_contents(capability_schema)
-    registry = Registry().with_resources([
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json", finding),
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability),
-    ])
+    schema_dir = REPO / "schemas"
+    capability_schema = json.loads((schema_dir / "capability.schema.json").read_text())
+    resources = []
+    for schema_path in sorted(schema_dir.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    registry = Registry().with_resources(resources)
     return Draft202012Validator(capability_schema, registry=registry)
 
 
