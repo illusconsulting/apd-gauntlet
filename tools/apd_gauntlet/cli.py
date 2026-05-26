@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json as _stdjson
 import pathlib
+from pathlib import Path
+from typing import Any
 
 import click
 
@@ -274,6 +276,101 @@ def refresh_d3fend_cmd() -> None:
     """Refresh MITRE D3FEND reference data."""
     path = refresh_d3fend()
     click.echo(f"Wrote {path}")
+
+
+def _build_schema_registry() -> Any:
+    """Build a referencing Registry covering every schema in schemas/.
+
+    Replicates the pattern from validate._build_registry() to allow cross-schema
+    $ref resolution (notably _defs.schema.json#/$defs/attack_technique_id).
+    """
+    from referencing import Registry, Resource
+
+    schemas_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "schemas"
+    resources: list[tuple[str, Any]] = []
+    for schema_path in sorted(schemas_dir.glob("*.schema.json")):
+        schema = _stdjson.loads(schema_path.read_text())
+        schema_id = schema.get("$id")
+        if not schema_id:
+            continue
+        resources.append((schema_id, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
+
+
+@main.command("parse-threat-model")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--methodology-hint",
+    default=None,
+    help="Force a methodology (stride/linddun/attack_tree/pasta/vast/trike/free_form).",
+)
+@click.option(
+    "--output",
+    default=None,
+    type=click.Path(path_type=Path),
+    help="Output path; if omitted, writes YAML to stdout.",
+)
+@click.option(
+    "--validate/--no-validate",
+    default=True,
+    help="Validate output against threat-model-normalized.schema.json (default: on).",
+)
+def parse_threat_model_cmd(
+    path: Path,
+    methodology_hint: str | None,
+    output: Path | None,
+    validate: bool,
+) -> None:
+    """Parse a threat model file into a normalized YAML graph.
+
+    Auto-detects the format from extension when --methodology-hint is absent.
+    Validates the result against schemas/threat-model-normalized.schema.json
+    unless --no-validate is passed.
+    """
+    import json
+
+    import yaml
+    from jsonschema import Draft202012Validator
+
+    from .threat_model.dispatcher import dispatch_parser
+
+    try:
+        normalized = dispatch_parser(path, methodology_hint)
+    except json.JSONDecodeError as e:
+        raise click.UsageError(
+            f"failed to parse {path}: invalid JSON at line {e.lineno} col {e.colno}"
+        ) from e
+    except ValueError as e:
+        raise click.UsageError(str(e)) from e
+
+    if validate:
+        schema_path = (
+            pathlib.Path(__file__).resolve().parent.parent.parent
+            / "schemas"
+            / "threat-model-normalized.schema.json"
+        )
+        schema = _stdjson.loads(schema_path.read_text())
+        registry = _build_schema_registry()
+        validator = Draft202012Validator(schema, registry=registry)
+        errors = list(validator.iter_errors(normalized))
+        if errors:
+            click.echo(
+                f"ERROR: parser output failed schema validation ({len(errors)} errors):",
+                err=True,
+            )
+            for err in errors[:5]:
+                click.echo(f"  - {err.message} at {list(err.absolute_path)}", err=True)
+            raise click.Abort()
+
+    text = yaml.safe_dump(normalized, sort_keys=False)
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(text)
+        click.echo(f"Wrote {output}", err=True)
+        click.echo(f"  methodology: {normalized['methodology']}", err=True)
+        click.echo(f"  entries:     {normalized['extraction_summary']['entry_count']}", err=True)
+    else:
+        click.echo(text)
 
 
 if __name__ == "__main__":
