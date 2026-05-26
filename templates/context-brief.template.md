@@ -87,7 +87,38 @@ If yes: how. If no: "No adjudication path impact per [evidence pointer]."
 
 ---
 
-## 4. Trust Boundary Map
+## 4. Taxonomy Scope (v1.2+)
+
+> Declares which framework taxonomies are in scope for this run (per `.apd-run.yaml`),
+> plus any additional taxonomies intake auto-detected as relevant. Specialists are bound
+> by the operator-accepted scope (`declared_in_run_config`); `suggested_additional` is
+> advisory only and must not drive specialist mappings unless the operator re-runs with
+> the suggestion accepted.
+
+```yaml
+declared_in_run_config: [cwe, mitre_attack, d3fend]   # from .apd-run.yaml taxonomies: list
+
+suggested_additional:
+  - taxonomy: owasp_api_top10
+    reason:   "OpenAPI 3.0 spec at inputs/api/openapi.yaml declares 17 REST endpoints with JWT bearer auth."
+    artifact: "inputs/api/openapi.yaml"
+  - taxonomy: owasp_llm_top10
+    reason:   "tech_plan.md §6.2 references an LLM-backed claim-summary feature using the anthropic SDK."
+    artifact: "inputs/tech_plan.md"
+```
+
+If `taxonomies:` is absent or empty in run-config and intake found no surfaces warranting
+suggestion, render the section as:
+
+```yaml
+declared_in_run_config: []
+suggested_additional: []
+note: "No taxonomies declared and no surfaces detected warranting suggestion."
+```
+
+---
+
+## 5. Trust Boundary Map
 
 | Boundary | Crosses | Upstream trust | Downstream trust | Auth posture | Encryption posture |
 |----------|---------|----------------|------------------|--------------|--------------------|
@@ -101,7 +132,7 @@ If yes: how. If no: "No adjudication path impact per [evidence pointer]."
 
 ---
 
-## 5. Evidence Gaps
+## 6. Evidence Gaps
 
 These items are not in the input artifacts and would be required for a complete architectural picture. Specialist agents draw from this list when populating `prerequisite_evidence` on `blocked` findings.
 
@@ -116,7 +147,7 @@ These items are not in the input artifacts and would be required for a complete 
 
 ---
 
-## 6. Per-Goal Relevance Table
+## 7. Per-Goal Relevance Table
 
 Specialist agents use this table to decide which artifacts to deep-read versus skim.
 
@@ -132,7 +163,7 @@ Legend: `primary` (this artifact is a primary source for this goal), `secondary`
 
 ---
 
-## 7. Notes for Specialists
+## 8. Notes for Specialists
 
 Free-form section for the intake agent to flag anything specialists should know that doesn't fit the structured sections above. Example:
 

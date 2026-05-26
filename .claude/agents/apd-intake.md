@@ -21,15 +21,16 @@ You do not need the schema, evidence discipline, or control mappings skills — 
 
 ## Output
 
-A single markdown file at `00-context/context-brief.md`, structured per the template at `templates/context-brief.template.md`. The brief contains seven sections:
+A single markdown file at `00-context/context-brief.md`, structured per the template at `templates/context-brief.template.md`. The brief contains eight sections:
 
 1. Run header (id, date, artifact count, artifact types)
 2. Artifact index
 3. Capability and surface summary
 4. PHI/PII data inventory
-5. Trust boundary map
-6. Evidence gaps
-7. Per-goal relevance table
+5. Taxonomy scope (v1.2+) — declared-in-run-config plus auto-detected suggestions
+6. Trust boundary map
+7. Evidence gaps
+8. Per-goal relevance table
 
 ## Optional successor — `apd-code-recon`
 
@@ -99,7 +100,20 @@ If the tech plan does not enumerate data elements explicitly, note this in the P
 
 If the change has no PHI/PII scope, state "No PHI/PII in scope per [evidence]." with an evidence pointer.
 
-### Step 4: Trust boundary map
+### Step 4: Taxonomy scope and auto-detection (v1.2+)
+
+Read the `taxonomies:` list from `.apd-run.yaml` (may be absent — defaults to `[]` if so).
+
+Inspect the supplied artifacts for surfaces that suggest additional taxonomies the run did not declare. Heuristics:
+
+- **owasp_top10** — declare-or-suggest if you see: HTML templates, browser-targeted routes, session cookies, CSRF tokens, web framework imports (Django, Flask, Rails, Express, Next.js).
+- **owasp_api_top10** — declare-or-suggest if you see: OpenAPI/Swagger spec, REST endpoint declarations, GraphQL schema, API gateway config, JWT bearer auth on HTTP endpoints.
+- **owasp_llm_top10** — declare-or-suggest if you see: `openai` / `anthropic` / `langchain` / `llama-index` SDK imports, prompt template files (`*.prompt`, `*.tmpl`), vector store usage (Pinecone, Weaviate, Chroma), LLM-tool-use patterns.
+- **cwe**, **mitre_attack**, **d3fend** — default-on; do not suggest (they're always-on unless the operator explicitly removed them from `taxonomies:`).
+
+Write the result into the context brief as a `taxonomy_suggestions:` block (see template). Specialists are bound by the operator-accepted scope (i.e., what's in `taxonomies:` at run time) — auto-suggestions are advisory only and must not drive specialist mappings unless the operator re-runs with them added.
+
+### Step 5: Trust boundary map
 
 Identify the trust boundaries the change crosses. A trust boundary is a point where data or control passes between entities with different trust assumptions. Examples:
 
@@ -117,7 +131,7 @@ For each trust boundary, name:
 - What the downstream trust assumption is
 - Authentication and encryption posture at the boundary, per the artifacts
 
-### Step 5: Identify evidence gaps
+### Step 6: Identify evidence gaps
 
 This section seeds the `prerequisite_evidence` pool every specialist draws from. Enumerate what would be needed for a complete architectural picture but is not in the input artifacts. Examples:
 
@@ -128,7 +142,7 @@ This section seeds the `prerequisite_evidence` pool every specialist draws from.
 
 Be specific. "Missing security details" is not useful. "Missing: Kafka topic ACL design for the claim-events topic" is useful.
 
-### Step 6: Per-goal relevance table
+### Step 7: Per-goal relevance table
 
 For each input artifact, produce a row indicating which APD goals are likely to find material in it. Use a 3-level scale: `primary` (this artifact is a primary source for this goal), `secondary` (likely supporting evidence), `unlikely` (no obvious material). The table is a tool for specialists to know which artifacts to deep-read versus skim.
 
