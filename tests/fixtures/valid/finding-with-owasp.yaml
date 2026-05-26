@@ -1,0 +1,25 @@
+finding:
+  schema_version: 1
+  id: auth-b2c3d4e5
+  agent: authenticity
+  apd_tier: trustworthiness
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: "User authentication endpoint lacks rate-limiting and brute-force protection"
+  summary: "Login API allows unlimited credential attempts with no lockout or throttling."
+  detail: "The /api/auth/login endpoint at services/auth/login_handler.py accepts POST requests without any rate-limiting middleware. OWASP Top 10 A07:2021 (Identification and Authentication Failures), OWASP API3:2023 (Broken Object Property Level Authorization), and OWASP LLM01 (Prompt Injection via forged identity context) all apply due to downstream LLM usage of identity claims."
+  evidence:
+    - artifact: services/auth/login_handler.py
+      locator: "L10-L40"
+      excerpt: "async def login(request): creds = await request.json(); return await authenticate(creds)"
+  control_mappings:
+    nist_800_53r5: ["IA-5", "AC-7"]
+    owasp_top10: ["A07:2021"]
+    owasp_api_top10: ["API3:2023"]
+    owasp_llm_top10: ["LLM01"]
+  recommendation:
+    posture: required
+    summary: "Add rate-limiting, account lockout, and MFA to the authentication endpoint."
+    detail: "Implement progressive throttling (e.g., exponential backoff after 5 failures), account lockout after 10 failures within 10 minutes, and enforce MFA for all user accounts accessing PHI-bearing services."

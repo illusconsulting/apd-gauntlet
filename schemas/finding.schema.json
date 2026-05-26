@@ -80,6 +80,22 @@
               "rationale":     { "type": "string", "minLength": 30 }
             }
           }
+        },
+        "cwe": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^CWE-[0-9]+$" }
+        },
+        "owasp_top10": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^A[0-9]{2}:20[0-9]{2}$" }
+        },
+        "owasp_api_top10": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^API[0-9]{1,2}:20[0-9]{2}$" }
+        },
+        "owasp_llm_top10": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^LLM[0-9]{2}$" }
         }
       }
     },

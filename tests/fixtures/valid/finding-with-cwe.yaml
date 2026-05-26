@@ -1,0 +1,23 @@
+finding:
+  schema_version: 1
+  id: conf-a1b2c3d4
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: "PHI transmitted without TLS to pricing-service"
+  summary: "Adjudication service sends PHI in plaintext over internal network to pricing-service."
+  detail: "Code at services/adjudication/pricing_client.py:42 uses http:// not https://; CWE-319 cleartext transmission of sensitive data."
+  evidence:
+    - artifact: services/adjudication/pricing_client.py
+      locator: "L42"
+      excerpt: 'response = requests.post("http://pricing-service/quote", json=phi_payload)'
+  control_mappings:
+    nist_800_53r5: ["SC-8", "SC-8(1)"]
+    cwe: ["CWE-319"]
+  recommendation:
+    posture: required
+    summary: "Switch the pricing client to HTTPS and verify the server certificate."
+    detail: "Update the call to use https:// and confirm the gateway terminates with a valid cert chain; mTLS preferred since both services are internal."

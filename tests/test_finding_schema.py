@@ -44,3 +44,35 @@ def test_invalid_finding_fixtures_fail(fixture):
     validator = Draft202012Validator(schema)
     errors = list(validator.iter_errors(data["finding"]))
     assert errors, f"Expected validation errors for {fixture}, got none"
+
+
+def test_finding_accepts_optional_cwe():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-with-cwe.yaml")
+    validator = Draft202012Validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_accepts_optional_owasp_taxonomies():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-with-owasp.yaml")
+    validator = Draft202012Validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_rejects_invalid_cwe_format():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "invalid" / "finding-with-invalid-cwe.yaml")
+    validator = Draft202012Validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors, "Expected validation errors for invalid CWE format, got none"
+
+
+def test_finding_without_new_taxonomies_still_valid():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-minimal.yaml")
+    validator = Draft202012Validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
