@@ -75,3 +75,19 @@ def test_run_config_without_taxonomies_still_valid():
     data = yaml.safe_load((FIXTURES / "valid/run-config.yaml").read_text())
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors == []
+
+
+def test_run_config_accepts_threat_model_path_and_methodology_hint():
+    data = yaml.safe_load(
+        (FIXTURES / "valid/run-config-with-threat-model.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+def test_run_config_rejects_unknown_methodology_hint():
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-with-bad-methodology-hint.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors  # truthy: rejected by the enum
