@@ -13,13 +13,13 @@ MD_FIXTURE = Path("tests/fixtures/threat_models/sample-stride-table.md")
 CSV_FIXTURE = Path("tests/fixtures/threat_models/sample-stride-table.csv")
 
 
-def test_markdown_parser_extracts_eight_entries():
+def test_markdown_parser_extracts_ten_entries():
     # The fixture has 10 populated STRIDE cells across 3 rows:
     # claim-ingress-API: S,T,I,D,E (5); adjudication-service: S,T,I,D (4); audit-log-writer: R (1)
     entries = parse_stride_markdown(MD_FIXTURE.read_text())
     assert len(entries) == 10
 
-def test_csv_parser_extracts_eight_entries():
+def test_csv_parser_extracts_ten_entries():
     entries = parse_stride_csv(CSV_FIXTURE.read_text())
     assert len(entries) == 10
 
