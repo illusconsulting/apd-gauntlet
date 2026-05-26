@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-26
+
+### Added
+
+- **`apd-threat-model-recon` tier-0 agent** — parses user-supplied threat models into a normalized graph at `00-context/threat-model-normalized.yaml`. Activation-gated on `.apd-run.yaml` declaring `threat_model: <path>` (or intake auto-detecting a TM-like artifact).
+- **`apd-threat-model-evaluator` tier-4 agent** — evaluates the normalized TM against specialist findings/capabilities; emits three finding flavors: coverage gap (`disposition: gap`), contradiction (`disposition: risk`), silence (`disposition: uncertainty`). Findings use `agent: threat_model_evaluator` and id prefix `tmeval-`.
+- **Native methodology support**: STRIDE (OWASP Threat Dragon JSON, Microsoft TMT .tm7, STRIDE-per-element Markdown/CSV), LINDDUN (Markdown/CSV tables), attack trees (indented prose, ADTool XML, JSON). PASTA / VAST / Trike / free-form prose accepted with reduced extraction confidence.
+- **CLI subcommand `parse-threat-model`** — standalone parser dispatcher; auto-detects format from extension or honors `--methodology-hint`.
+- **CLI flags on `init-run`**: `--threat-model <path>` and `--methodology-hint <name>` pre-populate the run-config.
+- **New skill `apd-threat-model-methodologies`** — canonical STRIDE/LINDDUN→APD-goal mapping tables (single source of truth shared with Python mapping module) + discipline rules.
+- **New schemas**: `threat-model-normalized.schema.json`, `threat-model-coverage.schema.json`.
+- **Validator extensions**: `tmeval-` findings must cite the normalized TM (or source artifact) in evidence; contradiction findings must cross-reference the contradicting specialist finding ID.
+- **New dependency**: `lxml>=4.9` (used by Microsoft TMT and ADTool XML parsers with XXE-safe flags).
+- **ADR 0009** — Methodology-aware threat-model evaluator.
+- **`docs/threat-modeling.md`** operator guide.
+
+### Changed
+
+- `finding.schema.json` — `agent` enum gains `threat_model_evaluator`; `id` pattern extended to accept `tmeval-` prefix.
+- `run-config.schema.json` — accepts optional `threat_model: <path>` and `methodology_hint: <name>` fields.
+- **Shared `$defs` extraction** (carry-forward from Phase A): ATT&CK / D3FEND / CWE patterns now defined once in `schemas/_defs.schema.json` and `$ref`'d by record schemas. Behavior unchanged.
+- **`owasp_llm_top10` pattern tightened** (carry-forward from Phase A): now `^LLM(0[1-9]|10)$` (was `^LLM[0-9]{2}$` which accepted non-existent codes).
+- **`refresh_mitre.py` aligned** (carry-forward from Phase A): constants renamed to `MAX_RESPONSE_BYTES` / `DEFAULT_TIMEOUT_SECONDS` matching the v1.2 triad; Content-Length pre-check added.
+- **CLI `validate` now scans coverage rollups** (carry-forward from Phase A): cwe-coverage / owasp-coverage / d3fend-coverage in `40-synthesis/` are now validated by `apd-gauntlet validate` (previously only by tests).
+- **ADR 0007 reformatted** (carry-forward from Phase A): now matches the canonical 0001-0008 hyphen+colon style.
+
+### Backward compatibility
+
+- All schema changes additive. v1.2-format runs (and v1.1, v1.0) validate unchanged.
+- Minimum-viable run with no `threat_model:` declaration produces identical output to v1.2.
+- PBM domain pack (`framework_compat: ">=1.0.0,<2.0.0"`) consumes v1.3.0 with no changes.
+
 ## [1.2.0] - 2026-XX-XX
 
 ### Added
