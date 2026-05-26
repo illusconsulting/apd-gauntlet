@@ -1,0 +1,20 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+  - cwe_id: CWE-79
+    name: "Improper Neutralization of Input During Web Page Generation"
+    abstraction: base
+    parent_pillar: CWE-707
+    finding_count: 2
+    finding_ids: [intg-a1b2c3d4, intg-5e6f7g8h]
+    surfaces:
+      - "member-portal/profile-edit"
+      - "member-portal/search-results"
+  - cwe_id: CWE-319
+    name: "Cleartext Transmission of Sensitive Information"
+    abstraction: base
+    parent_pillar: CWE-693
+    finding_count: 1
+    finding_ids: [conf-a1b2c3d4]
+    surfaces:
+      - "internal/adjudication-to-pricing"

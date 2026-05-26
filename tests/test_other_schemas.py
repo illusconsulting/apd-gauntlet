@@ -63,3 +63,13 @@ def test_invalid_fixtures_fail(kind, fixture):
     validator = _validator_for(kind)
     errors = list(validator.iter_errors(_record(kind, fixture)))
     assert errors, f"Expected validation errors for {fixture}, got none"
+
+
+def test_cwe_coverage_schema_validates():
+    """CWE coverage rollup is a whole-document schema, not a per-record schema."""
+    rollup = yaml.safe_load(
+        (FIXTURES / "valid" / "cwe-coverage-valid.yaml").read_text()
+    )
+    schema = json.loads((SCHEMA_DIR / "cwe-coverage.schema.json").read_text())
+    errors = list(Draft202012Validator(schema).iter_errors(rollup))
+    assert errors == [], [e.message for e in errors]

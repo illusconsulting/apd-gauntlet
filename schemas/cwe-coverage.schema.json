@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cwe-coverage.schema.json",
+  "title": "APD Gauntlet CWE Coverage Rollup",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cwe_id", "name", "abstraction", "finding_count", "finding_ids"],
+        "additionalProperties": false,
+        "properties": {
+          "cwe_id":         { "type": "string", "pattern": "^CWE-[0-9]+$" },
+          "name":           { "type": "string", "minLength": 3 },
+          "abstraction":    { "type": "string", "enum": ["pillar", "class", "base", "variant", "compound"] },
+          "parent_pillar":  { "type": ["string", "null"], "pattern": "^CWE-[0-9]+$" },
+          "finding_count":  { "type": "integer", "minimum": 0 },
+          "finding_ids":    { "type": "array", "items": { "type": "string" } },
+          "surfaces":       { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}
