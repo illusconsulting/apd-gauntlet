@@ -55,6 +55,21 @@ Write to `40-synthesis/`:
 - `rejected-records.yaml` — records that failed structural validation, with the reason per record
 - `advisory-report.md` — the human-readable advisory document
 
+## Outputs (v1.2+ additions)
+
+The synthesizer emits the existing rollups (`nist-coverage.yaml`, `attack-exposure.yaml`, `coverage-matrix.yaml`, plus advisory report and annexes), and additionally when the run declares the relevant taxonomies:
+
+- **`40-synthesis/cwe-coverage.yaml`** — emitted when `cwe` is declared in run-config and any finding carries a `control_mappings.cwe[]` value. Validates against `schemas/cwe-coverage.schema.json`. Group entries by CWE ID; populate `parent_pillar` from the projected reference data at `tools/apd_gauntlet/data/cwe.json` when available; list `surfaces` derived from the finding's evidence locators.
+
+- **`40-synthesis/owasp-coverage.yaml`** — emitted when any of `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10` is declared and any finding carries the corresponding mapping. Validates against `schemas/owasp-coverage.schema.json`. One entry per (taxonomy, category_id) pair. Categories never touched by a finding are emitted with `silent: true` to make coverage gaps explicit.
+
+- **`40-synthesis/d3fend-coverage.yaml`** — emitted when `d3fend` is declared and any capability carries `control_mappings.d3fend[]`. Validates against `schemas/d3fend-coverage.schema.json`. Includes both the `defensive_entries` (D3FEND techniques implemented by capabilities) and the `counter_coverage` view (for each ATT&CK technique exposed by a finding, list which D3FEND-backed capabilities counter it — or `has_capability_coverage: false` if none do). The `counter_coverage` view feeds Phase C bottleneck analysis.
+
+Discipline:
+- Rollup an entry only when at least one finding (or capability for D3FEND) cites it; do not synthesize coverage from reference data alone.
+- `silent: true` entries in OWASP coverage exist to make absence visible to reviewers; reference the full taxonomy from `tools/apd_gauntlet/data/owasp_*.json`.
+- Never invent CWE/OWASP/D3FEND mappings — only roll up what specialists emitted.
+
 ## Process
 
 ### Step 1: Structural validation

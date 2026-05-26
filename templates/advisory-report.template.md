@@ -218,6 +218,24 @@ Legend: `covered` (capabilities, no gaps), `gapped` (findings, no capabilities),
 
 ---
 
+## Framework Coverage (v1.2+, when declared)
+
+### CWE coverage
+
+Linked rollup: `40-synthesis/cwe-coverage.yaml`. Lists CWE IDs touched by findings, grouped by abstraction (base/variant) and parent pillar. Use this view to communicate developer-facing weakness exposure.
+
+### OWASP coverage
+
+Linked rollup: `40-synthesis/owasp-coverage.yaml`. Lists OWASP Top 10 / API / LLM categories with finding count and `silent: true` entries marking absence. Use this view for reviewer-facing risk summary aligned to industry-standard taxonomies.
+
+### D3FEND defensive coverage
+
+Linked rollup: `40-synthesis/d3fend-coverage.yaml`. Two views: `defensive_entries` (D3FEND techniques implemented by capabilities, with backing capability IDs) and `counter_coverage` (for each exposed ATT&CK technique, whether a D3FEND-backed capability counters it). Use this view for architect-facing defensive posture analysis.
+
+(Sections appear only when the relevant rollup file exists.)
+
+---
+
 ## 10. Severity Disagreement Annex
 
 > Records where two agents agreed on the concern but disagreed on severity. The merged finding takes the higher severity per the synthesis rule; the disagreement is preserved here for transparency.
