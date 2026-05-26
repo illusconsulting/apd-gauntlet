@@ -1,0 +1,172 @@
+{
+  "head": {
+    "vars": [
+      "def_tech_label",
+      "def_tech",
+      "off_tech_label",
+      "off_tech_id",
+      "off_tech",
+      "def_tactic_label"
+    ]
+  },
+  "results": {
+    "bindings": [
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Network Traffic Filtering"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficFiltering"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Valid Accounts"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1078"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1078"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Isolate"
+        }
+      },
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Network Traffic Filtering"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficFiltering"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Phishing"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1566"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1566"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Isolate"
+        }
+      },
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Network Traffic Filtering"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficFiltering"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Phishing"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1566"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1566"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Isolate"
+        }
+      },
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Multi-factor Authentication"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#Multi-factorAuthentication"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Valid Accounts"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1078"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1078"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Harden"
+        }
+      },
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Multi-factor Authentication"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#Multi-factorAuthentication"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Brute Force"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1110"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1110"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Harden"
+        }
+      },
+      {
+        "def_tech_label": {
+          "type": "literal",
+          "value": "Network Traffic Signature Analysis"
+        },
+        "def_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficSignatureAnalysis"
+        },
+        "off_tech_label": {
+          "type": "literal",
+          "value": "Command and Scripting Interpreter"
+        },
+        "off_tech_id": {
+          "type": "literal",
+          "value": "T1059"
+        },
+        "off_tech": {
+          "type": "uri",
+          "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#T1059"
+        },
+        "def_tactic_label": {
+          "type": "literal",
+          "value": "Detect"
+        }
+      }
+    ]
+  }
+}
