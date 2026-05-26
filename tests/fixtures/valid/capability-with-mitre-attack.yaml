@@ -1,6 +1,6 @@
 capability:
   schema_version: 1
-  id: auth-cap-1a2b3c4d
+  id: auth-cap-2b3c4d5e
   agent: authenticity
   apd_tier: trustworthiness
   apd_goal: authenticity
@@ -13,12 +13,8 @@ capability:
       locator: "spec.mtls.mode"
       excerpt: "STRICT mode enforces mTLS on all inbound connections within the mesh"
   control_mappings:
-    nist_800_53r5: ["AC-3", "IA-5", "SC-8", "SC-8(1)"]
+    nist_800_53r5: ["AC-3", "IA-5"]
     mitre_attack:
       - technique: T1078
         tactic: TA0001
         rationale: "Capability defends against valid-account abuse on internal service-to-service paths via mTLS-enforced identity."
-    d3fend:
-      - technique: D3-NTA
-        counters_attack: ["T1078"]
-        rationale: "Network traffic analysis with mTLS-enforced identity detects and prevents unauthorized service-to-service traversal."

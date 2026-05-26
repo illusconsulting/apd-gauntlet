@@ -29,6 +29,20 @@
       "additionalProperties": false,
       "properties": {
         "nist_800_53r5": { "$ref": "finding.schema.json#/properties/control_mappings/properties/nist_800_53r5" },
+        "mitre_attack": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["technique", "tactic", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "technique":     { "type": "string", "pattern": "^T[0-9]{4}$" },
+              "sub_technique": { "type": ["string", "null"], "pattern": "^T[0-9]{4}\\.[0-9]{3}$" },
+              "tactic":        { "type": "string", "pattern": "^TA[0-9]{4}$" },
+              "rationale":     { "type": "string", "minLength": 30 }
+            }
+          }
+        },
         "mitre_attack_mitigations": {
           "type": "array",
           "items": {

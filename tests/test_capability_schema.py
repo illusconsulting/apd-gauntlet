@@ -72,3 +72,17 @@ def test_capability_without_d3fend_still_valid():
     data = _load_yaml(FIXTURES / "valid" / "capability-designed.yaml")
     errors = list(validator.iter_errors(data["capability"]))
     assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_capability_accepts_optional_mitre_attack():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "valid" / "capability-with-mitre-attack.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_capability_rejects_mitre_attack_entry_missing_required_field():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "invalid" / "capability-with-malformed-mitre-attack.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors, "Expected validation errors for missing tactic and rationale, got none"
