@@ -88,6 +88,10 @@ If CBM is unreachable when the recon agent runs:
 - Under `code_recon: enabled`, the run halts; surface the CBM availability issue, then either fix it or relax to `auto`.
 - Under `code_recon: auto`, the agent writes `00-context/code-recon-skipped.md` and the run proceeds without code-grounded evidence.
 
+### Taxonomy scope (v1.2+)
+
+Declare taxonomies in `.apd-run.yaml` or pass `--taxonomies cwe,mitre_attack,d3fend,owasp_api_top10` to `init-run`. CWE, ATT&CK, and D3FEND are default-on; OWASP variants are opt-in (gated on the SUT having the relevant web/API/LLM surface). See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
+
 ## Step 2: Invoke the orchestrator in Claude Code
 
 In Claude Code, invoke the `apd-orchestrator` agent against the run directory:

@@ -40,7 +40,7 @@ For a tech plan plus supplementary artifacts (PRD, code, IaC, diagrams, threat m
 - **Findings** — gaps, risks, uncertainties, and items blocked on missing evidence.
 - **Confirmed capabilities** — security properties the design or implementation positively demonstrates, with explicit scope and caveats.
 
-Both streams are organized along the nine APD goals listed above. Every finding and capability carries NIST 800-53r5 control mappings. Findings carry MITRE ATT&CK technique mappings when an agent has high confidence; capabilities carry ATT&CK mitigation mappings. Severity is calibrated against an explicit domain-specific rubric (PBM ships in v1; others can be added — see [docs/adapting-to-other-domains.md](docs/adapting-to-other-domains.md)).
+Both streams are organized along the nine APD goals listed above. Every finding and capability carries NIST 800-53r5 control mappings. Findings carry MITRE ATT&CK technique mappings (and, when the run declares the relevant taxonomies, CWE / OWASP Top 10 / API / LLM mappings) when an agent has high confidence. Capabilities carry ATT&CK mitigation mappings, optional ATT&CK technique mappings (techniques the capability defends against), and optional MITRE D3FEND mappings with required ATT&CK counter-references. Severity is calibrated against an explicit domain-specific rubric (PBM ships in v1; others can be added — see [docs/adapting-to-other-domains.md](docs/adapting-to-other-domains.md)).
 
 The synthesizer dedups across lenses, surfaces contradictions between findings and capabilities, and produces three rollups: a NIST 800-53r5 coverage matrix, an ATT&CK exposure summary, and an APD-by-component coverage grid. The final deliverable is `40-synthesis/advisory-report.md`.
 

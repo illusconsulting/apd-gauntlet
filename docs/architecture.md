@@ -128,8 +128,13 @@ runs/<run-id>/
     ├── contradictions.yaml               severity-disagreements.yaml
     ├── nist-coverage.yaml                attack-exposure.yaml
     ├── apd-coverage-matrix.yaml          rejected-records.yaml
+    ├── cwe-coverage.yaml                 # v1.2+ (when cwe declared)
+    ├── owasp-coverage.yaml               # v1.2+ (when any owasp_* declared)
+    ├── d3fend-coverage.yaml              # v1.2+ (when d3fend declared)
     └── advisory-report.md                # the deliverable
 ```
+
+The three additional rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`) are activation-gated: they are emitted only when the corresponding taxonomies are declared in the run's `taxonomies:` field in `.apd-run.yaml`. Runs that omit the `taxonomies:` field produce the same output as v1.1. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
 
 ## Domain packs
 

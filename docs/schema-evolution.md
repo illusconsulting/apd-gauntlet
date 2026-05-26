@@ -70,6 +70,25 @@ When a field or behavior is deprecated:
 2. Keep the deprecated surface working through at least one minor release.
 3. Remove in a major bump.
 
+## v1.2.0 — Multi-framework taxonomy mappings (Phase A)
+
+Additive within v1.x. Extensions:
+
+- `finding.schema.json` gains optional `control_mappings.cwe`, `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`.
+- `capability.schema.json` gains optional `control_mappings.d3fend` (with required `counters_attack` cross-reference) AND optional `control_mappings.mitre_attack` (parallel to the field on findings; technique-level claims the capability defends against).
+- `run-config.schema.json` gains optional `taxonomies` array.
+- New schemas: `cwe-coverage`, `owasp-coverage`, `d3fend-coverage`.
+
+PBM domain pack (`framework_compat: ">=1.0.0,<2.0.0"`) consumes v1.2.0 without changes.
+
+## v1.3.0 — Methodology-aware threat-model evaluator (Phase B)
+
+(Coming next — see `docs/superpowers/specs/2026-05-25-threat-model-and-attack-path-analysis-design.md`.)
+
+## v1.4.0 — Attack-path enumeration and D3FEND defense graph (Phase C)
+
+(Coming after Phase B.)
+
 ## See also
 
 - [Architecture](architecture.md)
