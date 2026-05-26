@@ -1,6 +1,7 @@
 """Tests for the refresh-owasp command (network mocked)."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from apd_gauntlet.refresh_owasp import (
     DEFAULT_TIMEOUT_SECONDS,
     MAX_RESPONSE_BYTES,
     _fetch_json,
+    _write_projected,
     fetch_owasp_api_top10,
     fetch_owasp_llm_top10,
     fetch_owasp_top10,
@@ -26,20 +28,38 @@ def test_owasp_size_cap_is_200_mib() -> None:
     assert MAX_RESPONSE_BYTES == 200 * 1024 * 1024
 
 
+def _make_fetch_json_side_effect(
+    payloads: list[dict[str, Any]],
+) -> Any:
+    """Return a side_effect for _fetch_json that yields (raw_bytes, parsed) per call."""
+    responses = [
+        (json.dumps(p).encode("utf-8"), p) for p in payloads
+    ]
+    calls: list[int] = [0]
+
+    def _side_effect(url: str) -> tuple[bytes, Any]:  # noqa: ARG001
+        idx = calls[0]
+        calls[0] += 1
+        return responses[idx]
+
+    return _side_effect
+
+
 def test_refresh_owasp_writes_three_files(tmp_path: Path) -> None:
     """End-to-end: refresh_owasp writes all three projected JSON files with metadata."""
-    fake_top10 = [
-        {"category_id": "A03:2021", "name": "Injection"},
-        {"category_id": "A05:2021", "name": "Security Misconfiguration"},
+    fake_payloads = [
+        {"categories": [
+            {"id": "A03:2021", "title": "Injection"},
+            {"id": "A05:2021", "title": "Security Misconfiguration"},
+        ]},
+        {"categories": [
+            {"id": "API3:2023", "title": "Broken Object Property Level Authorization"},
+        ]},
+        {"categories": [{"id": "LLM01", "title": "Prompt Injection"}]},
     ]
-    fake_api = [
-        {"category_id": "API3:2023", "name": "Broken Object Property Level Authorization"},
-    ]
-    fake_llm = [{"category_id": "LLM01", "name": "Prompt Injection"}]
-    with (
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_top10", return_value=fake_top10),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_api_top10", return_value=fake_api),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_llm_top10", return_value=fake_llm),
+    with patch(
+        "apd_gauntlet.refresh_owasp._fetch_json",
+        side_effect=_make_fetch_json_side_effect(fake_payloads),
     ):
         paths = refresh_owasp(output_dir=tmp_path)
 
@@ -63,11 +83,14 @@ def test_refresh_owasp_writes_three_files(tmp_path: Path) -> None:
 
 def test_refresh_owasp_preserves_edition_in_category_id(tmp_path: Path) -> None:
     """A finding mapped to A03:2021 stays A03:2021 — the year is part of the id."""
-    fake = [{"category_id": "A03:2021", "name": "Injection"}]
-    with (
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_top10", return_value=fake),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_api_top10", return_value=[]),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_llm_top10", return_value=[]),
+    fake_payloads = [
+        {"categories": [{"id": "A03:2021", "title": "Injection"}]},
+        {"categories": []},
+        {"categories": []},
+    ]
+    with patch(
+        "apd_gauntlet.refresh_owasp._fetch_json",
+        side_effect=_make_fetch_json_side_effect(fake_payloads),
     ):
         refresh_owasp(output_dir=tmp_path)
     data = json.loads((tmp_path / "owasp_top10.json").read_text())
@@ -155,21 +178,49 @@ def test_fetch_owasp_llm_top10_projects_categories() -> None:
     assert entries == [{"category_id": "LLM01", "name": "Prompt Injection"}]
 
 
-def test_refresh_owasp_default_output_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """When output_dir is None, refresh_owasp writes under the package's data/ dir.
-
-    Verified by mocking the fetch functions and checking the default path is computed
-    relative to the module file (not duplicating writes in the repo during tests).
-    """
-    fake: list[dict[str, Any]] = [{"category_id": "A01:2021", "name": "Broken Access Control"}]
+def test_refresh_owasp_writes_three_files_to_explicit_dir(
+    tmp_path: Path,
+) -> None:
+    """refresh_owasp with an explicit output_dir writes all files under that directory."""
+    fake_payloads = [
+        {"categories": [{"id": "A01:2021", "title": "Broken Access Control"}]},
+        {"categories": []},
+        {"categories": []},
+    ]
     target_dir = tmp_path / "pkg" / "data"
-    # Patch the module-level Path(__file__) lookup by patching the function default behavior
-    # via passing output_dir explicitly — we just verify the explicit-path path works.
-    with (
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_top10", return_value=fake),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_api_top10", return_value=[]),
-        patch("apd_gauntlet.refresh_owasp.fetch_owasp_llm_top10", return_value=[]),
+    with patch(
+        "apd_gauntlet.refresh_owasp._fetch_json",
+        side_effect=_make_fetch_json_side_effect(fake_payloads),
     ):
         paths = refresh_owasp(output_dir=target_dir)
     assert paths["top10"].exists()
     assert paths["top10"].parent == target_dir
+
+
+def test_write_projected_hashes_raw_bytes_when_provided(tmp_path: Path) -> None:
+    """source_sha256 equals sha256(raw_bytes) when raw_bytes are passed in.
+
+    This verifies the contract described in _fetch_json's docstring: callers can
+    pass the exact upstream bytes to _write_projected and the stored hash will
+    reflect those bytes, not a re-serialised projection.
+    """
+    raw = b'{"categories":[{"id":"A01:2021","title":"Broken Access Control"}]}'
+    entries = [{"category_id": "A01:2021", "name": "Broken Access Control"}]
+    out = tmp_path / "test.json"
+    _write_projected(entries, "https://example.invalid/", out, raw_bytes=raw)
+    data = json.loads(out.read_text())
+    assert data["source_sha256"] == hashlib.sha256(raw).hexdigest()
+
+
+def test_write_projected_falls_back_to_entries_hash_when_no_raw_bytes(
+    tmp_path: Path,
+) -> None:
+    """source_sha256 is a stable hash of projected entries when raw_bytes is None (seed mode)."""
+    entries = [{"category_id": "A01:2021", "name": "Broken Access Control"}]
+    out = tmp_path / "test.json"
+    _write_projected(entries, "seed_only", out, raw_bytes=None)
+    data = json.loads(out.read_text())
+    expected = hashlib.sha256(
+        json.dumps(entries, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    assert data["source_sha256"] == expected

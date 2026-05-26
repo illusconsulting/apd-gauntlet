@@ -134,18 +134,32 @@ def fetch_owasp_llm_top10() -> list[dict[str, Any]]:
     return _project_categories(payload)
 
 
-def _write_projected(entries: list[dict[str, Any]], url: str, output_path: Path) -> None:
+def _write_projected(
+    entries: list[dict[str, Any]],
+    url: str,
+    output_path: Path,
+    raw_bytes: bytes | None = None,
+) -> None:
     """Serialize entries with provenance metadata and write to ``output_path``.
 
-    The ``source_sha256`` is computed over a canonical ``sort_keys`` JSON dump
-    of the entries list so the hash is stable regardless of upstream key
-    ordering — the projection itself is deterministic, but this guards against
-    surprising re-ordering inside the projected entries.
+    When ``raw_bytes`` is provided (live fetch), ``source_sha256`` is computed
+    over the exact upstream bytes received — matching the promise in
+    :func:`_fetch_json`'s docstring.  When ``raw_bytes`` is ``None`` (seed mode
+    or other cases where no upstream response is available), the hash falls back
+    to a canonical ``sort_keys`` JSON dump of the projected entries so the field
+    is always populated.
     """
-    body = json.dumps(entries, sort_keys=True).encode("utf-8")
+    if raw_bytes is not None:
+        sha = hashlib.sha256(raw_bytes).hexdigest()
+    else:
+        # Seed mode: no upstream response available; hash the projected entries
+        # so the field is stable and deterministic.
+        sha = hashlib.sha256(
+            json.dumps(entries, sort_keys=True).encode("utf-8")
+        ).hexdigest()
     projected = {
         "source_url": url,
-        "source_sha256": hashlib.sha256(body).hexdigest(),
+        "source_sha256": sha,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "entries": entries,
     }
@@ -158,6 +172,10 @@ def refresh_owasp(output_dir: Path | None = None) -> dict[str, Path]:
 
     Returns a mapping ``{"top10": Path, "api_top10": Path, "llm_top10": Path}``
     of the written file paths.
+
+    Raw upstream bytes are passed directly to :func:`_write_projected` so that
+    ``source_sha256`` is computed over the exact bytes received from the server,
+    fulfilling the contract described in :func:`_fetch_json`'s docstring.
     """
     if output_dir is None:
         output_dir = Path(__file__).parent / "data"
@@ -166,9 +184,27 @@ def refresh_owasp(output_dir: Path | None = None) -> dict[str, Path]:
         "api_top10": output_dir / "owasp_api_top10.json",
         "llm_top10": output_dir / "owasp_llm_top10.json",
     }
-    _write_projected(fetch_owasp_top10(), OWASP_TOP10_URL, paths["top10"])
-    _write_projected(fetch_owasp_api_top10(), OWASP_API_TOP10_URL, paths["api_top10"])
-    _write_projected(fetch_owasp_llm_top10(), OWASP_LLM_TOP10_URL, paths["llm_top10"])
+    top10_body, top10_payload = _fetch_json(OWASP_TOP10_URL)
+    _write_projected(
+        _project_categories(top10_payload),
+        OWASP_TOP10_URL,
+        paths["top10"],
+        raw_bytes=top10_body,
+    )
+    api_body, api_payload = _fetch_json(OWASP_API_TOP10_URL)
+    _write_projected(
+        _project_categories(api_payload),
+        OWASP_API_TOP10_URL,
+        paths["api_top10"],
+        raw_bytes=api_body,
+    )
+    llm_body, llm_payload = _fetch_json(OWASP_LLM_TOP10_URL)
+    _write_projected(
+        _project_categories(llm_payload),
+        OWASP_LLM_TOP10_URL,
+        paths["llm_top10"],
+        raw_bytes=llm_body,
+    )
     return paths
 
 
