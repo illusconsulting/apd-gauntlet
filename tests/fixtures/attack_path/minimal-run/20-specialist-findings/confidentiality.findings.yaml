@@ -1,0 +1,22 @@
+findings:
+  - schema_version: 1
+    id: conf-1a2b3c4d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "PHI plaintext on adjudication-service to member-record-store link"
+    summary: "PHI traverses the adjudication-service to member-record-store link without envelope encryption."
+    detail: "PHI fields flow in plaintext between adjudication-service and member-record-store, exposing minimum-necessary internal audience."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "section 4.2"
+        excerpt: "adjudication-service writes PHI rows to member-record-store with broker-managed encryption only"
+    control_mappings:
+      nist_800_53r5: ["SC-8(1)", "SC-13", "SC-28(1)"]
+    recommendation:
+      posture: required
+      summary: "Apply field-level envelope encryption on PHI columns before write."
+      detail: "Encrypt PHI fields in the adjudication-service producer SDK using KMS-managed envelope keys before persistence."

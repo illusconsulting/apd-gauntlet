@@ -1,0 +1,13 @@
+code_evidence_index:
+  indexed_commit_sha: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+  cbm_project: "claim-event-bus"
+  generated_at: "2026-05-26T12:00:00Z"
+  entries:
+    - id: cev-1a2b3c4d
+      qualified_name: "claim_bus.ingress.handler.submit_claim"
+      kind: function
+      file_path: "src/claim_bus/ingress/handler.py"
+      line_range: "L20-L40"
+      excerpt: "def submit_claim(payload): adjudication_client.send(payload)"
+      apd_relevance: [integrity, authenticity]
+      notes: "Cross-service call from claim-ingress to adjudication-service."

@@ -1,0 +1,11 @@
+run_id: pbm-attack-path-minimal
+domain: pbm
+framework_version: 1.4.0
+crown_jewels:
+  - phi_store
+attacker_positions:
+  - external
+attack_path_analysis:
+  max_hop: 4
+  max_paths_per_pair: 10
+  bottleneck_threshold: 2
