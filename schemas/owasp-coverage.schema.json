@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/owasp-coverage.schema.json",
+  "title": "APD Gauntlet OWASP Coverage Rollup",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["taxonomy", "category_id", "name", "finding_count", "finding_ids", "silent"],
+        "additionalProperties": false,
+        "properties": {
+          "taxonomy":      { "type": "string", "enum": ["owasp_top10", "owasp_api_top10", "owasp_llm_top10"] },
+          "category_id":   { "type": "string", "minLength": 3 },
+          "name":          { "type": "string", "minLength": 3 },
+          "finding_count": { "type": "integer", "minimum": 0 },
+          "finding_ids":   { "type": "array", "items": { "type": "string" } },
+          "surfaces":      { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "silent":        { "type": "boolean" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "taxonomy": { "const": "owasp_top10" } }, "required": ["taxonomy"] },
+            "then": { "properties": { "category_id": { "pattern": "^A[0-9]{2}:20[0-9]{2}$" } } }
+          },
+          {
+            "if": { "properties": { "taxonomy": { "const": "owasp_api_top10" } }, "required": ["taxonomy"] },
+            "then": { "properties": { "category_id": { "pattern": "^API[0-9]{1,2}:20[0-9]{2}$" } } }
+          },
+          {
+            "if": { "properties": { "taxonomy": { "const": "owasp_llm_top10" } }, "required": ["taxonomy"] },
+            "then": { "properties": { "category_id": { "pattern": "^LLM[0-9]{2}$" } } }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -73,3 +73,13 @@ def test_cwe_coverage_schema_validates():
     schema = json.loads((SCHEMA_DIR / "cwe-coverage.schema.json").read_text())
     errors = list(Draft202012Validator(schema).iter_errors(rollup))
     assert errors == [], [e.message for e in errors]
+
+
+def test_owasp_coverage_schema_validates():
+    """OWASP coverage rollup is a whole-document schema covering Top 10, API Top 10, LLM Top 10."""
+    rollup = yaml.safe_load(
+        (FIXTURES / "valid" / "owasp-coverage-valid.yaml").read_text()
+    )
+    schema = json.loads((SCHEMA_DIR / "owasp-coverage.schema.json").read_text())
+    errors = list(Draft202012Validator(schema).iter_errors(rollup))
+    assert errors == [], [e.message for e in errors]

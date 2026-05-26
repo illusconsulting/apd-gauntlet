@@ -1,0 +1,31 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+  - taxonomy: owasp_top10
+    category_id: A03:2021
+    name: "Injection"
+    finding_count: 2
+    finding_ids: [intg-a1b2c3d4, intg-5e6f7g8h]
+    surfaces: ["member-portal/search"]
+    silent: false
+  - taxonomy: owasp_top10
+    category_id: A05:2021
+    name: "Security Misconfiguration"
+    finding_count: 0
+    finding_ids: []
+    surfaces: []
+    silent: true
+  - taxonomy: owasp_api_top10
+    category_id: API3:2023
+    name: "Broken Object Property Level Authorization"
+    finding_count: 1
+    finding_ids: [auth-9f8e7d6c]
+    surfaces: ["api/v1/members/{id}"]
+    silent: false
+  - taxonomy: owasp_llm_top10
+    category_id: LLM01
+    name: "Prompt Injection"
+    finding_count: 0
+    finding_ids: []
+    surfaces: []
+    silent: true
