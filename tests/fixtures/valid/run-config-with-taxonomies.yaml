@@ -1,0 +1,9 @@
+run_id: apd-20260601-taxonomies-test
+domain: pbm
+framework_version: 1.2.0
+code_recon: auto
+taxonomies:
+  - cwe
+  - mitre_attack
+  - d3fend
+  - owasp_api_top10

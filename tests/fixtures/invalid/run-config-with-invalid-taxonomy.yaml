@@ -1,0 +1,6 @@
+run_id: apd-20260601-bad-taxonomy
+domain: pbm
+framework_version: 1.2.0
+taxonomies:
+  - cwe
+  - made_up_framework

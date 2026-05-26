@@ -10,6 +10,14 @@
     "domain":            { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
     "framework_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "code_recon":        { "type": "string", "enum": ["enabled", "auto", "disabled"] },
-    "cbm_project":       { "type": "string", "minLength": 1 }
+    "cbm_project":       { "type": "string", "minLength": 1 },
+    "taxonomies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10"]
+      }
+    }
   }
 }

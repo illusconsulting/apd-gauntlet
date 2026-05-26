@@ -50,3 +50,28 @@ def test_code_recon_optional_defaults_handled_by_validator():
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors == []
+
+
+def test_run_config_accepts_taxonomies():
+    """A run-config that declares a valid subset of framework taxonomies passes."""
+    data = yaml.safe_load(
+        (FIXTURES / "valid/run-config-with-taxonomies.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+def test_run_config_rejects_unknown_taxonomy():
+    """A run-config with an unrecognised taxonomy value must fail validation."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-with-invalid-taxonomy.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors
+
+
+def test_run_config_without_taxonomies_still_valid():
+    """Omitting taxonomies entirely must remain valid (field is optional)."""
+    data = yaml.safe_load((FIXTURES / "valid/run-config.yaml").read_text())
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
