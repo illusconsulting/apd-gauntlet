@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/asset-graph.schema.json",
+  "title": "APD Gauntlet Asset Graph",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["attack_path_analyzer"] },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "node_type", "name", "provenance", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "node_id":   { "type": "string", "pattern": "^(asset|idn|atk|jewel)-[0-9a-f]{8}$" },
+          "node_type": { "type": "string", "enum": ["asset", "identity", "attacker_position", "crown_jewel"] },
+          "name":      { "type": "string", "minLength": 1 },
+          "asset_type":{ "type": "string", "enum": ["service", "data_store", "secret_store", "queue", "network", "external_dependency", "compute"] },
+          "data_classifications": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["phi", "pii", "pci", "phi_subset", "secret", "public", "internal", "confidential"] }
+          },
+          "provenance": {
+            "type": "object",
+            "required": ["source"],
+            "additionalProperties": false,
+            "properties": {
+              "source":   { "type": "string", "enum": ["artifact", "domain_default", "threat_model", "code_evidence", "run_config"] },
+              "artifact": { "type": "string" },
+              "locator":  { "type": "string" }
+            }
+          },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["edge_id", "edge_type", "from", "to", "provenance", "confidence", "traversal_cost"],
+        "additionalProperties": false,
+        "properties": {
+          "edge_id":   { "type": "string", "pattern": "^edge-[0-9a-f]{8}$" },
+          "edge_type": { "type": "string", "enum": ["network_reachable", "authn_required", "authz_grants", "data_resides_on", "trusts", "compromisable_via_finding", "mitigated_by_capability"] },
+          "from":      { "type": "string", "pattern": "^(asset|idn|atk|jewel)-[0-9a-f]{8}$" },
+          "to":        { "type": "string", "pattern": "^(asset|idn|atk|jewel)-[0-9a-f]{8}$" },
+          "finding_id":    { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" },
+          "capability_id": { "type": "string", "pattern": "^cap-[0-9a-f]{8}$" },
+          "provenance": { "$ref": "#/properties/nodes/items/properties/provenance" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "traversal_cost": { "type": "integer", "minimum": 1, "maximum": 100 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "edge_type": { "const": "compromisable_via_finding" } } },
+            "then": { "required": ["finding_id"] }
+          },
+          {
+            "if": { "properties": { "edge_type": { "const": "mitigated_by_capability" } } },
+            "then": { "required": ["capability_id"] }
+          }
+        ]
+      }
+    },
+    "build_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_count":               { "type": "integer", "minimum": 0 },
+        "edge_count":               { "type": "integer", "minimum": 0 },
+        "attacker_position_count":  { "type": "integer", "minimum": 0 },
+        "crown_jewel_count":        { "type": "integer", "minimum": 0 },
+        "finding_edges_count":      { "type": "integer", "minimum": 0 },
+        "capability_edges_count":   { "type": "integer", "minimum": 0 },
+        "sources_used":             { "type": "array", "items": { "type": "string", "enum": ["asset_inventory", "threat_model_normalized", "code_evidence_index", "findings", "capabilities", "domain_defaults", "run_config"] } }
+      }
+    }
+  }
+}
