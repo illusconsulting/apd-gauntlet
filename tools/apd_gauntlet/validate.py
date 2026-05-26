@@ -96,13 +96,21 @@ def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, di
 
 CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 
+# Whole-document rollup files in 40-synthesis/ that get schema-validated by the
+# CLI. Each entry maps the on-disk filename to the schema in schemas/.
+SYNTHESIS_ROLLUPS: dict[str, str] = {
+    "cwe-coverage.yaml":    "cwe-coverage.schema.json",
+    "owasp-coverage.yaml":  "owasp-coverage.schema.json",
+    "d3fend-coverage.yaml": "d3fend-coverage.schema.json",
+}
+
 
 def _code_evidence_index_path(run_dir: pathlib.Path) -> pathlib.Path:
     return run_dir / "00-context" / CODE_EVIDENCE_INDEX_FILENAME
 
 
 def _validate_code_evidence_index(
-    run_dir: pathlib.Path, report: ValidationReport
+    run_dir: pathlib.Path, report: ValidationReport, registry: Registry
 ) -> None:
     """If code-evidence-index.yaml exists, schema-validate it. Errors append to report."""
     path = _code_evidence_index_path(run_dir)
@@ -114,8 +122,43 @@ def _validate_code_evidence_index(
     except yaml.YAMLError as e:
         report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
         return
-    for err in Draft202012Validator(schema).iter_errors(data):
+    validator = Draft202012Validator(schema, registry=registry)
+    for err in validator.iter_errors(data):
         report.errors.append(Violation(path, None, err.message, "/".join(map(str, err.path))))
+
+
+def _validate_synthesis_rollups(
+    run_dir: pathlib.Path,
+    report: ValidationReport,
+    registry: Registry,
+    seen_files: set[pathlib.Path],
+) -> None:
+    """Schema-validate each present coverage rollup under 40-synthesis/.
+
+    Walks ``SYNTHESIS_ROLLUPS`` so the validator catches malformed CWE / OWASP /
+    D3FEND coverage rollups the same way it catches malformed findings. Missing
+    rollups are silent (these files are optional). Discovered files are added
+    to ``seen_files`` so ``files_seen`` reflects them.
+    """
+    synthesis_dir = run_dir / "40-synthesis"
+    if not synthesis_dir.exists():
+        return
+    for filename, schema_name in SYNTHESIS_ROLLUPS.items():
+        path = synthesis_dir / filename
+        if not path.exists():
+            continue
+        seen_files.add(path)
+        schema = json.loads((SCHEMAS_DIR / schema_name).read_text())
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError as e:
+            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
+            continue
+        validator = Draft202012Validator(schema, registry=registry)
+        for err in validator.iter_errors(data):
+            report.errors.append(
+                Violation(path, None, err.message, "/".join(map(str, err.path)))
+            )
 
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
@@ -142,7 +185,8 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         rid = record.get("id")
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
-    _validate_code_evidence_index(run_dir, report)
+    _validate_code_evidence_index(run_dir, report, registry)
+    _validate_synthesis_rollups(run_dir, report, registry, seen_files)
     report.files_seen = len(seen_files)
     return report
 
