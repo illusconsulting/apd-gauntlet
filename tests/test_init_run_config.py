@@ -80,3 +80,60 @@ def test_init_run_empty_taxonomies_omits_field(tmp_path):
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert "taxonomies" not in cfg
+
+
+def test_scaffold_run_includes_threat_model_when_provided(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    root = tmp_path / "runs"
+
+    run_dir = scaffold_run("run-005", inputs, "pbm", root, threat_model="threat-model.md")
+
+    cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
+    assert cfg["threat_model"] == "threat-model.md"
+
+    # Must also schema-validate.
+    errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
+    assert errors == []
+
+
+def test_scaffold_run_includes_methodology_hint_when_provided(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    root = tmp_path / "runs"
+
+    run_dir = scaffold_run("run-006", inputs, "pbm", root, methodology_hint="stride")
+
+    cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
+    assert cfg["methodology_hint"] == "stride"
+
+    # Must also schema-validate.
+    errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
+    assert errors == []
+
+
+def test_scaffold_run_omits_threat_model_when_absent(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    root = tmp_path / "runs"
+
+    run_dir = scaffold_run("run-007", inputs, "pbm", root)
+
+    cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
+    assert "threat_model" not in cfg
+
+
+def test_scaffold_run_omits_methodology_hint_when_only_threat_model_provided(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    root = tmp_path / "runs"
+
+    run_dir = scaffold_run("run-008", inputs, "pbm", root, threat_model="threat-model.md")
+
+    cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
+    assert "methodology_hint" not in cfg
+    assert cfg["threat_model"] == "threat-model.md"

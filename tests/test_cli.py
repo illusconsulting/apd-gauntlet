@@ -75,6 +75,48 @@ def test_cli_init_run_accepts_taxonomies_flag(tmp_path):
     assert cfg["taxonomies"] == ["cwe", "mitre_attack", "d3fend"]
 
 
+def test_cli_init_run_accepts_threat_model_and_methodology_hint(tmp_path):
+    inputs = tmp_path / "src-inputs"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# stub")
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "init-run", "run-tm-001",
+            "--inputs", str(inputs),
+            "--domain", "pbm",
+            "--root", str(tmp_path / "runs"),
+            "--threat-model", "threat-model.md",
+            "--methodology-hint", "stride",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    cfg_path = tmp_path / "runs" / "run-tm-001" / ".apd-run.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text())
+    assert cfg["threat_model"] == "threat-model.md"
+    assert cfg["methodology_hint"] == "stride"
+
+
+def test_cli_init_run_methodology_hint_validated_against_known_set(tmp_path):
+    inputs = tmp_path / "src-inputs"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# stub")
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "init-run", "run-tm-002",
+            "--inputs", str(inputs),
+            "--domain", "pbm",
+            "--root", str(tmp_path / "runs"),
+            "--methodology-hint", "invalid_hint",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "invalid_hint" in result.output or "Invalid value" in result.output
+
+
 # ---------------------------------------------------------------------------
 # parse-threat-model subcommand tests (Task B-17)
 # ---------------------------------------------------------------------------

@@ -30,6 +30,8 @@ def scaffold_run(
     domain: str,
     root: pathlib.Path,
     taxonomies: list[str] | None = None,
+    threat_model: str | None = None,
+    methodology_hint: str | None = None,
 ) -> pathlib.Path:
     _validate_run_id(run_id)
     run_dir = root / run_id
@@ -53,5 +55,9 @@ def scaffold_run(
     if taxonomies:
         taxonomies_block = "taxonomies:\n" + "".join(f"  - {t}\n" for t in taxonomies)
         config_text += taxonomies_block
+    if threat_model:
+        config_text += f"threat_model: {threat_model}\n"
+    if methodology_hint:
+        config_text += f"methodology_hint: {methodology_hint}\n"
     (run_dir / ".apd-run.yaml").write_text(config_text)
     return run_dir

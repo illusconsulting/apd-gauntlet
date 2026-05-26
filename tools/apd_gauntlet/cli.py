@@ -125,11 +125,33 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> 
         "(cwe,mitre_attack,d3fend,owasp_top10,owasp_api_top10,owasp_llm_top10)."
     ),
 )
-def init_run_cmd(run_id, inputs, domain, root, taxonomies) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--threat-model",
+    default=None,
+    help="Path (relative to --inputs) to a threat model file.",
+)
+@click.option(
+    "--methodology-hint",
+    type=click.Choice(
+        ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form"],
+        case_sensitive=False,
+    ),
+    default=None,
+    help="Methodology hint for threat model parsing.",
+)
+def init_run_cmd(run_id, inputs, domain, root, taxonomies, threat_model, methodology_hint) -> None:  # type: ignore[no-untyped-def]
     parsed = (
         [t.strip() for t in taxonomies.split(",") if t.strip()] if taxonomies else None
     )
-    target = scaffold_run(run_id, inputs, domain, root, taxonomies=parsed)
+    target = scaffold_run(
+        run_id,
+        inputs,
+        domain,
+        root,
+        taxonomies=parsed,
+        threat_model=threat_model,
+        methodology_hint=methodology_hint,
+    )
     click.echo(f"Run scaffolded at {target}")
 
 
