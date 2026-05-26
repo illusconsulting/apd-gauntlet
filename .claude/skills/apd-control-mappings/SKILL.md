@@ -220,3 +220,45 @@ Tying the mitigation back to the technique(s) it covers in the rationale is reco
 If two agents map the same architectural concern to different 800-53r5 controls or ATT&CK techniques, the synthesizer takes the union — both mappings appear on the merged finding. The synthesizer does not arbitrate which control is "more correct"; that is for human reviewers.
 
 If two agents emit *contradictory* mappings (one maps to a mitigation, the other to a technique, on what becomes a merged finding), the synthesizer surfaces the contradiction in the contradiction annex.
+
+---
+
+## Per-taxonomy discipline (v1.2+)
+
+A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, owasp_top10, owasp_api_top10, owasp_llm_top10, d3fend]`). The intake brief lists which are in scope plus any taxonomies intake auto-suggested. **Only emit mappings for taxonomies declared in the run.** Auto-suggestions that the operator did not adopt do not authorize emission.
+
+### CWE (on findings, optional)
+
+- Map only when the finding describes a specific weakness pattern that matches a CWE entry's **Demonstrative Examples** or **Observed Examples**.
+- Use **base** or **variant** abstractions only. **Pillar** and **category** entries (e.g., CWE-693 "Protection Mechanism Failure") are too abstract for actionable mapping and must not be used.
+- Each `cwe` mapping is just the ID string (no rationale field on the schema — but the finding's `detail` text must justify the weakness-pattern match. Reviewers should be able to read the detail and see why CWE-79 applies.)
+- One finding may carry multiple CWE IDs when the weakness composes.
+
+### OWASP Top 10 (web — on findings, optional)
+
+- Map only when the SUT has a web surface (HTML routes, browser-rendered templates, session cookies). Intake auto-suggests this taxonomy when those surfaces are detected.
+- Use the current edition format `A<NN>:<YYYY>` (e.g., A03:2021). Do not silently re-map findings to newer editions when they ship — the edition year is part of the ID.
+- Limit one OWASP Top 10 ID per finding except when the finding genuinely spans categories (e.g., a single misconfiguration that's both A05 and A07). Multiple IDs require the `detail` text to walk through each.
+
+### OWASP API Top 10 (on findings, optional)
+
+- Map when the SUT exposes an API (OpenAPI/Swagger spec, REST/GraphQL endpoints, API gateway config).
+- Format `API<N>:<YYYY>` (e.g., API3:2023).
+- Same per-finding multiplicity discipline as OWASP Top 10.
+
+### OWASP LLM Top 10 (on findings, optional)
+
+- Map only when the SUT integrates an LLM (SDK imports of `openai`, `anthropic`, `langchain`, etc.; vector store usage; prompt templates).
+- Format `LLM<NN>` (e.g., LLM01).
+- LLM01 (Prompt Injection), LLM06 (Sensitive Information Disclosure), LLM07 (Insecure Plugin Design) are most often-cited; map only when the finding actually describes the categorized risk pattern.
+
+### D3FEND (on capabilities, optional)
+
+- D3FEND attaches to **capabilities**, not findings. A capability earns a D3FEND mapping when its design demonstrably implements the technique.
+- Each D3FEND entry **must** cite which ATT&CK techniques it counters via `counters_attack`. The cited ATT&CK technique(s) must also appear in the same capability's `mitre_attack` block (the `mitre_attack` field documents which techniques the capability defends against). Schema validates the format; cross-reference is checked by the validator. Map-by-name-similarity is forbidden.
+- Each D3FEND entry requires `rationale` (≥30 chars) explaining how the capability implements the D3FEND technique.
+- Use the format `D3-<short_code>` (e.g., D3-NTA for Network Traffic Analysis, D3-NTF for Network Traffic Filtering, D3-PHDURA for Process Hierarchy Database Update Restriction Analysis — codes can be 2 to 7 letters). Reference data with the full set of valid codes is at `tools/apd_gauntlet/data/d3fend.json`.
+
+## High-confidence-only rule (extends unchanged)
+
+The existing high-confidence-only rule applies to all five new taxonomies. When uncertain whether a CWE matches the weakness pattern, when uncertain whether the SUT actually exposes the OWASP-categorized surface, when uncertain whether a capability truly implements a D3FEND technique — **do not map**. Leave the field absent.
