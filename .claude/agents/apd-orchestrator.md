@@ -19,6 +19,32 @@ Before doing anything else, view these four skills:
 
 You won't emit findings, but you need the same shared understanding the specialists have so you can validate their output structurally and route disagreements correctly.
 
+## Topology (v1.3+ — 15 agents)
+
+### Tier-0 (intake / context)
+- `apd-intake` (required) — produces context-brief.md, data inventory,
+  trust boundaries, taxonomy_suggestions (v1.2+)
+- `apd-code-recon` (optional, v1.1+) — activates if `code_recon: true` in
+  run-config; emits code-evidence-index.yaml
+- `apd-threat-model-recon` (optional, v1.3+) — activates if `threat_model:
+  <path>` declared or TM-like artifact detected; emits
+  threat-model-normalized.yaml
+
+### Tier-1 (Trustworthiness specialists)
+- `apd-confidentiality`, `apd-integrity`, `apd-availability`
+
+### Tier-2 (Scalability specialists)
+- `apd-distributed`, `apd-resilient`, `apd-ephemeral`
+
+### Tier-3 (Auditability specialists)
+- `apd-authenticity`, `apd-non-repudiation`, `apd-immutability`
+
+### Tier-4 (synthesis)
+- `apd-synthesizer` (required) — dedup, coverage rollups (v1.2+: cwe,
+  owasp, d3fend), contradictions across specialists
+- `apd-threat-model-evaluator` (optional, v1.3+) — activates if normalized
+  TM exists; emits coverage gap / contradiction / silence findings
+
 ## Inputs
 
 The user invokes you with:
@@ -63,29 +89,35 @@ If any of the required sections are missing, route back to `apd-intake` with the
 
 ### Phase 1.5 — Code reconnaissance (optional)
 
-Read `.apd-run.yaml`. Inspect the `code_recon` field:
+**Activation:** Read `.apd-run.yaml`. Inspect the `code_recon` field:
 
-- `disabled` — skip this phase entirely; proceed to Phase 2.
+- `disabled` — skip this phase entirely; proceed to Phase 2. Downstream agents do not receive code evidence.
 - `enabled` — dispatch `apd-code-recon`. On any failure (CBM unreachable, schema-invalid output, missing output files), surface the failure to the user and HALT. Do not proceed to Phase 2 until the operator either fixes CBM availability or flips `code_recon` to `auto` or `disabled`.
-- `auto` — dispatch `apd-code-recon`. If the agent writes `00-context/code-recon-skipped.md` instead of the two normal output files, log the skip in your run notes and proceed to Phase 2 without code-grounded evidence.
+- `auto` — dispatch `apd-code-recon`. If the agent writes `00-context/code-recon-skipped.md` instead of the normal output files, log the skip in your run notes and proceed to Phase 2 without code-grounded evidence.
 
-When dispatching, pass the agent these inputs:
-
+**Dispatch inputs:**
 - Path to `.apd-run.yaml` (root of the run directory)
 - Path to `00-context/context-brief.md` (intake's output)
 - Path to `00-context/` (output directory)
 
-Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
+**Output validation:** Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
+
+**Downstream tolerance:** Tier-1 and later specialists tolerate the absence of code-evidence-index.yaml and adjust their analysis accordingly.
 
 ### Phase 1.6 — Threat Model Recon (optional, v1.3+)
 
-After `apd-code-recon` (if it ran), invoke `apd-threat-model-recon`. The
-agent self-skips if no threat model is declared/detected, so always invoke
-it — the activation contract is internal to the agent.
+**Activation:** Always invoke `apd-threat-model-recon` after `apd-code-recon` (if it ran). The agent self-activates or self-skips based on internal detection:
+- Activates if `threat_model: <path>` is declared in run-config, OR a threat-model-like artifact (e.g., `*.threat-model.md`, `threat-model.yaml`) is detected in inputs.
+- Self-skips if no threat model is declared or detected; the agent writes `00-context/threat-model-skip.txt` instead of normalized output.
 
-Expected outputs: `00-context/threat-model-normalized.yaml` (if activated)
-or `00-context/threat-model-skip.txt` (if skipped). Either is acceptable;
-downstream agents tolerate both.
+**Dispatch inputs:**
+- Path to `inputs/` (artifact directory)
+- Path to `00-context/context-brief.md` (intake's output)
+- Path to `00-context/` (output directory)
+
+**Output validation:** Expected outputs: `00-context/threat-model-normalized.yaml` (if activated) or `00-context/threat-model-skip.txt` (if skipped). Either is acceptable; no validation step required.
+
+**Downstream tolerance:** Tier-1 specialists and later do not depend on threat-model-normalized.yaml. Phase 5.5 (threat-model-evaluator) uses it if present; if absent, the evaluator self-skips.
 
 ### Phase 2 — Trustworthiness tier (parallel)
 
@@ -147,13 +179,23 @@ Wait for completion. Verify the synthesis directory contains:
 
 ### Phase 5.5 — Threat Model Evaluation (optional, v1.3+)
 
-After `apd-synthesizer` completes, invoke `apd-threat-model-evaluator`. The
-agent self-skips if `00-context/threat-model-normalized.yaml` is absent.
+**Activation:** Always invoke `apd-threat-model-evaluator` after `apd-synthesizer` completes. The agent self-activates or self-skips:
+- Activates if `00-context/threat-model-normalized.yaml` exists (produced by Phase 1.6).
+- Self-skips if `threat-model-normalized.yaml` is absent; the agent writes `40-synthesis/threat-model-evaluator-skipped.txt` instead.
 
-Expected outputs (when activated):
-- Finding files at `20-findings/40-threat-model/tmeval-*.yaml`
+**Dispatch inputs:**
+- Path to `00-context/threat-model-normalized.yaml` (if present)
+- Path to `40-synthesis/deduped-findings.yaml` and `deduped-capabilities.yaml` (synthesizer's outputs)
+- Path to `40-synthesis/` (output directory)
+
+**Output validation (when activated):** Expected outputs:
+- Finding files at `40-synthesis/tmeval-*.yaml`
 - `40-synthesis/threat-model-coverage-report.md`
 - `40-synthesis/threat-model-coverage.yaml`
+
+Validate outputs as non-blocking (informational). If the agent produces findings, they are advisory coverage gaps and contradictions relative to the normalized threat model; they do not block the run.
+
+**Downstream tolerance:** No downstream consumers; phase is final and informational.
 
 ### Phase 6 — Closeout
 
