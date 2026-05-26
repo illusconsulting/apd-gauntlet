@@ -115,8 +115,19 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> 
     default=pathlib.Path("runs"),
     show_default=True,
 )
-def init_run_cmd(run_id, inputs, domain, root) -> None:  # type: ignore[no-untyped-def]
-    target = scaffold_run(run_id, inputs, domain, root)
+@click.option(
+    "--taxonomies",
+    default=None,
+    help=(
+        "Comma-separated taxonomies "
+        "(cwe,mitre_attack,d3fend,owasp_top10,owasp_api_top10,owasp_llm_top10)."
+    ),
+)
+def init_run_cmd(run_id, inputs, domain, root, taxonomies) -> None:  # type: ignore[no-untyped-def]
+    parsed = (
+        [t.strip() for t in taxonomies.split(",") if t.strip()] if taxonomies else None
+    )
+    target = scaffold_run(run_id, inputs, domain, root, taxonomies=parsed)
     click.echo(f"Run scaffolded at {target}")
 
 

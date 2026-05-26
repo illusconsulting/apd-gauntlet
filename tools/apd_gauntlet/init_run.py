@@ -25,7 +25,11 @@ def _validate_run_id(run_id: str) -> None:
 
 
 def scaffold_run(
-    run_id: str, inputs_src: pathlib.Path, domain: str, root: pathlib.Path
+    run_id: str,
+    inputs_src: pathlib.Path,
+    domain: str,
+    root: pathlib.Path,
+    taxonomies: list[str] | None = None,
 ) -> pathlib.Path:
     _validate_run_id(run_id)
     run_dir = root / run_id
@@ -46,5 +50,8 @@ def scaffold_run(
         "# code_recon: disabled # skip code-recon entirely\n"
         "# cbm_project: <project-name>  # optional CBM project pointer override\n"
     )
+    if taxonomies:
+        taxonomies_block = "taxonomies:\n" + "".join(f"  - {t}\n" for t in taxonomies)
+        config_text += taxonomies_block
     (run_dir / ".apd-run.yaml").write_text(config_text)
     return run_dir

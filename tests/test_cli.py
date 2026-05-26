@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
 
@@ -51,3 +52,24 @@ def test_cli_refresh_d3fend_invokes_refresh():
         result = runner.invoke(main, ["refresh-d3fend"])
         assert result.exit_code == 0
         mock.assert_called_once()
+
+
+def test_cli_init_run_accepts_taxonomies_flag(tmp_path):
+    inputs = tmp_path / "src-inputs"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# stub")
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "init-run", "run-tax-001",
+            "--inputs", str(inputs),
+            "--domain", "pbm",
+            "--root", str(tmp_path / "runs"),
+            "--taxonomies", "cwe,mitre_attack,d3fend",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    cfg_path = tmp_path / "runs" / "run-tax-001" / ".apd-run.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text())
+    assert cfg["taxonomies"] == ["cwe", "mitre_attack", "d3fend"]
