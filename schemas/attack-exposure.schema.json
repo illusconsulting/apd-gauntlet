@@ -6,9 +6,9 @@
   "required": ["id", "sub_technique", "tactic", "name", "exposure_finding_count", "exposure_finding_ids", "mitigated_by_capabilities"],
   "additionalProperties": false,
   "properties": {
-    "id":             { "type": "string", "pattern": "^T[0-9]{4}$" },
-    "sub_technique":  { "type": ["string", "null"], "pattern": "^T[0-9]{4}\\.[0-9]{3}$" },
-    "tactic":         { "type": "string", "pattern": "^TA[0-9]{4}$" },
+    "id":             { "$ref": "_defs.schema.json#/$defs/attack_technique_id_topline" },
+    "sub_technique":  { "$ref": "_defs.schema.json#/$defs/attack_sub_technique_id" },
+    "tactic":         { "$ref": "_defs.schema.json#/$defs/attack_tactic_id" },
     "name":           { "type": "string", "minLength": 3 },
     "exposure_finding_count": { "type": "integer", "minimum": 0 },
     "exposure_finding_ids":   { "type": "array", "items": { "type": "string" } },
@@ -20,7 +20,7 @@
         "additionalProperties": false,
         "properties": {
           "capability_id": { "type": "string" },
-          "mitigation_id": { "type": "string", "pattern": "^M[0-9]{4}$" }
+          "mitigation_id": { "$ref": "_defs.schema.json#/$defs/attack_mitigation_id" }
         }
       }
     }

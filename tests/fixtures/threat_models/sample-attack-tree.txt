@@ -1,0 +1,11 @@
+Exfiltrate member PHI from claim adjudication system
+    OR
+    Compromise pharmacy submitter account
+        Phishing attack on pharmacy operator
+        Credential stuffing against pharmacy portal
+    Lateral movement from compromised vendor integration
+        Compromise drug pricing data feed credentials
+        SMB lateral movement to adjudication network segment
+    Direct database access via misconfigured backup
+        Read DynamoDB backup with overly-permissive S3 read role
+        Exploit publicly-accessible backup API endpoint

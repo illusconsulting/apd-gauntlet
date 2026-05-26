@@ -83,7 +83,26 @@ PBM domain pack (`framework_compat: ">=1.0.0,<2.0.0"`) consumes v1.2.0 without c
 
 ## v1.3.0 — Methodology-aware threat-model evaluator (Phase B)
 
-(Coming next — see `docs/superpowers/specs/2026-05-25-threat-model-and-attack-path-analysis-design.md`.)
+Additive within v1.x. Extensions:
+
+- `finding.schema.json` — `agent` enum gains `threat_model_evaluator`;
+  `id` pattern extended to accept `tmeval-<sha8>` prefix; same extension
+  on `cross_references` and `merged_from` patterns.
+- `run-config.schema.json` — accepts optional `threat_model: <path>` and
+  `methodology_hint: <name>` fields. Methodology hint enum:
+  stride / linddun / attack_tree / pasta / vast / trike / free_form.
+- New: `threat-model-normalized.schema.json` (recon output).
+- New: `threat-model-coverage.schema.json` (evaluator output).
+
+Shared `$defs` extraction (Task B-4): `schemas/_defs.schema.json` holds
+the canonical regex patterns for ATT&CK technique IDs, D3FEND IDs, and
+CWE IDs. The four existing schemas (finding, capability, d3fend-coverage,
+attack-exposure) `$ref` into `_defs.schema.json`. Validator builds a
+jsonschema `Registry` so refs resolve. Behavior preserved (same patterns
+enforced).
+
+PBM domain pack (`framework_compat: ">=1.0.0,<2.0.0"`) consumes v1.3.0
+with no changes.
 
 ## v1.4.0 — Attack-path enumeration and D3FEND defense graph (Phase C)
 

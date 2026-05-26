@@ -1,0 +1,23 @@
+finding:
+  schema_version: 1
+  id: tmeval-a1b2c3d4
+  agent: threat_model_evaluator
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: "Threat model asserts PHI encrypted in transit; specialist found plaintext"
+  summary: "TM entry tm-1a2b3c4d claims PHI is encrypted between adjudication and pricing; conf-9e8d7c6b shows plaintext."
+  detail: "The threat model assumes end-to-end encryption for PHI in transit between the adjudication and pricing services using TLS 1.3. However, the confidentiality specialist's finding (conf-9e8d7c6b) documented plaintext transmission over the internal network, indicating a mismatch between threat model assumptions and implementation reality."
+  evidence:
+    - artifact: "00-context/threat-model-normalized.yaml"
+      locator: "entry tm-1a2b3c4d"
+      excerpt: 'asset: pricing-service mitigation: "TLS 1.3 enforced"'
+  control_mappings:
+    nist_800_53r5: ["SC-8"]
+  cross_references: [conf-9e8d7c6b]
+  recommendation:
+    posture: required
+    summary: "Reconcile TM and code reality"
+    detail: "Update the threat model to reflect current implementation (plaintext transmission), or immediately remediate the code to enable TLS 1.3 per the model's security assumptions. This gap represents a critical control failure."

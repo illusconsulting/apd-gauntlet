@@ -92,6 +92,21 @@ If CBM is unreachable when the recon agent runs:
 
 Declare taxonomies in `.apd-run.yaml` or pass `--taxonomies cwe,mitre_attack,d3fend,owasp_api_top10` to `init-run`. CWE, ATT&CK, and D3FEND are default-on; OWASP variants are opt-in (gated on the SUT having the relevant web/API/LLM surface). See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
 
+### Threat model evaluation (v1.3+)
+
+If the run includes a threat model, declare it in `.apd-run.yaml` or pass
+`--threat-model <path>` to `init-run`:
+
+```yaml
+threat_model: inputs/threat-model.json
+methodology_hint: stride   # optional; auto-detected if absent
+```
+
+`apd-threat-model-recon` (tier-0) parses the file into a normalized graph;
+`apd-threat-model-evaluator` (tier-4) emits coverage-gap, contradiction, and
+silence findings against the synthesizer's dedup'd specialist findings. See
+[docs/threat-modeling.md](threat-modeling.md) for the full operator guide.
+
 ## Step 2: Invoke the orchestrator in Claude Code
 
 In Claude Code, invoke the `apd-orchestrator` agent against the run directory:

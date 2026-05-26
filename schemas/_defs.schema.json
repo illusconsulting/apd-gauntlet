@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/_defs.schema.json",
+  "title": "APD Gauntlet shared schema definitions",
+  "description": "Reusable $defs for patterns referenced across multiple record schemas. Edit here; other schemas $ref into this file rather than duplicating the regex.",
+  "type": "object",
+  "$defs": {
+    "attack_technique_id": {
+      "type": "string",
+      "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$",
+      "description": "MITRE ATT&CK technique ID; accepts both top-level (T1078) and sub-technique (T1078.001) forms."
+    },
+    "attack_technique_id_topline": {
+      "type": "string",
+      "pattern": "^T[0-9]{4}$",
+      "description": "MITRE ATT&CK technique ID at top-level only (no sub-technique). Used where the schema author wants to constrain to parent techniques and carry the sub_technique value in a sibling field."
+    },
+    "attack_sub_technique_id": {
+      "type": ["string", "null"],
+      "pattern": "^T[0-9]{4}\\.[0-9]{3}$",
+      "description": "MITRE ATT&CK sub-technique ID (e.g. T1078.001). Nullable so callers can record 'no sub-technique applicable' explicitly."
+    },
+    "attack_tactic_id": {
+      "type": "string",
+      "pattern": "^TA[0-9]{4}$",
+      "description": "MITRE ATT&CK tactic ID (e.g. TA0006)."
+    },
+    "attack_mitigation_id": {
+      "type": "string",
+      "pattern": "^M[0-9]{4}$",
+      "description": "MITRE ATT&CK enterprise mitigation ID (e.g. M1041)."
+    },
+    "d3fend_id": {
+      "type": "string",
+      "pattern": "^D3-[A-Z]{2,7}$",
+      "description": "MITRE D3FEND short code. Real D3FEND data uses 2-to-7 letter codes (e.g. D3-NTA, D3-NTSA, D3-PHDURA)."
+    },
+    "cwe_id": {
+      "type": "string",
+      "pattern": "^CWE-[0-9]+$",
+      "description": "CWE identifier (e.g. CWE-79)."
+    }
+  }
+}

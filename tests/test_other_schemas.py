@@ -8,6 +8,7 @@ import pathlib
 import pytest
 import yaml
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 REPO = pathlib.Path(__file__).parent.parent
 SCHEMA_DIR = REPO / "schemas"
@@ -24,9 +25,19 @@ KINDS = {
 }
 
 
+def _build_registry():
+    resources = []
+    for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
+
+
 def _validator_for(kind):
     schema = json.loads((SCHEMA_DIR / KINDS[kind][0]).read_text())
-    return Draft202012Validator(schema)
+    return Draft202012Validator(schema, registry=_build_registry())
 
 
 def _record(kind, fixture):
@@ -77,7 +88,7 @@ def _validate_whole_doc_schema(fixture_name: str, schema_name: str) -> list:
     schema_path = SCHEMA_DIR / schema_name
     data = yaml.safe_load(fixture_path.read_text())
     schema = json.loads(schema_path.read_text())
-    return list(Draft202012Validator(schema).iter_errors(data))
+    return list(Draft202012Validator(schema, registry=_build_registry()).iter_errors(data))
 
 
 def test_cwe_coverage_schema_validates() -> None:
@@ -92,4 +103,20 @@ def test_owasp_coverage_schema_validates() -> None:
 
 def test_d3fend_coverage_schema_validates() -> None:
     errors = _validate_whole_doc_schema("d3fend-coverage-valid.yaml", "d3fend-coverage.schema.json")
+    assert errors == [], errors
+
+
+def test_threat_model_normalized_schema_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-normalized-valid.yaml",
+        "threat-model-normalized.schema.json",
+    )
+    assert errors == [], errors
+
+
+def test_threat_model_coverage_schema_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-coverage-valid.yaml",
+        "threat-model-coverage.schema.json",
+    )
     assert errors == [], errors

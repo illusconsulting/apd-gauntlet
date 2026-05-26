@@ -4,8 +4,8 @@ description: Active domain pack content — severity rubric, consequential actio
 metadata:
   pack: pbm
   pack_version: 1.0.0
-  framework_version: 1.0.0
-  generated: 2026-05-25T00:37:50Z
+  framework_version: 1.3.0
+  generated: 2026-05-26T20:05:30Z
 ---
 
 
@@ -15,7 +15,7 @@ metadata:
 
 Calibrated against impact-to-PBM, not against generic CVSS. The specialist agent cites the matching clause in finding `detail` fields. Cited examples in each tier are illustrative, not exhaustive.
 
-### Critical
+## Critical
 
 Any of the following:
 
@@ -26,7 +26,7 @@ Any of the following:
 - **Total adjudication outage exceeding contractual SLA** — sustained inability to adjudicate claims affecting all plan sponsors simultaneously.
 - **Loss of CMS Part D submission integrity** — PDE (Prescription Drug Event) data submission failures or corruption that exposes the PBM to CMS enforcement action.
 
-### High
+## High
 
 Any of the following:
 
@@ -38,7 +38,7 @@ Any of the following:
 - **CMS Part D compliance gap not affecting member dispensing** — formulary update lag, prior authorization workflow gap, transition fill logic gap, that does not currently affect a dispensing decision but is required by CMS-4201-F or equivalent.
 - **URAC accreditation-relevant gap** — control absence in a domain URAC evaluates, where the absence would be findable in an accreditation audit.
 
-### Medium
+## Medium
 
 Any of the following:
 
@@ -49,7 +49,7 @@ Any of the following:
 - **Configuration drift detection gap** on systems where compensating attestation exists.
 - **Documentation gap with security-relevant content missing** — architecture decision records, runbooks, or threat models absent in ways that impair operations or future review.
 
-### Low
+## Low
 
 Any of the following:
 
@@ -58,7 +58,7 @@ Any of the following:
 - **Defense-in-depth gap fully compensated** by upstream controls — useful to know but architecturally non-urgent.
 - **Configuration drift on non-critical path** — dev environment, ephemeral test infrastructure.
 
-### Informational
+## Informational
 
 Observations that do not rise to remediation but are worth surfacing for the architecture record. Used sparingly. Examples: notable architectural choices with security implications worth documenting, parity gaps with industry peers that are not actually risks.
 
@@ -70,7 +70,6 @@ Observations that do not rise to remediation but are worth surfacing for the arc
 - **Do not average across multiple impacts.** A finding that has critical PHI exposure AND medium operational risk is critical.
 - **Do not inflate to signal importance.** The synthesizer escalates and reconciles severity disagreements between agents; over-claiming on one agent degrades the cross-agent reconciliation signal.
 - **When in doubt, drop one level.** A high-confidence medium is more useful than a low-confidence high.
-
 
 ## Source: `consequential-actions.md`
 
@@ -90,7 +89,6 @@ For a PBM, the following actions are consequential and must be auditable. Non-Re
 
 This list is not exhaustive. Specialists should treat actions outside this list as candidates for inclusion — flagging them as evidence gaps until the operator confirms.
 
-
 ## Source: `immutability-classes.md`
 
 # PBM required-immutable data classes
@@ -108,7 +106,6 @@ For a PBM, the following data classes must not change once written:
 - Drug formulary historical state at point of adjudication
 
 Specialists raise Immutability findings against any class on this list that has mutable storage or absent retention controls.
-
 
 ## Source: `data-taxonomy.md`
 
@@ -154,7 +151,6 @@ Specialist agents treat the following fields as PHI when they appear in artifact
 
 This taxonomy is consulted by Confidentiality, Integrity, and Non-Repudiation specialists. The intake agent enumerates fields by reading artifacts against this list.
 
-
 ## Source: `common-patterns/confidentiality.md`
 
 # PBM common patterns — Confidentiality
@@ -166,26 +162,31 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style and severity.
 
 **Pattern: Broker-level encryption only on PHI event stream.**
+
 - Severity: typically high (PHI exposure beyond minimum-necessary; broker compromise yields plaintext)
 - NIST: SC-8(1), SC-13, SC-28(1)
 - ATT&CK: T1530 (Data from Cloud Storage) with specific rationale
 
 **Pattern: Single KEK protecting heterogeneous data classes.**
+
 - Severity: typically medium (defense-in-depth gap; key compromise broader than necessary)
 - NIST: SC-12, SC-12(1)
 - Related concerns: ephemeral (rotation cadence amplification)
 
 **Pattern: PHI displayed unmasked by default in admin UI.**
+
 - Severity: high to critical depending on scope of admin role
 - NIST: AC-3, AC-6, SC-28
 - Related concerns: non_repudiation (unmask audit), authenticity (admin identity assurance)
 
 **Pattern: Service-to-service inside cluster relies on network-level trust, payloads contain PHI.**
+
 - Severity: high (PHI exposure beyond minimum-necessary via lateral movement)
 - NIST: SC-8(1), SC-23, IA-3
 - ATT&CK: T1557 with specific rationale on in-cluster observer
 
 **Pattern: Tech plan describes encryption-in-transit generically without specifying TLS version or cipher suite policy.**
+
 - Disposition: uncertainty or blocked depending on what else the artifacts say
 - Severity: typically medium when blocked, deferred when uncertainty
 - prerequisite_evidence: "TLS configuration policy — version floor, cipher suite list, certificate validation behavior"
@@ -198,7 +199,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: mTLS across service mesh.** Maturity higher when evidence includes service mesh configuration; `designed` when tech plan asserts intent.
 
-
 ## Source: `common-patterns/integrity.md`
 
 # PBM common patterns — Integrity
@@ -208,26 +208,31 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Event bus messages lack producer signatures; consumers trust payload contents.**
+
 - Severity: high if PHI or adjudication input is involved; medium otherwise
 - NIST: SI-7, SI-7(1), SC-8(1), SC-16
 - Related concerns: authenticity (producer identity)
 
 **Pattern: Idempotency claimed at API but key derivation is request-body hash.**
+
 - Severity: medium to high depending on adjudication impact (a malicious or accidental change to a single field defeats dedup)
 - NIST: SI-10, SI-7
 - Detail must call out the specific risk: client retry under transient network failure produces double-adjudication if the body changed between attempts.
 
 **Pattern: NCPDP D.0 transactions accepted without field-level validation beyond standard syntax.**
+
 - Severity: medium (downstream errors, possible adjudication errors)
 - NIST: SI-10
 - Related concerns: availability (malformed input causing cascading failure)
 
 **Pattern: Formulary configuration is application-managed with no integrity check.**
+
 - Severity: critical to high (corruption affects therapeutic decisions)
 - NIST: SI-7(7), CM-3, CM-5
 - Related concerns: immutability (historical configuration drift), non_repudiation (who changed configuration)
 
 **Pattern: Tech plan describes "data validation" generically without specifying which fields, what rules, or what error handling.**
+
 - Disposition: blocked or uncertainty
 - prerequisite_evidence: "Validation rule specification — fields, rules, error handling, dead-letter policy"
 
@@ -241,7 +246,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Configuration-as-code for plan rules with reviewed PRs gating changes.** Often `designed` from tech plan; `implemented` or higher requires repository or pipeline evidence.
 
-
 ## Source: `common-patterns/availability.md`
 
 # PBM common patterns — Availability
@@ -251,24 +255,29 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Adjudication latency target not stated, but contractual SLA exists.**
+
 - Severity: high (cannot verify the system meets contractual obligation)
 - NIST: CP-2, CP-2(3)
 - Detail must enumerate the contracts the SLA appears in, per intake brief.
 
 **Pattern: DR RTO stated as 4 hours but no tested failover procedure documented.**
+
 - Severity: high (RTO is aspirational without test evidence)
 - NIST: CP-2, CP-4 (contingency plan testing), CP-7
 
 **Pattern: Single-region deployment with 99.95% availability target.**
+
 - Severity: high (target likely undeliverable from single region)
 - NIST: CP-7, SC-36
 - Related concerns: distributed (this finding's recommendation will point to a topology change owned by Distributed)
 
 **Pattern: Vendor dependency (e.g. eligibility lookup) has no stated SLA in artifacts.**
+
 - Disposition: blocked or uncertainty
 - prerequisite_evidence: "Vendor SLA for [vendor name] eligibility service"
 
 **Pattern: Health checks specified as TCP port checks only.**
+
 - Severity: medium (shallow health checks mask real degradation)
 - NIST: SI-13, CP-10
 
@@ -280,7 +289,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: SLO and error budget framework for the claim adjudication path.** Often `designed` from tech plan; higher maturity requires monitoring dashboard evidence.
 
-
 ## Source: `common-patterns/distributed.md`
 
 # PBM common patterns — Distributed
@@ -290,25 +298,30 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Stateful component (e.g. Valkey, RDS primary) in single AZ.**
+
 - Severity: high (PBM SLA contracts typically require AZ resilience)
 - NIST: SC-7, CP-7, SC-36
 - Cross-reference: any Availability finding on SLO consistency
 
 **Pattern: Hidden SPOF in CI/CD — emergency deployment depends on single pipeline.**
+
 - Severity: medium to high depending on RTO sensitivity
 - NIST: CM-2(2), CP-2
 - Related concerns: ephemeral (immutable infra readiness for redeployment)
 
 **Pattern: Tech plan claims multi-region but artifacts don't specify topology — active-active versus active-passive versus standby.**
+
 - Disposition: uncertainty or blocked
 - prerequisite_evidence: "Multi-region topology specification — active configuration, write conflict policy, failover trigger"
 
 **Pattern: Cross-region replication for audit logs is asynchronous with unspecified lag.**
+
 - Severity: medium to high (cross-references Non-Repudiation tier 3)
 - NIST: AU-9(2), SC-36
 - Related concerns: non_repudiation, immutability
 
 **Pattern: Adjudication CAP positioning unstated.**
+
 - Disposition: uncertainty
 - Detail: in pharmacy adjudication, the CAP choice has clinical consequences (continuing to adjudicate with stale formulary versus stopping adjudication). The artifacts must state the choice.
 
@@ -320,7 +333,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Stateless application tier with all state externalized.** Maturity ladder typically `designed` from tech plan; `implemented` requires service configuration or IaC evidence.
 
-
 ## Source: `common-patterns/resilient.md`
 
 # PBM common patterns — Resilient
@@ -330,24 +342,29 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: No circuit breaker on PHI-containing vendor call (eligibility, drug pricing).**
+
 - Severity: high (vendor degradation can cascade to total adjudication outage)
 - NIST: SI-13, SC-5, CP-13
 - Cross-reference: any Availability finding on vendor SLA
 
 **Pattern: Retry policy without jitter on the event bus consumer.**
+
 - Severity: medium (thundering herd risk on partial broker failure)
 - NIST: SI-13(4), SC-5(1)
 
 **Pattern: Timeout missing on database call in adjudication path.**
+
 - Severity: high (single slow query can hang adjudication threads, cascading to thread pool exhaustion)
 - NIST: SI-13, SC-5
 
 **Pattern: No graceful degradation specified for eligibility vendor outage.**
+
 - Severity: high (vendor outage produces total adjudication outage)
 - NIST: CP-12, CP-13, SI-17
 - Detail must specify what would happen today (system errors) and what should happen (cached eligibility, fail-open with downstream verification, or explicit soft-deny with patient communication).
 
 **Pattern: Tech plan describes "retries" without specifying backoff, jitter, or budget.**
+
 - Disposition: uncertainty
 - prerequisite_evidence: "Retry policy specification — backoff curve, jitter, total budget per dependency, idempotency interaction"
 
@@ -359,7 +376,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Bulkheaded thread pools separating adjudication from reporting.** Often higher confidence when application configuration is in evidence.
 
-
 ## Source: `common-patterns/ephemeral.md`
 
 # PBM common patterns — Ephemeral
@@ -369,30 +385,36 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Service account credentials are static long-lived secrets in application config.**
+
 - Severity: high (broad blast radius on credential leak, no automatic invalidation)
 - NIST: IA-5, IA-5(1), IA-5(7), SC-12(1)
 - ATT&CK: T1078 (Valid Accounts) with sub-technique by environment
 
 **Pattern: Database credentials shared across services; no rotation.**
+
 - Severity: high
 - NIST: IA-5, AC-2(2)
 - Related concerns: confidentiality (key management around the shared credential)
 
 **Pattern: Production access via standing admin role with no JIT.**
+
 - Severity: high (excessive standing privilege, no time-boxing)
 - NIST: AC-6, AC-2(2), AC-2(3)
 - Related concerns: non_repudiation (audit of admin actions), authenticity (admin identity strength)
 
 **Pattern: Container images mutable in production — `:latest` tags, in-place container updates.**
+
 - Severity: medium to high depending on what's mutable
 - NIST: CM-2, CM-3, SA-15(7)
 - Related concerns: authenticity (image signing), integrity (configuration drift)
 
 **Pattern: Tech plan mentions "secrets stored in vault" without rotation specifics.**
+
 - Disposition: uncertainty or blocked
 - prerequisite_evidence: "Secret rotation policy — cadence, mechanism, automation, exception process"
 
 **Pattern: Member portal session lifetime not specified.**
+
 - Disposition: uncertainty
 - prerequisite_evidence: "Session management policy — max lifetime, idle timeout, step-up bounds, logout behavior"
 
@@ -406,7 +428,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Immutable container deployment via signed image references in IaC.** Cross-cuts Authenticity for the signing aspect; Ephemeral confirms the replace-don't-patch posture.
 
-
 ## Source: `common-patterns/authenticity.md`
 
 # PBM common patterns — Authenticity
@@ -416,31 +437,37 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Service-to-service inside cluster uses shared secret tokens, not mTLS.**
+
 - Severity: high (lateral movement amplification)
 - NIST: SC-8(1), SC-23, IA-3
 - ATT&CK: T1557 with specific in-cluster rationale
 - Related concerns: ephemeral (shared-secret rotation), confidentiality (in-cluster PHI in transit)
 
 **Pattern: MFA bypass via SMS fallback on PHI surfaces.**
+
 - Severity: high (effective AAL downgrade)
 - NIST: IA-2(1), IA-2(2), IA-2(8)
 - ATT&CK: T1621 (Multi-Factor Authentication Request Generation) with rationale
 
 **Pattern: Container images deployed without signature verification.**
+
 - Severity: high (supply chain compromise vector)
 - NIST: SI-7, SR-4, SR-11
 - Related concerns: ephemeral (immutable infra requires authentic images)
 
 **Pattern: Webhook payloads from vendor accepted without signature verification.**
+
 - Severity: high (forged webhook can inject malicious adjudication input)
 - NIST: SC-23, IA-3(1), SI-10
 - Related concerns: integrity (input validation, route to Integrity finding for the malformed-input concern)
 
 **Pattern: SBOM not generated; no vulnerability attribution path.**
+
 - Severity: medium to high depending on regulatory commitments
 - NIST: SR-4, SR-4(3), SR-11
 
 **Pattern: Tech plan describes "authenticated APIs" generically.**
+
 - Disposition: uncertainty or blocked
 - prerequisite_evidence: "API authentication specification — mechanism (OAuth, mTLS, signed JWT), token lifetime, validation procedure"
 
@@ -454,7 +481,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: SLSA Level 2 build provenance for production deployments.** Higher maturity requires CI/CD configuration evidence.
 
-
 ## Source: `common-patterns/non-repudiation.md`
 
 # PBM common patterns — Non-Repudiation
@@ -464,30 +490,36 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Admin configuration changes logged but actor attribution is system account, not the human operator.**
+
 - Severity: high (configuration corruption is not attributable; URAC and SOC 2 expose)
 - NIST: AU-3, AU-3(1), AU-12, AU-10
 - Related concerns: authenticity (admin identity strength), immutability (configuration history)
 
 **Pattern: PHI access logging present but only at table/service level, not record level.**
+
 - Severity: high (minimum-necessary attestation impaired)
 - NIST: AU-2, AU-3
 - Detail: HIPAA Security Rule and minimum-necessary doctrine require attribution at the level needed to prove appropriate use, not just access.
 
 **Pattern: Audit shipping is fire-and-forget; consumer-side failure produces silent loss.**
+
 - Severity: high
 - NIST: AU-4, AU-5
 - Related concerns: availability (audit pipeline reliability), immutability (durability of the audit)
 
 **Pattern: No cryptographic protection on audit entries; mutable database table.**
+
 - Severity: high
 - NIST: AU-9, AU-9(2), AU-9(3)
 - Related concerns: immutability (this finding's recommendation will couple to an immutability finding)
 
 **Pattern: Time source unspecified.**
+
 - Disposition: uncertainty
 - prerequisite_evidence: "Audit time source specification — NTP topology, drift bounds, fallback"
 
 **Pattern: Break-glass procedure exists but break-glass actions are not specially audited beyond normal logging.**
+
 - Severity: medium to high
 - NIST: AU-3, AU-12(1), AC-6(9)
 
@@ -501,7 +533,6 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Audit log read access gated by separate role from operational roles, with read events themselves audited.** Cross-cuts Authenticity for the role definition.
 
-
 ## Source: `common-patterns/immutability.md`
 
 # PBM common patterns — Immutability
@@ -511,31 +542,37 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Audit log written to a mutable RDS table; no append-only enforcement.**
+
 - Severity: high (audit log alteration breaks HIPAA accountability; combines with any Non-Repudiation gap)
 - NIST: AU-9, AU-9(2), AU-9(3), AU-11
 - Cross-reference: any Non-Repudiation finding on audit completeness; the merged or linked record carries both concerns
 
 **Pattern: Backup retention policy meets minimum but no object lock applied.**
+
 - Severity: high (backups vulnerable to ransomware deletion)
 - NIST: CP-9, CP-9(1), CP-9(8), MP-4
 - Related concerns: availability (backup recoverability)
 
 **Pattern: Configuration is partly IaC, partly manual; no drift detection.**
+
 - Severity: medium to high depending on what's manually managed
 - NIST: CM-2, CM-2(2), CM-3, CM-6
 - Related concerns: integrity (configuration correctness), authenticity (signed-commit posture)
 
 **Pattern: Configuration repository allows history rewrite (no protected branches).**
+
 - Severity: medium to high
 - NIST: CM-3, CM-3(1), SI-7(8)
 - Related concerns: authenticity (signed commits provide attribution but mutable history defeats it)
 
 **Pattern: Formulary configuration history not retained — only current state stored.**
+
 - Severity: high (adjudication decisions cannot be reconstructed against the formulary at decision time; defends regulatory and litigation positions)
 - NIST: CM-2(3), AU-11
 - Related concerns: non_repudiation (linking decisions to their inputs)
 
 **Pattern: Retention duration not specified in artifacts.**
+
 - Disposition: uncertainty or blocked
 - prerequisite_evidence: "Retention policy — duration per data class, regulatory citation, enforcement mechanism, legal-hold override"
 

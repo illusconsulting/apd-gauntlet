@@ -62,16 +62,19 @@ class ValidationReport:
 
 
 def _build_registry() -> Registry:
-    finding = Resource.from_contents(
-        json.loads((SCHEMAS_DIR / "finding.schema.json").read_text())
-    )
-    capability = Resource.from_contents(
-        json.loads((SCHEMAS_DIR / "capability.schema.json").read_text())
-    )
-    return Registry().with_resources([
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json", finding),
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability),
-    ])
+    """Build a referencing Registry covering every schema in schemas/.
+
+    Each schema is registered under its declared ``$id``. This lets cross-schema
+    ``$ref`` resolve — notably the shared patterns in ``_defs.schema.json``.
+    """
+    resources: list[tuple[str, Resource[Any]]] = []
+    for schema_path in sorted(SCHEMAS_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        schema_id = schema.get("$id")
+        if not schema_id:
+            continue
+        resources.append((schema_id, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
 
 
 def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, dict[str, Any]]]:
@@ -93,13 +96,28 @@ def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, di
 
 CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 
+# Whole-document rollup files in 40-synthesis/ that get schema-validated by the
+# CLI. Each entry maps the on-disk filename to the schema in schemas/.
+SYNTHESIS_ROLLUPS: dict[str, str] = {
+    "cwe-coverage.yaml":           "cwe-coverage.schema.json",
+    "owasp-coverage.yaml":         "owasp-coverage.schema.json",
+    "d3fend-coverage.yaml":        "d3fend-coverage.schema.json",
+    "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
+}
+
+# Whole-document rollup files in 00-context/ that get schema-validated by the
+# CLI. Each entry maps the on-disk filename to the schema in schemas/.
+CONTEXT_ROLLUPS: dict[str, str] = {
+    "threat-model-normalized.yaml": "threat-model-normalized.schema.json",
+}
+
 
 def _code_evidence_index_path(run_dir: pathlib.Path) -> pathlib.Path:
     return run_dir / "00-context" / CODE_EVIDENCE_INDEX_FILENAME
 
 
 def _validate_code_evidence_index(
-    run_dir: pathlib.Path, report: ValidationReport
+    run_dir: pathlib.Path, report: ValidationReport, registry: Registry
 ) -> None:
     """If code-evidence-index.yaml exists, schema-validate it. Errors append to report."""
     path = _code_evidence_index_path(run_dir)
@@ -111,8 +129,77 @@ def _validate_code_evidence_index(
     except yaml.YAMLError as e:
         report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
         return
-    for err in Draft202012Validator(schema).iter_errors(data):
+    validator = Draft202012Validator(schema, registry=registry)
+    for err in validator.iter_errors(data):
         report.errors.append(Violation(path, None, err.message, "/".join(map(str, err.path))))
+
+
+def _validate_synthesis_rollups(
+    run_dir: pathlib.Path,
+    report: ValidationReport,
+    registry: Registry,
+    seen_files: set[pathlib.Path],
+) -> None:
+    """Schema-validate each present coverage rollup under 40-synthesis/.
+
+    Walks ``SYNTHESIS_ROLLUPS`` so the validator catches malformed CWE / OWASP /
+    D3FEND coverage rollups the same way it catches malformed findings. Missing
+    rollups are silent (these files are optional). Discovered files are added
+    to ``seen_files`` so ``files_seen`` reflects them.
+    """
+    synthesis_dir = run_dir / "40-synthesis"
+    if not synthesis_dir.exists():
+        return
+    for filename, schema_name in SYNTHESIS_ROLLUPS.items():
+        path = synthesis_dir / filename
+        if not path.exists():
+            continue
+        seen_files.add(path)
+        schema = json.loads((SCHEMAS_DIR / schema_name).read_text())
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError as e:
+            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
+            continue
+        validator = Draft202012Validator(schema, registry=registry)
+        for err in validator.iter_errors(data):
+            report.errors.append(
+                Violation(path, None, err.message, "/".join(map(str, err.path)))
+            )
+
+
+def _validate_context_rollups(
+    run_dir: pathlib.Path,
+    report: ValidationReport,
+    registry: Registry,
+    seen_files: set[pathlib.Path],
+) -> None:
+    """Schema-validate each present rollup under 00-context/.
+
+    Walks ``CONTEXT_ROLLUPS`` so the validator catches malformed threat-model
+    rollups the same way it catches malformed findings. Missing rollups are
+    silent (these files are optional). Discovered files are added to
+    ``seen_files`` so ``files_seen`` reflects them.
+    """
+    context_dir = run_dir / "00-context"
+    if not context_dir.exists():
+        return
+    for filename, schema_name in CONTEXT_ROLLUPS.items():
+        path = context_dir / filename
+        if not path.exists():
+            continue
+        seen_files.add(path)
+        schema = json.loads((SCHEMAS_DIR / schema_name).read_text())
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError as e:
+            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
+            continue
+        validator = Draft202012Validator(schema, registry=registry)
+        for err in validator.iter_errors(data):
+            report.errors.append(
+                Violation(path, None, err.message, "/".join(map(str, err.path)))
+            )
 
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
@@ -139,7 +226,9 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         rid = record.get("id")
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
-    _validate_code_evidence_index(run_dir, report)
+    _validate_code_evidence_index(run_dir, report, registry)
+    _validate_context_rollups(run_dir, report, registry, seen_files)
+    _validate_synthesis_rollups(run_dir, report, registry, seen_files)
     report.files_seen = len(seen_files)
     return report
 
@@ -178,6 +267,10 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_hedge_words_in_attack_rationale(record):
                 report.warnings.append(Violation(path, rid, msg))
+            for msg in linters.check_tmeval_evidence_pointer(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_tmeval_contradiction_cross_reference(record):
+                report.errors.append(Violation(path, rid, msg))
         elif kind == "capability":
             for msg in linters.check_excerpt_length(record):
                 report.errors.append(Violation(path, rid, msg))

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/threat-model-coverage.schema.json",
+  "title": "APD Gauntlet Threat Model Coverage Report",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "methodology", "surface_coverage", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["threat_model_evaluator"] },
+    "methodology":    { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"] },
+    "surface_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["surface", "categories_present", "categories_absent"],
+        "additionalProperties": false,
+        "properties": {
+          "surface":            { "type": "string", "minLength": 1 },
+          "categories_present": { "type": "array", "items": { "type": "string" } },
+          "categories_absent":  { "type": "array", "items": { "type": "string" } },
+          "tm_entry_count":     { "type": "integer", "minimum": 0 },
+          "tm_entry_ids":       { "type": "array", "items": { "type": "string", "pattern": "^tm-[0-9a-f]{8}$" } }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_entries", "contradictions_emitted", "silences_emitted", "coverage_gaps_emitted"],
+      "additionalProperties": false,
+      "properties": {
+        "total_entries":          { "type": "integer", "minimum": 0 },
+        "contradictions_emitted": { "type": "integer", "minimum": 0 },
+        "silences_emitted":       { "type": "integer", "minimum": 0 },
+        "coverage_gaps_emitted":  { "type": "integer", "minimum": 0 },
+        "surfaces_examined":      { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

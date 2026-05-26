@@ -28,3 +28,7 @@ jobs:
       - uses: github/codeql-action/analyze@fee9466b8957867761f2d78f922ab084e3e2dd17  # v3
         with:
           category: "/language:${{ matrix.language }}"
+          # Code Scanning needs to be enabled in repository settings before
+          # SARIF upload succeeds. Until then, run the analysis but skip the
+          # upload step so PRs don't fail on the repo-config gap.
+          upload: never

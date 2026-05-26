@@ -18,6 +18,17 @@
         "type": "string",
         "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10"]
       }
+    },
+    "threat_model": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\.\\.).+$",
+      "description": "Path (relative to the run directory) to a supplied threat model. When set, apd-threat-model-recon activates."
+    },
+    "methodology_hint": {
+      "type": "string",
+      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form"],
+      "description": "Optional hint to the recon parser when the methodology can't be auto-detected from the file shape."
     }
   }
 }

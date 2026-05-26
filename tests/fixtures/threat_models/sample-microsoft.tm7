@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ThreatModel xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.Model"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <DrawingSurfaceList>
+    <DrawingSurfaceModel>
+      <Borders>
+        <!-- Element 1: Web Server (Process) -->
+        <KeyValueOfguidanyType>
+          <Key>{72af058d-befc-4088-ab20-c2ad94147d1e}</Key>
+          <Value xsi:type="ProcessModel">
+            <GenericTypeId>tm.Process</GenericTypeId>
+            <Properties>
+              <KeyValueOfstringstring>
+                <Key>Name</Key>
+                <Value>Web Server</Value>
+              </KeyValueOfstringstring>
+              <KeyValueOfstringstring>
+                <Key>OutOfScope</Key>
+                <Value>false</Value>
+              </KeyValueOfstringstring>
+            </Properties>
+          </Value>
+        </KeyValueOfguidanyType>
+        <!-- Element 2: User Database (DataStore) -->
+        <KeyValueOfguidanyType>
+          <Key>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Key>
+          <Value xsi:type="DataStoreModel">
+            <GenericTypeId>tm.DataStore</GenericTypeId>
+            <Properties>
+              <KeyValueOfstringstring>
+                <Key>Name</Key>
+                <Value>User Database</Value>
+              </KeyValueOfstringstring>
+              <KeyValueOfstringstring>
+                <Key>OutOfScope</Key>
+                <Value>false</Value>
+              </KeyValueOfstringstring>
+              <KeyValueOfstringstring>
+                <Key>IsEncrypted</Key>
+                <Value>true</Value>
+              </KeyValueOfstringstring>
+            </Properties>
+          </Value>
+        </KeyValueOfguidanyType>
+        <!-- Element 3: SQL traffic (DataFlow) -->
+        <KeyValueOfguidanyType>
+          <Key>{3a07107c-06e8-4da7-82af-9518452af665}</Key>
+          <Value xsi:type="FlowModel">
+            <GenericTypeId>tm.Flow</GenericTypeId>
+            <Properties>
+              <KeyValueOfstringstring>
+                <Key>Name</Key>
+                <Value>SQL traffic</Value>
+              </KeyValueOfstringstring>
+              <KeyValueOfstringstring>
+                <Key>IsEncrypted</Key>
+                <Value>false</Value>
+              </KeyValueOfstringstring>
+              <KeyValueOfstringstring>
+                <Key>Protocol</Key>
+                <Value>SQL/TCP</Value>
+              </KeyValueOfstringstring>
+            </Properties>
+          </Value>
+        </KeyValueOfguidanyType>
+      </Borders>
+    </DrawingSurfaceModel>
+  </DrawingSurfaceList>
+  <ThreatInstances>
+    <!-- Threat 1: Spoofing — has mitigation -->
+    <KeyValueOfstringThreatpc_P0_PhOB>
+      <Key>{21d8835c-0643-4e9d-9eea-7b8222d67782}</Key>
+      <Value>
+        <Title>Spoofing of Web Server Authentication</Title>
+        <Properties>
+          <KeyValueOfstringstring>
+            <Key>Title</Key>
+            <Value>Spoofing of Web Server Authentication</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Description</Key>
+            <Value>An attacker may impersonate the web server to intercept credentials.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>State</Key>
+            <Value>NotStarted</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Category</Key>
+            <Value>Spoofing</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Priority</Key>
+            <Value>High</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatCategory</Key>
+            <Value>Spoofing</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>SourceGuid</Key>
+            <Value>{72af058d-befc-4088-ab20-c2ad94147d1e}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>TargetGuid</Key>
+            <Value>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatShortDescription</Key>
+            <Value>An attacker may impersonate the web server.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatDescription</Key>
+            <Value>Mitigation: Enforce mutual TLS with certificate pinning. Validate server certificates against a trusted CA. Implement HSTS with a long max-age.</Value>
+          </KeyValueOfstringstring>
+        </Properties>
+      </Value>
+    </KeyValueOfstringThreatpc_P0_PhOB>
+    <!-- Threat 2: Tampering — has mitigation -->
+    <KeyValueOfstringThreatpc_P0_PhOB>
+      <Key>{f82ebff4-96aa-46de-bfb5-f29a6f9259d1}</Key>
+      <Value>
+        <Title>Tampering with SQL Traffic Data</Title>
+        <Properties>
+          <KeyValueOfstringstring>
+            <Key>Title</Key>
+            <Value>Tampering with SQL Traffic Data</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Description</Key>
+            <Value>An attacker with MITM position may modify SQL queries in transit.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>State</Key>
+            <Value>Mitigated</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Category</Key>
+            <Value>Tampering</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Priority</Key>
+            <Value>High</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatCategory</Key>
+            <Value>Tampering</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>SourceGuid</Key>
+            <Value>{3a07107c-06e8-4da7-82af-9518452af665}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>TargetGuid</Key>
+            <Value>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatShortDescription</Key>
+            <Value>An on-path attacker may alter SQL query content.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatDescription</Key>
+            <Value>Mitigation: Encrypt all database traffic with TLS 1.2+. Use parameterized queries to prevent injection. Enable SQL Server connection encryption and force encryption in the connection string.</Value>
+          </KeyValueOfstringstring>
+        </Properties>
+      </Value>
+    </KeyValueOfstringThreatpc_P0_PhOB>
+    <!-- Threat 3: Information Disclosure — NO mitigation (exercises null path) -->
+    <KeyValueOfstringThreatpc_P0_PhOB>
+      <Key>{bf3a10fb-947e-46bd-ada3-0dc31097335d}</Key>
+      <Value>
+        <Title>Information Disclosure via Database Error Messages</Title>
+        <Properties>
+          <KeyValueOfstringstring>
+            <Key>Title</Key>
+            <Value>Information Disclosure via Database Error Messages</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Description</Key>
+            <Value>Verbose SQL error messages may leak schema structure or connection string details to an attacker.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>State</Key>
+            <Value>NotStarted</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Category</Key>
+            <Value>Information Disclosure</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Priority</Key>
+            <Value>Medium</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatCategory</Key>
+            <Value>Information Disclosure</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>SourceGuid</Key>
+            <Value>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>TargetGuid</Key>
+            <Value>{72af058d-befc-4088-ab20-c2ad94147d1e}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatShortDescription</Key>
+            <Value>Database error messages may expose sensitive internal details.</Value>
+          </KeyValueOfstringstring>
+        </Properties>
+      </Value>
+    </KeyValueOfstringThreatpc_P0_PhOB>
+    <!-- Threat 4: Denial of Service — NO mitigation (exercises null path) -->
+    <KeyValueOfstringThreatpc_P0_PhOB>
+      <Key>{3addc0e7-e6d6-4c5b-a8b0-c53a2a6f8194}</Key>
+      <Value>
+        <Title>Denial of Service via Connection Pool Exhaustion</Title>
+        <Properties>
+          <KeyValueOfstringstring>
+            <Key>Title</Key>
+            <Value>Denial of Service via Connection Pool Exhaustion</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Description</Key>
+            <Value>An attacker may flood the database connection pool causing the web server to become unresponsive.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>State</Key>
+            <Value>NotStarted</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Category</Key>
+            <Value>Denial of Service</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Priority</Key>
+            <Value>Medium</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatCategory</Key>
+            <Value>Denial of Service</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>SourceGuid</Key>
+            <Value>{72af058d-befc-4088-ab20-c2ad94147d1e}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>TargetGuid</Key>
+            <Value>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatShortDescription</Key>
+            <Value>An attacker may exhaust the database connection pool.</Value>
+          </KeyValueOfstringstring>
+        </Properties>
+      </Value>
+    </KeyValueOfstringThreatpc_P0_PhOB>
+    <!-- Threat 5: Elevation of Privilege — has mitigation -->
+    <KeyValueOfstringThreatpc_P0_PhOB>
+      <Key>{9073de60-eadb-481e-ba0a-e47cb408433c}</Key>
+      <Value>
+        <Title>Elevation of Privilege via SQL Injection</Title>
+        <Properties>
+          <KeyValueOfstringstring>
+            <Key>Title</Key>
+            <Value>Elevation of Privilege via SQL Injection</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Description</Key>
+            <Value>An attacker may exploit SQL injection to execute commands as a privileged database user.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>State</Key>
+            <Value>NotStarted</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Category</Key>
+            <Value>Elevation of Privilege</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>Priority</Key>
+            <Value>High</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatCategory</Key>
+            <Value>Elevation of Privilege</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>SourceGuid</Key>
+            <Value>{3a07107c-06e8-4da7-82af-9518452af665}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>TargetGuid</Key>
+            <Value>{60eae8f1-29de-47aa-b33e-7de9136e3531}</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatShortDescription</Key>
+            <Value>SQL injection allows privilege escalation to database admin.</Value>
+          </KeyValueOfstringstring>
+          <KeyValueOfstringstring>
+            <Key>UserThreatDescription</Key>
+            <Value>Mitigation: Use parameterized queries or stored procedures exclusively. Apply principle of least privilege — the web server account must not have DDL or DROP permissions. Enable Web Application Firewall rules for SQL injection patterns.</Value>
+          </KeyValueOfstringstring>
+        </Properties>
+      </Value>
+    </KeyValueOfstringThreatpc_P0_PhOB>
+  </ThreatInstances>
+</ThreatModel>

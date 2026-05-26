@@ -1,0 +1,58 @@
+schema_version: 1
+generated_by: threat_model_recon
+source_artifact: inputs/threat-model.md
+methodology: stride
+extraction_summary:
+  entry_count: 3
+  high_confidence_count: 2
+  medium_confidence_count: 1
+  low_confidence_count: 0
+  parser_used: markdown_stride_parser
+
+entries:
+  - entry_id: tm-a1b2c3d4
+    asset: claim-ingress-API
+    threat: Spoofing of API client identity; attacker could submit claims as legitimate service
+    mitigation: "Implement mutual TLS (mTLS) authentication with certificate pinning and service-to-service identity validation"
+    methodology: stride
+    source_locator: "threat-model.md:42-55"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: [T1078, T1078.003]
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+
+  - entry_id: tm-deadbeef
+    asset: audit-log-writer
+    threat: Information disclosure of sensitive claim details written to logs
+    mitigation: null
+    methodology: stride
+    source_locator: "threat-model.md:78-91"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: [T1005, T1040]
+    inferred_apd_goals:
+      - confidentiality
+
+  - entry_id: tm-f00dbeef
+    asset: claim-processing-queue
+    threat: Denial of service via message queue saturation; malicious actors flood queue with invalid claims
+    mitigation: "Implement queue rate limiting, message validation, and DLQ with alarm thresholds"
+    methodology: stride
+    source_locator: "threat-model.md:115-128"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: [T1499]
+    inferred_apd_goals:
+      - availability
+      - resilient

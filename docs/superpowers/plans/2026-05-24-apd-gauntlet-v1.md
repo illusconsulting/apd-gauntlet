@@ -72,6 +72,7 @@ Goal: establish the v1.0 directory layout, root-level files, and move existing c
 ### Task 1.1: Create root-level configuration files
 
 **Files:**
+
 - Create: `LICENSE`
 - Create: `.gitignore`
 - Create: `pyproject.toml` (skeleton)
@@ -89,6 +90,7 @@ Expected: `Apache License`, `Version 2.0, January 2004`, `http://www.apache.org/
 - [ ] **Step 3: Write `.gitignore`**
 
 Create `.gitignore`:
+
 ```
 # Python
 __pycache__/
@@ -124,6 +126,7 @@ runs/
 - [ ] **Step 4: Write skeleton `pyproject.toml`**
 
 Create `pyproject.toml`:
+
 ```toml
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -220,6 +223,7 @@ git commit -m "M1: add Apache-2.0 LICENSE, .gitignore, pyproject.toml skeleton"
 - [ ] **Step 1: Create the empty directory tree**
 
 Run:
+
 ```bash
 mkdir -p \
   .claude/agents \
@@ -242,6 +246,7 @@ mkdir -p \
 - [ ] **Step 2: Add `.gitkeep` files so empty directories survive git**
 
 Run:
+
 ```bash
 for d in .claude/agents .claude/skills/apd-framework .claude/skills/apd-finding-schema \
   .claude/skills/apd-evidence-discipline .claude/skills/apd-control-mappings \
@@ -268,11 +273,13 @@ git commit -m "M1: create v1.0 directory skeleton"
 ### Task 1.3: Migrate existing agents into `.claude/agents/`
 
 **Files:**
+
 - Move: `9-agent-apd-framework/apd-*.md` (12 files) → `.claude/agents/`
 
 - [ ] **Step 1: Move all twelve agent files**
 
 Run:
+
 ```bash
 git mv 9-agent-apd-framework/apd-orchestrator.md  .claude/agents/apd-orchestrator.md
 git mv 9-agent-apd-framework/apd-intake.md        .claude/agents/apd-intake.md
@@ -309,6 +316,7 @@ git commit -m "M1: move 12 agents into .claude/agents/"
 ### Task 1.4: Migrate existing skills into `.claude/skills/`
 
 **Files:**
+
 - Move: `9-agent-apd-framework/SKILL.md` → `.claude/skills/apd-framework/SKILL.md`
 - Move: `9-agent-apd-framework/mnt/.../apd-evidence-discipline/SKILL.md` → `.claude/skills/apd-evidence-discipline/SKILL.md`
 - Move: `9-agent-apd-framework/mnt/.../apd-finding-schema/SKILL.md` → `.claude/skills/apd-finding-schema/SKILL.md`
@@ -317,6 +325,7 @@ git commit -m "M1: move 12 agents into .claude/agents/"
 - [ ] **Step 1: Move skill files**
 
 Run:
+
 ```bash
 git mv 9-agent-apd-framework/SKILL.md .claude/skills/apd-framework/SKILL.md
 
@@ -333,6 +342,7 @@ git mv 9-agent-apd-framework/mnt/user-data/outputs/apd-gauntlet/.claude/skills/a
 - [ ] **Step 2: Remove the now-empty `mnt/` tree and `.gitkeep`s**
 
 Run:
+
 ```bash
 rm -rf 9-agent-apd-framework/mnt
 rm .claude/skills/apd-framework/.gitkeep \
@@ -358,6 +368,7 @@ git commit -m "M1: move 4 skills into .claude/skills/ and delete mnt/ duplicate"
 ### Task 1.5: Migrate templates and finalize legacy directory removal
 
 **Files:**
+
 - Move: `9-agent-apd-framework/*.template.{yaml,md}` (4 files) → `templates/`
 - Move: `9-agent-apd-framework/README.md` → temporary path (will be rewritten in M7)
 - Delete: `9-agent-apd-framework/`
@@ -365,6 +376,7 @@ git commit -m "M1: move 4 skills into .claude/skills/ and delete mnt/ duplicate"
 - [ ] **Step 1: Move templates**
 
 Run:
+
 ```bash
 git mv 9-agent-apd-framework/finding.template.yaml      templates/finding.template.yaml
 git mv 9-agent-apd-framework/capability.template.yaml   templates/capability.template.yaml
@@ -413,7 +425,7 @@ Should NOT include: `9-agent-apd-framework`, `mnt`.
 - [ ] **Step 2: Push to origin**
 
 Run: `git push origin main`
-Expected: M1 commits visible on https://github.com/shoveleejoe/apd-gauntlet.
+Expected: M1 commits visible on <https://github.com/shoveleejoe/apd-gauntlet>.
 
 ---
 
@@ -428,6 +440,7 @@ Goal: author 8 JSON Schema (draft 2020-12) files, plus positive and negative tes
 - [ ] **Step 1: Create a virtual environment**
 
 Run:
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -448,6 +461,7 @@ Expected: `no tests ran` or similar with exit code 5.
 ### Task 2.2: Author the `finding.schema.json`
 
 **Files:**
+
 - Create: `schemas/finding.schema.json`
 - Create: `tests/fixtures/valid/finding-minimal.yaml`
 - Create: `tests/fixtures/valid/finding-full.yaml`
@@ -461,6 +475,7 @@ Expected: `no tests ran` or similar with exit code 5.
 - [ ] **Step 1: Write the positive fixtures**
 
 Create `tests/fixtures/valid/finding-minimal.yaml`:
+
 ```yaml
 finding:
   schema_version: 1
@@ -503,6 +518,7 @@ Create `tests/fixtures/invalid/finding-strength-disposition.yaml` — change `di
 - [ ] **Step 3: Write the test driver**
 
 Create `tests/test_finding_schema.py`:
+
 ```python
 """Schema validation tests for finding records."""
 from __future__ import annotations
@@ -558,6 +574,7 @@ Expected: failure because `schemas/finding.schema.json` does not exist yet.
 - [ ] **Step 5: Write the schema**
 
 Create `schemas/finding.schema.json`:
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -719,6 +736,7 @@ git commit -m "M2: add finding.schema.json with positive and negative fixtures"
 ### Task 2.3: Author the `capability.schema.json`
 
 **Files:**
+
 - Create: `schemas/capability.schema.json`
 - Create: `tests/fixtures/valid/capability-designed.yaml`
 - Create: `tests/fixtures/valid/capability-with-caveats.yaml`
@@ -730,6 +748,7 @@ git commit -m "M2: add finding.schema.json with positive and negative fixtures"
 - [ ] **Step 1: Write the positive fixtures**
 
 Create `tests/fixtures/valid/capability-designed.yaml`:
+
 ```yaml
 capability:
   schema_version: 1
@@ -771,6 +790,7 @@ Expected: failure because schema does not exist yet.
 - [ ] **Step 5: Write the schema**
 
 Create `schemas/capability.schema.json`:
+
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -827,6 +847,7 @@ Create `schemas/capability.schema.json`:
 ```
 
 Note the `$ref` cross-file pointers — `jsonschema` resolves them via a referencing store; the test driver passes both schemas to the validator. Update `tests/test_capability_schema.py` to register both:
+
 ```python
 from referencing import Registry, Resource
 finding_schema  = Resource.from_contents(json.loads((REPO / "schemas/finding.schema.json").read_text()))
@@ -837,6 +858,7 @@ registry = Registry().with_resources([
 ])
 validator = Draft202012Validator(capability_schema.contents, registry=registry)
 ```
+
 Use `from referencing import Registry, Resource` and the same pattern in any test that uses `$ref`.
 
 - [ ] **Step 6: Run the tests and verify they pass**
@@ -856,6 +878,7 @@ git commit -m "M2: add capability.schema.json with positive and negative fixture
 ### Task 2.4: Author the remaining six schemas
 
 **Files:**
+
 - Create: `schemas/contradiction.schema.json`
 - Create: `schemas/severity-disagreement.schema.json`
 - Create: `schemas/coverage-matrix.schema.json`
@@ -868,6 +891,7 @@ git commit -m "M2: add capability.schema.json with positive and negative fixture
 Treat this as **six mini-tasks**, all following the same TDD pattern as 2.2 and 2.3:
 
 For each schema:
+
 1. Write one positive fixture demonstrating a well-formed record.
 2. Write at least one negative fixture (a different invariant per schema — e.g. for `severity-disagreement`, omit `agent_severities`; for `contradiction`, omit `finding_id`).
 3. Write the schema using the field definitions from spec §5.
@@ -887,6 +911,7 @@ The key required fields per schema (from spec §5):
 - [ ] **Step 1: Write `contradiction.schema.json`, fixtures, and verify**
 
 Apply the TDD pattern. Commit:
+
 ```bash
 git add schemas/contradiction.schema.json tests/fixtures/ tests/test_other_schemas.py
 git commit -m "M2: add contradiction.schema.json with fixtures"
@@ -913,6 +938,7 @@ Commit individually.
 Use a fixture that includes the PBM pack metadata from spec §8.2 as the positive case. Negative: omit `framework_compat`.
 
 Commit:
+
 ```bash
 git add schemas/domain.schema.json tests/fixtures/ tests/test_other_schemas.py
 git commit -m "M2: add domain.schema.json with PBM fixture"
@@ -923,11 +949,13 @@ git commit -m "M2: add domain.schema.json with PBM fixture"
 ### Task 2.5: Meta-validate all schemas against the draft 2020-12 meta-schema
 
 **Files:**
+
 - Create: `tests/test_meta_schemas.py`
 
 - [ ] **Step 1: Write the meta-validation test**
 
 Create `tests/test_meta_schemas.py`:
+
 ```python
 """Verify every schema under schemas/ is itself a valid JSON Schema draft 2020-12 document."""
 from __future__ import annotations
@@ -976,6 +1004,7 @@ Goal: build the `apd-gauntlet` CLI with all subcommands from spec §6.1, the thr
 ### Task 3.1: Author the CLI skeleton
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/__init__.py`
 - Create: `tools/apd_gauntlet/cli.py`
 - Create: `tests/test_cli.py`
@@ -983,6 +1012,7 @@ Goal: build the `apd-gauntlet` CLI with all subcommands from spec §6.1, the thr
 - [ ] **Step 1: Write the failing CLI invocation test**
 
 Create `tests/test_cli.py`:
+
 ```python
 """Smoke tests for the apd-gauntlet CLI entry point."""
 from __future__ import annotations
@@ -1012,12 +1042,14 @@ Expected: `ModuleNotFoundError: No module named 'apd_gauntlet'`.
 - [ ] **Step 3: Write the minimal package**
 
 Create `tools/apd_gauntlet/__init__.py`:
+
 ```python
 """APD Gauntlet — Python validator and CLI for the APD security architecture review framework."""
 __version__ = "1.0.0"
 ```
 
 Create `tools/apd_gauntlet/cli.py`:
+
 ```python
 """apd-gauntlet CLI entry point."""
 from __future__ import annotations
@@ -1057,6 +1089,7 @@ git commit -m "M3: add apd-gauntlet CLI skeleton with --version and --help"
 ### Task 3.2: Implement the `validate` command — Pass 1 (schema validation)
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/validate.py`
 - Modify: `tools/apd_gauntlet/cli.py`
 - Create: `tests/test_validate_schema_pass.py`
@@ -1067,6 +1100,7 @@ git commit -m "M3: add apd-gauntlet CLI skeleton with --version and --help"
 Create the run-shape fixture: `tests/fixtures/runs/clean-run/` with subdirs `00-context`, `10-trustworthiness`, `20-scalability`, `30-auditability`, `40-synthesis`. Drop one valid finding YAML and one valid capability YAML into `10-trustworthiness/`.
 
 Create `tests/test_validate_schema_pass.py`:
+
 ```python
 """Pass-1 tests: schema validation of records in a run directory."""
 from __future__ import annotations
@@ -1107,6 +1141,7 @@ Expected: failure, "no such command 'validate'".
 - [ ] **Step 3: Implement Pass 1**
 
 Create `tools/apd_gauntlet/validate.py`:
+
 ```python
 """Validation engine — Pass 1 (schema), Pass 2 (semantic lints), Pass 3 (cross-file)."""
 from __future__ import annotations
@@ -1222,6 +1257,7 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
 ```
 
 Modify `tools/apd_gauntlet/cli.py` — add the `validate` subcommand:
+
 ```python
 import pathlib
 from .validate import run_schema_pass
@@ -1263,6 +1299,7 @@ git commit -m "M3: implement validate command — Pass 1 (schema validation)"
 ### Task 3.3: Implement Pass 2 — semantic lints
 
 **Files:**
+
 - Modify: `tools/apd_gauntlet/validate.py`
 - Create: `tools/apd_gauntlet/linters.py`
 - Create: `tests/test_validate_semantic.py`
@@ -1278,6 +1315,7 @@ Implement four semantic lints (spec §6.2 Pass 2):
 - [ ] **Step 1: Write failing tests for each lint**
 
 Create `tests/test_validate_semantic.py` with one test per lint, each using a minimal fixture in `tests/fixtures/runs/<lint-name>/`. Pattern:
+
 ```python
 def test_long_excerpt_is_caught(tmp_path):
     # Copy a clean run, then corrupt one excerpt to 30 words.
@@ -1298,6 +1336,7 @@ Expected: failures (lints not yet implemented).
 - [ ] **Step 3: Implement the lints**
 
 Create `tools/apd_gauntlet/linters.py`:
+
 ```python
 """Semantic lints — checks JSON Schema cannot express."""
 from __future__ import annotations
@@ -1398,6 +1437,7 @@ def check_capability_maturity_evidence(record: dict[str, Any], tech_plan_artifac
 ```
 
 Modify `validate.py` — add `run_semantic_pass`:
+
 ```python
 from . import linters
 
@@ -1426,6 +1466,7 @@ def run_semantic_pass(run_dir: pathlib.Path, tech_plan_artifacts: set[str] | Non
 ```
 
 Modify the CLI `validate` command — merge schema + semantic reports:
+
 ```python
 @main.command(help="Validate all records under a run directory.")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
@@ -1468,6 +1509,7 @@ git commit -m "M3: implement validate Pass 2 — semantic lints (excerpt, id, he
 ### Task 3.4: Implement Pass 3 — cross-file resolution
 
 **Files:**
+
 - Modify: `tools/apd_gauntlet/validate.py`
 - Create: `tests/test_validate_cross_file.py`
 - Create: cross-file fixtures (run with dangling `cross_references`, etc.)
@@ -1484,6 +1526,7 @@ Implement four cross-file checks (spec §6.2 Pass 3):
 Create `tests/test_validate_cross_file.py` with one test per cross-file check. For each, set up a fixture run with a deliberate orphan reference.
 
 For the intake-brief check, the test fixture's `context-brief.md` should include a YAML frontmatter block:
+
 ```yaml
 ---
 framework_version: 1.0.0
@@ -1494,6 +1537,7 @@ artifacts:
   - { filename: claim-events.proto, type: code }
 ---
 ```
+
 The cross-file pass parses this frontmatter to know what's a tech_plan and what artifacts are admissible.
 
 - [ ] **Step 2: Run the tests and verify they fail**
@@ -1504,6 +1548,7 @@ Expected: failures (cross-file pass not implemented).
 - [ ] **Step 3: Implement the cross-file pass**
 
 Add to `validate.py`:
+
 ```python
 def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:
     """Extract the YAML frontmatter block from context-brief.md."""
@@ -1595,6 +1640,7 @@ git commit -m "M3: implement validate Pass 3 — cross-file ID and artifact reso
 ### Task 3.5: Implement `init-run`
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/init_run.py`
 - Modify: `tools/apd_gauntlet/cli.py`
 - Create: `tests/test_init_run.py`
@@ -1602,6 +1648,7 @@ git commit -m "M3: implement validate Pass 3 — cross-file ID and artifact reso
 - [ ] **Step 1: Write failing test**
 
 Create `tests/test_init_run.py`:
+
 ```python
 import pathlib
 from click.testing import CliRunner
@@ -1632,6 +1679,7 @@ Expected: failure.
 - [ ] **Step 3: Implement**
 
 Create `tools/apd_gauntlet/init_run.py`:
+
 ```python
 """Scaffold a runs/<run-id>/ directory."""
 from __future__ import annotations
@@ -1660,6 +1708,7 @@ def scaffold_run(run_id: str, inputs_src: pathlib.Path, domain: str, root: pathl
 ```
 
 Modify `cli.py`:
+
 ```python
 from .init_run import scaffold_run
 
@@ -1691,6 +1740,7 @@ git commit -m "M3: implement init-run command"
 ### Task 3.6: Implement `build-domain-skill`
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/build_domain_skill.py`
 - Modify: `tools/apd_gauntlet/cli.py`
 - Create: `tests/test_build_domain_skill.py`
@@ -1699,6 +1749,7 @@ git commit -m "M3: implement init-run command"
 - [ ] **Step 1: Write the test fixture**
 
 Create `tests/fixtures/domains/sample/domain.yaml`:
+
 ```yaml
 name: sample
 display_name: "Sample Test Domain"
@@ -1712,6 +1763,7 @@ regulatory_anchors: []
 ```
 
 Create `tests/fixtures/domains/sample/severity-rubric.md`:
+
 ```markdown
 # Sample severity rubric
 
@@ -1722,6 +1774,7 @@ Low: cosmetic.
 ```
 
 Create `tests/fixtures/domains/sample/common-patterns/confidentiality.md`:
+
 ```markdown
 # Confidentiality patterns (sample)
 
@@ -1731,6 +1784,7 @@ Just one sample pattern.
 - [ ] **Step 2: Write failing test**
 
 Create `tests/test_build_domain_skill.py`:
+
 ```python
 import pathlib
 from click.testing import CliRunner
@@ -1781,6 +1835,7 @@ Run: `pytest tests/test_build_domain_skill.py -v`
 - [ ] **Step 4: Implement**
 
 Create `tools/apd_gauntlet/build_domain_skill.py`:
+
 ```python
 """Compose .claude/skills/apd-domain/SKILL.md from a domain pack."""
 from __future__ import annotations
@@ -1864,6 +1919,7 @@ def build_domain_skill(
 ```
 
 Modify `cli.py`:
+
 ```python
 from .build_domain_skill import build_domain_skill
 
@@ -1896,6 +1952,7 @@ git commit -m "M3: implement build-domain-skill command with semver compat check
 ### Task 3.7: Implement `summarize`, `lint-agents`, `check-ids`, `validate-domain`
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/summary.py`
 - Modify: `tools/apd_gauntlet/cli.py`
 - Create: `tests/test_summarize.py`, `tests/test_lint_agents.py`, `tests/test_check_ids.py`, `tests/test_validate_domain.py`
@@ -1908,6 +1965,7 @@ For each command, follow the TDD pattern: failing test, implement, passing test,
 - `validate-domain <name>` — validates `domains/<name>/domain.yaml` against the schema and verifies all `includes` files exist.
 
 Each of these is roughly 15-30 lines of implementation. Commit each independently:
+
 ```bash
 git commit -m "M3: implement summarize command"
 git commit -m "M3: implement lint-agents command"
@@ -1920,6 +1978,7 @@ git commit -m "M3: implement validate-domain command"
 ### Task 3.8: Implement `refresh-mitre` and ship the cached crosswalk
 
 **Files:**
+
 - Create: `tools/apd_gauntlet/refresh_mitre.py`
 - Create: `tools/apd_gauntlet/data/mitre-mitigations.json` (cached)
 - Modify: `tools/apd_gauntlet/cli.py`
@@ -1932,6 +1991,7 @@ The `refresh-mitre` subcommand fetches MITRE's enterprise STIX bundle and projec
 The MITRE source: `https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json`. Mitigations have `type: course-of-action`; relationships of `relationship_type: mitigates` connect a mitigation (`source_ref`) to a technique (`target_ref`).
 
 Create `tools/apd_gauntlet/refresh_mitre.py`:
+
 ```python
 """Refresh the cached MITRE ATT&CK mitigation→technique crosswalk."""
 from __future__ import annotations
@@ -1973,6 +2033,7 @@ Expected: writes `tools/apd_gauntlet/data/mitre-mitigations.json` (~50-150 KB).
 - [ ] **Step 3: Write the test (using a network-mocked version)**
 
 Create `tests/test_refresh_mitre.py`:
+
 ```python
 import json
 import pathlib
@@ -2042,6 +2103,7 @@ Goal: apply the seven contract fixes from spec §7.1, extract PBM specialization
 ### Task 4.1: Update templates with `schema_version` and drop `strength`
 
 **Files:**
+
 - Modify: `templates/finding.template.yaml`
 - Modify: `templates/capability.template.yaml`
 
@@ -2052,10 +2114,13 @@ Edit `templates/finding.template.yaml` — after `finding:` add `schema_version:
 - [ ] **Step 2: Update the finding template's `disposition:` comment**
 
 Change the comment line near `disposition: gap` from:
+
 ```
 disposition: gap   # required: gap | risk | uncertainty | strength | blocked
 ```
+
 to:
+
 ```
 disposition: gap   # required: gap | risk | uncertainty | blocked
 ```
@@ -2076,6 +2141,7 @@ git commit -m "M4: add schema_version to templates; remove strength from disposi
 ### Task 4.2: Update `apd-finding-schema/SKILL.md`
 
 **Files:**
+
 - Modify: `.claude/skills/apd-finding-schema/SKILL.md`
 
 - [ ] **Step 1: Read the current file** to locate the disposition documentation.
@@ -2083,10 +2149,13 @@ git commit -m "M4: add schema_version to templates; remove strength from disposi
 - [ ] **Step 2: Drop `strength` from the documented `disposition` enum**
 
 Replace:
+
 ```
 disposition: gap                # gap | risk | uncertainty | strength | blocked
 ```
+
 with:
+
 ```
 disposition: gap                # gap | risk | uncertainty | blocked
 ```
@@ -2100,6 +2169,7 @@ In the YAML sample block in §"Finding schema", insert `schema_version: 1` as th
 - [ ] **Step 4: Add the canonical schema-file reference at the top**
 
 Add a new section near the top:
+
 ```markdown
 ## Canonical contract
 
@@ -2152,6 +2222,7 @@ git commit -m "M4: update finding-schema skill — drop strength, add schema_ver
 ### Task 4.3: Update `apd-evidence-discipline/SKILL.md` — remove PBM rubric
 
 **Files:**
+
 - Modify: `.claude/skills/apd-evidence-discipline/SKILL.md`
 
 The current file embeds the full impact-to-PBM severity rubric. M5 moves the rubric content to `domains/pbm/severity-rubric.md`. Here we *remove* the rubric from this skill and replace with a pointer.
@@ -2190,6 +2261,7 @@ git commit -m "M4: remove PBM rubric from evidence-discipline; replace with doma
 ### Task 4.4: Update `apd-control-mappings/SKILL.md` — cite MITRE crosswalk source
 
 **Files:**
+
 - Modify: `.claude/skills/apd-control-mappings/SKILL.md`
 
 - [ ] **Step 1: Add a "Crosswalk source" section under "MITRE ATT&CK mapping discipline":**
@@ -2215,6 +2287,7 @@ git commit -m "M4: cite MITRE STIX crosswalk source and shipped snapshot in cont
 ### Task 4.5: Update `apd-orchestrator.md` — Phase 0 domain build, tier-end validation, skip-specialist stubs
 
 **Files:**
+
 - Modify: `.claude/agents/apd-orchestrator.md`
 
 - [ ] **Step 1: Insert a new sub-step in Phase 0 (after "Validate the input directory"):**
@@ -2233,6 +2306,7 @@ git commit -m "M4: cite MITRE STIX crosswalk source and shipped snapshot in cont
 - [ ] **Step 2: Add a "Tier-end validation" subsection between Phase 2/3/4:**
 
 After each tier's parallel dispatch and completion, append:
+
 ```markdown
 **Validation.** Run `apd-gauntlet validate <run-dir>` over the just-completed tier's outputs. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the emitting agent with the specific violations cited. Allow up to two retries per agent. After two retries, surface the failure and proceed without that record.
 ```
@@ -2248,7 +2322,9 @@ After each tier's parallel dispatch and completion, append:
     emitted_by: orchestrator
   findings: []
   ```
+
   Same shape for capabilities. The synthesizer records the skip in run metadata; advisory report includes a "Specialists skipped" note in the executive summary.
+
 ```
 
 - [ ] **Step 4: Add a Phase 6 line about run metadata:**
@@ -2265,6 +2341,7 @@ After each tier's parallel dispatch and completion, append:
    specialists_skipped: [<list>]
    ---
    ```
+
 ```
 
 - [ ] **Step 5: Commit**
@@ -2279,11 +2356,13 @@ git commit -m "M4: orchestrator — Phase 0 domain build, tier-end validation, s
 ### Task 4.6: Update `apd-synthesizer.md` — rejected-records, validator invocation, frontmatter
 
 **Files:**
+
 - Modify: `.claude/agents/apd-synthesizer.md`
 
 - [ ] **Step 1: Add `rejected-records.yaml` to the official "Outputs" list**
 
 In the bulleted "Write to `40-synthesis/`:" list, insert:
+
 ```
 - `rejected-records.yaml` — records that failed structural validation, with the reason per record
 ```
@@ -2301,6 +2380,7 @@ If the validator CLI is unavailable, fall back to LLM-judged structural review u
 - [ ] **Step 3: Update Step 9 to emit YAML frontmatter on the advisory report:**
 
 After the "Section order" list, add:
+
 ```markdown
 The advisory report begins with a YAML frontmatter block:
 
@@ -2317,6 +2397,7 @@ specialists_skipped: []
 ```
 
 Then the human-readable section content follows.
+
 ```
 
 - [ ] **Step 4: Commit**
@@ -2331,6 +2412,7 @@ git commit -m "M4: synthesizer — add rejected-records output, validator invoca
 ### Task 4.7: Update `apd-intake.md` — frontmatter, artifact-index for cross-file validation
 
 **Files:**
+
 - Modify: `.claude/agents/apd-intake.md`
 
 - [ ] **Step 1: Add a sub-step in "Process / Step 1" requiring the intake brief to start with frontmatter:**
@@ -2352,6 +2434,7 @@ artifacts:
 ```
 
 The artifact `type` values come from the type taxonomy listed below. Specialists never write outside this index — evidence references that don't appear here are caught by `apd-gauntlet validate`.
+
 ```
 
 - [ ] **Step 2: Commit**
@@ -2366,6 +2449,7 @@ git commit -m "M4: intake — require YAML frontmatter with typed artifact index
 ### Task 4.8: Refactor each specialist agent (×9) — remove embedded patterns, add apd-domain reading
 
 **Files:**
+
 - Modify: `.claude/agents/apd-confidentiality.md`
 - Modify: `.claude/agents/apd-integrity.md`
 - Modify: `.claude/agents/apd-availability.md`
@@ -2381,6 +2465,7 @@ Treat this as **nine micro-tasks** with the same shape. Per file:
 - [ ] **Step 1: Add `apd-domain/SKILL.md` to "Required reading"**
 
 In the "Required reading" list (typically 5 items), insert as a new entry:
+
 ```
 - `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
 ```
@@ -2415,6 +2500,7 @@ Repeat for all nine specialists.
 ### Task 4.9: Add `schema_version` documentation to `context-brief.template.md`
 
 **Files:**
+
 - Modify: `templates/context-brief.template.md`
 
 - [ ] **Step 1: Insert the YAML frontmatter block at the top of the file**
@@ -2447,6 +2533,7 @@ git commit -m "M4: add YAML frontmatter (framework_version, artifacts) to contex
 ### Task 4.10: Add frontmatter to `advisory-report.template.md`
 
 **Files:**
+
 - Modify: `templates/advisory-report.template.md`
 
 - [ ] **Step 1: Insert frontmatter at top:**
@@ -2492,11 +2579,13 @@ Goal: assemble `domains/pbm/`, populate it with the PBM-specific content extract
 ### Task 5.1: Author `domains/pbm/domain.yaml`
 
 **Files:**
+
 - Create: `domains/pbm/domain.yaml`
 
 - [ ] **Step 1: Write the metadata**
 
 Create `domains/pbm/domain.yaml` (the content here is the same as spec §8.2):
+
 ```yaml
 name: pbm
 display_name: "Pharmacy Benefit Management"
@@ -2541,6 +2630,7 @@ git commit -m "M5: add domains/pbm/domain.yaml (children land in subsequent task
 ### Task 5.2: Move PBM severity rubric to the pack
 
 **Files:**
+
 - Create: `domains/pbm/severity-rubric.md`
 
 The content is the section "Severity rubric — impact-to-PBM" deleted from `apd-evidence-discipline/SKILL.md` in Task 4.3. Use git to recover it from history.
@@ -2548,16 +2638,19 @@ The content is the section "Severity rubric — impact-to-PBM" deleted from `apd
 - [ ] **Step 1: Recover the section text**
 
 Run:
+
 ```bash
 git show HEAD~<N>:.claude/skills/apd-evidence-discipline/SKILL.md \
   | awk '/^## Severity rubric — impact-to-PBM/,/^## Severity calibration discipline/' \
   | sed '$d'
 ```
+
 (Replace `<N>` with the offset to the commit before Task 4.3's removal.)
 
 - [ ] **Step 2: Write `domains/pbm/severity-rubric.md`**
 
 Open it in your editor and paste the recovered content. Prepend a top-level heading:
+
 ```markdown
 # PBM Severity Rubric (impact-to-PBM)
 
@@ -2580,6 +2673,7 @@ git commit -m "M5: extract PBM severity rubric into domain pack"
 ### Task 5.3: Write the remaining three narrative files
 
 **Files:**
+
 - Create: `domains/pbm/consequential-actions.md`
 - Create: `domains/pbm/immutability-classes.md`
 - Create: `domains/pbm/data-taxonomy.md`
@@ -2591,6 +2685,7 @@ These extract content that was inline in the specialist agents (apd-non-repudiat
 This is the "Consequential-action surface" section currently embedded in `apd-non-repudiation.md` (Task 4.8 keeps the analytical checklist but the *concrete PBM list* moves here).
 
 Write `domains/pbm/consequential-actions.md`:
+
 ```markdown
 # PBM consequential-action surface
 
@@ -2612,6 +2707,7 @@ This list is not exhaustive. Specialists should treat actions outside this list 
 - [ ] **Step 2: Author `immutability-classes.md`**
 
 Mirror of the "What must be immutable?" section in `apd-immutability.md`:
+
 ```markdown
 # PBM required-immutable data classes
 
@@ -2633,6 +2729,7 @@ Specialists raise Immutability findings against any class on this list that has 
 - [ ] **Step 3: Author `data-taxonomy.md`**
 
 Write `domains/pbm/data-taxonomy.md`:
+
 ```markdown
 # PBM PHI/PII data taxonomy
 
@@ -2689,6 +2786,7 @@ git commit -m "M5: add PBM consequential-actions, immutability-classes, data-tax
 ### Task 5.4: Move PBM common-patterns content (×9 files)
 
 **Files:**
+
 - Create: `domains/pbm/common-patterns/confidentiality.md`
 - Create: `domains/pbm/common-patterns/integrity.md`
 - Create: `domains/pbm/common-patterns/availability.md`
@@ -2704,16 +2802,19 @@ For each goal, recover the "Common finding patterns" + "Common capability patter
 - [ ] **Step 1 (×9): Recover the section text per agent**
 
 Run for each goal:
+
 ```bash
 git show HEAD~<N>:.claude/agents/apd-<goal>.md \
   | awk '/^## Common finding patterns/,/^## Self-check before emitting/' \
   | sed '$d' > /tmp/<goal>-patterns.md
 ```
+
 (Adjust `<N>` to the offset of the commit before Task 4.8's removal for that file.)
 
 - [ ] **Step 2 (×9): Write the pack file with a top-level heading**
 
 For each goal, create `domains/pbm/common-patterns/<goal>.md`:
+
 ```markdown
 # PBM common patterns — <Goal>
 
@@ -2736,6 +2837,7 @@ Repeat for all nine.
 ### Task 5.5: Validate the pack and build the skill
 
 **Files:**
+
 - Create: `.claude/skills/apd-domain/SKILL.md` (generated)
 
 - [ ] **Step 1: Validate the pack**
@@ -2780,6 +2882,7 @@ Goal: author a synthetic PBM tech plan + supplementary artifacts (`examples/apd-
 ### Task 6.1: Scaffold the example directory
 
 **Files:**
+
 - Create: `examples/apd-20260601-claim-event-bus/README.md`
 - Create: `examples/apd-20260601-claim-event-bus/inputs/.gitkeep`
 - Create: `examples/apd-20260601-claim-event-bus/expected/.gitkeep`
@@ -2787,12 +2890,14 @@ Goal: author a synthetic PBM tech plan + supplementary artifacts (`examples/apd-
 - [ ] **Step 1: Create the directory and README**
 
 Run:
+
 ```bash
 mkdir -p examples/apd-20260601-claim-event-bus/inputs
 mkdir -p examples/apd-20260601-claim-event-bus/expected
 ```
 
 Create `examples/apd-20260601-claim-event-bus/README.md`:
+
 ```markdown
 # APD Gauntlet Example — Claim Event Bus
 
@@ -2823,6 +2928,7 @@ apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 ```
 
 Exit code 0 means the example is consistent with the current schemas.
+
 ```
 
 - [ ] **Step 2: Commit**
@@ -2837,6 +2943,7 @@ git commit -m "M6: scaffold example directory with README"
 ### Task 6.2: Author the synthetic inputs
 
 **Files:**
+
 - Create: `examples/apd-20260601-claim-event-bus/inputs/tech_plan.md`
 - Create: `examples/apd-20260601-claim-event-bus/inputs/claim-events.proto`
 - Create: `examples/apd-20260601-claim-event-bus/inputs/threat-model.md`
@@ -2892,6 +2999,7 @@ git commit -m "M6: author synthetic input artifacts for the claim-event-bus exam
 ### Task 6.3: Author curated expected outputs
 
 **Files:**
+
 - Create: `examples/apd-20260601-claim-event-bus/expected/00-context/context-brief.md`
 - Create: `examples/apd-20260601-claim-event-bus/expected/10-trustworthiness/<goal>.findings.yaml` (×3) and `.capabilities.yaml` (×3)
 - Create: `examples/apd-20260601-claim-event-bus/expected/20-scalability/...` (×6)
@@ -2946,11 +3054,13 @@ git commit -m "M6: author curated expected outputs for the claim-event-bus examp
 ### Task 6.4: Wire into integration test
 
 **Files:**
+
 - Create: `tests/test_examples.py`
 
 - [ ] **Step 1: Write the test**
 
 Create `tests/test_examples.py`:
+
 ```python
 """Integration test: the bundled example must validate cleanly."""
 from __future__ import annotations
@@ -2998,6 +3108,7 @@ Use Claude Code's `context7` (or equivalent) to fetch the current plugin manifes
 - [ ] **Step 2: Author `plugin.json`** based on the verified spec (still substantially the spec §10.1 form). Verify it validates against whatever schema the Claude Code plugin tooling provides.
 
 Create `plugin.json`:
+
 ```json
 {
   "name": "apd-gauntlet",
@@ -3025,11 +3136,13 @@ git commit -m "M7: add Claude Code plugin manifest"
 ### Task 7.2: Write `.github/workflows/validate.yml`
 
 **Files:**
+
 - Create: `.github/workflows/validate.yml`
 
 - [ ] **Step 1: Write the workflow**
 
 Create `.github/workflows/validate.yml`:
+
 ```yaml
 name: validate
 
@@ -3071,6 +3184,7 @@ Confirm green on GitHub Actions.
 ### Task 7.3: Write `.github/workflows/python-tests.yml`
 
 **Files:**
+
 - Create: `.github/workflows/python-tests.yml`
 
 - [ ] **Step 1: Write the workflow**
@@ -3113,12 +3227,14 @@ git push origin main
 ### Task 7.4: Write `.github/workflows/markdown-lint.yml`
 
 **Files:**
+
 - Create: `.github/workflows/markdown-lint.yml`
 - Create: `.markdownlint.json`
 
 - [ ] **Step 1: Author markdownlint config**
 
 Create `.markdownlint.json`:
+
 ```json
 {
   "default": true,
@@ -3175,6 +3291,7 @@ git push origin main
 ### Task 7.5: Write `.github/workflows/release.yml`
 
 **Files:**
+
 - Create: `.github/workflows/release.yml`
 
 - [ ] **Step 1: Write the workflow**
@@ -3226,6 +3343,7 @@ git push origin main
 ### Task 7.6: Author the six ADRs
 
 **Files:**
+
 - Create: `docs/adrs/0001-three-tier-structure.md`
 - Create: `docs/adrs/0002-block-on-ambiguity-default.md`
 - Create: `docs/adrs/0003-pluggable-domain-packs.md`
@@ -3234,6 +3352,7 @@ git push origin main
 - Create: `docs/adrs/0006-llm-driven-clustering.md`
 
 Use the lightweight ADR format (~1-2 KB per file):
+
 ```markdown
 # ADR-NNNN: <Title>
 
@@ -3260,6 +3379,7 @@ Use the lightweight ADR format (~1-2 KB per file):
 - [ ] **Step 1 (×6): Write each ADR**
 
 For each, use the corresponding rationale from the design spec sections:
+
 - 0001: spec §1, §2 "Why three tiers, why nine goals"
 - 0002: spec §5 "Three load-bearing analytical disciplines" rule 2
 - 0003: design conversation chunks 1+3
@@ -3279,6 +3399,7 @@ git commit -m "M7: add ADRs 0001–0006"
 ### Task 7.7: Author the documentation pages
 
 **Files:**
+
 - Create: `docs/architecture.md`
 - Create: `docs/running-the-gauntlet.md`
 - Create: `docs/adapting-to-other-domains.md`
@@ -3319,6 +3440,7 @@ git commit -m "M7: add architecture, running-the-gauntlet, adapting-to-other-dom
 ### Task 7.8: Rewrite the top-level `README.md`
 
 **Files:**
+
 - Create: `README.md`
 - Delete: `docs/_legacy-readme.md`
 
@@ -3327,6 +3449,7 @@ Target length: ~5 KB. Sections: badges (build status, license, PyPI version), Ov
 - [ ] **Step 1: Write `README.md`**
 
 Use the spec §1 "Context" as the basis of the Overview. Quick start:
+
 ```markdown
 ## Quick start
 
@@ -3359,6 +3482,7 @@ git commit -m "M7: rewrite top-level README; remove legacy README"
 ### Task 7.9: Add `CONTRIBUTING.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`
 
 **Files:**
+
 - Create: `CONTRIBUTING.md`
 - Create: `CHANGELOG.md`
 - Create: `CODE_OF_CONDUCT.md`
@@ -3370,6 +3494,7 @@ Cover: how to propose changes (issue first for major); test expectations (pytest
 - [ ] **Step 2: `CHANGELOG.md`**
 
 Keep-a-Changelog format with one entry:
+
 ```markdown
 # Changelog
 
@@ -3392,7 +3517,7 @@ First public release.
 
 - [ ] **Step 3: `CODE_OF_CONDUCT.md`**
 
-Copy the stock Contributor Covenant 2.1 text (https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Copy the stock Contributor Covenant 2.1 text (<https://www.contributor-covenant.org/version/2/1/code_of_conduct/>).
 
 - [ ] **Step 4: Commit**
 
@@ -3406,6 +3531,7 @@ git commit -m "M7: add CONTRIBUTING, CHANGELOG, CODE_OF_CONDUCT"
 ### Task 7.10: Add issue templates and PR template
 
 **Files:**
+
 - Create: `.github/ISSUE_TEMPLATE/bug_report.yml`
 - Create: `.github/ISSUE_TEMPLATE/domain_pack_proposal.yml`
 - Create: `.github/PULL_REQUEST_TEMPLATE.md`
@@ -3435,6 +3561,7 @@ Expected: clean; coverage ≥85%.
 - [ ] **Step 2: Run all lints**
 
 Run:
+
 ```bash
 ruff check tools/ tests/
 mypy tools/
@@ -3442,6 +3569,7 @@ apd-gauntlet lint-agents --agent-dir .claude/agents/
 apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 apd-gauntlet validate-domain pbm
 ```
+
 All expected: clean.
 
 - [ ] **Step 3: Push and verify all four CI workflows green on `main`**
@@ -3458,6 +3586,7 @@ Wait for the GitHub Actions checks to complete. Verify all green.
 - [ ] **Step 1: Update `CHANGELOG.md` with the actual release date**
 
 Replace `[1.0.0] - 2026-XX-XX` with today's date. Commit:
+
 ```bash
 git add CHANGELOG.md
 git commit -m "M7: set v1.0.0 release date in CHANGELOG"
@@ -3467,6 +3596,7 @@ git push origin main
 - [ ] **Step 2: Make the repo public (one-time)**
 
 If the repo is still private, make it public now via GitHub UI or:
+
 ```bash
 gh repo edit shoveleejoe/apd-gauntlet --visibility public --accept-visibility-change-consequences
 ```
@@ -3487,11 +3617,13 @@ Watch GitHub Actions. The `release` job builds the package, publishes to PyPI (a
 - [ ] **Step 5: Smoke-test the published package**
 
 In a fresh virtualenv:
+
 ```bash
 pip install apd-gauntlet
 apd-gauntlet --version
 apd-gauntlet --help
 ```
+
 Expected: 1.0.0; help output lists all subcommands.
 
 ---
@@ -3499,6 +3631,7 @@ Expected: 1.0.0; help output lists all subcommands.
 ## Verification — end of v1.0
 
 At this point:
+
 - Repo public at `github.com/shoveleejoe/apd-gauntlet`
 - `apd-gauntlet` installable via `pip install apd-gauntlet`
 - Claude Code plugin loadable from `.claude/`
@@ -3513,6 +3646,7 @@ The framework is ready for a first round of real-world use. v1.1 work: second do
 ## Self-Review Notes (writer)
 
 Spec-coverage scan: each spec section mapped to at least one task —
+
 - §4 (layout) → M1
 - §5 (schemas) → M2
 - §6 (validator) → M3

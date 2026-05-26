@@ -4,7 +4,7 @@ Multi-agent security architecture review built on the APD framework — **A**ssu
 
 This is **advisory input to architecture review**, not a gate. The output is structured to help an architect make better decisions, not to replace one.
 
-```
+```text
 Trustworthiness   →  Confidentiality · Integrity · Availability
 Scalability       →  Distributed · Resilient · Ephemeral
 Auditability      →  Authenticity · Non-Repudiation · Immutability
@@ -41,6 +41,8 @@ For a tech plan plus supplementary artifacts (PRD, code, IaC, diagrams, threat m
 - **Confirmed capabilities** — security properties the design or implementation positively demonstrates, with explicit scope and caveats.
 
 Both streams are organized along the nine APD goals listed above. Every finding and capability carries NIST 800-53r5 control mappings. Findings carry MITRE ATT&CK technique mappings (and, when the run declares the relevant taxonomies, CWE / OWASP Top 10 / API / LLM mappings) when an agent has high confidence. Capabilities carry ATT&CK mitigation mappings, optional ATT&CK technique mappings (techniques the capability defends against), and optional MITRE D3FEND mappings with required ATT&CK counter-references. Severity is calibrated against an explicit domain-specific rubric (PBM ships in v1; others can be added — see [docs/adapting-to-other-domains.md](docs/adapting-to-other-domains.md)).
+
+When a threat model is supplied (Threat Dragon JSON, Microsoft TMT, STRIDE/LINDDUN tables, attack trees), the gauntlet's threat-model evaluator surfaces coverage gaps, contradictions between TM claims and specialist findings, and surface silences as `tmeval-` findings.
 
 The synthesizer dedups across lenses, surfaces contradictions between findings and capabilities, and produces three rollups: a NIST 800-53r5 coverage matrix, an ATT&CK exposure summary, and an APD-by-component coverage grid. The final deliverable is `40-synthesis/advisory-report.md`.
 

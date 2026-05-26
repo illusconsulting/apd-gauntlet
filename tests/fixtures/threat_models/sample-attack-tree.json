@@ -1,0 +1,29 @@
+{
+  "goal": "Exfiltrate member PHI from claim adjudication system",
+  "gate": "OR",
+  "children": [
+    {
+      "goal": "Compromise pharmacy submitter account",
+      "gate": "AND",
+      "children": [
+        { "goal": "Phishing attack on pharmacy operator" },
+        { "goal": "Credential stuffing against pharmacy portal" }
+      ]
+    },
+    {
+      "goal": "Lateral movement from compromised vendor integration",
+      "gate": "AND",
+      "children": [
+        { "goal": "Compromise drug pricing data feed credentials" },
+        { "goal": "SMB lateral movement to adjudication network segment" }
+      ]
+    },
+    {
+      "goal": "Direct database access via misconfigured backup",
+      "children": [
+        { "goal": "Read DynamoDB backup with overly-permissive S3 read role" },
+        { "goal": "Exploit publicly-accessible backup API endpoint" }
+      ]
+    }
+  ]
+}

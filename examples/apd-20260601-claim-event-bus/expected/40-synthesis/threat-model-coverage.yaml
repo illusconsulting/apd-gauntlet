@@ -1,0 +1,36 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+surface_coverage:
+  - surface: claim-ingress-API
+    categories_present: [S, T, I, D, E]
+    categories_absent: [R]
+    tm_entry_count: 5
+    tm_entry_ids:
+      - tm-43625e57
+      - tm-b9c3c1b5
+      - tm-5eadb570
+      - tm-f2d83cb5
+      - tm-4d037558
+  - surface: adjudication-to-pricing
+    categories_present: [I]
+    categories_absent: [S, T, R, D, E]
+    tm_entry_count: 1
+    tm_entry_ids:
+      - tm-1a799f16
+  - surface: audit-log-writer
+    categories_present: [S, T, I, D, E]
+    categories_absent: [R]
+    tm_entry_count: 5
+    tm_entry_ids:
+      - tm-04b76ff1
+      - tm-9a8c9ce4
+      - tm-99aa91ca
+      - tm-6dc432fd
+      - tm-8df8b2f3
+summary:
+  total_entries: 11
+  contradictions_emitted: 1
+  silences_emitted: 1
+  coverage_gaps_emitted: 1
+  surfaces_examined: 3

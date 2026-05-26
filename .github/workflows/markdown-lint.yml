@@ -15,6 +15,7 @@ jobs:
         with:
           globs: |
             docs/**/*.md
+            !docs/superpowers/plans/**
             .claude/**/*.md
             domains/**/*.md
             README.md

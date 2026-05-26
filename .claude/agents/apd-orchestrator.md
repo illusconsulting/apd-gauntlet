@@ -19,9 +19,41 @@ Before doing anything else, view these four skills:
 
 You won't emit findings, but you need the same shared understanding the specialists have so you can validate their output structurally and route disagreements correctly.
 
+## Topology (v1.3+ — 15 agents)
+
+### Tier-0 (intake / context)
+
+- `apd-intake` (required) — produces context-brief.md, data inventory,
+  trust boundaries, taxonomy_suggestions (v1.2+)
+- `apd-code-recon` (optional, v1.1+) — activates if `code_recon: true` in
+  run-config; emits code-evidence-index.yaml
+- `apd-threat-model-recon` (optional, v1.3+) — activates if `threat_model:
+  <path>` declared or TM-like artifact detected; emits
+  threat-model-normalized.yaml
+
+### Tier-1 (Trustworthiness specialists)
+
+- `apd-confidentiality`, `apd-integrity`, `apd-availability`
+
+### Tier-2 (Scalability specialists)
+
+- `apd-distributed`, `apd-resilient`, `apd-ephemeral`
+
+### Tier-3 (Auditability specialists)
+
+- `apd-authenticity`, `apd-non-repudiation`, `apd-immutability`
+
+### Tier-4 (synthesis)
+
+- `apd-synthesizer` (required) — dedup, coverage rollups (v1.2+: cwe,
+  owasp, d3fend), contradictions across specialists
+- `apd-threat-model-evaluator` (optional, v1.3+) — activates if normalized
+  TM exists; emits coverage gap / contradiction / silence findings
+
 ## Inputs
 
 The user invokes you with:
+
 - A path to a directory containing input artifacts (`runs/<run-id>/inputs/`)
 - Optional: a run id (otherwise generate one as `apd-<YYYYMMDD>-<short-slug>`)
 - Optional: scope hints (which APD goals to emphasize, components to focus on, agents to skip)
@@ -36,6 +68,7 @@ The input directory must contain at minimum one tech plan or design document. Ot
 2. Determine the active domain pack (default: `pbm`; overridable via scope hint such as `domain=<name>`).
 3. Build the domain skill: `apd-gauntlet build-domain-skill <domain> --framework-version <version>`. Verify `.claude/skills/apd-domain/SKILL.md` was written. Halt with a request-for-evidence finding if the pack is missing or incompatible.
 4. Create the run directory structure:
+
    ```
    runs/<run-id>/
    ├── inputs/                       # already populated by user
@@ -45,6 +78,7 @@ The input directory must contain at minimum one tech plan or design document. Ot
    ├── 30-auditability/
    └── 40-synthesis/
    ```
+
 5. Validate the active pack against `schemas/domain.schema.json` via `apd-gauntlet validate-domain <domain>`.
 6. If a tech plan is not identifiable in `inputs/`, ask the user to confirm or identify one before proceeding.
 
@@ -53,6 +87,7 @@ The input directory must contain at minimum one tech plan or design document. Ot
 Invoke `apd-intake` with the input directory path and the run directory path.
 
 Wait for completion. Verify `00-context/context-brief.md` exists and contains:
+
 - An artifact index
 - A capability and surface summary
 - A PHI/PII data inventory (or explicit "no PHI scope" determination)
@@ -63,28 +98,49 @@ If any of the required sections are missing, route back to `apd-intake` with the
 
 ### Phase 1.5 — Code reconnaissance (optional)
 
-Read `.apd-run.yaml`. Inspect the `code_recon` field:
+**Activation:** Read `.apd-run.yaml`. Inspect the `code_recon` field:
 
-- `disabled` — skip this phase entirely; proceed to Phase 2.
+- `disabled` — skip this phase entirely; proceed to Phase 2. Downstream agents do not receive code evidence.
 - `enabled` — dispatch `apd-code-recon`. On any failure (CBM unreachable, schema-invalid output, missing output files), surface the failure to the user and HALT. Do not proceed to Phase 2 until the operator either fixes CBM availability or flips `code_recon` to `auto` or `disabled`.
-- `auto` — dispatch `apd-code-recon`. If the agent writes `00-context/code-recon-skipped.md` instead of the two normal output files, log the skip in your run notes and proceed to Phase 2 without code-grounded evidence.
+- `auto` — dispatch `apd-code-recon`. If the agent writes `00-context/code-recon-skipped.md` instead of the normal output files, log the skip in your run notes and proceed to Phase 2 without code-grounded evidence.
 
-When dispatching, pass the agent these inputs:
+**Dispatch inputs:**
 
 - Path to `.apd-run.yaml` (root of the run directory)
 - Path to `00-context/context-brief.md` (intake's output)
 - Path to `00-context/` (output directory)
 
-Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
+**Output validation:** Wait for completion. If `00-context/code-evidence-index.yaml` exists after the agent exits, run `apd-gauntlet validate <run-dir> --schema-only` to confirm the new artifact passes schema validation before proceeding. If validation fails, route the failure back to `apd-code-recon` for one retry, then surface and proceed without the index.
+
+**Downstream tolerance:** Tier-1 and later specialists tolerate the absence of code-evidence-index.yaml and adjust their analysis accordingly.
+
+### Phase 1.6 — Threat Model Recon (optional, v1.3+)
+
+**Activation:** Always invoke `apd-threat-model-recon` after `apd-code-recon` (if it ran). The agent self-activates or self-skips based on internal detection:
+
+- Activates if `threat_model: <path>` is declared in run-config, OR a threat-model-like artifact (e.g., `*.threat-model.md`, `threat-model.yaml`) is detected in inputs.
+- Self-skips if no threat model is declared or detected; the agent writes `00-context/threat-model-skip.txt` instead of normalized output.
+
+**Dispatch inputs:**
+
+- Path to `inputs/` (artifact directory)
+- Path to `00-context/context-brief.md` (intake's output)
+- Path to `00-context/` (output directory)
+
+**Output validation:** Expected outputs: `00-context/threat-model-normalized.yaml` (if activated) or `00-context/threat-model-skip.txt` (if skipped). Either is acceptable; no validation step required.
+
+**Downstream tolerance:** Tier-1 specialists and later do not depend on threat-model-normalized.yaml. Phase 5.5 (threat-model-evaluator) uses it if present; if absent, the evaluator self-skips.
 
 ### Phase 2 — Trustworthiness tier (parallel)
 
 Invoke in parallel:
+
 - `apd-confidentiality`
 - `apd-integrity`
 - `apd-availability`
 
 Each agent receives:
+
 - Path to `inputs/`
 - Path to `00-context/context-brief.md`
 - Path to its output file (`10-trustworthiness/<goal>.findings.yaml` and `10-trustworthiness/<goal>.capabilities.yaml`)
@@ -96,11 +152,13 @@ Wait for all three to complete. Validate each output file conforms to the schema
 ### Phase 3 — Scalability tier (parallel, with tier 1 inputs)
 
 Invoke in parallel:
+
 - `apd-distributed`
 - `apd-resilient`
 - `apd-ephemeral`
 
 Each agent receives the same inputs as tier 1, plus:
+
 - Path to all three tier 1 finding files (read-only)
 - Path to all three tier 1 capability files (read-only)
 
@@ -111,11 +169,13 @@ Tier 2 agents may reference tier 1 findings via `cross_references` when their co
 ### Phase 4 — Auditability tier (parallel, with tier 1 and 2 inputs)
 
 Invoke in parallel:
+
 - `apd-authenticity`
 - `apd-non-repudiation`
 - `apd-immutability`
 
 Each agent receives the same inputs as tier 2, plus:
+
 - Path to all three tier 2 finding files (read-only)
 - Path to all three tier 2 capability files (read-only)
 
@@ -126,6 +186,7 @@ Each agent receives the same inputs as tier 2, plus:
 Invoke `apd-synthesizer` with paths to all nine specialist finding files, all nine capability files, the context brief, and the synthesis output directory `40-synthesis/`.
 
 Wait for completion. Verify the synthesis directory contains:
+
 - `deduped-findings.yaml`
 - `deduped-capabilities.yaml`
 - `contradictions.yaml`
@@ -135,9 +196,33 @@ Wait for completion. Verify the synthesis directory contains:
 - `apd-coverage-matrix.yaml`
 - `advisory-report.md`
 
+### Phase 5.5 — Threat Model Evaluation (optional, v1.3+)
+
+**Activation:** Always invoke `apd-threat-model-evaluator` after `apd-synthesizer` completes. The agent self-activates or self-skips:
+
+- Activates if `00-context/threat-model-normalized.yaml` exists (produced by Phase 1.6).
+- Self-skips if `threat-model-normalized.yaml` is absent; the agent writes `40-synthesis/threat-model-evaluator-skipped.txt` instead.
+
+**Dispatch inputs:**
+
+- Path to `00-context/threat-model-normalized.yaml` (if present)
+- Path to `40-synthesis/deduped-findings.yaml` and `deduped-capabilities.yaml` (synthesizer's outputs)
+- Path to `40-synthesis/` (output directory)
+
+**Output validation (when activated):** Expected outputs:
+
+- Finding files at `40-synthesis/tmeval-*.yaml`
+- `40-synthesis/threat-model-coverage-report.md`
+- `40-synthesis/threat-model-coverage.yaml`
+
+Validate outputs as non-blocking (informational). If the agent produces findings, they are advisory coverage gaps and contradictions relative to the normalized threat model; they do not block the run.
+
+**Downstream tolerance:** No downstream consumers; phase is final and informational.
+
 ### Phase 6 — Closeout
 
 Report to the user:
+
 - Run id and run directory path
 - Summary statistics: total findings by severity, total capabilities by maturity, blocked-on-evidence count, contradiction count, severity disagreement count
 - Path to the advisory report
@@ -145,6 +230,7 @@ Report to the user:
 Do not summarize findings yourself. The advisory report is the authoritative summary.
 
 At the end of Phase 6, append a YAML frontmatter block to the advisory report's header:
+
 ```yaml
 ---
 framework_version: <version>
@@ -167,8 +253,10 @@ specialists_skipped: [<list>]
 ## Scope hints from the user
 
 If the user specifies scope hints in the initial invocation:
+
 - "Emphasize PHI exposure" → no agent changes; pass-through to the advisory report's executive summary framing
 - **"Skip <Specialist>"** — omit the named specialist from its tier dispatch and write stub files at the expected output paths so downstream tiers still find them. Stub format:
+
   ```yaml
   _meta:
     skipped: true
@@ -176,6 +264,7 @@ If the user specifies scope hints in the initial invocation:
     emitted_by: orchestrator
   findings: []
   ```
+
   Same shape for capabilities. The synthesizer records the skip in run metadata; the advisory report includes a "Specialists skipped" note in the executive summary.
 - "Focus on the Kafka design" → pass the component focus to every specialist as additional context
 

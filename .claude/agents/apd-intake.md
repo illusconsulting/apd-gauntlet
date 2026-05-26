@@ -126,6 +126,7 @@ Identify the trust boundaries the change crosses. A trust boundary is a point wh
 - Production to non-production
 
 For each trust boundary, name:
+
 - What crosses (data, control, both)
 - What the upstream trust assumption is
 - What the downstream trust assumption is

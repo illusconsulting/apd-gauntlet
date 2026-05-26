@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<adtree>
+  <node refinement="disjunctive">
+    <label>Exfiltrate member PHI from claim adjudication system</label>
+    <node refinement="conjunctive">
+      <label>Compromise pharmacy submitter account</label>
+      <node refinement="disjunctive">
+        <label>Phishing attack on pharmacy operator</label>
+      </node>
+      <node refinement="disjunctive">
+        <label>Credential stuffing against pharmacy portal</label>
+      </node>
+    </node>
+    <node refinement="conjunctive">
+      <label>Lateral movement from compromised vendor integration</label>
+      <node refinement="disjunctive">
+        <label>Compromise drug pricing data feed credentials</label>
+      </node>
+      <node refinement="disjunctive">
+        <label>SMB lateral movement to adjudication network segment</label>
+      </node>
+    </node>
+    <node refinement="disjunctive">
+      <label>Direct database access via misconfigured backup</label>
+      <node refinement="disjunctive">
+        <label>Read DynamoDB backup with overly-permissive S3 read role</label>
+      </node>
+      <node refinement="disjunctive">
+        <label>Exploit publicly-accessible backup API endpoint</label>
+      </node>
+    </node>
+  </node>
+</adtree>

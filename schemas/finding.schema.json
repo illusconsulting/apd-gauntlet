@@ -14,7 +14,7 @@
     "schema_version": { "type": "integer", "const": 1 },
     "id": {
       "type": "string",
-      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-[0-9a-f]{8}$"
+      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$"
     },
     "agent": {
       "type": "string",
@@ -22,7 +22,7 @@
         "confidentiality", "integrity", "availability",
         "distributed", "resilient", "ephemeral",
         "authenticity", "non_repudiation", "immutability",
-        "synthesizer"
+        "synthesizer", "threat_model_evaluator"
       ]
     },
     "apd_tier": { "type": "string", "enum": ["trustworthiness", "scalability", "auditability"] },
@@ -74,16 +74,16 @@
             "required": ["technique", "tactic", "rationale"],
             "additionalProperties": false,
             "properties": {
-              "technique":     { "type": "string", "pattern": "^T[0-9]{4}$" },
-              "sub_technique": { "type": ["string", "null"], "pattern": "^T[0-9]{4}\\.[0-9]{3}$" },
-              "tactic":        { "type": "string", "pattern": "^TA[0-9]{4}$" },
+              "technique":     { "$ref": "_defs.schema.json#/$defs/attack_technique_id_topline" },
+              "sub_technique": { "$ref": "_defs.schema.json#/$defs/attack_sub_technique_id" },
+              "tactic":        { "$ref": "_defs.schema.json#/$defs/attack_tactic_id" },
               "rationale":     { "type": "string", "minLength": 30 }
             }
           }
         },
         "cwe": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^CWE-[0-9]+$" }
+          "items": { "$ref": "_defs.schema.json#/$defs/cwe_id" }
         },
         "owasp_top10": {
           "type": "array",
@@ -95,7 +95,7 @@
         },
         "owasp_llm_top10": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^LLM[0-9]{2}$" }
+          "items": { "type": "string", "pattern": "^LLM(0[1-9]|10)$" }
         }
       }
     },
@@ -123,11 +123,11 @@
     },
     "cross_references": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-[0-9a-f]{8}$" }
+      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$" }
     },
     "merged_from": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-[0-9a-f]{8}$" }
+      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval)-[0-9a-f]{8}$" }
     },
     "lens_perspectives": {
       "type": "object",

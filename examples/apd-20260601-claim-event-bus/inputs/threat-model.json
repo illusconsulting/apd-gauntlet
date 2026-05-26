@@ -1,0 +1,61 @@
+{
+  "summary": {
+    "title": "PBM Claim Event Bus Threat Model",
+    "owner": "Architecture review team",
+    "description": "STRIDE threat model for the claim adjudication event bus, prepared during initial design review."
+  },
+  "detail": {
+    "contributors": [{"name": "Architecture review team"}],
+    "diagrams": [
+      {
+        "id": "diagram-1",
+        "title": "Claim Event Bus Data Flow",
+        "diagramType": "STRIDE",
+        "cells": [
+          {
+            "id": "cell-1",
+            "data": {
+              "type": "tm.Process",
+              "name": "claim-ingress-API",
+              "outOfScope": false,
+              "threats": [
+                {"id": "th-1", "type": "Spoofing", "title": "Pharmacy credential theft via phishing", "status": "Open", "severity": "Medium", "description": "Attacker phishes pharmacy staff credentials to submit fraudulent claims.", "mitigation": "MFA required on pharmacy portal; rotating short-lived tokens"},
+                {"id": "th-2", "type": "Tampering", "title": "Replay of submitted claim with altered NDC", "status": "Open", "severity": "Medium", "description": "Attacker captures and replays a valid claim submission with the NDC code modified to trigger higher reimbursement.", "mitigation": "Payload signing with HMAC over canonical JSON"},
+                {"id": "th-3", "type": "Information Disclosure", "title": "Token in CloudFront access logs", "status": "Mitigated", "severity": "Low", "description": "Bearer token may appear in CloudFront access logs if not stripped at the edge.", "mitigation": "CloudFront logging filters strip Authorization header"},
+                {"id": "th-4", "type": "Denial of Service", "title": "High-volume duplicate submission DoS", "status": "Open", "severity": "Medium", "description": "Attacker submits high volumes of duplicate claims to exhaust adjudication capacity.", "mitigation": "Rate limiting at API gateway"},
+                {"id": "th-5", "type": "Elevation of Privilege", "title": "Pharmacy account elevated via missing tenant check", "status": "Open", "severity": "High", "description": "Pharmacy account submits claims for a different tenant by omitting the tenant ID validation path.", "mitigation": "Tenant ID validated on every claim against pharmacy-to-tenant mapping"}
+              ]
+            }
+          },
+          {
+            "id": "cell-2",
+            "data": {
+              "type": "tm.DataFlow",
+              "name": "adjudication-to-pricing",
+              "description": "adjudication-service queries pricing-service over Kafka",
+              "outOfScope": false,
+              "threats": [
+                {"id": "th-6", "type": "Information Disclosure", "title": "PHI in transit between adjudication and pricing services", "status": "Mitigated", "severity": "High", "description": "PHI is sent over Kafka to pricing-service for adjudication.", "mitigation": "TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing"}
+              ]
+            }
+          },
+          {
+            "id": "cell-3",
+            "data": {
+              "type": "tm.Store",
+              "name": "audit-log-writer",
+              "outOfScope": false,
+              "threats": [
+                {"id": "th-7", "type": "Spoofing", "title": "Service account compromise allows audit write impersonation", "status": "Open", "severity": "Medium", "description": "A compromised service account could write fabricated audit entries or overwrite legitimate ones.", "mitigation": "Service account isolation per writer process"},
+                {"id": "th-8", "type": "Tampering", "title": "Audit entry modification after write", "status": "Mitigated", "severity": "High", "description": "Insider or compromised admin modifies written audit entries to cover tracks.", "mitigation": "Write-once storage on DynamoDB with deny-update IAM policy"},
+                {"id": "th-9", "type": "Information Disclosure", "title": "Audit entries leak PHI in error fields", "status": "Open", "severity": "Medium", "description": "Serialization errors may expose raw PHI field values in the audit entry error payload.", "mitigation": "Error redaction in audit serializer"},
+                {"id": "th-10", "type": "Denial of Service", "title": "Audit writer DOS via flood", "status": "Open", "severity": "Low", "description": "High-volume writes from a rogue service exhaust audit writer capacity and drop legitimate entries.", "mitigation": "Per-source rate limit"},
+                {"id": "th-11", "type": "Elevation of Privilege", "title": "Direct DynamoDB write bypasses audit serializer", "status": "Open", "severity": "Medium", "description": "An actor with direct DynamoDB credentials bypasses the audit serializer to write arbitrary entries.", "mitigation": "IAM policy restricts table writes to audit-writer role"}
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

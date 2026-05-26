@@ -15,11 +15,11 @@
         "required": ["d3fend_id", "name", "capability_count", "capability_ids", "counters_attack"],
         "additionalProperties": false,
         "properties": {
-          "d3fend_id":         { "type": "string", "pattern": "^D3-[A-Z]{2,7}$" },
+          "d3fend_id":         { "$ref": "_defs.schema.json#/$defs/d3fend_id" },
           "name":              { "type": "string", "minLength": 3 },
           "capability_count":  { "type": "integer", "minimum": 0 },
           "capability_ids":    { "type": "array", "items": { "type": "string" } },
-          "counters_attack":   { "type": "array", "items": { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" } }
+          "counters_attack":   { "type": "array", "items": { "$ref": "_defs.schema.json#/$defs/attack_technique_id" } }
         }
       }
     },
@@ -30,10 +30,10 @@
         "required": ["attack_technique", "exposed_by_finding_count", "exposed_by_finding_ids", "countered_by_d3fend", "countered_by_capability_ids", "has_capability_coverage"],
         "additionalProperties": false,
         "properties": {
-          "attack_technique":             { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
+          "attack_technique":             { "$ref": "_defs.schema.json#/$defs/attack_technique_id" },
           "exposed_by_finding_count":     { "type": "integer", "minimum": 0 },
           "exposed_by_finding_ids":       { "type": "array", "items": { "type": "string" } },
-          "countered_by_d3fend":          { "type": "array", "items": { "type": "string", "pattern": "^D3-[A-Z]{2,7}$" } },
+          "countered_by_d3fend":          { "type": "array", "items": { "$ref": "_defs.schema.json#/$defs/d3fend_id" } },
           "countered_by_capability_ids":  { "type": "array", "items": { "type": "string" } },
           "has_capability_coverage":      { "type": "boolean" }
         }

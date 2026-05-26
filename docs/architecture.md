@@ -33,6 +33,37 @@ See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
 Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md).
 
+## Tier topology
+
+### Tier-0 (intake)
+
+- apd-intake
+- apd-code-recon (optional, v1.1+)
+- apd-threat-model-recon (optional, v1.3+)
+
+### Tier-1 (trustworthiness)
+
+- apd-confidentiality
+- apd-integrity
+- apd-availability
+
+### Tier-2 (scalability)
+
+- apd-distributed
+- apd-resilient
+- apd-ephemeral
+
+### Tier-3 (auditability)
+
+- apd-authenticity
+- apd-non-repudiation
+- apd-immutability
+
+### Tier-4 (synthesis)
+
+- apd-synthesizer
+- apd-threat-model-evaluator (optional, v1.3+)
+
 ## The five skills
 
 | Skill | Purpose |
@@ -116,13 +147,17 @@ After a successful run:
 runs/<run-id>/
 ├── inputs/                       # your artifacts (untouched)
 ├── 00-context/
-│   └── context-brief.md          # intake output with frontmatter
-├── 10-trustworthiness/
-│   ├── confidentiality.findings.yaml     confidentiality.capabilities.yaml
-│   ├── integrity.findings.yaml           integrity.capabilities.yaml
-│   └── availability.findings.yaml        availability.capabilities.yaml
-├── 20-scalability/               # six files, same shape
-├── 30-auditability/              # six files, same shape
+│   ├── context-brief.md          # intake output with frontmatter
+│   ├── code-evidence-index.yaml         (v1.1+, optional)
+│   └── threat-model-normalized.yaml     (v1.3+, optional)
+├── 20-findings/
+│   ├── 10-trustworthiness/
+│   │   ├── confidentiality.findings.yaml     confidentiality.capabilities.yaml
+│   │   ├── integrity.findings.yaml           integrity.capabilities.yaml
+│   │   └── availability.findings.yaml        availability.capabilities.yaml
+│   ├── 20-scalability/               # six files, same shape
+│   ├── 30-auditability/              # six files, same shape
+│   └── 40-threat-model/                 (v1.3+, optional — tmeval-*.yaml)
 └── 40-synthesis/
     ├── deduped-findings.yaml             deduped-capabilities.yaml
     ├── contradictions.yaml               severity-disagreements.yaml
@@ -131,10 +166,25 @@ runs/<run-id>/
     ├── cwe-coverage.yaml                 # v1.2+ (when cwe declared)
     ├── owasp-coverage.yaml               # v1.2+ (when any owasp_* declared)
     ├── d3fend-coverage.yaml              # v1.2+ (when d3fend declared)
-    └── advisory-report.md                # the deliverable
+    ├── threat-model-coverage-report.md  (v1.3+, optional)
+    └── threat-model-coverage.yaml       (v1.3+, optional)
 ```
 
 The three additional rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`) are activation-gated: they are emitted only when the corresponding taxonomies are declared in the run's `taxonomies:` field in `.apd-run.yaml`. Runs that omit the `taxonomies:` field produce the same output as v1.1. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
+
+## Output schemas
+
+The validator uses the following JSON Schema files (`schemas/*.schema.json`):
+
+- `schemas/finding.schema.json` — YAML contract for findings (all agents).
+- `schemas/capability.schema.json` — YAML contract for capabilities (all agents).
+- `schemas/run-config.schema.json` — YAML contract for `.apd-run.yaml`.
+- `schemas/attack-exposure.schema.json` — Synthesizer ATT&CK rollup.
+- `schemas/d3fend-coverage.schema.json` — Synthesizer D3FEND rollup (v1.2+).
+- `schemas/cwe-coverage.schema.json` — Synthesizer CWE rollup (v1.2+).
+- `schemas/threat-model-normalized.schema.json` — Recon output (v1.3+).
+- `schemas/threat-model-coverage.schema.json` — Evaluator output (v1.3+).
+- `schemas/_defs.schema.json` — Shared pattern definitions for ATT&CK/D3FEND/CWE (v1.3+).
 
 ## Domain packs
 

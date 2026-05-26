@@ -5,31 +5,37 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Service-to-service inside cluster uses shared secret tokens, not mTLS.**
+
 - Severity: high (lateral movement amplification)
 - NIST: SC-8(1), SC-23, IA-3
 - ATT&CK: T1557 with specific in-cluster rationale
 - Related concerns: ephemeral (shared-secret rotation), confidentiality (in-cluster PHI in transit)
 
 **Pattern: MFA bypass via SMS fallback on PHI surfaces.**
+
 - Severity: high (effective AAL downgrade)
 - NIST: IA-2(1), IA-2(2), IA-2(8)
 - ATT&CK: T1621 (Multi-Factor Authentication Request Generation) with rationale
 
 **Pattern: Container images deployed without signature verification.**
+
 - Severity: high (supply chain compromise vector)
 - NIST: SI-7, SR-4, SR-11
 - Related concerns: ephemeral (immutable infra requires authentic images)
 
 **Pattern: Webhook payloads from vendor accepted without signature verification.**
+
 - Severity: high (forged webhook can inject malicious adjudication input)
 - NIST: SC-23, IA-3(1), SI-10
 - Related concerns: integrity (input validation, route to Integrity finding for the malformed-input concern)
 
 **Pattern: SBOM not generated; no vulnerability attribution path.**
+
 - Severity: medium to high depending on regulatory commitments
 - NIST: SR-4, SR-4(3), SR-11
 
 **Pattern: Tech plan describes "authenticated APIs" generically.**
+
 - Disposition: uncertainty or blocked
 - prerequisite_evidence: "API authentication specification — mechanism (OAuth, mTLS, signed JWT), token lifetime, validation procedure"
 

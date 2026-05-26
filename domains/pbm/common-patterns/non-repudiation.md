@@ -5,30 +5,36 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 ## Common finding patterns
 
 **Pattern: Admin configuration changes logged but actor attribution is system account, not the human operator.**
+
 - Severity: high (configuration corruption is not attributable; URAC and SOC 2 expose)
 - NIST: AU-3, AU-3(1), AU-12, AU-10
 - Related concerns: authenticity (admin identity strength), immutability (configuration history)
 
 **Pattern: PHI access logging present but only at table/service level, not record level.**
+
 - Severity: high (minimum-necessary attestation impaired)
 - NIST: AU-2, AU-3
 - Detail: HIPAA Security Rule and minimum-necessary doctrine require attribution at the level needed to prove appropriate use, not just access.
 
 **Pattern: Audit shipping is fire-and-forget; consumer-side failure produces silent loss.**
+
 - Severity: high
 - NIST: AU-4, AU-5
 - Related concerns: availability (audit pipeline reliability), immutability (durability of the audit)
 
 **Pattern: No cryptographic protection on audit entries; mutable database table.**
+
 - Severity: high
 - NIST: AU-9, AU-9(2), AU-9(3)
 - Related concerns: immutability (this finding's recommendation will couple to an immutability finding)
 
 **Pattern: Time source unspecified.**
+
 - Disposition: uncertainty
 - prerequisite_evidence: "Audit time source specification — NTP topology, drift bounds, fallback"
 
 **Pattern: Break-glass procedure exists but break-glass actions are not specially audited beyond normal logging.**
+
 - Severity: medium to high
 - NIST: AU-3, AU-12(1), AC-6(9)
 

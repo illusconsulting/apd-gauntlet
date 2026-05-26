@@ -1,0 +1,129 @@
+{
+  "summary": {
+    "title": "PBM Claims Processing Platform",
+    "owner": "Security Architecture Team",
+    "description": "Threat model for the pharmacy benefit management claims processing pipeline covering web client, API gateway, and member database tiers.",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [
+      { "name": "Jon King" }
+    ],
+    "diagrams": [
+      {
+        "title": "Claims Processing Data Flow",
+        "thumbnail": "",
+        "id": 0,
+        "diagramType": "STRIDE",
+        "version": "2.0.0",
+        "cells": [
+          {
+            "position": { "x": 100, "y": 150 },
+            "size": { "width": 120, "height": 60 },
+            "attrs": {
+              "label": { "text": "Browser Client" }
+            },
+            "shape": "actor",
+            "id": "cell-web-client",
+            "data": {
+              "type": "tm.Actor",
+              "name": "Web Client",
+              "description": "Pharmacy operator browser accessing the PBM claims portal.",
+              "outOfScope": false,
+              "threats": [
+                {
+                  "id": "threat-001",
+                  "severity": "High",
+                  "title": "Pharmacy credential theft via phishing",
+                  "type": "Spoofing",
+                  "status": "Open",
+                  "description": "An attacker may obtain pharmacy operator credentials through phishing, enabling unauthorized claims submission under a legitimate pharmacy identity.",
+                  "mitigation": "Enforce MFA for all pharmacy operator logins; implement FIDO2 tokens for high-privilege accounts; rotate credentials quarterly."
+                },
+                {
+                  "id": "threat-002",
+                  "severity": "Medium",
+                  "title": "Session token replay from XSS",
+                  "type": "Tampering",
+                  "status": "Open",
+                  "description": "Reflected or stored XSS in the claims portal could allow an attacker to steal session tokens and replay them to submit fraudulent claims.",
+                  "mitigation": "Apply Content-Security-Policy headers; sanitize all user-supplied HTML; bind session tokens to client TLS fingerprint."
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 350, "y": 150 },
+            "size": { "width": 140, "height": 60 },
+            "attrs": {
+              "label": { "text": "Claims API (label)" }
+            },
+            "shape": "process",
+            "id": "cell-api-gateway",
+            "data": {
+              "type": "tm.Process",
+              "name": "API Gateway",
+              "description": "REST API gateway that validates, routes, and authorizes claims from pharmacy operators.",
+              "outOfScope": false,
+              "threats": [
+                {
+                  "id": "threat-003",
+                  "severity": "High",
+                  "title": "Adjudication result tampering via unsecured admin endpoint",
+                  "type": "Tampering",
+                  "status": "Open",
+                  "description": "An insider or compromised service account could modify adjudication outcomes via an unauthenticated internal admin API, altering approved/denied status.",
+                  "mitigation": ""
+                },
+                {
+                  "id": "threat-004",
+                  "severity": "High",
+                  "title": "PHI leakage through verbose error responses",
+                  "type": "Information disclosure",
+                  "status": "Open",
+                  "description": "Unhandled exceptions may expose member PHI in HTTP 500 response bodies, violating HIPAA Minimum Necessary.",
+                  "mitigation": "Strip PHI from all error responses; return opaque error codes; ship PHI-containing logs to the internal SIEM only."
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 600, "y": 150 },
+            "size": { "width": 140, "height": 60 },
+            "attrs": {
+              "label": { "text": "Member DB" }
+            },
+            "shape": "store",
+            "id": "cell-member-db",
+            "data": {
+              "type": "tm.Store",
+              "name": "Member Database",
+              "description": "PostgreSQL database storing member eligibility, claim history, and PHI for the PBM platform.",
+              "outOfScope": false,
+              "threats": [
+                {
+                  "id": "threat-005",
+                  "severity": "Critical",
+                  "title": "Mass PHI exfiltration via SQL injection in eligibility lookup",
+                  "type": "Information disclosure",
+                  "status": "Open",
+                  "description": "Unsanitized member ID parameters could allow UNION-based SQL injection, exfiltrating SSN, DOB, and prescription history.",
+                  "mitigation": "Parameterize all database queries; apply least privilege to the claims_api role; enable pg_audit logging for SELECT on member tables."
+                },
+                {
+                  "id": "threat-006",
+                  "severity": "High",
+                  "title": "Claims database unavailability via unthrottled bulk reprocessing",
+                  "type": "Denial of service",
+                  "status": "Open",
+                  "description": "Bulk claim reprocessing requests can saturate the member database connection pool, causing downtime that delays patient medication access.",
+                  "mitigation": "Apply per-pharmacy rate limits at the API gateway; implement connection pool sizing and queue-based backpressure for bulk jobs."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

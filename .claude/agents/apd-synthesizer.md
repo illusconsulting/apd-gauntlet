@@ -66,6 +66,7 @@ The synthesizer emits the existing rollups (`nist-coverage.yaml`, `attack-exposu
 - **`40-synthesis/d3fend-coverage.yaml`** — emitted when `d3fend` is declared and any capability carries `control_mappings.d3fend[]`. Validates against `schemas/d3fend-coverage.schema.json`. Includes both the `defensive_entries` (D3FEND techniques implemented by capabilities) and the `counter_coverage` view (for each ATT&CK technique exposed by a finding, list which D3FEND-backed capabilities counter it — or `has_capability_coverage: false` if none do). The `counter_coverage` view feeds Phase C bottleneck analysis.
 
 Discipline:
+
 - Rollup an entry only when at least one finding (or capability for D3FEND) cites it; do not synthesize coverage from reference data alone.
 - `silent: true` entries in OWASP coverage exist to make absence visible to reviewers; reference the full taxonomy from `tools/apd_gauntlet/data/owasp_*.json`.
 - Never invent CWE/OWASP/D3FEND mappings — only roll up what specialists emitted.
@@ -179,6 +180,7 @@ control:
 ```
 
 Posture values:
+
 - `silent` — no findings or capabilities reference this control. Not output unless the control is on a "must address" list for the run.
 - `covered` — capabilities reference, no findings.
 - `gapped` — findings reference, no capabilities.
@@ -250,6 +252,7 @@ Write `advisory-report.md` in this exact section order:
 ```
 
 The advisory report begins with a YAML frontmatter block:
+
 ```yaml
 ---
 framework_version: 1.0.0
@@ -267,6 +270,7 @@ Then the human-readable section content follows.
 Use the template at `templates/advisory-report.template.md`. Detailed guidance per section:
 
 **1. Executive Summary.** Three paragraphs maximum.
+
 - Paragraph 1: scope (what was assessed, what artifacts, what was out of scope).
 - Paragraph 2: the headline finding posture (number of critical/high findings, number of blocked items, what these signal architecturally).
 - Paragraph 3: the headline capability posture (what is confirmed, where coverage is strongest, where it's thinnest).
@@ -276,6 +280,7 @@ Do not summarize individual findings here. Do not editorialize. Do not recommend
 **2. Confirmed Security Posture.** Affirmative section by APD tier. For each tier, list the capabilities in that tier, grouped by APD goal. For each capability, one line stating the title, the maturity, the scope summary. Reviewers read this first.
 
 **3. Blocked-on-Evidence.** All findings with `disposition: blocked`, grouped by APD goal. For each:
+
 - Title
 - Prerequisite evidence list
 - Apparent severity if resolved (per `detail`)
@@ -283,6 +288,7 @@ Do not summarize individual findings here. Do not editorialize. Do not recommend
 This section is the gauntlet's request for more artifacts.
 
 **4. Findings.** All non-blocked findings, sorted by severity descending then by APD tier ascending. Group by severity. For each finding:
+
 - Title and ID
 - APD goal (and lens_perspectives if merged)
 - Severity with cited rubric clause
