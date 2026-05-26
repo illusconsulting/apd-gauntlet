@@ -30,5 +30,14 @@
         <Related_Weakness Nature="ChildOf" CWE_ID="74" View_ID="1000" Ordinal="Primary"/>
       </Related_Weaknesses>
     </Weakness>
+    <Weakness ID="416" Name="Use After Free"
+              Abstraction="Variant" Structure="Simple" Status="Stable">
+      <Description>Test fixture description for CWE-416, with ChildOf repeated across two views.</Description>
+      <Related_Weaknesses>
+        <Related_Weakness Nature="ChildOf" CWE_ID="825" View_ID="1000" Ordinal="Primary"/>
+        <Related_Weakness Nature="ChildOf" CWE_ID="825" View_ID="699" Ordinal="Primary"/>
+        <Related_Weakness Nature="ChildOf" CWE_ID="672" View_ID="1000" Ordinal="Primary"/>
+      </Related_Weaknesses>
+    </Weakness>
   </Weaknesses>
 </Weakness_Catalog>

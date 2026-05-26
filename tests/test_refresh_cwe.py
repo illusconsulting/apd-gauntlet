@@ -65,7 +65,7 @@ def test_project_extracts_required_fields(sample_cwe_xml_bytes: bytes) -> None:
     assert "entries" in projected
     assert "source_sha256" in projected
     assert "fetched_at" in projected
-    assert len(projected["entries"]) == 2
+    assert len(projected["entries"]) == 3
 
     entry = projected["entries"][0]
     assert set(entry.keys()) >= {
@@ -138,4 +138,15 @@ def test_refresh_cwe_writes_to_data_dir(tmp_path: Path, sample_cwe_xml_bytes: by
     data = json.loads(target.read_text())
     assert data["source_sha256"] == hashlib.sha256(sample_cwe_xml_bytes).hexdigest()
     assert data["source_url"]
-    assert "entries" in data and len(data["entries"]) == 2
+    assert "entries" in data and len(data["entries"]) == 3
+
+
+def test_project_deduplicates_parents_across_views(sample_cwe_xml_bytes: bytes) -> None:
+    """A weakness with the same ChildOf across multiple views appears once in parents."""
+    projected = project_cwe_xml_to_json(sample_cwe_xml_bytes)
+    by_id = {e["cwe_id"]: e for e in projected["entries"]}
+    # CWE-416 fixture has CWE_ID=825 listed under two different View_IDs; must appear once.
+    assert "CWE-416" in by_id
+    entry = by_id["CWE-416"]
+    assert entry["parents"] == ["CWE-825", "CWE-672"]
+    assert len(entry["parents"]) == len(set(entry["parents"]))

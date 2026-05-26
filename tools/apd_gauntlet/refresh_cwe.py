@@ -82,13 +82,18 @@ def project_cwe_xml_to_json(xml_bytes: bytes) -> dict[str, Any]:
             continue
         name = weakness.get("Name") or ""
         abstraction = (weakness.get("Abstraction") or "").lower()
+        seen_parents: set[str] = set()
         parents: list[str] = []
         for rel in weakness.iter(f"{_NS}Related_Weakness"):
             if rel.get("Nature") != "ChildOf":
                 continue
             parent_id = rel.get("CWE_ID")
-            if parent_id:
-                parents.append(f"CWE-{parent_id}")
+            if not parent_id:
+                continue
+            pid = f"CWE-{parent_id}"
+            if pid not in seen_parents:
+                seen_parents.add(pid)
+                parents.append(pid)
         has_demo = weakness.find(f"{_NS}Demonstrative_Examples") is not None
         has_obs = weakness.find(f"{_NS}Observed_Examples") is not None
         entries.append(
