@@ -122,6 +122,14 @@ def test_threat_model_coverage_schema_validates() -> None:
     assert errors == [], errors
 
 
+def test_asset_inventory_valid_fixture_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "asset-inventory-valid.yaml",
+        "asset-inventory.schema.json",
+    )
+    assert errors == [], errors
+
+
 def test_domain_accepts_crown_jewels_and_attacker_positions():
     """Domain with all three attack-path arrays should validate."""
     validator = _validator_for("domain")

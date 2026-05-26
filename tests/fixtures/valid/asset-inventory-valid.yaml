@@ -1,0 +1,75 @@
+schema_version: 1
+generated_by: intake
+assets:
+  - asset_id: asset-a1b2c3d4
+    name: "Web Client"
+    asset_type: external_dependency
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 'External clients'"
+    confidence: high
+  - asset_id: asset-b2c3d4e5
+    name: "API Gateway"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 'Service topology'"
+    confidence: high
+  - asset_id: asset-c3d4e5f6
+    name: "Adjudication Service"
+    asset_type: service
+    provenance:
+      source: code_evidence
+      artifact: "00-context/code-evidence-index.yaml"
+      locator: "components[0]"
+    confidence: high
+  - asset_id: asset-d4e5f6a7
+    name: "Member Record Store"
+    asset_type: data_store
+    data_classifications: [phi, internal]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 'Data stores'"
+    confidence: high
+identities:
+  - identity_id: idn-aaaaaaaa
+    name: "pharmacy-submitter"
+    identity_type: external_party
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 'External roles'"
+    confidence: high
+  - identity_id: idn-bbbbbbbb
+    name: "adjudication-service-account"
+    identity_type: service_account
+    provenance:
+      source: code_evidence
+      artifact: "00-context/code-evidence-index.yaml"
+      locator: "service_accounts[0]"
+    confidence: medium
+trust_boundaries:
+  - boundary_id: tb-aaaaaaaa
+    name: "external-to-ingress"
+    crosses: [asset-a1b2c3d4, asset-b2c3d4e5]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "trust boundary diagram"
+  - boundary_id: tb-bbbbbbbb
+    name: "ingress-to-internal"
+    crosses: [asset-b2c3d4e5, asset-c3d4e5f6]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "trust boundary diagram"
+extraction_summary:
+  asset_count: 4
+  identity_count: 2
+  trust_boundary_count: 2
+  high_confidence_count: 5
+  medium_confidence_count: 1
+  low_confidence_count: 0
