@@ -81,7 +81,7 @@
                   "minItems": 1,
                   "items": {
                     "type": "string",
-                    "pattern": "^cap-[0-9a-f]{8}$"
+                    "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$"
                   },
                   "description": "Existing capabilities that implement this D3FEND technique"
                 }

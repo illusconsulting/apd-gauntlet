@@ -33,7 +33,7 @@ def load_d3fend_data() -> dict[str, Any]:
     return json.loads(_D3FEND_DATA_PATH.read_text())  # type: ignore[no-any-return]
 
 
-def _lookup_d3fend_counters(
+def lookup_d3fend_counters(
     attack_technique_ids: list[str],
     d3fend: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -116,7 +116,7 @@ def build_overlays(
         })
         if not attack_techs:
             continue
-        candidate = _lookup_d3fend_counters(attack_techs, d3fend_data)
+        candidate = lookup_d3fend_counters(attack_techs, d3fend_data)
 
         existing_backing: list[dict[str, Any]] = []
         net_new: list[str] = []

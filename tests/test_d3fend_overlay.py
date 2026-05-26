@@ -8,8 +8,8 @@ to ``defense-graph.schema.json``.
 from __future__ import annotations
 
 from apd_gauntlet.attack_path.d3fend_overlay import (
-    _lookup_d3fend_counters,
     build_overlays,
+    lookup_d3fend_counters,
 )
 from apd_gauntlet.attack_path.graph import Edge, Graph, Node
 
@@ -35,26 +35,28 @@ D3FEND_DATA = {
         },
     ]
 }
+# Note: all three D3FEND IDs and their counters_attack mappings are fabricated
+# for unit-test purposes only and do not match the real bundled d3fend.json.
 
 
 # ---------------------------------------------------------------------------
-# _lookup_d3fend_counters unit tests
+# lookup_d3fend_counters unit tests
 # ---------------------------------------------------------------------------
 
 def test_lookup_d3fend_counters_returns_only_techniques_that_counter_input() -> None:
-    counters = _lookup_d3fend_counters(["T1078"], D3FEND_DATA)
+    counters = lookup_d3fend_counters(["T1078"], D3FEND_DATA)
     ids = {c["d3fend_id"] for c in counters}
     assert ids == {"D3-NTSA", "D3-IBCA", "D3-MFA"}
 
 
 def test_lookup_d3fend_counters_filters_by_intersection() -> None:
-    counters = _lookup_d3fend_counters(["T1190"], D3FEND_DATA)
+    counters = lookup_d3fend_counters(["T1190"], D3FEND_DATA)
     ids = {c["d3fend_id"] for c in counters}
     assert ids == {"D3-NTSA"}
 
 
 def test_lookup_d3fend_counters_handles_empty() -> None:
-    assert _lookup_d3fend_counters([], D3FEND_DATA) == []
+    assert lookup_d3fend_counters([], D3FEND_DATA) == []
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +138,7 @@ def test_build_overlays_marks_existing_capability_backing() -> None:
     }
     capabilities = [
         {
-            "id": "cap-12345678",
+            "id": "conf-cap-12345678",
             "control_mappings": {
                 "d3fend": [
                     {
@@ -161,7 +163,7 @@ def test_build_overlays_marks_existing_capability_backing() -> None:
 
     assert len(overlays) == 1
     overlay = overlays[0]
-    assert {"d3fend_id": "D3-MFA", "capability_ids": ["cap-12345678"]} \
+    assert {"d3fend_id": "D3-MFA", "capability_ids": ["conf-cap-12345678"]} \
         in overlay["existing_capability_backing"]
     assert "D3-MFA" not in overlay["net_new_d3fend"]
 
@@ -181,7 +183,7 @@ def test_build_overlays_net_new_d3fend_excludes_already_backed() -> None:
     }
     capabilities = [
         {
-            "id": "cap-12345678",
+            "id": "conf-cap-12345678",
             "control_mappings": {
                 "d3fend": [
                     {

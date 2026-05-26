@@ -18,7 +18,7 @@ bottleneck_overlays:
     existing_capability_backing:
       - d3fend_id: D3-MFA
         capability_ids:
-          - cap-12345678
+          - conf-cap-12345678
     net_new_d3fend:
       - D3-IBCA
       - D3-NTSA
