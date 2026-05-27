@@ -91,8 +91,9 @@ def render_partitioned_diagrams(
     If the union of all path nodes is at or below the cap, returns a single
     diagram. Otherwise partitions ``paths`` by ``attacker_position`` (sorted
     by attacker node_id for determinism) and emits one diagram per attacker.
-    Within each partition, paths are added greedily in their original order
-    until the cap would be exceeded; any remaining paths are dropped.
+    Within each partition, paths are added greedily in their original order.
+    Paths that would push the node count over ``_MAX_NODES_PER_DIAGRAM`` are
+    skipped; subsequent paths that fit within the cap are still included.
     """
     all_nodes: set[str] = set()
     for p in paths:
@@ -119,7 +120,7 @@ def render_partitioned_diagrams(
                 candidate_nodes.add(e.from_node)
                 candidate_nodes.add(e.to_node)
             if len(candidate_nodes) > _MAX_NODES_PER_DIAGRAM:
-                break
+                continue
             subset_nodes = candidate_nodes
             subset.append(p)
         if subset:

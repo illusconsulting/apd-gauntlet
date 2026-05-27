@@ -168,6 +168,9 @@ def test_render_path_diagram_labels_edges_with_edge_type() -> None:
     assert "compromisable_via_finding" in output or "network_reachable" in output
 
 
+_NODE_DECL_RE = re.compile(r'^[A-Za-z_][\w]*\[".*"\]$')
+
+
 def test_render_partitioned_diagrams_partitions_when_node_cap_exceeded() -> None:
     diagrams = render_partitioned_diagrams(
         paths=_many_paths(), graph=_large_graph()
@@ -175,10 +178,9 @@ def test_render_partitioned_diagrams_partitions_when_node_cap_exceeded() -> None
     assert len(diagrams) >= 3  # one per attacker partition
     for d in diagrams:
         node_lines = [
-            line for line in d.splitlines()
-            if "[" in line and line.strip() and line.strip()[0].isalpha()
+            line for line in d.splitlines() if _NODE_DECL_RE.match(line.strip())
         ]
-        assert len(node_lines) <= 50
+        assert 1 <= len(node_lines) <= 50
 
 
 def test_render_partitioned_diagrams_single_diagram_when_below_cap() -> None:
@@ -186,6 +188,164 @@ def test_render_partitioned_diagrams_single_diagram_when_below_cap() -> None:
         paths=[_sample_path()], graph=_sample_graph()
     )
     assert len(diagrams) == 1
+
+
+def test_render_partitioned_diagrams_continues_past_oversize_path() -> None:
+    """A late-fitting path must be included even when an earlier path overflows.
+
+    Regression test for the greedy partition loop: it previously used ``break``
+    which dropped every remaining path the moment one candidate exceeded the
+    50-node cap. With ``continue`` in place, a path that reuses nodes already
+    in the subset (adding zero new nodes) must still be rendered.
+
+    Layout:
+      - 1 attacker, 1 jewel, 56 intermediate assets (asset_0..asset_55).
+      - Path A: attacker -> asset_0 -> asset_1 -> ... -> asset_44 -> jewel
+        (47 unique nodes; fits under the cap).
+      - Path B: attacker -> asset_45 -> asset_46 -> ... -> asset_55 -> jewel
+        (would push the running total to 58 > 50; must be skipped).
+      - Path C: attacker -> asset_0 -> jewel (all nodes already in Path A;
+        adds zero new nodes). With ``continue``, Path C is included.
+        With ``break``, Path C would be dropped because it follows Path B.
+    """
+    g = Graph()
+    atk_id = stable_id("atk", "single")
+    jewel_id = stable_id("jewel", "single")
+    g.add_node(Node(
+        atk_id, "attacker_position", "ext",
+        {"source": "domain_default"}, "high",
+    ))
+    g.add_node(Node(
+        jewel_id, "crown_jewel", "phi",
+        {"source": "domain_default"}, "high",
+    ))
+    asset_ids = [stable_id("asset", f"mid-{i}") for i in range(56)]
+    for i, aid in enumerate(asset_ids):
+        g.add_node(Node(
+            aid, "asset", f"mid-{i}",
+            {"source": "artifact"}, "high",
+        ))
+
+    # --- Path A: chain through asset_0..asset_44 ----------------------------
+    path_a_edges: list[str] = []
+    e_atk_to_a0 = stable_id("edge", "atk-to-a0")
+    g.add_edge(Edge(
+        e_atk_to_a0, "network_reachable",
+        atk_id, asset_ids[0],
+        {"source": "artifact"}, "high", 1,
+    ))
+    path_a_edges.append(e_atk_to_a0)
+    for i in range(44):
+        eid = stable_id("edge", f"a{i}-to-a{i + 1}")
+        g.add_edge(Edge(
+            eid, "network_reachable",
+            asset_ids[i], asset_ids[i + 1],
+            {"source": "artifact"}, "high", 1,
+        ))
+        path_a_edges.append(eid)
+    e_a44_to_jewel = stable_id("edge", "a44-to-jewel")
+    g.add_edge(Edge(
+        e_a44_to_jewel, "data_resides_on",
+        asset_ids[44], jewel_id,
+        {"source": "artifact"}, "high", 1,
+    ))
+    path_a_edges.append(e_a44_to_jewel)
+
+    # --- Path B: chain through asset_45..asset_55 (new nodes; overflow) -----
+    path_b_edges: list[str] = []
+    e_atk_to_a45 = stable_id("edge", "atk-to-a45")
+    g.add_edge(Edge(
+        e_atk_to_a45, "network_reachable",
+        atk_id, asset_ids[45],
+        {"source": "artifact"}, "high", 1,
+    ))
+    path_b_edges.append(e_atk_to_a45)
+    for i in range(45, 55):
+        eid = stable_id("edge", f"a{i}-to-a{i + 1}")
+        g.add_edge(Edge(
+            eid, "network_reachable",
+            asset_ids[i], asset_ids[i + 1],
+            {"source": "artifact"}, "high", 1,
+        ))
+        path_b_edges.append(eid)
+    e_a55_to_jewel = stable_id("edge", "a55-to-jewel")
+    g.add_edge(Edge(
+        e_a55_to_jewel, "data_resides_on",
+        asset_ids[55], jewel_id,
+        {"source": "artifact"}, "high", 1,
+    ))
+    path_b_edges.append(e_a55_to_jewel)
+
+    # --- Path C: attacker -> asset_0 -> jewel (zero new nodes) --------------
+    # Reuses ``e_atk_to_a0`` from Path A; introduces a brand-new edge for the
+    # asset_0 -> jewel hop that does NOT appear in Path A or Path B. The
+    # presence of *this edge id* in the rendered diagram is the smoking gun
+    # that proves Path C was processed after Path B was skipped.
+    e_a0_to_jewel = stable_id("edge", "a0-to-jewel")
+    g.add_edge(Edge(
+        e_a0_to_jewel, "data_resides_on",
+        asset_ids[0], jewel_id,
+        {"source": "artifact"}, "high", 1,
+    ))
+    path_c_edges = [e_atk_to_a0, e_a0_to_jewel]
+
+    paths = [
+        APath(
+            path_id=stable_id("edge", "path-a"),
+            attacker_position=atk_id,
+            crown_jewel=jewel_id,
+            edges=tuple(path_a_edges),
+            hop_count=len(path_a_edges),
+            feasibility="high",
+            severity_sum=0,
+            mitigation_count=0,
+        ),
+        APath(
+            path_id=stable_id("edge", "path-b"),
+            attacker_position=atk_id,
+            crown_jewel=jewel_id,
+            edges=tuple(path_b_edges),
+            hop_count=len(path_b_edges),
+            feasibility="high",
+            severity_sum=0,
+            mitigation_count=0,
+        ),
+        APath(
+            path_id=stable_id("edge", "path-c"),
+            attacker_position=atk_id,
+            crown_jewel=jewel_id,
+            edges=tuple(path_c_edges),
+            hop_count=len(path_c_edges),
+            feasibility="high",
+            severity_sum=0,
+            mitigation_count=0,
+        ),
+    ]
+
+    diagrams = render_partitioned_diagrams(paths=paths, graph=g)
+    assert len(diagrams) == 1  # only one attacker -> one partition
+    output = diagrams[0]
+
+    # Path C's unique edge must appear (proves loop kept going past Path B).
+    asset_0_safe = _sanitize(asset_ids[0])
+    jewel_safe = _sanitize(jewel_id)
+    expected_c_edge_prefix = f"{asset_0_safe} --|data_resides_on/high|--> {jewel_safe}"
+    assert expected_c_edge_prefix in output, (
+        f"Path C edge missing from diagram; got:\n{output}"
+    )
+
+    # Path B's unique edge must NOT appear (would push total > 50, so skipped).
+    asset_55_safe = _sanitize(asset_ids[55])
+    unexpected_b_edge = f"{asset_55_safe} --|data_resides_on/high|--> {jewel_safe}"
+    assert unexpected_b_edge not in output, (
+        f"Path B edge unexpectedly present (cap should have skipped it):\n{output}"
+    )
+
+    # Node-count stays within the cap (canonical regex; same as test #4).
+    node_lines = [
+        line for line in output.splitlines() if _NODE_DECL_RE.match(line.strip())
+    ]
+    assert 1 <= len(node_lines) <= 50
 
 
 def test_mermaid_output_is_valid_against_basic_syntax_pattern() -> None:
