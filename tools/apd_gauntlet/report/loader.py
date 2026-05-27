@@ -177,6 +177,10 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     }
     if attack_paths is not None:
         source_hashes["attack-paths.yaml"] = _hash(synth / "attack-paths.yaml")
+    if asset_graph is not None:
+        source_hashes["asset-graph.yaml"] = _hash(synth / "asset-graph.yaml")
+    if defense_graph is not None:
+        source_hashes["defense-graph.yaml"] = _hash(synth / "defense-graph.yaml")
     if report_data is not None:
         source_hashes["report-data.yaml"] = _hash(synth / "report-data.yaml")
 
