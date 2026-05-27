@@ -125,9 +125,6 @@ def _extract_domain_pack_version(
     return ""
 
 
-_PATH_SLUG_RE = None  # lazy import avoids top-level re dependency
-
-
 def _is_path_slug(value: str) -> bool:
     """Return True if *value* looks like a filesystem path slug.
 
