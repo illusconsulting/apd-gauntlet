@@ -24,7 +24,10 @@ def main() -> int:
         )
         return 2
     if not (BUILD_DIR / "node_modules").exists():
-        subprocess.run(["npm", "ci"], cwd=BUILD_DIR, check=True)
+        if (BUILD_DIR / "package-lock.json").exists():
+            subprocess.run(["npm", "ci"], cwd=BUILD_DIR, check=True)
+        else:
+            subprocess.run(["npm", "install"], cwd=BUILD_DIR, check=True)
     subprocess.run(["node", "build.mjs"], cwd=BUILD_DIR, check=True)
     print("build-report-template: bundle written.")
     return 0
