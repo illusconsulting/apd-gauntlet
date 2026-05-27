@@ -6,13 +6,25 @@ and the lint-agents command rely on.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
+from typing import Any
 
+import yaml
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AGENT = REPO_ROOT / ".claude" / "agents" / "apd-attack-path-analyzer.md"
+
+
+def _agent_frontmatter() -> dict[str, Any]:
+    text = AGENT.read_text()
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+    assert m is not None, "Agent file is missing YAML frontmatter"
+    meta = yaml.safe_load(m.group(1))
+    assert isinstance(meta, dict)
+    return meta
 
 
 def test_agent_file_exists() -> None:
@@ -24,6 +36,16 @@ def test_agent_has_required_frontmatter() -> None:
     assert text.startswith("---\n")
     for field in ("name:", "description:", "tools:", "model:"):
         assert field in text, f"Frontmatter missing '{field}'"
+
+
+def test_agent_tools_are_expected_set() -> None:
+    meta = _agent_frontmatter()
+    assert set(meta["tools"]) == {"Read", "Glob", "Grep", "Write", "Bash"}
+
+
+def test_agent_model_is_opus() -> None:
+    meta = _agent_frontmatter()
+    assert meta["model"] == "opus"
 
 
 def test_agent_declares_tier_4() -> None:

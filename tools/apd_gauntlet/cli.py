@@ -556,43 +556,48 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
 def _load_records(
     run_dir: Path,
 ) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
-    """Index findings under ``20-specialist-findings/`` by ``id`` and collect
-    all capabilities under ``30-specialist-capabilities/``. Missing
-    directories yield empty results — the analyzer must still run on
-    partial inputs.
+    """Index findings by ``id`` and collect capabilities, recursively scanning
+    ``run_dir`` for ``*.findings.yaml`` / ``*.capabilities.yaml``.
+
+    Specialist agents emit into the per-goal tier directories
+    (``10-trustworthiness/``, ``20-scalability/``, ``30-auditability/``) per
+    the apd-synthesizer's input convention; test fixtures may use flatter
+    layouts. A recursive glob handles both shapes uniformly.
+
+    The analyzer's own ``40-synthesis/attack-path-findings.yaml`` is skipped
+    so repeated runs do not ingest the previous run's apath-* findings as
+    "specialist findings."
     """
     findings_by_id: dict[str, dict[str, Any]] = {}
     capabilities: list[dict[str, Any]] = []
-    fdir = run_dir / "20-specialist-findings"
-    if fdir.exists():
-        for f in sorted(fdir.glob("*.findings.yaml")):
-            doc = yaml.safe_load(f.read_text()) or {}
-            for idx, rec in enumerate(doc.get("findings", []) or []):
-                if not isinstance(rec, dict):
-                    click.echo(
-                        f"WARNING: {f}: findings[{idx}] is not a dict; skipping",
-                        err=True,
-                    )
-                    continue
-                if "id" not in rec:
-                    click.echo(
-                        f"WARNING: {f}: findings[{idx}] missing 'id'; skipping",
-                        err=True,
-                    )
-                    continue
-                findings_by_id[rec["id"]] = rec
-    cdir = run_dir / "30-specialist-capabilities"
-    if cdir.exists():
-        for f in sorted(cdir.glob("*.capabilities.yaml")):
-            doc = yaml.safe_load(f.read_text()) or {}
-            for idx, rec in enumerate(doc.get("capabilities", []) or []):
-                if not isinstance(rec, dict):
-                    click.echo(
-                        f"WARNING: {f}: capabilities[{idx}] is not a dict; skipping",
-                        err=True,
-                    )
-                    continue
-                capabilities.append(rec)
+    for f in sorted(run_dir.glob("**/*.findings.yaml")):
+        if "40-synthesis" in f.parts and f.name == "attack-path-findings.yaml":
+            continue
+        doc = yaml.safe_load(f.read_text()) or {}
+        for idx, rec in enumerate(doc.get("findings", []) or []):
+            if not isinstance(rec, dict):
+                click.echo(
+                    f"WARNING: {f}: findings[{idx}] is not a dict; skipping",
+                    err=True,
+                )
+                continue
+            if "id" not in rec:
+                click.echo(
+                    f"WARNING: {f}: findings[{idx}] missing 'id'; skipping",
+                    err=True,
+                )
+                continue
+            findings_by_id[rec["id"]] = rec
+    for f in sorted(run_dir.glob("**/*.capabilities.yaml")):
+        doc = yaml.safe_load(f.read_text()) or {}
+        for idx, rec in enumerate(doc.get("capabilities", []) or []):
+            if not isinstance(rec, dict):
+                click.echo(
+                    f"WARNING: {f}: capabilities[{idx}] is not a dict; skipping",
+                    err=True,
+                )
+                continue
+            capabilities.append(rec)
     return findings_by_id, capabilities
 
 

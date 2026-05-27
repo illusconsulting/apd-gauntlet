@@ -62,12 +62,10 @@ def build_graph(run_dir: Path) -> BuildResult:
     tm_norm = _load_optional(run_dir / "00-context" / "threat-model-normalized.yaml")
     code_idx = _load_optional(run_dir / "00-context" / "code-evidence-index.yaml")
     findings = _load_all_records(
-        run_dir / "20-specialist-findings", key="findings", glob="*.findings.yaml"
+        run_dir, key="findings", glob="**/*.findings.yaml"
     )
     capabilities = _load_all_records(
-        run_dir / "30-specialist-capabilities",
-        key="capabilities",
-        glob="*.capabilities.yaml",
+        run_dir, key="capabilities", glob="**/*.capabilities.yaml"
     )
 
     crown_jewel_names = _resolve_crown_jewels(run_cfg, domain_cfg)
@@ -122,12 +120,25 @@ def _load_optional(path: Path) -> dict[str, Any] | None:
 
 
 def _load_all_records(
-    dir_path: Path, *, key: str, glob: str
+    run_dir: Path, *, key: str, glob: str
 ) -> list[dict[str, Any]]:
+    """Recursively load YAML records matching ``glob`` under ``run_dir``.
+
+    Specialist agents emit findings/capabilities into per-goal tier directories
+    (``10-trustworthiness/``, ``20-scalability/``, ``30-auditability/``), but
+    older fixtures and test scaffolds may use flatter layouts. A recursive
+    glob (e.g. ``**/*.findings.yaml``) handles both shapes uniformly.
+
+    The analyzer's own ``40-synthesis/attack-path-findings.yaml`` is skipped
+    explicitly — if it weren't, every re-run would ingest its own previous
+    output as a "specialist finding."
+    """
     out: list[dict[str, Any]] = []
-    if not dir_path.exists():
+    if not run_dir.exists():
         return out
-    for f in sorted(dir_path.glob(glob)):
+    for f in sorted(run_dir.glob(glob)):
+        if "40-synthesis" in f.parts and f.name == "attack-path-findings.yaml":
+            continue
         doc = _load_yaml(f)
         records = doc.get(key)
         if isinstance(records, list):
@@ -382,7 +393,7 @@ def _add_finding_edges(g: Graph, findings: list[dict[str, Any]]) -> None:
                     to_node=hits[1],
                     provenance={
                         "source": "artifact",
-                        "artifact": "20-specialist-findings",
+                        "artifact": "specialist findings",
                         "locator": f["id"],
                     },
                     confidence=f.get("confidence", "medium"),
@@ -420,7 +431,7 @@ def _add_capability_edges(g: Graph, capabilities: list[dict[str, Any]]) -> None:
                     to_node=hits[1],
                     provenance={
                         "source": "artifact",
-                        "artifact": "30-specialist-capabilities",
+                        "artifact": "specialist capabilities",
                         "locator": c["id"],
                     },
                     confidence=c.get("confidence", "medium"),

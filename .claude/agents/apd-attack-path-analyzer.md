@@ -26,14 +26,16 @@ model: opus
 Tier-4 agent. Runs AFTER `apd-synthesizer` has produced dedup'd findings and
 capabilities. Activation-gated:
 
-- Activates when the domain pack declares `crown_jewels[]` OR the run-config
-  declares `crown_jewels[]` (and at least one `attacker_positions[]` entry is
-  similarly declared)
-- Skips silently when neither side declares targets — the operator opted out
-  of attack-path analysis for this run
-- Block-on-missing: if the operator declared `crown_jewels: []` (empty list,
-  overriding the domain pack), the analyzer emits a single
-  `disposition: blocked` finding and stops
+- Activates when BOTH `crown_jewels[]` AND `attacker_positions[]` are
+  resolvable — from either the run-config or the active domain pack (the
+  run-config wins when both declare the same field)
+- Skips silently when `crown_jewels` OR `attacker_positions` are absent (or
+  both) from both the run-config and the domain pack — the operator opted
+  out of attack-path analysis for this run
+- Block-on-empty-override: if the operator declared `crown_jewels: []`
+  (explicit empty list, overriding the domain pack), the analyzer emits a
+  single `disposition: blocked` finding and stops. The same rule applies to
+  an explicit `attacker_positions: []` override
 
 ## Inputs
 
@@ -42,11 +44,14 @@ capabilities. Activation-gated:
   attacker-vector edges)
 - `00-context/code-evidence-index.yaml` (optional; used for cross-service
   reachability)
-- `20-specialist-findings/*.findings.yaml` (dedup'd by `apd-synthesizer`; one
-  finding can produce one `compromisable_via_finding` edge)
-- `30-specialist-capabilities/*.capabilities.yaml` (dedup'd by
-  `apd-synthesizer`; one capability can produce one
-  `mitigated_by_capability` edge)
+- Specialist findings under `10-trustworthiness/`, `20-scalability/`, and
+  `30-auditability/` (matching `*.findings.yaml`, recursive; dedup'd by
+  `apd-synthesizer`; each finding can produce one
+  `compromisable_via_finding` edge). The analyzer's own
+  `40-synthesis/attack-path-findings.yaml` is excluded from this scan
+- Specialist capabilities under the same tier directories (matching
+  `*.capabilities.yaml`, recursive; dedup'd by `apd-synthesizer`; each
+  capability can produce one `mitigated_by_capability` edge)
 - `.apd-run.yaml` (`crown_jewels[]`, `attacker_positions[]`,
   `attack_path_analysis.{max_hop, max_paths_per_pair, bottleneck_threshold}`)
 - The active domain pack (defaults for the same fields)
@@ -75,10 +80,15 @@ capabilities. Activation-gated:
 3. **Author edge provenance.** Read the emitted `asset-graph.yaml`. For each
    `compromisable_via_finding` and `mitigated_by_capability` edge, check
    that the deterministic name-matching heuristic chose plausible
-   endpoints. When it did not (e.g., the finding's evidence excerpt
-   mentions "the gateway" but the heuristic wired it to the wrong asset),
-   correct the edge by editing `asset-graph.yaml` in place AND update the
-   finding/capability's `evidence[].excerpt` so the linkage is explicit.
+   endpoints. Only make a correction when the evidence positively names a
+   different endpoint than the heuristic chose (per
+   `apd-attack-path-discipline` Rule 2). When the evidence is merely
+   imprecise — e.g., the excerpt says "the gateway" with no further
+   disambiguation — leave the heuristic choice and note the uncertainty in
+   `provenance.locator`. Over-correction destroys reproducibility between
+   runs. When you do correct (e.g., the excerpt clearly names a specific
+   asset the heuristic missed), edit `asset-graph.yaml` in place AND update
+   the finding/capability's `evidence[].excerpt` so the linkage is explicit.
    Use `provenance.locator` to point to the excerpt that justifies the
    correction; the schema's `additionalProperties: false` prevents
    introducing new keys.
@@ -91,9 +101,27 @@ capabilities. Activation-gated:
    `templates/attack-path-report.template.md`. Embed Mermaid diagrams
    inline (the CLI's mermaid module produces them; pull from a temporary
    output or call the renderer via a Python one-liner from a Bash step).
-6. **Validate.** `apd-gauntlet validate <run_dir>` must pass on the
-   artifacts you wrote. Schema mismatches block the agent from declaring
-   success.
+   If `templates/attack-path-report.template.md` does not yet exist (it
+   ships in Task C-22), generate the report inline with the following
+   sections: Executive Summary; Asset Graph Overview (node/edge counts,
+   sources used, embedded Mermaid diagram); Top Attack Paths (sorted by
+   `severity_sum` descending, ties broken by `hop_count` ascending);
+   Bottleneck Edge Analysis (per-edge D3FEND overlay and gap-finding
+   summary); D3FEND Defensive Overlay (the `defense-graph.yaml` rendered
+   as a markdown table); and References (cross-links to `apath-*` findings
+   and the dedup'd specialist findings whose edges contributed).
+6. **Validate.** Run `apd-gauntlet validate <run_dir>` for the cross-file
+   passes it currently covers. Note: until Task C-21 wires the four C-15
+   artifacts (`asset-graph.yaml`, `attack-paths.yaml`, `defense-graph.yaml`,
+   `attack-path-findings.yaml`) into the validator's glob set and
+   `SYNTHESIS_ROLLUPS` map, three of the four emitted files pass `validate`
+   vacuously. Until that lands, run a direct schema check on each emitted
+   file — `asset-graph.yaml` against `schemas/asset-graph.schema.json`,
+   `attack-paths.yaml` against `schemas/attack-path.schema.json`,
+   `defense-graph.yaml` against `schemas/defense-graph.schema.json`, and
+   each record in `attack-path-findings.yaml` against
+   `schemas/finding.schema.json`. If any artifact fails its schema, fix it
+   before declaring success.
 
 ## Required reading
 
