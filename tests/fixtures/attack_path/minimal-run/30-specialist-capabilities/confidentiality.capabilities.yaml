@@ -1,12 +1,12 @@
-capabilities:
+capability:
   - schema_version: 1
-    id: conf-cap-7c2a4f91
+    id: conf-cap-f75d3687
     agent: confidentiality
     apd_tier: trustworthiness
     apd_goal: confidentiality
     title: "Mutual TLS on claim-ingress to adjudication-service link"
     description: "Mutual TLS is enforced between claim-ingress and adjudication-service, preventing in-cluster eavesdropping on PHI submission requests."
-    maturity: implemented
+    maturity: designed
     scope: "Confirmed for: claim-ingress to adjudication-service link only. Not addressed: claim-ingress to external pharmacy systems."
     evidence:
       - artifact: tech_plan.md

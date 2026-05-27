@@ -498,7 +498,7 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
     short_hash = hashlib.sha256(reason.encode()).hexdigest()[:8]
     doc = {
         "schema_version": 1,
-        "findings": [
+        "finding": [
             {
                 "schema_version": 1,
                 "id": f"apath-{short_hash}",
@@ -574,26 +574,38 @@ def _load_records(
         if "40-synthesis" in f.parts and f.name == "attack-path.findings.yaml":
             continue
         doc = yaml.safe_load(f.read_text()) or {}
-        for idx, rec in enumerate(doc.get("findings", []) or []):
+        # Canonical root key is singular (`finding`), per validate.RECORD_KINDS.
+        # Accept legacy plural (`findings`) defensively so older or hand-rolled
+        # fixtures still load — writers always emit singular.
+        raw = doc.get("finding")
+        if raw is None:
+            raw = doc.get("findings")
+        records = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+        for idx, rec in enumerate(records):
             if not isinstance(rec, dict):
                 click.echo(
-                    f"WARNING: {f}: findings[{idx}] is not a dict; skipping",
+                    f"WARNING: {f}: finding[{idx}] is not a dict; skipping",
                     err=True,
                 )
                 continue
             if "id" not in rec:
                 click.echo(
-                    f"WARNING: {f}: findings[{idx}] missing 'id'; skipping",
+                    f"WARNING: {f}: finding[{idx}] missing 'id'; skipping",
                     err=True,
                 )
                 continue
             findings_by_id[rec["id"]] = rec
     for f in sorted(run_dir.glob("**/*.capabilities.yaml")):
         doc = yaml.safe_load(f.read_text()) or {}
-        for idx, rec in enumerate(doc.get("capabilities", []) or []):
+        # Singular canonical; accept legacy plural defensively (see above).
+        raw = doc.get("capability")
+        if raw is None:
+            raw = doc.get("capabilities")
+        records = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+        for idx, rec in enumerate(records):
             if not isinstance(rec, dict):
                 click.echo(
-                    f"WARNING: {f}: capabilities[{idx}] is not a dict; skipping",
+                    f"WARNING: {f}: capability[{idx}] is not a dict; skipping",
                     err=True,
                 )
                 continue
@@ -730,7 +742,11 @@ def _write_defense_graph(path: Path, overlays: list[dict[str, Any]]) -> None:
 
 
 def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
-    doc = {"schema_version": 1, "findings": findings}
+    """Emit a ``*.findings.yaml`` doc with the singular ``finding:`` root key
+    (per ``validate.RECORD_KINDS``). The internal Python variable stays
+    plural — only the YAML root key is singular.
+    """
+    doc = {"schema_version": 1, "finding": findings}
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
 
 

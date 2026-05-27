@@ -1,6 +1,6 @@
-findings:
+finding:
   - schema_version: 1
-    id: conf-1a2b3c4d
+    id: conf-10a1727f
     agent: confidentiality
     apd_tier: trustworthiness
     apd_goal: confidentiality

@@ -139,7 +139,7 @@ def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
     # A poison record that, if ingested, would attach to a `compromisable_via_finding`
     # edge — we assert that no edge with this id appears in the graph.
     (synth / "attack-path.findings.yaml").write_text(
-        "findings:\n"
+        "finding:\n"
         "  - id: apath-poison\n"
         "    detail: 'adjudication-service to member-record-store'\n"
         "    severity: high\n"

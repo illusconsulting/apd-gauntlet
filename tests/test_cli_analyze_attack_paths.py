@@ -108,7 +108,7 @@ def test_analyze_attack_paths_emits_blocked_finding_when_no_crown_jewels(
     findings_doc = yaml.safe_load(
         (tmp_path / "40-synthesis" / "attack-path.findings.yaml").read_text()
     )
-    blocked = [f for f in findings_doc["findings"] if f["disposition"] == "blocked"]
+    blocked = [f for f in findings_doc["finding"] if f["disposition"] == "blocked"]
     assert blocked
     assert "crown jewels" in blocked[0]["title"].lower()
 
@@ -182,8 +182,9 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
             f"{[e.message for e in errors]}"
         )
 
-    # The findings file is a wrapper {schema_version, findings: [...]};
-    # finding.schema.json describes one finding record, so iterate.
+    # The findings file is a wrapper {schema_version, finding: [...]} per the
+    # singular root-key convention in validate.RECORD_KINDS; finding.schema.json
+    # describes one finding record, so iterate.
     findings_doc = yaml.safe_load(
         (synth / "attack-path.findings.yaml").read_text()
     )
@@ -191,9 +192,40 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
         (SCHEMA_DIR / "finding.schema.json").read_text()
     )
     finding_validator = Draft202012Validator(finding_schema, registry=registry)
-    for f in findings_doc["findings"]:
+    for f in findings_doc["finding"]:
         errors = list(finding_validator.iter_errors(f))
         assert errors == [], (
             f"finding {f.get('id')} failed schema validation: "
             f"{[e.message for e in errors]}"
         )
+
+
+def test_analyze_attack_paths_output_is_iterable_by_validate(tmp_path: Path) -> None:
+    """End-to-end regression: the analyzer's emitted ``attack-path.findings.yaml``
+    must satisfy *both* the ``*.findings.yaml`` glob *and* the singular
+    ``finding:`` root key that ``validate._iter_records`` keys off.
+
+    Pre-C-20 the file was named ``attack-path-findings.yaml`` (hyphen) and
+    therefore did not match the ``*.findings.yaml`` glob — so ``apath-*``
+    records never reached the synthesizer's matrix. The C-20 rename closed
+    the filename half of that gap; this test guards the convention half:
+    if any future change re-introduces the plural ``findings:`` root key,
+    ``_iter_records`` will return zero apath records and this assertion
+    will fail loudly.
+    """
+    from apd_gauntlet.validate import _iter_records
+
+    runner = CliRunner()
+    _scaffold_minimal_run(tmp_path)
+    result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+
+    all_records = list(_iter_records(tmp_path))
+    finding_records = [rec for _path, kind, rec in all_records if kind == "finding"]
+    apath_records = [
+        r for r in finding_records if str(r.get("id", "")).startswith("apath-")
+    ]
+    assert apath_records, (
+        "analyzer findings should be reachable via _iter_records — was broken "
+        "pre-C-20 by the filename+root-key convention split"
+    )

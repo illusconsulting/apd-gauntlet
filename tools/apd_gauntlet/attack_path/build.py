@@ -62,10 +62,10 @@ def build_graph(run_dir: Path) -> BuildResult:
     tm_norm = _load_optional(run_dir / "00-context" / "threat-model-normalized.yaml")
     code_idx = _load_optional(run_dir / "00-context" / "code-evidence-index.yaml")
     findings = _load_all_records(
-        run_dir, key="findings", glob="**/*.findings.yaml"
+        run_dir, key="finding", glob="**/*.findings.yaml"
     )
     capabilities = _load_all_records(
-        run_dir, key="capabilities", glob="**/*.capabilities.yaml"
+        run_dir, key="capability", glob="**/*.capabilities.yaml"
     )
 
     crown_jewel_names = _resolve_crown_jewels(run_cfg, domain_cfg)
@@ -129,10 +129,20 @@ def _load_all_records(
     older fixtures and test scaffolds may use flatter layouts. A recursive
     glob (e.g. ``**/*.findings.yaml``) handles both shapes uniformly.
 
+    The canonical root key is singular (``finding`` / ``capability``) per
+    ``validate.RECORD_KINDS``. A legacy plural form (``findings`` /
+    ``capabilities``) is accepted defensively so older hand-rolled fixtures
+    still load — writers always emit the singular form. Both list and scalar
+    payloads under the root key are supported.
+
     The analyzer's own ``40-synthesis/attack-path.findings.yaml`` is skipped
     explicitly — if it weren't, every re-run would ingest its own previous
     output as a "specialist finding."
     """
+    plural_alias = {
+        "finding": "findings",
+        "capability": "capabilities",
+    }
     out: list[dict[str, Any]] = []
     if not run_dir.exists():
         return out
@@ -141,8 +151,12 @@ def _load_all_records(
             continue
         doc = _load_yaml(f)
         records = doc.get(key)
+        if records is None and key in plural_alias:
+            records = doc.get(plural_alias[key])
         if isinstance(records, list):
             out.extend(r for r in records if isinstance(r, dict))
+        elif isinstance(records, dict):
+            out.append(records)
     return out
 
 
