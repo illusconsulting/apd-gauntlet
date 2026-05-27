@@ -210,6 +210,93 @@ def capability_grid(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     return out
 
 
+_SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4, "info": 4}
+_CONF_ORDER = {"high": 0, "medium": 1, "low": 2}
+
+
+def _algorithmic_headline_ranks(findings: list[dict[str, Any]]) -> dict[str, int]:
+    """Pick the top-10 findings by (severity, confidence, id). Returns id→rank."""
+    ranked = sorted(
+        findings,
+        key=lambda f: (
+            _SEV_ORDER.get(f.get("severity", "informational"), 9),
+            _CONF_ORDER.get(f.get("confidence", "low"), 9),
+            f.get("id", ""),
+        ),
+    )
+    top = ranked[:10]
+    return {f["id"]: idx + 1 for idx, f in enumerate(top) if "id" in f}
+
+
+def _lens_perspective_source_ids(raw: Any) -> list[Any]:
+    """Extract source_id values from lens_perspectives — tolerates list or dict shape.
+
+    List shape (standard):  [{source_id: "x", ...}, ...]  → ["x", ...]
+    Dict shape (legacy_example): {lens_name: {source_id: "x", ...}, ...} → ["x", ...]
+    """
+    if isinstance(raw, dict):
+        return [v.get("source_id") for v in raw.values() if isinstance(v, dict)]
+    if isinstance(raw, list):
+        return [lp.get("source_id") for lp in raw if isinstance(lp, dict)]
+    return []
+
+
+def findings_array(
+    artifacts: RunArtifacts,
+    *,
+    headline_supplement: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Map deduped findings + attack-path findings to the template's flat array.
+
+    Headline rank: if supplement is supplied, use it (silently dropping ids that
+    don't match a finding). Otherwise compute algorithmically (top-10 by severity
+    desc, confidence desc, id asc).
+    """
+    all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
+    if headline_supplement is not None:
+        valid_ids = {f.get("id") for f in all_findings}
+        headline_ranks = {
+            entry["id"]: entry["rank"]
+            for entry in headline_supplement
+            if entry.get("id") in valid_ids
+        }
+    else:
+        headline_ranks = _algorithmic_headline_ranks(all_findings)
+
+    out: list[dict[str, Any]] = []
+    for f in all_findings:
+        fid = f.get("id")
+        entry: dict[str, Any] = {
+            "id":           fid,
+            "title":        f.get("title", ""),
+            "goal":         f.get("apd_goal"),
+            "tier":         f.get("apd_tier"),
+            "severity":     f.get("severity", "informational"),
+            "confidence":   f.get("confidence", "low"),
+            "disposition":  f.get("disposition", "gap"),
+            "summary":      f.get("summary", ""),
+            "detail":       f.get("detail", ""),
+            "rubric_clause": f.get("rubric_clause"),
+            "evidence":     f.get("evidence", []),
+            "recommendation": f.get("recommendation"),
+            "mappings": {
+                "nist":      (f.get("control_mappings") or {}).get("nist_800_53r5", []),
+                "attack":    (f.get("control_mappings") or {}).get("mitre_attack", []),
+                "cwe":       (f.get("control_mappings") or {}).get("cwe", []),
+                "owasp_api": (f.get("control_mappings") or {}).get("owasp_api_top10", []),
+                "owasp":     (f.get("control_mappings") or {}).get("owasp_top10", []),
+                "d3fend":    (f.get("control_mappings") or {}).get("d3fend", []),
+            },
+            "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
+            "prerequisite_evidence": f.get("prerequisite_evidence", []),
+        }
+        if fid in headline_ranks:
+            entry["headline"] = True
+            entry["headline_rank"] = headline_ranks[fid]
+        out.append(entry)
+    return out
+
+
 def strengths_section(
     artifacts: RunArtifacts,
     *,
