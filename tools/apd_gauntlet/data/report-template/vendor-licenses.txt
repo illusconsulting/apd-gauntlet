@@ -1,0 +1,3 @@
+React 18.3.1 — MIT — https://github.com/facebook/react/blob/main/LICENSE
+Mermaid 10.9.1 — MIT — https://github.com/mermaid-js/mermaid/blob/develop/LICENSE
+Fonts: Google Fonts — see SIL OFL / Apache 2.0 license files alongside each .woff2

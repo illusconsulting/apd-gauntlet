@@ -1,0 +1,33 @@
+# tests/fixtures/report-data/example.report-data.yaml
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "This run assessed LegacyExample v4.0 across thirteen input artifacts. The PBM domain pack supplied severity-rubric anchors; HIPAA breach-notification clauses applied while CMS Part D anchors did not."
+    - "After dedup the synthesizer produced 44 findings against 48 confirmed capabilities. The headline gap is structural on the sidecar pre-seal hop where channel confidentiality, channel integrity, and workload identity are all absent at once."
+
+headline_findings:
+  - {id: merged-7c2a4f91, rank: 1}
+  - {id: merged-9c1f8d62, rank: 2}
+  - {id: nonrep-bf44cc75, rank: 3}
+
+strengths:
+  - id: conf-cap-3f6176f9
+    caveats:
+      - "32 MiB binary pass-through is mediation-exempt by spec; adopters with cleartext PHI in binary payloads must apply complementary controls."
+  - id: conf-cap-bc41682b
+    caveats:
+      - "Pre-bootstrap XSS defeats this boundary by patching natives before captureNatives runs."
+
+next_steps:
+  - rank: 1
+    text: "Resolve the sidecar to external transport cluster which is the single architectural change that closes the pre-seal hop attacker position."
+    refs: [merged-7c2a4f91]
+  - rank: 2
+    text: "Publish KEK lifecycle documentation naming vendor, hierarchy, rotation cadence, revocation procedure, ESO HA topology."
+    refs: [merged-9c1f8d62]
+
+posture_summary:
+  trustworthiness: "Substantial and tightly engineered; structural gap on the pre-seal hop."
+  scalability:     "Stateless tier confirmed; outbound resilience and topology blocked on evidence."
+  auditability:    "Verification-flow audit only; production sink, time source, and storage tier unspecified."

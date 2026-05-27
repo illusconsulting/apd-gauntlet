@@ -26,7 +26,12 @@ venv/
 env/
 
 # Run outputs (gauntlet runs)
-runs/
+# Exclude direct contents of runs/, then re-include the legacy_example example run
+# (used as fixture by Phase D tests and the operator quickstart). The
+# regenerable HTML report build output under it stays excluded.
+runs/*
+!runs/apd-legacy-example-run
+runs/apd-legacy-example-run/40-synthesis/report-html/
 # Allow test fixture runs
 !tests/fixtures/runs/
 !tests/fixtures/runs/**

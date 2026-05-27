@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/report-data.schema.json",
+  "title": "APD Gauntlet Report Supplement",
+  "type": "object",
+  "required": [
+    "schema_version", "exec_summary", "headline_findings",
+    "strengths", "next_steps", "posture_summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "exec_summary": {
+      "type": "object",
+      "required": ["paragraphs"],
+      "additionalProperties": false,
+      "properties": {
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": { "type": "string", "minLength": 40 }
+        }
+      }
+    },
+    "headline_findings": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["id", "rank"],
+        "additionalProperties": false,
+        "properties": {
+          "id":   { "type": "string", "minLength": 1 },
+          "rank": { "type": "integer", "minimum": 1, "maximum": 10 }
+        }
+      }
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "caveats"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "caveats": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 10 }
+          }
+        }
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rank", "text", "refs"],
+        "additionalProperties": false,
+        "properties": {
+          "rank": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string", "minLength": 10 },
+          "refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "posture_summary": {
+      "type": "object",
+      "required": ["trustworthiness", "scalability", "auditability"],
+      "additionalProperties": false,
+      "properties": {
+        "trustworthiness": { "type": "string", "minLength": 10 },
+        "scalability":     { "type": "string", "minLength": 10 },
+        "auditability":    { "type": "string", "minLength": 10 }
+      }
+    }
+  }
+}
