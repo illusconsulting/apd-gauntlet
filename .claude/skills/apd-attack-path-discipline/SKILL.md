@@ -13,7 +13,9 @@ become false confidence in shipping designs.
 ## Hard rules
 
 ### 1. Never invent nodes
+
 Every node in the asset graph must cite one of:
+
 - An asset/identity/trust-boundary record in `00-context/asset-inventory.yaml`
 - A normalized threat-model entry whose `asset` field is the node name
 - A code-evidence-index entry naming the service/component
@@ -24,7 +26,9 @@ If a node has no citation, it does not exist. Do not add it because "it
 probably should be there."
 
 ### 2. Never invent edges
+
 Every edge must cite one of:
+
 - An IaC/architecture artifact declaring network reachability
 - A finding whose evidence describes attacker traversal (edge_type =
   `compromisable_via_finding`, finding_id required)
@@ -35,6 +39,7 @@ Every edge must cite one of:
 - A trust boundary declared in asset-inventory or domain-pack defaults
 
 ### 3. Confidence floors severity
+
 - Paths whose feasibility floor is `low` MUST cap at `disposition: uncertainty`
   and `severity ∈ {low, medium}`. Never escalate to `risk` on a low-confidence
   path.
@@ -46,6 +51,7 @@ Every edge must cite one of:
   advisory report.
 
 ### 4. Bounded enumeration; honest output
+
 - `max_hop` caps at 12 (schema-enforced). Default 8.
 - `max_paths_per_pair` caps at 200 (schema-enforced). Default 50.
 - When truncation occurs, the `attack-paths.yaml` summary records
@@ -54,12 +60,14 @@ Every edge must cite one of:
   hops."
 
 ### 5. Block on missing crown jewels
+
 No declared targets → analyzer emits a single `disposition: blocked` finding
 and does not enumerate. Do not guess. The block-finding must list
 `prerequisite_evidence: ["domain pack or run-config must declare
 crown_jewels[]"]`.
 
 ### 6. D3FEND must counter ATT&CK
+
 A D3FEND technique appearing in `candidate_d3fend[]` MUST have a non-empty
 `counters[]` array drawn from the bottleneck edge's `exposed_attack_techniques`.
 The MITRE D3FEND attack-counter table is the authoritative source; never map
@@ -71,6 +79,7 @@ See [d3fend-mapping-pattern.md](references/d3fend-mapping-pattern.md) for the
 walk-through.
 
 ### 7. Mermaid diagram cap
+
 Single diagram ≤ 50 nodes. Graphs above this cap partition by attacker_position
 into multiple inline `flowchart LR` diagrams in the report. The
 `tools/apd_gauntlet/attack_path/mermaid.py` module enforces this — do not
