@@ -1,0 +1,77 @@
+name: api-security
+display_name: "API Security (OWASP API Top 10)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "API-security-specialized severity rubric and pattern library for API-backed production systems handling PII, payment card data, credentials, and session tokens. Anchored to the OWASP API Security Top 10 (2023), OWASP ASVS 4.0, PCI-DSS 4.0, GDPR, NIST SP 800-63B, and SOC 2 Trust Services Criteria."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - "OWASP API Top 10 (2023)"
+  - "OWASP Top 10 (2021)"
+  - "OWASP ASVS 4.0"
+  - "PCI-DSS 4.0"
+  - GDPR
+  - "NIST SP 800-63B"
+  - "SOC 2"
+  - "FedRAMP Moderate"
+crown_jewels:
+  - pattern: user_credentials_store
+    description: "Password hashes, recovery codes, MFA seeds (TOTP secrets), WebAuthn credential records, security-question answers. Compromise yields direct account takeover and downstream impact across every connected surface; rehydrates indefinitely until rotation."
+  - pattern: payment_methods_store
+    description: "PCI-scope cardholder data — PAN, expiry, cardholder name, billing address — and tokenized payment instruments with their detokenization paths. Compromise triggers PCI-DSS forensic requirements, card-brand fines, and mandatory cardholder notification."
+  - pattern: pii_profile_store
+    description: "User PII subject to GDPR Article 4(1) and CCPA personal information definitions: legal name, email, phone, postal address, date of birth, government identifier equivalents, geolocation, device identifiers. Mass exposure triggers GDPR Article 33 72-hour breach notification."
+  - pattern: session_token_signing_keys
+    description: "Asymmetric and symmetric keys backing JWT/PASETO signing and verification, OAuth/OIDC issuer keys, refresh-token HMAC keys, OAuth client secrets, API-key derivation roots. Compromise enables forgery of any session or token; effectively a global authentication bypass."
+  - pattern: authorization_decision_engine
+    description: "RBAC role definitions, ABAC policy bundles, ReBAC relationship graphs, or external policy decision points (OPA, Cedar, AuthZed). Corruption produces silent privilege escalation invisible to per-request authentication checks; recovery requires policy diff plus replay."
+  - pattern: audit_log_store
+    description: "Security and consequential-action event log spanning authentication, authorization decisions, PII access, payment events, and administrative configuration. Tampering destroys the breach-detection and breach-notification fact base; regulators treat absence as presumption of breach."
+  - pattern: backup_artifact_store
+    description: "Database snapshots, object-store backups, configuration backups, and key-material escrow copies. Frequently the weakest crown jewel because encryption-at-rest, access controls, and immutability are typically weaker than the primary stores they protect against."
+  - pattern: third_party_integration_secrets
+    description: "Outbound OAuth client credentials, webhook signing keys, vendor API tokens, SaaS partner mTLS client certificates. Compromise enables impersonation of the service to its supply chain and forgery of inbound integration traffic."
+attacker_positions:
+  - position: unauthenticated_internet
+    description: "Untrusted external client with no credentials and no prior foothold; the default attacker position for any internet-reachable endpoint and the baseline against which OWASP API1, API2, API4, API7, and API8 are evaluated."
+  - position: authenticated_low_priv_user_with_bola_target
+    description: "A valid low-privilege user enumerating object identifiers (numeric IDs, GUIDs leaked through other endpoints, predictable references) looking for IDOR/BOLA per OWASP API1. The dominant real-world API attack vector; assume every authenticated endpoint sees this."
+  - position: authenticated_user_seeking_authz_bypass
+    description: "A valid user attempting Broken Function-Level Authorization (OWASP API5) by invoking admin or moderator endpoints via predictable URL patterns, HTTP method swaps, or undocumented routes discovered through JS bundle inspection."
+  - position: compromised_user_session_token
+    description: "Attacker holding a stolen JWT, session cookie, refresh token, or OAuth bearer token via XSS, malware, mobile-app key extraction, or man-in-the-middle. Models the consequences of session-lifetime and revocation choices."
+  - position: compromised_oauth_client_credentials
+    description: "Attacker holding a valid OAuth client_id plus client_secret (or equivalent confidential-client credential) through misconfiguration, repository exposure, or supply-chain compromise; permits impersonation of an entire integrated application."
+  - position: compromised_third_party_integration
+    description: "Attacker controlling a vendor, partner, or SaaS integration; can send forged webhooks, malicious API responses, and tampered SBOM/artifact metadata. Models OWASP API10 (Unsafe Consumption of APIs) and supply-chain trust collapse."
+  - position: compromised_admin_session
+    description: "Attacker holding a privileged operator credential via phishing, session theft, or insider threat. Lateral movement and configuration-tampering scope; the boundary case where Authenticity, Non-Repudiation, and Immutability findings converge."
+  - position: supply_chain_attacker
+    description: "Adversary publishing or compromising upstream dependencies — typosquatted npm/PyPI packages, dependency confusion against internal package registries, malicious Maven artifacts, base-image tampering, or compromised CI/CD plugins."
+  - position: internal_lateral_attacker
+    description: "Post-breach attacker pivoting inside a trust zone (Kubernetes cluster, VPC, service mesh) after initial foothold elsewhere. The 'assume compromise' position used to evaluate east-west controls and in-cluster trust assumptions."
+default_trust_boundaries:
+  - boundary: public_internet_to_edge
+    description: "First crossing from untrusted client to the edge tier — CDN, WAF, API gateway, or reverse proxy. TLS termination, DDoS absorption, bot management, and IP reputation enforcement happen here; downstream tiers must not re-trust client-supplied identity."
+  - boundary: edge_to_application_tier
+    description: "Edge-to-application backend crossing after TLS termination. Authentication and authorization enforcement points typically live here; lateral movement scope inside the application tier starts at this boundary."
+  - boundary: application_to_data_tier
+    description: "Service-to-datastore crossing — application service to PostgreSQL, MongoDB, Redis, S3, message broker. Frequently the weakest link under 'in-cluster trust' assumptions; in-cluster mTLS, query parameterization, and least-privilege datastore credentials enforce it."
+  - boundary: application_to_third_party
+    description: "Outbound integration crossing to vendor APIs, OAuth identity providers, SaaS partners, payment processors. Egress identity assertion, response validation, and circuit-breaking enforce it; SSRF mitigation (OWASP API7) lives at this boundary."
+  - boundary: payment_card_data_environment
+    description: "PCI-DSS Cardholder Data Environment scope boundary. Every ingress and egress must be auditable, encrypted, authenticated, and segmented from non-CDE networks; tokenization at the boundary collapses downstream scope."
+  - boundary: personal_data_subject_zone
+    description: "GDPR data-subject scope boundary. Cross-border or extra-EEA egress must have a lawful transfer basis (SCCs, adequacy decision, BCRs); data-residency assertions must be enforceable, not aspirational."
