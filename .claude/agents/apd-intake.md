@@ -32,6 +32,51 @@ A single markdown file at `00-context/context-brief.md`, structured per the temp
 7. Evidence gaps
 8. Per-goal relevance table
 
+### `00-context/asset-inventory.yaml` (NEW in v1.4 — required when crown_jewels declared)
+
+Machine-readable inventory of the assets, identities, and trust boundaries
+identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
+
+- **Assets** — every named service, data store, secret store, queue,
+  network, external dependency, or compute resource mentioned in supplied
+  artifacts. Each carries:
+  - `asset_id: asset-<sha8>` (deterministic ID from name + locator)
+  - `name`: the canonical name as used in artifacts
+  - `asset_type` ∈ {service, data_store, secret_store, queue, network, external_dependency, compute}
+  - `data_classifications[]`: PHI / PII / PCI / secret / internal / etc.
+  - `provenance.source` ∈ {artifact, domain_default, threat_model, code_evidence}, plus `artifact` and `locator` when applicable
+  - `confidence` ∈ {high, medium, low} — high for IaC-declared, medium for prose-described, low for inferred
+
+- **Identities** — human roles, service accounts, workload identities,
+  external parties mentioned in supplied artifacts. Each carries:
+  - `identity_id: idn-<sha8>`
+  - `name`: canonical name
+  - `identity_type` ∈ {human_role, service_account, workload_identity, external_party}
+  - provenance + confidence as above
+
+- **Trust boundaries** — declared cross-asset trust transitions. Each carries:
+  - `boundary_id: tb-<sha8>`
+  - `name`: human-readable description
+  - `crosses[]`: array of `asset_id` values the boundary partitions
+
+Use [asset-inventory.template.md](../../templates/asset-inventory.template.md) as the YAML skeleton.
+
+**Discipline:** Same evidence-discipline rules apply. Never invent assets that
+no supplied artifact mentions. When an asset is described ambiguously, set
+`confidence: low`; the attack-path analyzer treats low-confidence nodes as
+bounded contributors to path feasibility, not as authoritative graph entries.
+
+**Activation:** Emit `00-context/asset-inventory.yaml` whenever the run-config's
+`crown_jewels` list is non-empty OR the active domain pack declares any
+`crown_jewels`. For backward compatibility with v1.1 / v1.2 / v1.3 runs that
+declare neither, the inventory is optional and not emitted. The
+`apd-attack-path-analyzer` agent skips silently in that case.
+
+The markdown trust-boundary section in the context-brief (step 5 below) remains
+unchanged — that section is for human review, while the YAML
+`trust_boundaries[]` block in the inventory is for the analyzer. The two
+outputs serve different consumers and are produced from the same evidence.
+
 ## Optional successor — `apd-code-recon`
 
 If `.apd-run.yaml` opts into code reconnaissance (`code_recon: enabled` or `auto`) and the CBM tools are reachable, the orchestrator will dispatch `apd-code-recon` after you complete. That agent does NOT modify your brief; it writes its own `00-context/code-architecture-brief.md` and `00-context/code-evidence-index.yaml`. You do not need to plan for it.
