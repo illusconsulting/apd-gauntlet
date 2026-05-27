@@ -56,6 +56,10 @@ class RunArtifacts:
     attack_path_findings: list[dict[str, Any]]
     report_data: dict[str, Any] | None
     source_hashes: dict[str, str] = field(default_factory=dict)
+    # Crown jewels and attacker positions sourced from .apd-run.yaml (run_cfg).
+    # These override / supplement the asset_inventory-derived lists in meta_block.
+    run_crown_jewels: list[str] = field(default_factory=list)
+    run_attacker_positions: list[str] = field(default_factory=list)
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -121,16 +125,69 @@ def _extract_domain_pack_version(
     return ""
 
 
+_PATH_SLUG_RE = None  # lazy import avoids top-level re dependency
+
+
+def _is_path_slug(value: str) -> bool:
+    """Return True if *value* looks like a filesystem path slug.
+
+    Patterns detected:
+    - Contains ``-Documents-GitHub-`` (macOS home-dir CBM project slugs)
+    - Starts with ``Users-`` (absolute path slugged with hyphens)
+    """
+    import re  # noqa: PLC0415 — intentional lazy import
+    return bool(re.search(r"-Documents-GitHub-|-Documents-|-Users-", value))
+
+
+def _humanise_slug(slug: str) -> str:
+    """Extract a human-readable name from a filesystem path slug.
+
+    ``Users-alice-Documents-GitHub-MyProject`` -> ``MyProject``
+    """
+    # Last hyphen-separated segment that starts with a capital letter, or just last segment.
+    parts = slug.split("-")
+    for part in reversed(parts):
+        if part and part[0].isupper():
+            return part
+    return parts[-1] if parts else slug
+
+
 def _extract_subject(run_cfg: dict[str, Any]) -> str:
     """Extract subject string.
 
-    Current fixture has no ``subject:`` key; fall back to ``cbm_project``
-    when present.
+    Priority order:
+    1. ``subject:`` key in run_cfg (explicit, human-authored)
+    2. ``cbm_project`` if it doesn't look like a path slug
+    3. Humanised last segment of ``cbm_project`` when it is a path slug
+    4. Empty string
     """
     subject = run_cfg.get("subject", "")
     if subject:
         return str(subject)
-    return str(run_cfg.get("cbm_project", ""))
+    cbm = str(run_cfg.get("cbm_project", ""))
+    if not cbm:
+        return ""
+    if _is_path_slug(cbm):
+        return _humanise_slug(cbm)
+    return cbm
+
+
+def _extract_str_list(run_cfg: dict[str, Any], key: str) -> list[str]:
+    """Extract a list of strings from run_cfg[key].
+
+    Handles both ``[str, ...]`` and ``[{name: str, ...}, ...]`` shapes.
+    Returns an empty list when key is absent or value is not a list.
+    """
+    raw = run_cfg.get(key)
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            out.append(item)
+        elif isinstance(item, dict):
+            out.append(item.get("name", item.get("id", str(item))))
+    return out
 
 
 def load_run(run_dir: pathlib.Path) -> RunArtifacts:
@@ -208,4 +265,6 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         attack_path_findings=apath_findings,
         report_data=report_data,
         source_hashes=source_hashes,
+        run_crown_jewels=_extract_str_list(run_cfg, "crown_jewels"),
+        run_attacker_positions=_extract_str_list(run_cfg, "attacker_positions"),
     )
