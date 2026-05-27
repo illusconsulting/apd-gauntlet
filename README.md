@@ -44,6 +44,8 @@ Both streams are organized along the nine APD goals listed above. Every finding 
 
 When a threat model is supplied (Threat Dragon JSON, Microsoft TMT, STRIDE/LINDDUN tables, attack trees), the gauntlet's threat-model evaluator surfaces coverage gaps, contradictions between TM claims and specialist findings, and surface silences as `tmeval-` findings.
 
+When the active domain pack (or `.apd-run.yaml`) declares crown jewels and attacker positions, v1.4 adds BloodHound-style attack-path enumeration over a partial graph assembled from intake, threat-model, code-evidence, and specialist findings — with a D3FEND defensive overlay on the bottleneck edges that expose ATT&CK techniques. The analyzer emits `apath-` findings and a dedicated `attack-path-report.md`. See [docs/attack-path-analysis.md](docs/attack-path-analysis.md) for the operator guide.
+
 The synthesizer dedups across lenses, surfaces contradictions between findings and capabilities, and produces three rollups: a NIST 800-53r5 coverage matrix, an ATT&CK exposure summary, and an APD-by-component coverage grid. The final deliverable is `40-synthesis/advisory-report.md`.
 
 ## Try the bundled example
@@ -58,6 +60,7 @@ A synthetic PBM claim event bus run with curated reference outputs. See [example
 
 - [Architecture](docs/architecture.md) — how the gauntlet works under the hood
 - [Running the gauntlet](docs/running-the-gauntlet.md) — operator guide
+- [Attack-path analysis (v1.4+)](docs/attack-path-analysis.md) — crown jewels, attacker positions, the D3FEND overlay, and the `apath-` finding flavors
 - [Adapting to other domains](docs/adapting-to-other-domains.md) — authoring a new domain pack
 - [Extending agents](docs/extending-agents.md) — contributor guide for framework changes
 - [Schema evolution](docs/schema-evolution.md) — versioning policy

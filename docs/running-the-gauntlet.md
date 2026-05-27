@@ -16,17 +16,18 @@ pip install apd-gauntlet
 apd-gauntlet --version
 ```
 
-The CLI exposes eight subcommands:
+The CLI exposes the following subcommands:
 
 ```
-apd-gauntlet validate <run-dir>           # three-pass validation
-apd-gauntlet init-run <run-id> ...        # scaffold a run directory
-apd-gauntlet build-domain-skill <pack>    # generate the apd-domain skill
-apd-gauntlet summarize <run-dir>          # finding/capability statistics
-apd-gauntlet lint-agents                  # validate agent file frontmatter
-apd-gauntlet check-ids <yaml-file>        # verify deterministic IDs
-apd-gauntlet validate-domain <pack>       # validate a domain pack
-apd-gauntlet refresh-mitre                # refresh the cached MITRE crosswalk
+apd-gauntlet validate <run-dir>             # three-pass validation
+apd-gauntlet init-run <run-id> ...          # scaffold a run directory
+apd-gauntlet build-domain-skill <pack>      # generate the apd-domain skill
+apd-gauntlet summarize <run-dir>            # finding/capability statistics
+apd-gauntlet lint-agents                    # validate agent file frontmatter
+apd-gauntlet check-ids <yaml-file>          # verify deterministic IDs
+apd-gauntlet validate-domain <pack>         # validate a domain pack
+apd-gauntlet refresh-mitre                  # refresh the cached MITRE crosswalk
+apd-gauntlet analyze-attack-paths <run-dir> # v1.4+: run the attack-path analyzer
 ```
 
 ## Step 1: Scaffold the run
@@ -106,6 +107,82 @@ methodology_hint: stride   # optional; auto-detected if absent
 `apd-threat-model-evaluator` (tier-4) emits coverage-gap, contradiction, and
 silence findings against the synthesizer's dedup'd specialist findings. See
 [docs/threat-modeling.md](threat-modeling.md) for the full operator guide.
+
+### Attack-path analysis (v1.4+)
+
+When the run has at least one declared crown jewel and at least one declared
+attacker position — either inherited from the active domain pack or set in
+`.apd-run.yaml` — the tier-4 `apd-attack-path-analyzer` enumerates
+BloodHound-style attack paths over a partial graph assembled from the
+intake, the normalized threat model, the code-evidence index, the
+specialist findings, and the dedup'd capabilities.
+
+Declare crown jewels, attacker positions, and enumeration tuning in
+`.apd-run.yaml`:
+
+```yaml
+crown_jewels:
+  - phi_store
+  - pde_submission_pipeline
+attacker_positions:
+  - external_internet
+  - compromised_pharmacy_credential
+  - compromised_vendor_integration
+attack_path_analysis:
+  max_hop: 6
+  max_paths_per_pair: 25
+  bottleneck_threshold: 4
+```
+
+If `crown_jewels` and `attacker_positions` are absent from `.apd-run.yaml`,
+the analyzer falls back to the values declared in the active domain pack's
+`domain.yaml`. The bundled PBM pack ships with three crown jewels and five
+attacker positions. The run-config values fully replace the domain defaults
+when present.
+
+The analyzer is **activation-gated**: when neither the domain pack nor the
+run-config declares any crown jewels (or any attacker positions), the
+analyzer writes `40-synthesis/attack-path-analyzer-skipped.txt` and the
+synthesis proceeds without attack-path output. The one exception is when
+the operator *explicitly* sets `crown_jewels: []` against a domain that
+declares some — that is treated as a deliberate misconfiguration and emits
+a `disposition: blocked` finding rather than a silent skip.
+
+Invoke the analyzer in two ways:
+
+- **Inline as part of the run.** When the orchestrator reaches Phase 5
+  (Synthesis), it dispatches `apd-attack-path-analyzer` if the activation
+  preconditions are satisfied. No extra operator action is required.
+- **Stand-alone, post-hoc.** After a run completes, re-run the analyzer
+  against an existing run directory:
+
+  ```bash
+  apd-gauntlet analyze-attack-paths runs/apd-20260601-claim-event-bus/
+  ```
+
+  This is the canonical workflow for re-running the analyzer after a
+  `apd-gauntlet refresh-d3fend` updates the D3FEND counter mappings, or
+  after a domain-pack edit changes the declared crown jewels.
+
+Outputs land in `40-synthesis/`:
+
+```
+40-synthesis/
+├── asset-graph.yaml              # nodes + typed edges with provenance
+├── attack-paths.yaml             # enumerated paths + bottleneck edges
+├── defense-graph.yaml            # D3FEND overlay on bottleneck edges
+├── attack-path.findings.yaml     # one apath-* finding per path or bottleneck
+└── attack-path-report.md         # human-readable executive summary + Mermaid
+```
+
+The `apath-*` findings carry one of four dispositions: `risk` (high
+feasibility, no mitigation), `uncertainty` (low feasibility or partial
+mitigation), `gap` (bottleneck edge without D3FEND coverage), or `blocked`
+(explicit empty `crown_jewels` against a domain that declares some). See
+[docs/attack-path-analysis.md](attack-path-analysis.md) for the full
+operator guide, including the discipline rules (no invented nodes or
+edges, D3FEND must counter ATT&CK, bounded enumeration with explicit
+truncation).
 
 ## Step 2: Invoke the orchestrator in Claude Code
 
