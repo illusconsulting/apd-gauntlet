@@ -1,2 +1,2 @@
 """APD Gauntlet — Python validator and CLI for the APD security architecture review framework."""
-__version__ = "1.4.0.dev0"
+__version__ = "1.4.0"
