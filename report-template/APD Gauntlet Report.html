@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APD Gauntlet · Advisory Report</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=Inter+Tight:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="screens.css" />
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body data-theme="light" data-sev="default" data-density="comfortable" data-type="editorial">
+
+<div id="root"></div>
+
+<!-- Data + tweaks scaffold -->
+<script src="data.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- Shared atoms (must come first; later screens reference these globals) -->
+<script type="text/babel" src="components.jsx"></script>
+
+<!-- Screen modules -->
+<script type="text/babel" src="screens/Overview.jsx"></script>
+<script type="text/babel" src="screens/Findings.jsx"></script>
+<script type="text/babel" src="screens/Capabilities.jsx"></script>
+<script type="text/babel" src="screens/Coverage.jsx"></script>
+<script type="text/babel" src="screens/Annexes.jsx"></script>
+
+<!-- App root -->
+<script type="text/babel" src="app.jsx"></script>
+
+</body>
+</html>

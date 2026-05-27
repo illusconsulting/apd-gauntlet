@@ -1,0 +1,103 @@
+/* eslint-disable */
+// Annexes screen — contradictions + severity disagreements (and link back to strengths)
+
+function Annexes({ data, onOpenFinding }) {
+  return (
+    <div>
+      <div className="section-eyebrow">§ 5 + § 10 — Annexes</div>
+      <h2 className="section-title">Contradictions &amp; severity disagreements</h2>
+
+      <section className="annex">
+        <header className="annex__head">
+          <div>
+            <div className="section-eyebrow" style={{ margin: 0 }}>§ 5 — Contradiction annex</div>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>Finding ⇄ Capability conflicts</h3>
+          </div>
+          <span className="pill">{data.contradictions.length} surfaced</span>
+        </header>
+        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+          Cases where a finding asserts a property is absent and a capability confirms it is present, or vice versa. In all three cases here, the recommended disposition is <strong>scope clarification of the capability</strong>, not capability downgrade — these indicate language that could be over-read by a reviewer outside the architectural context.
+        </p>
+
+        {data.contradictions.map((c) => (
+          <div key={c.id} className="contradiction">
+            <div className="contradiction__id"><CopyPill value={c.id} /></div>
+            <div className="contradiction__col">
+              <div className="contradiction__label">Finding asserts</div>
+              <CopyPill value={c.finding.id} />
+              <div className="contradiction__assertion">"{c.finding.assertion}"</div>
+            </div>
+            <div className="contradiction__col">
+              <div className="contradiction__label">Capability asserts</div>
+              <CopyPill value={c.capability.id} />
+              <div className="contradiction__assertion">"{c.capability.assertion}"</div>
+            </div>
+            <div className="contradiction__resolution">
+              <div className="contradiction__label" style={{ marginBottom: 4 }}>Comparison &amp; resolution</div>
+              <div>{c.comparison}</div>
+              <div style={{ marginTop: "var(--space-2)", color: "var(--ink)" }}><strong>→</strong> {c.resolution}</div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="annex">
+        <header className="annex__head">
+          <div>
+            <div className="section-eyebrow" style={{ margin: 0 }}>§ 10 — Severity disagreement annex</div>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>Within-cluster lens disagreements</h3>
+          </div>
+          <span className="pill">{data.severity_disagreements.length} clusters</span>
+        </header>
+        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+          Records where two agents agreed on the concern but disagreed on severity. The merged finding takes the higher severity per the synthesis rule; the disagreement is preserved here for transparency.
+        </p>
+
+        {data.severity_disagreements.map((d) => (
+          <div key={d.id} className="sev-disagreement">
+            <header className="sev-disagreement__head">
+              <span
+                className="pill pill--id pill--clickable"
+                onClick={() => onOpenFinding(d.id)}
+                style={{ fontSize: "var(--text-sm)" }}
+              >{d.id} →</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
+                chosen → <SeverityPill value={d.chosen} />
+              </span>
+            </header>
+            <dl className="sev-disagreement__lenses">
+              {d.agents.map((a) => (
+                <React.Fragment key={a.lens}>
+                  <dt>{a.lens}</dt>
+                  <dd><SeverityPill value={a.severity} /></dd>
+                </React.Fragment>
+              ))}
+            </dl>
+            <div className="sev-disagreement__rationale">"{d.rationale}"</div>
+          </div>
+        ))}
+      </section>
+
+      {/* Domain-pack calibration caveat */}
+      <section className="annex">
+        <header className="annex__head">
+          <div>
+            <div className="section-eyebrow" style={{ margin: 0 }}>Domain-pack calibration caveat</div>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>PBM quick-path</h3>
+          </div>
+          <span className="pill" style={{ borderColor: "var(--sev-medium)", color: "var(--sev-medium)" }}>
+            quick-path tradeoff
+          </span>
+        </header>
+        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }}>
+          LegacyExample is a <strong>render-path mediator</strong>, not a PBM-domain claim adjudication, formulary, or member benefits system. The PBM domain pack supplied severity rubric anchors that apply naturally to LegacyExample's HIPAA-eligible PHI surface (HIPAA §164.502(b) minimum-necessary; §164.402 breach-notification; §164.308(a)(7) contingency-plan; §164.312(b) audit controls), and PCI-DSS / GDPR analogues where the sensitive value class matches.
+        </p>
+        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65, marginTop: "var(--space-3)" }}>
+          <strong>CMS Part D and URAC anchors from the pack do NOT apply</strong> and were correctly flagged as inapplicable in-finding by every specialist that encountered them. The synthesizer applied the same discipline — every high-severity finding in this report cites a HIPAA or PCI-DSS / GDPR clause for its anchor, not a Part D / URAC one.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+window.Annexes = Annexes;
