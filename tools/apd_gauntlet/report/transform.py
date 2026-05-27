@@ -7,6 +7,7 @@ from __future__ import annotations
 import collections
 import json as _json
 import pathlib
+import re
 from typing import Any
 
 from .loader import RunArtifacts
@@ -447,4 +448,116 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
         "goals":      goals,
         "goalLabels": _GOAL_LABEL_SHORT,
         "rows":       rows,
+    }
+
+
+_NODE_ID_OK = re.compile(r"^[A-Za-z0-9_-]+$")
+_LABEL_STRIP = re.compile(r"[^A-Za-z0-9 _./:()-]")
+# HTML tag pattern: reject the entire label if angle-bracket tags are present.
+_HTML_TAG = re.compile(r"<[^>]*>")
+
+
+def _safe_node_id(raw: str, fallback: str) -> str:
+    """Mermaid node ids must be plain identifiers. Drop anything that could
+    inject syntax (newlines, brackets, html); fall back if nothing left.
+    """
+    return raw if _NODE_ID_OK.match(raw or "") else fallback
+
+
+def _safe_label(raw: str) -> str:
+    """Mermaid node labels are quoted strings; we additionally strip
+    metacharacters that confuse the parser or compose into XSS payloads when
+    mermaid renders to SVG (#, [, ], <, >, &, etc.). Truncated to 60 chars
+    so adversarial asset names cannot blow up graph layout.
+
+    Defense-in-depth: if the raw label contains HTML-tag patterns (<…>), the
+    entire label is discarded and replaced with "(unnamed)" — partial stripping
+    of a tag payload (e.g. keeping "alert" from "<script>alert(1)</script>")
+    is still an information leak from an adversarial asset name.
+    """
+    if _HTML_TAG.search(raw or ""):
+        return "(unnamed)"
+    cleaned = _LABEL_STRIP.sub(" ", raw or "")
+    cleaned = " ".join(cleaned.split())  # collapse whitespace
+    return cleaned[:60] or "(unnamed)"
+
+
+def _build_mermaid(asset_graph: dict[str, Any]) -> str:
+    """Render the asset graph as a small Mermaid graph TD definition.
+
+    Sanitization discipline: every node id and label is constrained to a safe
+    character set before interpolation. Asset-graph YAML is adopter-controlled
+    so unsafe characters MUST be filtered here, not at render time. Combined
+    with mermaid securityLevel='strict' on the JS side, this gives defense in
+    depth against label-based SVG/XSS payloads.
+
+    Mermaid handles ~100-node graphs comfortably. Larger graphs render a
+    summary string so the page still loads.
+    """
+    nodes = asset_graph.get("nodes") or []
+    edges = asset_graph.get("edges") or []
+    if len(nodes) > 100:
+        return f"graph TD\n  too_large[\"Graph has {len(nodes)} nodes; see asset-graph.yaml\"]"
+    lines = ["graph TD"]
+    id_remap: dict[str, str] = {}
+    for idx, n in enumerate(nodes):
+        raw_id = str(n.get("node_id", f"n{idx}"))
+        safe_id = _safe_node_id(raw_id, f"n{idx}")
+        id_remap[raw_id] = safe_id
+        label = _safe_label(str(n.get("name") or raw_id))
+        ntype = n.get("node_type", "")
+        prefix = {
+            "attacker_position": "((", "crown_jewel": "{{", "service": "[",
+            "data_store": "[(", "secret_store": "[(",
+        }.get(ntype, "[")
+        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]"}[prefix]
+        lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
+    for e in edges:
+        src = id_remap.get(str(e.get("from", "")))
+        dst = id_remap.get(str(e.get("to", "")))
+        if src and dst:
+            lines.append(f"  {src} --> {dst}")
+    return "\n".join(lines)
+
+
+def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
+    """Return the data.attack_paths block, or None when v1.4 artifacts are absent."""
+    if artifacts.attack_paths is None or artifacts.asset_graph is None:
+        return None
+    paths = artifacts.attack_paths.get("paths") or []
+
+    # Group paths by (attacker_position, crown_jewel).
+    pairs_by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for p in paths:
+        key = (p.get("attacker_position", ""), p.get("crown_jewel", ""))
+        pairs_by_key.setdefault(key, []).append({
+            "path_id":          p.get("path_id"),
+            "hop_count":        p.get("hop_count"),
+            "feasibility":      p.get("feasibility"),
+            "severity_sum":     p.get("severity_sum"),
+            "mitigation_count": p.get("mitigation_count"),
+            "edges":            p.get("edges", []),
+            "bottleneck_edges": p.get("bottleneck_edges", []),
+        })
+    pairs = [
+        {"attacker_position": k[0], "crown_jewel": k[1], "paths": v}
+        for k, v in sorted(pairs_by_key.items())
+    ]
+
+    overlays = []
+    if artifacts.defense_graph is not None:
+        overlays = artifacts.defense_graph.get("bottleneck_overlays") or []
+
+    return {
+        "mermaid": _build_mermaid(artifacts.asset_graph),
+        "pairs":   pairs,
+        "bottleneck_overlays": overlays,
+        "summary": {
+            "total_paths":  len(paths),
+            "total_pairs":  len(pairs),
+            "bottleneck_count": (
+                len(overlays)
+                if artifacts.defense_graph is not None else 0
+            ),
+        },
     }
