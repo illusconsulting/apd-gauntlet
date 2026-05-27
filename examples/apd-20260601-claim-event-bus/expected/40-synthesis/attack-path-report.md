@@ -22,7 +22,7 @@ Crown jewels and attacker positions are curated subsets of the PBM domain pack d
 - **24** bottleneck edge(s) — edges appearing on at least 4 paths
 - **0** net-new D3FEND defensive investments identified
 
-The graph contains 16 nodes (8 assets, 3 identities, 3 attacker positions, 2 crown jewels) and 43 edges (30 `network_reachable`, 6 `trusts`, 2 `data_resides_on`, 1 `compromisable_via_finding`, plus the inventory-derived edges). All enumerated paths terminate at `phi_store` via `audit-log-store` or `member-record-store` `data_resides_on` edges; the `pde_submission_pipeline` jewel has no incoming edges from the constructed graph.
+The graph contains 16 nodes (8 assets, 3 identities, 3 attacker positions, 2 crown jewels) and 43 edges (30 `network_reachable`, 10 `trusts`, 2 `data_resides_on`, 1 `compromisable_via_finding`). All enumerated paths terminate at `phi_store` via `audit-log-store` or `member-record-store` `data_resides_on` edges; the `pde_submission_pipeline` jewel has no incoming edges from the constructed graph.
 
 ## High-leverage findings
 

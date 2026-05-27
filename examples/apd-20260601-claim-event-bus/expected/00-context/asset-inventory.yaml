@@ -132,6 +132,6 @@ extraction_summary:
   asset_count: 8
   identity_count: 3
   trust_boundary_count: 5
-  high_confidence_count: 7
+  high_confidence_count: 6
   medium_confidence_count: 3
   low_confidence_count: 2
