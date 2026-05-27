@@ -42,6 +42,7 @@ def _scaffold_minimal_run(
     *,
     max_hop: int | None = None,
     max_paths_per_pair: int | None = None,
+    bottleneck_threshold: int | None = None,
 ) -> None:
     """Copy the C-10 minimal-run fixture into ``tmp_path`` and optionally
     override the ``attack_path_analysis`` tuning knobs in ``.apd-run.yaml``.
@@ -52,7 +53,11 @@ def _scaffold_minimal_run(
             shutil.copytree(child, dst)
         else:
             shutil.copy2(child, dst)
-    if max_hop is not None or max_paths_per_pair is not None:
+    if (
+        max_hop is not None
+        or max_paths_per_pair is not None
+        or bottleneck_threshold is not None
+    ):
         cfg_path = tmp_path / ".apd-run.yaml"
         cfg: dict[str, Any] = yaml.safe_load(cfg_path.read_text()) or {}
         tuning = cfg.setdefault("attack_path_analysis", {})
@@ -60,6 +65,8 @@ def _scaffold_minimal_run(
             tuning["max_hop"] = max_hop
         if max_paths_per_pair is not None:
             tuning["max_paths_per_pair"] = max_paths_per_pair
+        if bottleneck_threshold is not None:
+            tuning["bottleneck_threshold"] = bottleneck_threshold
         cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
 
@@ -108,7 +115,9 @@ def test_analyze_attack_paths_emits_blocked_finding_when_no_crown_jewels(
 
 def test_analyze_attack_paths_honors_run_config_tuning(tmp_path: Path) -> None:
     runner = CliRunner()
-    _scaffold_minimal_run(tmp_path, max_hop=4, max_paths_per_pair=10)
+    _scaffold_minimal_run(
+        tmp_path, max_hop=4, max_paths_per_pair=10, bottleneck_threshold=3
+    )
     result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
     assert result.exit_code == 0, result.output
     attack_paths = yaml.safe_load(
@@ -116,6 +125,7 @@ def test_analyze_attack_paths_honors_run_config_tuning(tmp_path: Path) -> None:
     )
     assert attack_paths["enumeration_parameters"]["max_hop"] == 4
     assert attack_paths["enumeration_parameters"]["max_paths_per_pair"] == 10
+    assert attack_paths["enumeration_parameters"]["bottleneck_threshold"] == 3
 
 
 def test_analyze_attack_paths_validate_does_not_crash(

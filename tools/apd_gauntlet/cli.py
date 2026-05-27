@@ -25,7 +25,13 @@ from .refresh_d3fend import refresh_d3fend
 from .refresh_mitre import fetch_and_project
 from .refresh_owasp import refresh_owasp
 from .summary import render_summary, summarize_run
-from .validate import ValidationReport, run_cross_file_pass, run_schema_pass, run_semantic_pass
+from .validate import (
+    ValidationReport,
+    build_registry,
+    run_cross_file_pass,
+    run_schema_pass,
+    run_semantic_pass,
+)
 
 
 @click.group(
@@ -307,25 +313,6 @@ def refresh_d3fend_cmd() -> None:
     click.echo(f"Wrote {path}")
 
 
-def _build_schema_registry() -> Any:
-    """Build a referencing Registry covering every schema in schemas/.
-
-    Replicates the pattern from validate._build_registry() to allow cross-schema
-    $ref resolution (notably _defs.schema.json#/$defs/attack_technique_id).
-    """
-    from referencing import Registry, Resource
-
-    schemas_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "schemas"
-    resources: list[tuple[str, Any]] = []
-    for schema_path in sorted(schemas_dir.glob("*.schema.json")):
-        schema = _stdjson.loads(schema_path.read_text())
-        schema_id = schema.get("$id")
-        if not schema_id:
-            continue
-        resources.append((schema_id, Resource.from_contents(schema)))
-    return Registry().with_resources(resources)
-
-
 @main.command("parse-threat-model")
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option(
@@ -379,7 +366,7 @@ def parse_threat_model_cmd(
             / "threat-model-normalized.schema.json"
         )
         schema = _stdjson.loads(schema_path.read_text())
-        registry = _build_schema_registry()
+        registry = build_registry()
         validator = Draft202012Validator(schema, registry=registry)
         errors = list(validator.iter_errors(normalized))
         if errors:
@@ -414,6 +401,9 @@ def analyze_attack_paths(run_dir: Path) -> None:
     - ``40-synthesis/attack-paths.yaml``
     - ``40-synthesis/defense-graph.yaml``
     - ``40-synthesis/attack-path-findings.yaml``
+
+    Enumeration defaults (override via .apd-run.yaml#attack_path_analysis):
+      max_hop=8, max_paths_per_pair=50, bottleneck_threshold=5
     """
     from .attack_path.build import BuilderBlocked, build_graph
     from .attack_path.d3fend_overlay import build_overlays, load_d3fend_data
@@ -427,9 +417,12 @@ def analyze_attack_paths(run_dir: Path) -> None:
     synth = run_dir / "40-synthesis"
     synth.mkdir(parents=True, exist_ok=True)
     run_cfg_path = run_dir / ".apd-run.yaml"
-    run_cfg: dict[str, Any] = (
-        yaml.safe_load(run_cfg_path.read_text()) if run_cfg_path.exists() else {}
-    ) or {}
+    try:
+        run_cfg: dict[str, Any] = (
+            yaml.safe_load(run_cfg_path.read_text()) if run_cfg_path.exists() else {}
+        ) or {}
+    except yaml.YAMLError as exc:
+        raise click.UsageError(f".apd-run.yaml is not valid YAML: {exc}") from exc
     tuning = run_cfg.get("attack_path_analysis", {}) or {}
     params = EnumerationParams(
         max_hop=int(tuning.get("max_hop", 8)),
@@ -521,9 +514,13 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
                     "crown_jewels[] in the domain pack or .apd-run.yaml to "
                     "enable attack-path analysis."
                 ),
+                # TODO: reference ADR-0010 once C-27 lands
                 "detail": (
-                    "See ADR-0010 (Attack-path analysis on partial graphs) "
-                    "for the block-on-missing-crown-jewels discipline."
+                    "Attack-path analysis requires at least one "
+                    "(attacker_position, crown_jewel) pair declared in either "
+                    "the domain pack's crown_jewels[] / attacker_positions[] "
+                    "fields or the run-config. See "
+                    "docs/attack-path-analysis.md for configuration patterns."
                 ),
                 "evidence": [
                     {
@@ -570,16 +567,32 @@ def _load_records(
     if fdir.exists():
         for f in sorted(fdir.glob("*.findings.yaml")):
             doc = yaml.safe_load(f.read_text()) or {}
-            for rec in doc.get("findings", []) or []:
-                if isinstance(rec, dict) and "id" in rec:
-                    findings_by_id[rec["id"]] = rec
+            for idx, rec in enumerate(doc.get("findings", []) or []):
+                if not isinstance(rec, dict):
+                    click.echo(
+                        f"WARNING: {f}: findings[{idx}] is not a dict; skipping",
+                        err=True,
+                    )
+                    continue
+                if "id" not in rec:
+                    click.echo(
+                        f"WARNING: {f}: findings[{idx}] missing 'id'; skipping",
+                        err=True,
+                    )
+                    continue
+                findings_by_id[rec["id"]] = rec
     cdir = run_dir / "30-specialist-capabilities"
     if cdir.exists():
         for f in sorted(cdir.glob("*.capabilities.yaml")):
             doc = yaml.safe_load(f.read_text()) or {}
-            for rec in doc.get("capabilities", []) or []:
-                if isinstance(rec, dict):
-                    capabilities.append(rec)
+            for idx, rec in enumerate(doc.get("capabilities", []) or []):
+                if not isinstance(rec, dict):
+                    click.echo(
+                        f"WARNING: {f}: capabilities[{idx}] is not a dict; skipping",
+                        err=True,
+                    )
+                    continue
+                capabilities.append(rec)
     return findings_by_id, capabilities
 
 

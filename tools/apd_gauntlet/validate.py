@@ -61,7 +61,7 @@ class ValidationReport:
         return "\n".join(lines)
 
 
-def _build_registry() -> Registry:
+def build_registry() -> Registry:
     """Build a referencing Registry covering every schema in schemas/.
 
     Each schema is registered under its declared ``$id``. This lets cross-schema
@@ -98,6 +98,8 @@ CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 
 # Whole-document rollup files in 40-synthesis/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
+# TODO (C-21): extend with C-15 synthesis artifacts:
+#   asset-graph.yaml, attack-paths.yaml, defense-graph.yaml, attack-path-findings.yaml
 SYNTHESIS_ROLLUPS: dict[str, str] = {
     "cwe-coverage.yaml":           "cwe-coverage.schema.json",
     "owasp-coverage.yaml":         "owasp-coverage.schema.json",
@@ -204,7 +206,7 @@ def _validate_context_rollups(
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 1: validate every record against its JSON Schema."""
-    registry = _build_registry()
+    registry = build_registry()
     report = ValidationReport()
     validators = {
         kind: Draft202012Validator(
