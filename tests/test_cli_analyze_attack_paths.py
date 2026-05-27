@@ -95,7 +95,7 @@ def test_analyze_attack_paths_writes_four_artifacts(tmp_path: Path) -> None:
     assert (synth / "asset-graph.yaml").exists()
     assert (synth / "attack-paths.yaml").exists()
     assert (synth / "defense-graph.yaml").exists()
-    assert (synth / "attack-path-findings.yaml").exists()
+    assert (synth / "attack-path.findings.yaml").exists()
 
 
 def test_analyze_attack_paths_emits_blocked_finding_when_no_crown_jewels(
@@ -106,7 +106,7 @@ def test_analyze_attack_paths_emits_blocked_finding_when_no_crown_jewels(
     result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
     assert result.exit_code == 0, result.output  # blocked is not an error
     findings_doc = yaml.safe_load(
-        (tmp_path / "40-synthesis" / "attack-path-findings.yaml").read_text()
+        (tmp_path / "40-synthesis" / "attack-path.findings.yaml").read_text()
     )
     blocked = [f for f in findings_doc["findings"] if f["disposition"] == "blocked"]
     assert blocked
@@ -153,7 +153,7 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
     """Directly validate every C-15-emitted artifact against its JSON Schema.
 
     ``apd-gauntlet validate`` does not (yet — see Task C-21) glob for
-    ``attack-path-findings.yaml`` nor reference the three graph artifacts
+    ``attack-path.findings.yaml`` nor reference the three graph artifacts
     in its ``SYNTHESIS_ROLLUPS`` map, so the sibling
     ``test_analyze_attack_paths_validate_does_not_crash`` passes vacuously
     for those files. This test closes that gap by loading each artifact
@@ -185,7 +185,7 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
     # The findings file is a wrapper {schema_version, findings: [...]};
     # finding.schema.json describes one finding record, so iterate.
     findings_doc = yaml.safe_load(
-        (synth / "attack-path-findings.yaml").read_text()
+        (synth / "attack-path.findings.yaml").read_text()
     )
     finding_schema = json.loads(
         (SCHEMA_DIR / "finding.schema.json").read_text()

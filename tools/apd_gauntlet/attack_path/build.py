@@ -129,7 +129,7 @@ def _load_all_records(
     older fixtures and test scaffolds may use flatter layouts. A recursive
     glob (e.g. ``**/*.findings.yaml``) handles both shapes uniformly.
 
-    The analyzer's own ``40-synthesis/attack-path-findings.yaml`` is skipped
+    The analyzer's own ``40-synthesis/attack-path.findings.yaml`` is skipped
     explicitly — if it weren't, every re-run would ingest its own previous
     output as a "specialist finding."
     """
@@ -137,7 +137,7 @@ def _load_all_records(
     if not run_dir.exists():
         return out
     for f in sorted(run_dir.glob(glob)):
-        if "40-synthesis" in f.parts and f.name == "attack-path-findings.yaml":
+        if "40-synthesis" in f.parts and f.name == "attack-path.findings.yaml":
             continue
         doc = _load_yaml(f)
         records = doc.get(key)

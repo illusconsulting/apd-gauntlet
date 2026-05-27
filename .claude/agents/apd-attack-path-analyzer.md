@@ -48,7 +48,7 @@ capabilities. Activation-gated:
   `30-auditability/` (matching `*.findings.yaml`, recursive; dedup'd by
   `apd-synthesizer`; each finding can produce one
   `compromisable_via_finding` edge). The analyzer's own
-  `40-synthesis/attack-path-findings.yaml` is excluded from this scan
+  `40-synthesis/attack-path.findings.yaml` is excluded from this scan
 - Specialist capabilities under the same tier directories (matching
   `*.capabilities.yaml`, recursive; dedup'd by `apd-synthesizer`; each
   capability can produce one `mitigated_by_capability` edge)
@@ -61,7 +61,7 @@ capabilities. Activation-gated:
 - `40-synthesis/asset-graph.yaml` — nodes + edges, schema-validated
 - `40-synthesis/attack-paths.yaml` — enumerated paths with feasibility / severity
 - `40-synthesis/defense-graph.yaml` — D3FEND overlay on bottleneck edges
-- `40-synthesis/attack-path-findings.yaml` — apath-* findings
+- `40-synthesis/attack-path.findings.yaml` — apath-* findings
   (schema = `finding.schema.json`)
 - `40-synthesis/attack-path-report.md` — markdown report with embedded
   Mermaid diagrams
@@ -113,13 +113,13 @@ capabilities. Activation-gated:
 6. **Validate.** Run `apd-gauntlet validate <run_dir>` for the cross-file
    passes it currently covers. Note: until Task C-21 wires the four C-15
    artifacts (`asset-graph.yaml`, `attack-paths.yaml`, `defense-graph.yaml`,
-   `attack-path-findings.yaml`) into the validator's glob set and
+   `attack-path.findings.yaml`) into the validator's glob set and
    `SYNTHESIS_ROLLUPS` map, three of the four emitted files pass `validate`
    vacuously. Until that lands, run a direct schema check on each emitted
    file — `asset-graph.yaml` against `schemas/asset-graph.schema.json`,
    `attack-paths.yaml` against `schemas/attack-path.schema.json`,
    `defense-graph.yaml` against `schemas/defense-graph.schema.json`, and
-   each record in `attack-path-findings.yaml` against
+   each record in `attack-path.findings.yaml` against
    `schemas/finding.schema.json`. If any artifact fails its schema, fix it
    before declaring success.
 

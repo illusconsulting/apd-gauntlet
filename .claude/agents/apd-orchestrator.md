@@ -256,7 +256,7 @@ Phases 5.5 and 5.6 may run in parallel; both consume Phase 5's outputs and write
 - `40-synthesis/asset-graph.yaml` — node/edge graph with provenance and confidence
 - `40-synthesis/attack-paths.yaml` — enumerated paths with feasibility / severity
 - `40-synthesis/defense-graph.yaml` — graph with D3FEND overlay on bottleneck edges
-- `40-synthesis/attack-path-findings.yaml` — `apath-*` findings
+- `40-synthesis/attack-path.findings.yaml` — `apath-*` findings
 - `40-synthesis/attack-path-report.md` — markdown report with embedded Mermaid diagrams
 
 Validate the YAML artifacts against their schemas (`schemas/asset-graph.schema.json`, `schemas/attack-path.schema.json`, `schemas/defense-graph.schema.json`) via `apd-gauntlet validate <run-dir>`. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the analyzer with the specific violations cited. Allow up to two retries; after two retries, surface the failure and proceed without that record.

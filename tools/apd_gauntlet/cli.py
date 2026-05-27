@@ -400,7 +400,7 @@ def analyze_attack_paths(run_dir: Path) -> None:
     - ``40-synthesis/asset-graph.yaml``
     - ``40-synthesis/attack-paths.yaml``
     - ``40-synthesis/defense-graph.yaml``
-    - ``40-synthesis/attack-path-findings.yaml``
+    - ``40-synthesis/attack-path.findings.yaml``
 
     Enumeration defaults (override via .apd-run.yaml#attack_path_analysis):
       max_hop=8, max_paths_per_pair=50, bottleneck_threshold=5
@@ -481,7 +481,7 @@ def analyze_attack_paths(run_dir: Path) -> None:
         synth / "attack-paths.yaml", all_paths, params, truncated_pairs, bottleneck_edges
     )
     _write_defense_graph(synth / "defense-graph.yaml", overlays)
-    _write_findings(synth / "attack-path-findings.yaml", findings)
+    _write_findings(synth / "attack-path.findings.yaml", findings)
 
     click.echo(
         f"analyze-attack-paths: wrote {len(all_paths)} paths, "
@@ -491,7 +491,7 @@ def analyze_attack_paths(run_dir: Path) -> None:
 
 def _write_blocked_finding(synth: Path, *, reason: str) -> None:
     """Emit a single ``disposition: blocked`` apath finding to
-    ``attack-path-findings.yaml``. Conforms to ``finding.schema.json``
+    ``attack-path.findings.yaml``. Conforms to ``finding.schema.json``
     (including the ``allOf`` rule requiring ``prerequisite_evidence`` when
     ``disposition == "blocked"``).
     """
@@ -550,7 +550,7 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
             }
         ],
     }
-    (synth / "attack-path-findings.yaml").write_text(yaml.safe_dump(doc, sort_keys=False))
+    (synth / "attack-path.findings.yaml").write_text(yaml.safe_dump(doc, sort_keys=False))
 
 
 def _load_records(
@@ -564,14 +564,14 @@ def _load_records(
     the apd-synthesizer's input convention; test fixtures may use flatter
     layouts. A recursive glob handles both shapes uniformly.
 
-    The analyzer's own ``40-synthesis/attack-path-findings.yaml`` is skipped
+    The analyzer's own ``40-synthesis/attack-path.findings.yaml`` is skipped
     so repeated runs do not ingest the previous run's apath-* findings as
     "specialist findings."
     """
     findings_by_id: dict[str, dict[str, Any]] = {}
     capabilities: list[dict[str, Any]] = []
     for f in sorted(run_dir.glob("**/*.findings.yaml")):
-        if "40-synthesis" in f.parts and f.name == "attack-path-findings.yaml":
+        if "40-synthesis" in f.parts and f.name == "attack-path.findings.yaml":
             continue
         doc = yaml.safe_load(f.read_text()) or {}
         for idx, rec in enumerate(doc.get("findings", []) or []):

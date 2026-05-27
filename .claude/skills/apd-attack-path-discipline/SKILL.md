@@ -81,7 +81,7 @@ bypass it.
 The analyzer runs in tier-4 AFTER `apd-synthesizer` has dedup'd specialist
 findings and capabilities. Inputs are read-only from the analyzer's
 perspective: it never modifies specialist records. Its own findings are
-appended to a separate file (`40-synthesis/attack-path-findings.yaml`) that
+appended to a separate file (`40-synthesis/attack-path.findings.yaml`) that
 the synthesizer's final coverage-matrix pass includes in the 9×N rollup.
 
 ## Out of scope (delegated)

@@ -54,7 +54,7 @@ def test_orchestrator_documents_analyzer_outputs() -> None:
         "asset-graph.yaml",
         "attack-paths.yaml",
         "defense-graph.yaml",
-        "attack-path-findings.yaml",
+        "attack-path.findings.yaml",
     ]
     assert any(out in text for out in expected_outputs)
 

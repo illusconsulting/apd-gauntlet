@@ -128,7 +128,7 @@ def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
     tmp_path: Path,
 ) -> None:
     """The recursive ``**/*.findings.yaml`` glob will also match
-    ``40-synthesis/attack-path-findings.yaml`` from a previous run. The
+    ``40-synthesis/attack-path.findings.yaml`` from a previous run. The
     builder must skip that file so re-runs do not ingest their own output
     as a "specialist finding."
     """
@@ -138,7 +138,7 @@ def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
     synth.mkdir(parents=True, exist_ok=True)
     # A poison record that, if ingested, would attach to a `compromisable_via_finding`
     # edge — we assert that no edge with this id appears in the graph.
-    (synth / "attack-path-findings.yaml").write_text(
+    (synth / "attack-path.findings.yaml").write_text(
         "findings:\n"
         "  - id: apath-poison\n"
         "    detail: 'adjudication-service to member-record-store'\n"
@@ -148,5 +148,5 @@ def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
     graph = build_graph(run).graph
     for e in graph._edges.values():
         assert e.finding_id != "apath-poison", (
-            "builder must not ingest 40-synthesis/attack-path-findings.yaml"
+            "builder must not ingest 40-synthesis/attack-path.findings.yaml"
         )

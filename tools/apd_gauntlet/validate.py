@@ -99,7 +99,7 @@ CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 # Whole-document rollup files in 40-synthesis/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
 # TODO (C-21): extend with C-15 synthesis artifacts:
-#   asset-graph.yaml, attack-paths.yaml, defense-graph.yaml, attack-path-findings.yaml
+#   asset-graph.yaml, attack-paths.yaml, defense-graph.yaml, attack-path.findings.yaml
 SYNTHESIS_ROLLUPS: dict[str, str] = {
     "cwe-coverage.yaml":           "cwe-coverage.schema.json",
     "owasp-coverage.yaml":         "owasp-coverage.schema.json",
