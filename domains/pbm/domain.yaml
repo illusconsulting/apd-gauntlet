@@ -22,3 +22,28 @@ regulatory_anchors:
   - "CMS Part D"
   - URAC
   - "SOC 2"
+crown_jewels:
+  - pattern: phi_store
+    description: "Member PHI store carrying demographics, claims history, prescriber/diagnosis associations subject to HIPAA breach-notification thresholds."
+  - pattern: pde_submission_pipeline
+    description: "CMS Part D Prescription Drug Event submission pipeline — submission integrity is regulator-anchored under CMS rules and material to plan revenue."
+  - pattern: claim_adjudication_engine
+    description: "Real-time claim adjudication engine — pricing accuracy and decision integrity drive member out-of-pocket and pharmacy reimbursement."
+attacker_positions:
+  - position: external_internet
+    description: "Untrusted external internet client; the default external attacker position for any internet-facing surface."
+  - position: compromised_pharmacy_credential
+    description: "An attacker holding a valid pharmacy-submitter credential through phishing, credential stuffing, or insider abuse at a pharmacy partner."
+  - position: compromised_vendor_integration
+    description: "An attacker who has compromised a third-party vendor's integration credentials (e.g., a benefits-management vendor or analytics partner)."
+  - position: insider_with_member_service_role
+    description: "An insider holding a legitimate member-services role but acting outside their minimum-necessary scope (e.g., bulk PHI export, unauthorized member lookups)."
+  - position: compromised_dev_workstation
+    description: "An attacker who has compromised a developer or operator workstation with production deployment or break-glass access."
+default_trust_boundaries:
+  - boundary: pharmacy_submission_ingress
+    description: "Boundary between external pharmacy submitters and the claim-ingress API; first authentication/authorization checkpoint for claim submission."
+  - boundary: member_portal_ingress
+    description: "Boundary between internet members and the member-facing portal; second external ingress with PHI-read scope after authentication."
+  - boundary: internal_to_pde_submission
+    description: "Boundary between internal services and the CMS Part D submission pipeline; outbound regulatory channel with submission-integrity guarantees."
