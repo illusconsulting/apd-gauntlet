@@ -103,6 +103,7 @@ def test_report_data_unknown_finding_ref_fails_cross_file(minimal_run: pathlib.P
 
 
 def test_report_data_unknown_strength_ref_fails_cross_file(minimal_run: pathlib.Path) -> None:
+    """A strengths entry pointing at a non-existent capability fails cross-file."""
     doc = {
         "schema_version": 1,
         "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
@@ -126,3 +127,23 @@ def test_report_data_absent_is_silent(minimal_run: pathlib.Path) -> None:
     rep_schema = run_schema_pass(minimal_run)
     rep_cross = run_cross_file_pass(minimal_run)
     assert rep_schema.is_clean and rep_cross.is_clean
+
+
+def test_report_data_unknown_next_steps_ref_fails_cross_file(minimal_run: pathlib.Path) -> None:
+    """A next_steps refs entry pointing at neither a finding nor a capability fails cross-file."""
+    doc = {
+        "schema_version": 1,
+        "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
+        "headline_findings": [{"id": "conf-12345678", "rank": 1}],
+        "strengths": [{"id": "conf-cap-abcd1234", "caveats": ["A caveat long enough."]}],
+        "next_steps": [{"rank": 1, "text": "Do the thing now.", "refs": ["nonexistent-00000000"]}],
+        "posture_summary": {
+            "trustworthiness": "Trust posture statement.",
+            "scalability":     "Scale posture statement.",
+            "auditability":    "Audit posture statement.",
+        },
+    }
+    (minimal_run / "40-synthesis" / "report-data.yaml").write_text(yaml.safe_dump(doc))
+    rep = run_cross_file_pass(minimal_run)
+    assert not rep.is_clean
+    assert any("nonexistent-00000000" in v.message for v in rep.errors)
