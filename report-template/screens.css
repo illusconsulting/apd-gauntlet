@@ -963,3 +963,18 @@
 .overlay-card__head { display: flex; justify-content: space-between; margin-bottom: var(--space-2); font-size: var(--text-sm); }
 .overlay-card__row { display: flex; gap: var(--space-3); margin-bottom: var(--space-2); align-items: flex-start; }
 .overlay-card__label { min-width: 140px; font-size: var(--text-xs); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── FINDINGS LAYOUT SELECT ─────────────────────────────────────────── */
+.findings__layout-select {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+.findings__layout-select select {
+  font: inherit;
+  background: var(--surface-1);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 4px;
+}

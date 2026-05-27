@@ -32,6 +32,13 @@ function App() {
     document.body.setAttribute("data-type", t.typePairing);
   }, [t.theme, t.sevPalette, t.density, t.typePairing]);
 
+  // Listen for findings-layout changes dispatched by the header-right select
+  React.useEffect(() => {
+    const onLayout = (e) => setTweak("findingsLayout", e.detail);
+    window.addEventListener("apd:setLayout", onLayout);
+    return () => window.removeEventListener("apd:setLayout", onLayout);
+  }, [setTweak]);
+
   const onOpenFinding = (id) => {
     setSelectedFinding(id);
     setActiveTab("findings");
@@ -112,70 +119,73 @@ function App() {
         )}
       </main>
 
-      {/* Tweaks panel */}
-      <TweaksPanel title="Tweaks">
-        <TweakSection label="Theme" />
-        <TweakRadio
-          label="Theme"
-          value={t.theme}
-          options={[
-            { value: "light", label: "Light" },
-            { value: "paper", label: "Paper" },
-            { value: "dark",  label: "Dark" },
-          ]}
-          onChange={(v) => setTweak("theme", v)}
-        />
-        <TweakRadio
-          label="Severity palette"
-          value={t.sevPalette}
-          options={[
-            { value: "default",  label: "Default" },
-            { value: "contrast", label: "Contrast" },
-            { value: "mono",     label: "Mono" },
-          ]}
-          onChange={(v) => setTweak("sevPalette", v)}
-        />
+      {/* Tweaks panel — dev only. Precompiled bundle omits tweaks-panel.jsx
+          entirely; this guard keeps app.jsx safe to bundle. */}
+      {typeof TweaksPanel !== "undefined" && (
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Theme" />
+          <TweakRadio
+            label="Theme"
+            value={t.theme}
+            options={[
+              { value: "light", label: "Light" },
+              { value: "paper", label: "Paper" },
+              { value: "dark",  label: "Dark" },
+            ]}
+            onChange={(v) => setTweak("theme", v)}
+          />
+          <TweakRadio
+            label="Severity palette"
+            value={t.sevPalette}
+            options={[
+              { value: "default",  label: "Default" },
+              { value: "contrast", label: "Contrast" },
+              { value: "mono",     label: "Mono" },
+            ]}
+            onChange={(v) => setTweak("sevPalette", v)}
+          />
 
-        <TweakSection label="Type" />
-        <TweakSelect
-          label="Type pairing"
-          value={t.typePairing}
-          options={[
-            { value: "editorial", label: "Editorial — Newsreader + Plex" },
-            { value: "technical", label: "Technical — IBM Plex Sans only" },
-            { value: "classic",   label: "Classic — Source Serif + Inter" },
-            { value: "modern",    label: "Modern — Instrument + Manrope" },
-          ]}
-          onChange={(v) => setTweak("typePairing", v)}
-        />
+          <TweakSection label="Type" />
+          <TweakSelect
+            label="Type pairing"
+            value={t.typePairing}
+            options={[
+              { value: "editorial", label: "Editorial — Newsreader + Plex" },
+              { value: "technical", label: "Technical — IBM Plex Sans only" },
+              { value: "classic",   label: "Classic — Source Serif + Inter" },
+              { value: "modern",    label: "Modern — Instrument + Manrope" },
+            ]}
+            onChange={(v) => setTweak("typePairing", v)}
+          />
 
-        <TweakSection label="Density" />
-        <TweakRadio
-          label="Density"
-          value={t.density}
-          options={[
-            { value: "compact",     label: "Compact" },
-            { value: "comfortable", label: "Comfy" },
-            { value: "roomy",       label: "Roomy" },
-          ]}
-          onChange={(v) => setTweak("density", v)}
-        />
+          <TweakSection label="Density" />
+          <TweakRadio
+            label="Density"
+            value={t.density}
+            options={[
+              { value: "compact",     label: "Compact" },
+              { value: "comfortable", label: "Comfy" },
+              { value: "roomy",       label: "Roomy" },
+            ]}
+            onChange={(v) => setTweak("density", v)}
+          />
 
-        <TweakSection label="Findings layout" />
-        <TweakRadio
-          label="Layout"
-          value={t.findingsLayout}
-          options={[
-            { value: "two-pane", label: "Two-pane" },
-            { value: "stacked",  label: "Stacked" },
-            { value: "table",    label: "Table" },
-          ]}
-          onChange={(v) => setTweak("findingsLayout", v)}
-        />
-        <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.5, padding: "4px 14px 12px" }}>
-          Switch to the Findings tab to see the layout change.
-        </div>
-      </TweaksPanel>
+          <TweakSection label="Findings layout" />
+          <TweakRadio
+            label="Layout"
+            value={t.findingsLayout}
+            options={[
+              { value: "two-pane", label: "Two-pane" },
+              { value: "stacked",  label: "Stacked" },
+              { value: "table",    label: "Table" },
+            ]}
+            onChange={(v) => setTweak("findingsLayout", v)}
+          />
+          <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.5, padding: "4px 14px 12px" }}>
+            Switch to the Findings tab to see the layout change.
+          </div>
+        </TweaksPanel>
+      )}
 
       <ToastHost />
     </div>
