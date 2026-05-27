@@ -319,8 +319,8 @@ full reference-data lifecycle.
 
 ## Design rationale
 
-See `docs/adrs/0010-attack-path-analyzer-and-d3fend-overlay.md` (added
-in C-27) for the full decision record — why BloodHound-style
+See `docs/adrs/0010-attack-path-analysis-on-partial-graphs.md` for the
+full decision record — why BloodHound-style
 enumeration over a partial graph, why the D3FEND-must-counter-ATT&CK
 discipline, why bounded enumeration with explicit truncation, and the
 two-sources-of-truth model for crown jewels (domain defaults plus
