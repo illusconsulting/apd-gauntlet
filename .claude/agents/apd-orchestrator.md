@@ -49,10 +49,11 @@ You won't emit findings, but you need the same shared understanding the speciali
   owasp, d3fend), contradictions across specialists
 - `apd-threat-model-evaluator` (optional, v1.3+) — activates if normalized
   TM exists; emits coverage gap / contradiction / silence findings
-- `apd-attack-path-analyzer` (optional, v1.4+) — activates if
-  `crown_jewels` are declared in the run-config or active domain pack;
-  performs bounded attack-path enumeration over the asset graph and
-  overlays MITRE D3FEND on bottleneck edges; emits apath-* findings
+- `apd-attack-path-analyzer` (optional, v1.4+) — activates when both
+  `crown_jewels[]` and `attacker_positions[]` are declared (in the
+  run-config or merged from the active domain pack); performs bounded
+  attack-path enumeration over the asset graph and overlays MITRE D3FEND
+  on bottleneck edges; emits apath-* findings
 
 The synthesizer runs first in tier 4. The evaluator (Phase 5.5) and the
 analyzer (Phase 5.6) can run in parallel — they consume the same dedup'd
