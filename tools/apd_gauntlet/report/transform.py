@@ -284,11 +284,11 @@ def findings_array(
             "recommendation": f.get("recommendation"),
             "mappings": {
                 "nist":      (f.get("control_mappings") or {}).get("nist_800_53r5", []),
-                "attack":    (f.get("control_mappings") or {}).get("mitre_attack", []),
+                "attack":    _extract_ids_from_mapping((f.get("control_mappings") or {}).get("mitre_attack"), "technique"),
                 "cwe":       (f.get("control_mappings") or {}).get("cwe", []),
                 "owasp_api": (f.get("control_mappings") or {}).get("owasp_api_top10", []),
                 "owasp":     (f.get("control_mappings") or {}).get("owasp_top10", []),
-                "d3fend":    (f.get("control_mappings") or {}).get("d3fend", []),
+                "d3fend":    _extract_ids_from_mapping((f.get("control_mappings") or {}).get("d3fend")),
             },
             "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
             "prerequisite_evidence": f.get("prerequisite_evidence", []),
