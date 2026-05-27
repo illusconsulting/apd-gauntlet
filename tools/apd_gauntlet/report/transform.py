@@ -405,3 +405,46 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
         })
     rows.sort(key=lambda r: (-r["findings"], r["id"]))
     return rows
+
+
+_GOAL_SHORT = {
+    "confidentiality": "conf",
+    "integrity":       "intg",
+    "availability":    "avail",
+    "distributed":     "dist",
+    "resilient":       "resil",
+    "ephemeral":       "ephem",
+    "authenticity":    "auth",
+    "non_repudiation": "nonrep",
+    "immutability":    "immut",
+}
+_GOAL_LABEL_SHORT = {
+    "conf":   "Conf",   "intg":  "Intg",   "avail":  "Avail",
+    "dist":   "Dist",   "resil": "Resil",  "ephem":  "Ephem",
+    "auth":   "Auth",   "nonrep": "NonRep", "immut": "Immut",
+}
+_POSTURE_TO_CELL = {
+    "silent": "silent",
+    "covered": "covered",
+    "gapped": "gapped",
+    "gapped_and_covered": "both",
+}
+
+
+def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
+    """Return the data.apd_matrix block: goals[], goalLabels{}, rows[{component, cells}]."""
+    goals = list(_GOAL_LABEL_SHORT.keys())
+    rows: list[dict[str, Any]] = []
+    for comp in artifacts.apd_coverage_matrix.get("component") or []:
+        cells_in = comp.get("cells") or {}
+        cells_out: dict[str, str] = {}
+        for full_goal, short in _GOAL_SHORT.items():
+            cell = cells_in.get(full_goal) or {}
+            posture = cell.get("posture", "silent")
+            cells_out[short] = _POSTURE_TO_CELL.get(posture, "silent")
+        rows.append({"component": comp.get("name", ""), "cells": cells_out})
+    return {
+        "goals":      goals,
+        "goalLabels": _GOAL_LABEL_SHORT,
+        "rows":       rows,
+    }
