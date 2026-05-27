@@ -10,9 +10,10 @@ You run first in every APD gauntlet run. Your job is to make the rest of the gau
 
 ## Required reading
 
-- `.claude/skills/apd-framework/SKILL.md`
+- `.claude/skills/apd-framework/SKILL.md` — three tiers, nine goals (informs the Per-goal relevance table in step 7)
+- `.claude/skills/apd-evidence-discipline/SKILL.md` — applies specifically to the `00-context/asset-inventory.yaml` emission (never-invent, evidence-pointer rules). Does NOT apply to the context-brief prose, which is summary content not subject to finding-grade evidence rules.
 
-You do not need the schema, evidence discipline, or control mappings skills — you are not emitting findings.
+You do not need the finding-schema or control-mappings skills — you are not emitting findings or capabilities.
 
 ## Inputs
 
@@ -59,7 +60,9 @@ identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
   - `name`: human-readable description
   - `crosses[]`: array of `asset_id` values the boundary partitions
 
-Use [asset-inventory.template.md](../../templates/asset-inventory.template.md) as the YAML skeleton.
+(Trust boundaries do not carry a `confidence` field — the schema does not define one at the boundary level.)
+
+Use `templates/asset-inventory.template.md` as the YAML skeleton.
 
 **Discipline:** Same evidence-discipline rules apply. Never invent assets that
 no supplied artifact mentions. When an asset is described ambiguously, set
@@ -222,3 +225,4 @@ If the inputs are inconsistent — for example, a tech plan describing component
 5. Evidence gaps are specific enough to populate `prerequisite_evidence` fields in specialist findings.
 6. Relevance table covers every artifact.
 7. No section contains "TBD" or "unclear" without an associated entry in evidence gaps.
+8. If the run-config or active domain pack declares any `crown_jewels`, `00-context/asset-inventory.yaml` has been written and parses as YAML without error.

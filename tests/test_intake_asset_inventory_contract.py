@@ -61,3 +61,4 @@ def test_asset_inventory_template_has_yaml_skeleton() -> None:
     assert "assets:" in text
     assert "identities:" in text
     assert "trust_boundaries:" in text
+    assert "extraction_summary:" in text
