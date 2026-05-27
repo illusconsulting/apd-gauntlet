@@ -565,6 +565,132 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
+# Contradictions + severity-disagreements + next_steps + posture passthrough
+# ---------------------------------------------------------------------------
+
+
+def contradictions_section(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Return contradictions in the React template's shape:
+       [{id, finding{id, assertion}, capability{id, assertion}, comparison, resolution}]
+    """
+    out: list[dict[str, Any]] = []
+    for c in artifacts.contradictions:
+        # capability_ids may be a list — the template shows one; join with " + " if many.
+        cap_ids = c.get("capability_ids") or ([c.get("capability_id")] if c.get("capability_id") else [])
+        out.append({
+            "id": c.get("id"),
+            "finding": {
+                "id": c.get("finding_id"),
+                "assertion": (c.get("finding_assertion") or "").strip(),
+            },
+            "capability": {
+                "id": " + ".join(filter(None, cap_ids)) or None,
+                "assertion": (c.get("capability_assertion") or "").strip(),
+            },
+            "comparison": (c.get("evidence_comparison") or c.get("comparison") or "").strip(),
+            "resolution": (c.get("recommended_resolution") or c.get("resolution") or "").strip(),
+        })
+    return out
+
+
+def _normalise_agent_severities(d: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalise the various severity-agent shapes into [{lens, severity}].
+
+    Accepted input shapes:
+    1. ``agents: [{lens: "x", severity: "high"}, ...]``  (planned schema)
+    2. ``lens_severities: [{lens: "x", severity: "high"}, ...]``  (alternate key)
+    3. ``agent_severities: {lens_name: "severity", ...}``  (legacy_example fixture shape)
+    """
+    # Shape 1 & 2: list under agents / lens_severities
+    agents_raw = d.get("agents") or d.get("lens_severities")
+    if agents_raw and isinstance(agents_raw, list):
+        return [
+            {"lens": a.get("lens") or a.get("agent"), "severity": a.get("severity")}
+            for a in agents_raw
+            if isinstance(a, dict)
+        ]
+    # Shape 3: dict under agent_severities
+    agent_sev = d.get("agent_severities")
+    if isinstance(agent_sev, dict):
+        return [
+            {"lens": lens, "severity": sev}
+            for lens, sev in agent_sev.items()
+        ]
+    return []
+
+
+def severity_disagreements_section(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for d in artifacts.severity_disagreements:
+        out.append({
+            "id":     d.get("finding_id") or d.get("id"),
+            "agents": _normalise_agent_severities(d),
+            "chosen":    d.get("chosen_severity") or d.get("chosen"),
+            "rationale": (d.get("rationale") or "").strip(),
+        })
+    return out
+
+
+def next_steps_section(
+    supplement: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not supplement:
+        return []
+    return [
+        {"rank": e["rank"], "text": e["text"], "refs": list(e.get("refs") or [])}
+        for e in sorted(supplement, key=lambda x: x.get("rank", 9999))
+    ]
+
+
+def posture_summary_section(
+    supplement: dict[str, Any] | None,
+) -> dict[str, str]:
+    if supplement:
+        return {
+            "trustworthiness": supplement.get("trustworthiness", ""),
+            "scalability":     supplement.get("scalability", ""),
+            "auditability":    supplement.get("auditability", ""),
+        }
+    return {
+        "trustworthiness": "Posture statement not provided by synthesizer.",
+        "scalability":     "Posture statement not provided by synthesizer.",
+        "auditability":    "Posture statement not provided by synthesizer.",
+    }
+
+
+def build_apd_data(
+    artifacts: RunArtifacts,
+    *,
+    run_dir: pathlib.Path | None = None,
+) -> dict[str, Any]:
+    """Assemble the full window.APD_DATA dict from a RunArtifacts."""
+    supplement = artifacts.report_data or {}
+    return {
+        "meta":     meta_block(artifacts, run_dir=run_dir),
+        "summary":  summary_rollup(artifacts),
+        "exec_summary": (supplement.get("exec_summary") or {}).get(
+            "paragraphs", ["Run summary not provided by synthesizer."]
+        ),
+        "posture_summary": posture_summary_section(supplement.get("posture_summary")),
+        "capabilities":  capability_grid(artifacts),
+        "strengths":     strengths_section(
+            artifacts, supplied_strengths=supplement.get("strengths"),
+        ),
+        "findings":      findings_array(
+            artifacts, headline_supplement=supplement.get("headline_findings"),
+        ),
+        "contradictions":         contradictions_section(artifacts),
+        "severity_disagreements": severity_disagreements_section(artifacts),
+        "nist_rollup":      nist_rollup_rows(artifacts),
+        "attack_exposure":  attack_exposure_rows(artifacts),
+        "apd_matrix":       apd_matrix(artifacts),
+        "attack_paths":     attack_paths_data(artifacts),
+        "next_steps":       next_steps_section(supplement.get("next_steps")),
+        "taxonomy":         taxonomy_dict(artifacts),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Taxonomy hover dictionary
 # ---------------------------------------------------------------------------
 
