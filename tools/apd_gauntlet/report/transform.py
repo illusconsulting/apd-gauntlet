@@ -31,7 +31,7 @@ def _crown_jewels_from_inventory(inventory: dict[str, Any]) -> list[str]:
         if not isinstance(asset, dict):
             continue
         if asset.get("asset_type") == "crown_jewel" or asset.get("kind") == "crown_jewel":
-            out.append(asset.get("name", asset.get("asset_id", "")))
+            out.append(asset.get("name") or asset.get("asset_id") or "")
     return out
 
 
@@ -41,8 +41,9 @@ def _attacker_positions_from_inventory(inventory: dict[str, Any]) -> list[str]:
     for asset in inventory.get("assets") or []:
         if not isinstance(asset, dict):
             continue
-        if asset.get("asset_type") == "attacker_position" or asset.get("kind") == "attacker_position":
-            out.append(asset.get("name", asset.get("asset_id", "")))
+        if (asset.get("asset_type") == "attacker_position"
+                or asset.get("kind") == "attacker_position"):
+            out.append(asset.get("name") or asset.get("asset_id") or "")
     return out
 
 
@@ -110,7 +111,8 @@ def meta_block(
             "version": artifacts.domain_pack_version,
         },
         "run_id": artifacts.run_id,
-        "synthesizer_version": "1.0.0",  # NOTE: future enhancement — pull from advisory-report frontmatter
+        # NOTE: future enhancement — pull from advisory-report frontmatter
+        "synthesizer_version": "1.0.0",
         "specialists_skipped": [],
         "subject": subject.split(" — ")[0] if " — " in subject else subject,
         "subject_tagline": subject.split(" — ", 1)[1] if " — " in subject else "",
@@ -134,7 +136,9 @@ def summary_rollup(artifacts: RunArtifacts) -> dict[str, Any]:
 
     cross_lens_merged = sum(
         1 for c in caps
-        if c.get("merged") or (c.get("lens_perspectives") and c.get("id", "").startswith("cap-merged"))
+        if c.get("merged") or (
+            c.get("lens_perspectives") and c.get("id", "").startswith("cap-merged")
+        )
     )
     linked_clusters = sum(
         1 for f in findings if f.get("linked_perspectives")
@@ -142,7 +146,8 @@ def summary_rollup(artifacts: RunArtifacts) -> dict[str, Any]:
 
     return {
         "findings_total": len(findings),
-        "findings_pre_dedup": len(findings),  # post-dedup view; pre/post unknown without specialist counts
+        # post-dedup view; pre/post unknown without specialist counts
+        "findings_pre_dedup": len(findings),
         "cross_lens_merged_clusters": cross_lens_merged,
         "linked_clusters": linked_clusters,
         "bySeverity": {
@@ -284,11 +289,15 @@ def findings_array(
             "recommendation": f.get("recommendation"),
             "mappings": {
                 "nist":      (f.get("control_mappings") or {}).get("nist_800_53r5", []),
-                "attack":    _extract_ids_from_mapping((f.get("control_mappings") or {}).get("mitre_attack"), "technique"),
+                "attack":    _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("mitre_attack"), "technique"
+                ),
                 "cwe":       (f.get("control_mappings") or {}).get("cwe", []),
                 "owasp_api": (f.get("control_mappings") or {}).get("owasp_api_top10", []),
                 "owasp":     (f.get("control_mappings") or {}).get("owasp_top10", []),
-                "d3fend":    _extract_ids_from_mapping((f.get("control_mappings") or {}).get("d3fend")),
+                "d3fend":    _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("d3fend")
+                ),
             },
             "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
             "prerequisite_evidence": f.get("prerequisite_evidence", []),
@@ -336,7 +345,8 @@ _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 
 
 def _nist_family_titles() -> dict[str, str]:
-    return _json.loads((_PKG_DATA / "nist-families.json").read_text())
+    result: dict[str, str] = _json.loads((_PKG_DATA / "nist-families.json").read_text())
+    return result
 
 
 def _notable_for_family(
@@ -389,7 +399,11 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     raw = artifacts.attack_exposure.get("technique") or []
     rows: list[dict[str, Any]] = []
     for t in raw:
-        mits = [m.get("capability_id") for m in (t.get("mitigated_by_capabilities") or []) if m.get("capability_id")]
+        mits = [
+            m.get("capability_id")
+            for m in (t.get("mitigated_by_capabilities") or [])
+            if m.get("capability_id")
+        ]
         findings = t.get("exposure_finding_count", 0)
         if not mits:
             coverage = "uncovered"
@@ -545,7 +559,7 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
         for k, v in sorted(pairs_by_key.items())
     ]
 
-    overlays = []
+    overlays: list[Any] = []
     if artifacts.defense_graph is not None:
         overlays = artifacts.defense_graph.get("bottleneck_overlays") or []
 
@@ -576,7 +590,9 @@ def contradictions_section(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for c in artifacts.contradictions:
         # capability_ids may be a list — the template shows one; join with " + " if many.
-        cap_ids = c.get("capability_ids") or ([c.get("capability_id")] if c.get("capability_id") else [])
+        cap_ids = c.get("capability_ids") or (
+            [c.get("capability_id")] if c.get("capability_id") else []
+        )
         out.append({
             "id": c.get("id"),
             "finding": {

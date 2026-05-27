@@ -46,7 +46,7 @@ def write_manifest(
 ) -> None:
     """Write a flat key=value manifest for traceability."""
     lines = [
-        f"generated_at={_dt.datetime.now(_dt.UTC).isoformat()}",
+        f"generated_at={_dt.datetime.now(_dt.timezone.utc).isoformat()}",
         f"framework_version={framework_version}",
         f"bundle_hash={bundle_hash}",
     ]

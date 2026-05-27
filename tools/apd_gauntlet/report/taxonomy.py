@@ -38,7 +38,7 @@ def cwe_titles() -> dict[str, str]:
                 if not isinstance(entry, dict):
                     continue
                 cid = entry.get("cwe_id", "")
-                title = entry.get("name", entry.get("title", cid))
+                title = entry.get("name", entry.get("title", cid)) or cid
                 if cid:
                     out[cid] = title
             return out
@@ -47,7 +47,7 @@ def cwe_titles() -> dict[str, str]:
             if not cid or not cid.startswith("CWE-"):
                 continue
             if isinstance(v, dict):
-                out[cid] = v.get("title", v.get("name", cid))
+                out[cid] = v.get("title", v.get("name", cid)) or cid
             else:
                 out[cid] = str(v)
     return out
@@ -74,7 +74,11 @@ def attack_technique_titles() -> dict[str, str]:
     techniques = raw.get("techniques")
     if isinstance(techniques, dict):
         for tid, v in techniques.items():
-            out[tid] = v if isinstance(v, str) else v.get("name", tid) if isinstance(v, dict) else tid
+            out[tid] = (
+                v if isinstance(v, str)
+                else (v.get("name") or tid) if isinstance(v, dict)
+                else tid
+            )
     # No "techniques" key (e.g. mitigations-only shape) → return empty dict;
     # callers use the id as the title.
     return out
@@ -100,7 +104,7 @@ def d3fend_titles() -> dict[str, str]:
             if not isinstance(entry, dict):
                 continue
             did = entry.get("d3fend_id", "")
-            name = entry.get("name", did)
+            name = entry.get("name") or did
             if did:
                 out[did] = name
         return out
@@ -108,5 +112,9 @@ def d3fend_titles() -> dict[str, str]:
     techniques = raw.get("techniques")
     if isinstance(techniques, dict):
         for did, v in techniques.items():
-            out[did] = v if isinstance(v, str) else v.get("name", did) if isinstance(v, dict) else did
+            out[did] = (
+                v if isinstance(v, str)
+                else (v.get("name") or did) if isinstance(v, dict)
+                else did
+            )
     return out

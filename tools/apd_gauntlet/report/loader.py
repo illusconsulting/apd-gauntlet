@@ -97,7 +97,7 @@ def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
     """
     domain_pack = run_cfg.get("domain_pack")
     if isinstance(domain_pack, dict):
-        return domain_pack.get("name", "")
+        return str(domain_pack.get("name", ""))
     if isinstance(domain_pack, str):
         return domain_pack
     # Fall back to the bare `domain:` key used by current runs.
@@ -183,7 +183,7 @@ def _extract_str_list(run_cfg: dict[str, Any], key: str) -> list[str]:
         if isinstance(item, str):
             out.append(item)
         elif isinstance(item, dict):
-            out.append(item.get("name", item.get("id", str(item))))
+            out.append(item.get("name") or item.get("id") or str(item))
     return out
 
 
