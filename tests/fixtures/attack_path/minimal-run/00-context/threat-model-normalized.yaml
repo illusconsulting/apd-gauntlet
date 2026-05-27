@@ -1,0 +1,42 @@
+schema_version: 1
+generated_by: threat_model_recon
+source_artifact: inputs/threat-model.md
+methodology: stride
+extraction_summary:
+  entry_count: 2
+  high_confidence_count: 1
+  medium_confidence_count: 1
+  low_confidence_count: 0
+  parser_used: markdown_stride_parser
+
+entries:
+  - entry_id: tm-a1b2c3d4
+    asset: adjudication-service
+    threat: "Tampering with adjudication decisions could redirect PHI to attacker-controlled stores."
+    mitigation: "Enforce mTLS and integrity checks between claim-ingress and adjudication-service."
+    methodology: stride
+    source_locator: "threat-model.md:10-20"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: [T1565]
+    inferred_apd_goals:
+      - integrity
+      - confidentiality
+
+  - entry_id: tm-deadbeef
+    asset: audit-log-writer
+    threat: "Information disclosure via verbose logs leaking PHI excerpts."
+    mitigation: null
+    methodology: stride
+    source_locator: "threat-model.md:30-40"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: [T1005]
+    inferred_apd_goals:
+      - confidentiality

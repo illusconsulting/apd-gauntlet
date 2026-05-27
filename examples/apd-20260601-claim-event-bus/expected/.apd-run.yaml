@@ -1,0 +1,19 @@
+run_id: apd-20260601-claim-event-bus
+domain: pbm
+framework_version: 1.4.0
+taxonomies:
+  - cwe
+  - mitre_attack
+  - d3fend
+  - owasp_api_top10
+crown_jewels:
+  - phi_store
+  - pde_submission_pipeline
+attacker_positions:
+  - external_internet
+  - compromised_pharmacy_credential
+  - compromised_vendor_integration
+attack_path_analysis:
+  max_hop: 6
+  max_paths_per_pair: 25
+  bottleneck_threshold: 4

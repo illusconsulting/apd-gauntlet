@@ -113,6 +113,58 @@ What field-level data classifications apply? For SaaS:
 
 Each file has two sections: "Common finding patterns" and "Common capability patterns." Adapt the PBM examples to your domain. The framework conventions (NIST mappings, severity calibration anchors, ATT&CK rationales) stay the same; only the *examples* and *severity rationales* change.
 
+### 7a. Declare attack-path analyzer defaults (v1.4+)
+
+The v1.4 `apd-attack-path-analyzer` (see [docs/attack-path-analysis.md](attack-path-analysis.md)) is activation-gated on three new optional fields in `domain.yaml`:
+
+| Field | What it is | What the analyzer does with it |
+|---|---|---|
+| `crown_jewels` | List of `{pattern, description}` entries naming the assets or pipelines the analyzer should treat as enumeration sinks. The `pattern` is matched against asset names and data classifications in the intake's asset inventory (the analyzer strips a trailing `_pipeline` suffix when matching data classifications). | Becomes the default sink set when `.apd-run.yaml` does not override it. |
+| `attacker_positions` | List of `{position, description}` entries naming the source nodes for enumeration — the "where the attacker starts" set. | Becomes the default source set when `.apd-run.yaml` does not override it. |
+| `default_trust_boundaries` | Optional list of `{name, description}` entries naming trust boundaries the analyzer should expect to see in the intake's `asset-inventory.yaml`. Used by intake validation to warn when a known boundary is missing from a run. | Hints at the trust topology the domain treats as canonical (e.g., "internet edge", "PHI store boundary"). |
+
+All three are optional. A domain pack that omits all three remains v1.4-compatible — the analyzer simply skips silently for runs in that domain unless the operator declares the values in `.apd-run.yaml`.
+
+#### Worked example: `cms-medicare-claims-billing`
+
+A fictional CMS Medicare Part B claims-billing domain pack would declare:
+
+```yaml
+# domains/cms-medicare-claims-billing/domain.yaml (excerpt)
+name: cms-medicare-claims-billing
+display_name: "CMS Medicare Part B Claims Billing"
+version: 0.1.0
+framework_compat: ">=1.4.0,<2.0.0"
+
+crown_jewels:
+  - pattern: beneficiary_phi_store
+    description: "Medicare beneficiary PHI store — HIPAA breach-notification thresholds plus CMS data-use agreement obligations."
+  - pattern: claim_submission_pipeline
+    description: "Part B claim submission pipeline to CMS — submission integrity drives provider reimbursement and is regulator-anchored under 42 CFR Part 424."
+  - pattern: era_reconciliation_pipeline
+    description: "Electronic Remittance Advice reconciliation — payment-posting integrity material to provider revenue cycle."
+
+attacker_positions:
+  - position: external_internet
+    description: "Untrusted external internet client — default external surface for any internet-facing CMS-edge endpoint."
+  - position: compromised_provider_credential
+    description: "Attacker holding a valid provider-submitter credential through phishing, credential stuffing, or insider abuse at a billing partner."
+  - position: compromised_clearinghouse_integration
+    description: "Attacker who has compromised a third-party clearinghouse's integration credentials."
+  - position: insider_with_billing_role
+    description: "An insider with a legitimate billing-ops role acting outside their minimum-necessary scope (e.g., bulk PHI export, cross-beneficiary claim queries)."
+
+default_trust_boundaries:
+  - name: internet_edge
+    description: "External internet to provider-portal DMZ — TLS-terminating load balancer is the boundary."
+  - name: phi_store_boundary
+    description: "App-tier subnet to PHI persistence layer — KMS-mediated access required."
+  - name: cms_integration_boundary
+    description: "Outbound boundary to the CMS submission gateway — mutual-TLS pinned to CMS-issued certificates."
+```
+
+When a run under this domain pack omits `crown_jewels`/`attacker_positions` from `.apd-run.yaml`, the analyzer enumerates 3 jewels × 4 positions = 12 (attacker, jewel) pairs against the assembled partial graph. A run that wants to tighten the scope (e.g., focus only on the external-internet to beneficiary-PHI path) supplies an override in `.apd-run.yaml` that fully replaces the domain defaults.
+
 ### 8. Validate the pack
 
 ```bash

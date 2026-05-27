@@ -106,7 +106,37 @@ with no changes.
 
 ## v1.4.0 — Attack-path enumeration and D3FEND defense graph (Phase C)
 
-(Coming after Phase B.)
+Additive within v1.x. Extensions:
+
+- `finding.schema.json` — `agent` enum gains `attack_path_analyzer`; `id`
+  pattern extended to accept `apath-<sha8>` prefix; same extension on
+  `cross_references` and `merged_from` patterns.
+- `run-config.schema.json` — accepts optional top-level `crown_jewels`
+  and `attacker_positions` arrays of strings (per-run overrides) and an
+  optional `attack_path_analysis` block with `max_hop`, `max_paths_per_pair`,
+  and `bottleneck_threshold` numeric knobs.
+- `domain.schema.json` — accepts optional `crown_jewels` and
+  `attacker_positions` arrays of `{pattern|position, description}` entries,
+  plus an optional `default_trust_boundaries` array of
+  `{name, description}` entries. All three are optional; a pack that omits
+  them remains v1.4-compatible.
+- New: `asset-inventory.schema.json` — intake rollup of assets, trust
+  boundaries, and data classifications.
+- New: `asset-graph.schema.json` — analyzer-built graph of nodes and typed
+  edges with provenance and confidence.
+- New: `attack-path.schema.json` — enumerated attack paths plus the
+  bottleneck-edge set plus the `enumeration_parameters` block that records
+  the knobs the run was bounded by.
+- New: `defense-graph.schema.json` — D3FEND counter overlay on the
+  bottleneck edges that expose ATT&CK techniques.
+
+Nothing removed. `framework_compat` unchanged (PBM and any other
+`>=1.0.0,<2.0.0` packs consume v1.4.0 without changes; packs that want to
+declare crown jewels, attacker positions, or default trust boundaries
+should bump their `framework_compat` floor to `>=1.4.0,<2.0.0`).
+
+See [docs/attack-path-analysis.md](attack-path-analysis.md) for the operator
+guide and [docs/adrs/0010-attack-path-analysis-on-partial-graphs.md](adrs/0010-attack-path-analysis-on-partial-graphs.md) for the design rationale.
 
 ## See also
 

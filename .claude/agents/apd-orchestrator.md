@@ -19,7 +19,7 @@ Before doing anything else, view these four skills:
 
 You won't emit findings, but you need the same shared understanding the specialists have so you can validate their output structurally and route disagreements correctly.
 
-## Topology (v1.3+ — 15 agents)
+## Topology (v1.4+ — 16 agents)
 
 ### Tier-0 (intake / context)
 
@@ -49,6 +49,17 @@ You won't emit findings, but you need the same shared understanding the speciali
   owasp, d3fend), contradictions across specialists
 - `apd-threat-model-evaluator` (optional, v1.3+) — activates if normalized
   TM exists; emits coverage gap / contradiction / silence findings
+- `apd-attack-path-analyzer` (optional, v1.4+) — activates when both
+  `crown_jewels[]` and `attacker_positions[]` are declared (in the
+  run-config or merged from the active domain pack); performs bounded
+  attack-path enumeration over the asset graph and overlays MITRE D3FEND
+  on bottleneck edges; emits apath-* findings
+
+The synthesizer runs first in tier 4. The evaluator (Phase 5.5) and the
+analyzer (Phase 5.6) can run in parallel — they consume the same dedup'd
+outputs and write to non-overlapping files in `40-synthesis/`. The
+synthesizer's final coverage-matrix pass includes findings from both
+evaluator (`tmeval-*`) and analyzer (`apath-*`) in the 9×N rollup.
 
 ## Inputs
 
@@ -95,6 +106,8 @@ Wait for completion. Verify `00-context/context-brief.md` exists and contains:
 - A relevance hint table per artifact
 
 If any of the required sections are missing, route back to `apd-intake` with the specific gap noted.
+
+When the run-config or the active domain pack declares any `crown_jewels`, intake also emits `00-context/asset-inventory.yaml` (a machine-readable rollup of assets, identities, and trust boundaries). This artifact is consumed by Phase 5.6's `apd-attack-path-analyzer`. If `crown_jewels` are declared but `asset-inventory.yaml` was not produced, route back to `apd-intake` with the gap noted. If `crown_jewels` are not declared, the inventory is optional and its absence is not a failure.
 
 ### Phase 1.5 — Code reconnaissance (optional)
 
@@ -218,6 +231,37 @@ Wait for completion. Verify the synthesis directory contains:
 Validate outputs as non-blocking (informational). If the agent produces findings, they are advisory coverage gaps and contradictions relative to the normalized threat model; they do not block the run.
 
 **Downstream tolerance:** No downstream consumers; phase is final and informational.
+
+### Phase 5.6 — Attack-Path Analysis (optional, v1.4+)
+
+**Activation:** Always invoke `apd-attack-path-analyzer` after `apd-synthesizer` completes. The agent self-activates or self-skips based on its own pre-flight check:
+
+- Activates if `crown_jewels[]` AND `attacker_positions[]` are declared (in `.apd-run.yaml` or merged from the active domain pack).
+- Self-skips if either `crown_jewels` or `attacker_positions` is absent or empty; the agent writes `40-synthesis/attack-path-analyzer-skipped.txt` instead of the normal output set.
+- Block-on-empty-override: if the operator explicitly declared `crown_jewels: []` (overriding a domain pack that would otherwise declare them), the agent halts with a request-for-evidence finding rather than silently skipping.
+
+Phases 5.5 and 5.6 may run in parallel; both consume Phase 5's outputs and write to non-overlapping files in `40-synthesis/`.
+
+**Dispatch inputs:**
+
+- Path to `00-context/asset-inventory.yaml` (intake's machine-readable inventory; required when activated)
+- Path to `00-context/threat-model-normalized.yaml` (optional; used for context)
+- Path to `00-context/code-evidence-index.yaml` (optional; used to ground edges in code evidence when available)
+- Path to `40-synthesis/deduped-findings.yaml` and `40-synthesis/deduped-capabilities.yaml` (synthesizer's outputs)
+- Path to `.apd-run.yaml` (`crown_jewels[]`, `attacker_positions[]`, enumeration parameters)
+- Path to `40-synthesis/` (output directory)
+
+**Output validation (when activated):** Expected outputs:
+
+- `40-synthesis/asset-graph.yaml` — node/edge graph with provenance and confidence
+- `40-synthesis/attack-paths.yaml` — enumerated paths with feasibility / severity
+- `40-synthesis/defense-graph.yaml` — graph with D3FEND overlay on bottleneck edges
+- `40-synthesis/attack-path.findings.yaml` — `apath-*` findings
+- `40-synthesis/attack-path-report.md` — markdown report with embedded Mermaid diagrams
+
+Validate the YAML artifacts against their schemas (`schemas/asset-graph.schema.json`, `schemas/attack-path.schema.json`, `schemas/defense-graph.schema.json`) via `apd-gauntlet validate <run-dir>`. If any record fails Pass 1 (schema), Pass 2 (semantic), or Pass 3 (cross-file) validation, route back to the analyzer with the specific violations cited. Allow up to two retries; after two retries, surface the failure and proceed without that record.
+
+**Downstream tolerance:** No downstream consumers; phase is final and informational. The synthesizer's coverage-matrix pass picks up `apath-*` findings on its next invocation, but the matrix rollup is already finalized for this run.
 
 ### Phase 6 — Closeout
 

@@ -1,0 +1,7 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+bottleneck_overlays: []
+summary:
+  bottleneck_edge_count: 0
+  total_candidate_d3fend: 0
+  total_net_new_d3fend: 0

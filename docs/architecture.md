@@ -22,7 +22,9 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The twelve agents
+## The 16 agents
+
+The gauntlet ships 16 agents in v1.4: a core dozen (coordinator, intake, nine specialists, synthesizer) plus four activation-gated optional agents that the orchestrator dispatches only when their preconditions are met.
 
 | Role | Agent | Purpose |
 |---|---|---|
@@ -30,8 +32,12 @@ See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 | Intake | `apd-intake` | Inventories artifacts, builds a PHI/PII data taxonomy, identifies evidence gaps, produces the context brief |
 | Specialist × 9 | `apd-confidentiality`, `apd-integrity`, `apd-availability`, `apd-distributed`, `apd-resilient`, `apd-ephemeral`, `apd-authenticity`, `apd-non-repudiation`, `apd-immutability` | Each analyzes input artifacts through one lens; emits findings and capabilities |
 | Synthesizer | `apd-synthesizer` | Reads all nine specialist outputs; clusters via merge/link/separate; produces the advisory report and rollups |
+| Optional intake (v1.1+) | `apd-code-recon` | Produces the code-grounded companion to the intake brief from codebase-memory-mcp call/symbol graphs |
+| Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a supplied threat model into a normalized graph |
+| Optional synthesis (v1.3+) | `apd-threat-model-evaluator` | Emits coverage-gap, contradiction, and silence findings against the dedup'd specialist findings |
+| Optional synthesis (v1.4+) | `apd-attack-path-analyzer` | Enumerates BloodHound-style attack paths from declared attacker positions to declared crown jewels over a partial graph; recommends D3FEND counters on bottleneck edges that expose ATT&CK techniques |
 
-Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md).
+Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). The four optional agents are activation-gated: their preconditions are declared in `.apd-run.yaml` or the active domain pack, and the orchestrator skips them silently (or blocks, where the discipline rule demands it) when those preconditions are unmet.
 
 ## Tier topology
 
@@ -63,6 +69,7 @@ Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file wit
 
 - apd-synthesizer
 - apd-threat-model-evaluator (optional, v1.3+)
+- apd-attack-path-analyzer (optional, v1.4+)
 
 ## The five skills
 
@@ -148,6 +155,7 @@ runs/<run-id>/
 ├── inputs/                       # your artifacts (untouched)
 ├── 00-context/
 │   ├── context-brief.md          # intake output with frontmatter
+│   ├── asset-inventory.yaml             (v1.4+, intake rollup)
 │   ├── code-evidence-index.yaml         (v1.1+, optional)
 │   └── threat-model-normalized.yaml     (v1.3+, optional)
 ├── 20-findings/
@@ -167,7 +175,12 @@ runs/<run-id>/
     ├── owasp-coverage.yaml               # v1.2+ (when any owasp_* declared)
     ├── d3fend-coverage.yaml              # v1.2+ (when d3fend declared)
     ├── threat-model-coverage-report.md  (v1.3+, optional)
-    └── threat-model-coverage.yaml       (v1.3+, optional)
+    ├── threat-model-coverage.yaml       (v1.3+, optional)
+    ├── asset-graph.yaml                 (v1.4+, optional — attack-path analyzer)
+    ├── attack-paths.yaml                (v1.4+, optional — attack-path analyzer)
+    ├── defense-graph.yaml               (v1.4+, optional — D3FEND overlay)
+    ├── attack-path.findings.yaml        (v1.4+, optional — apath-* findings)
+    └── attack-path-report.md            (v1.4+, optional — human-readable report)
 ```
 
 The three additional rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`) are activation-gated: they are emitted only when the corresponding taxonomies are declared in the run's `taxonomies:` field in `.apd-run.yaml`. Runs that omit the `taxonomies:` field produce the same output as v1.1. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
@@ -185,6 +198,12 @@ The validator uses the following JSON Schema files (`schemas/*.schema.json`):
 - `schemas/threat-model-normalized.schema.json` — Recon output (v1.3+).
 - `schemas/threat-model-coverage.schema.json` — Evaluator output (v1.3+).
 - `schemas/_defs.schema.json` — Shared pattern definitions for ATT&CK/D3FEND/CWE (v1.3+).
+- `schemas/asset-inventory.schema.json` — Intake rollup of assets, trust boundaries, and data classifications (v1.4+).
+- `schemas/asset-graph.schema.json` — Analyzer-built graph of nodes and typed edges with provenance and confidence (v1.4+).
+- `schemas/attack-path.schema.json` — Enumerated attack paths, bottleneck-edge set, and the `enumeration_parameters` block (v1.4+).
+- `schemas/defense-graph.schema.json` — D3FEND counter overlay on bottleneck edges that expose ATT&CK techniques (v1.4+).
+
+See [Attack-path analysis](attack-path-analysis.md) for the operator guide to the v1.4 analyzer.
 
 ## Domain packs
 

@@ -61,7 +61,7 @@ class ValidationReport:
         return "\n".join(lines)
 
 
-def _build_registry() -> Registry:
+def build_registry() -> Registry:
     """Build a referencing Registry covering every schema in schemas/.
 
     Each schema is registered under its declared ``$id``. This lets cross-schema
@@ -98,17 +98,25 @@ CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 
 # Whole-document rollup files in 40-synthesis/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
+# Note: attack-path.findings.yaml is NOT listed here — post-C-20 it matches the
+# ``*.findings.yaml`` glob in RECORD_KINDS and is validated per-record.
 SYNTHESIS_ROLLUPS: dict[str, str] = {
     "cwe-coverage.yaml":           "cwe-coverage.schema.json",
     "owasp-coverage.yaml":         "owasp-coverage.schema.json",
     "d3fend-coverage.yaml":        "d3fend-coverage.schema.json",
     "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
+    # C-21: Phase C synthesis artifacts
+    "asset-graph.yaml":            "asset-graph.schema.json",
+    "attack-paths.yaml":           "attack-path.schema.json",
+    "defense-graph.yaml":          "defense-graph.schema.json",
 }
 
 # Whole-document rollup files in 00-context/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
 CONTEXT_ROLLUPS: dict[str, str] = {
     "threat-model-normalized.yaml": "threat-model-normalized.schema.json",
+    # C-21: Phase C intake artifact (emitted by the intake step).
+    "asset-inventory.yaml":         "asset-inventory.schema.json",
 }
 
 
@@ -204,7 +212,7 @@ def _validate_context_rollups(
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 1: validate every record against its JSON Schema."""
-    registry = _build_registry()
+    registry = build_registry()
     report = ValidationReport()
     validators = {
         kind: Draft202012Validator(
@@ -336,6 +344,60 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
         for v in sem.errors:
             if "non-tech-plan evidence" in v.message:
                 report.errors.append(v)
+
+    # Asset-graph edge integrity (C-21).
+    # If the run has a 40-synthesis/asset-graph.yaml, verify:
+    #   (a) every edge's ``from``/``to`` references a node_id present in nodes
+    #   (b) compromisable_via_finding edges reference a known finding_id
+    #   (c) mitigated_by_capability edges reference a known capability_id
+    # The per-document schema already enforces shape; this is the cross-file pass.
+    asset_graph_path = run_dir / "40-synthesis" / "asset-graph.yaml"
+    if asset_graph_path.exists():
+        try:
+            ag = yaml.safe_load(asset_graph_path.read_text()) or {}
+        except yaml.YAMLError as e:
+            report.errors.append(
+                Violation(asset_graph_path, None, f"YAML parse error: {e}")
+            )
+        else:
+            node_ids = {
+                n.get("node_id")
+                for n in (ag.get("nodes") or [])
+                if isinstance(n, dict) and n.get("node_id")
+            }
+            for i, edge in enumerate(ag.get("edges") or []):
+                if not isinstance(edge, dict):
+                    continue
+                eid = edge.get("edge_id")
+                for endpoint in ("from", "to"):
+                    node_ref = edge.get(endpoint)
+                    if node_ref and node_ref not in node_ids:
+                        report.errors.append(
+                            Violation(
+                                asset_graph_path, eid,
+                                f"edges[{i}].{endpoint} '{node_ref}' not in nodes list",
+                            )
+                        )
+                if edge.get("edge_type") == "compromisable_via_finding":
+                    fid = edge.get("finding_id")
+                    if fid and fid not in finding_ids:
+                        report.errors.append(
+                            Violation(
+                                asset_graph_path, eid,
+                                f"edges[{i}].finding_id '{fid}' not found in any "
+                                "specialist or tier-4 finding file",
+                            )
+                        )
+                if edge.get("edge_type") == "mitigated_by_capability":
+                    cid = edge.get("capability_id")
+                    if cid and cid not in capability_ids:
+                        report.errors.append(
+                            Violation(
+                                asset_graph_path, eid,
+                                f"edges[{i}].capability_id '{cid}' not found in any "
+                                "specialist capability file",
+                            )
+                        )
 
     # Contradictions reference real IDs.
     contradictions_path = run_dir / "40-synthesis" / "contradictions.yaml"

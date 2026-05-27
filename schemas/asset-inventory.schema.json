@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/asset-inventory.schema.json",
+  "title": "APD Gauntlet Asset Inventory",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "assets", "identities", "trust_boundaries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by": { "type": "string", "enum": ["intake"] },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["asset_id", "name", "asset_type", "provenance", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": { "type": "string", "pattern": "^asset-[0-9a-f]{8}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "asset_type": { "type": "string", "enum": ["service", "data_store", "secret_store", "queue", "network", "external_dependency", "compute"] },
+          "data_classifications": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["phi", "pii", "pci", "phi_subset", "secret", "public", "internal", "confidential"] }
+          },
+          "provenance": {
+            "type": "object",
+            "required": ["source"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "type": "string", "enum": ["artifact", "domain_default", "threat_model", "code_evidence"] },
+              "artifact": { "type": "string" },
+              "locator": { "type": "string" }
+            }
+          },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "identities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identity_id", "name", "identity_type", "provenance", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "identity_id": { "type": "string", "pattern": "^idn-[0-9a-f]{8}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "identity_type": { "type": "string", "enum": ["human_role", "service_account", "workload_identity", "external_party"] },
+          "provenance": { "$ref": "#/properties/assets/items/properties/provenance" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "trust_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["boundary_id", "name", "crosses", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "boundary_id": { "type": "string", "pattern": "^tb-[0-9a-f]{8}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "crosses": {
+            "type": "array",
+            "minItems": 2,
+            "items": { "type": "string", "pattern": "^asset-[0-9a-f]{8}$" }
+          },
+          "provenance": { "$ref": "#/properties/assets/items/properties/provenance" }
+        }
+      }
+    },
+    "extraction_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_count": { "type": "integer", "minimum": 0 },
+        "identity_count": { "type": "integer", "minimum": 0 },
+        "trust_boundary_count": { "type": "integer", "minimum": 0 },
+        "high_confidence_count": { "type": "integer", "minimum": 0 },
+        "medium_confidence_count": { "type": "integer", "minimum": 0 },
+        "low_confidence_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

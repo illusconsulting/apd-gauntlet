@@ -1,0 +1,1362 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+enumeration_parameters:
+  max_hop: 6
+  max_paths_per_pair: 25
+  bottleneck_threshold: 4
+paths:
+- path_id: path-091eb787
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-bd61022c
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-bd61022c
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-344ae95b
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-07946d39
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-07946d39
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-3be27c87
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-17783b27
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-17783b27
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-a509a1f6
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-decfffea
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-decfffea
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-c34f74f3
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-27e4ec84
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-27e4ec84
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-110084a0
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-07946d39
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-07946d39
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-26a5d056
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-27e4ec84
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-27e4ec84
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-2ef7c35f
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-07946d39
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-07946d39
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-46b6e50a
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-decfffea
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-decfffea
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-5796db5a
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-bd61022c
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-bd61022c
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-72af5d91
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-17783b27
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-17783b27
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-9314985f
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-17783b27
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-17783b27
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-b5bd8bd2
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-bd61022c
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-bd61022c
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d132b7a7
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-decfffea
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-decfffea
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d1b8e45a
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-27e4ec84
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-27e4ec84
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-1cba6d30
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-4f04c048
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-4b7506ed
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-f29aefbf
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-575eea43
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-cb1c4890
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-a7acb679
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-f2a4568b
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d0e7a036
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-631176ba
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-5da3ef2d
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-bd61022c
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-bd61022c
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-64d45d5c
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-27e4ec84
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-27e4ec84
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-77fb16e8
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-17783b27
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-17783b27
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-b98dfc6a
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-decfffea
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-decfffea
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-e1ffabb7
+  attacker_position: atk-e0a03f74
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-07946d39
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-07946d39
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-653937f5
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-67448007
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-67448007
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-6d1212df
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-4b6f06ec
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-4b6f06ec
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-9c79936a
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-88ca3e5d
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-88ca3e5d
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-bab80189
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-20d89553
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-20d89553
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-df6f089b
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-af0b27e9
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-af0b27e9
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-054a954b
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-af0b27e9
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-af0b27e9
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-1582e7dd
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-4b6f06ec
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-4b6f06ec
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-1c8ebf2d
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-67448007
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-67448007
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-435e395f
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-af0b27e9
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-af0b27e9
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-51e9f0ec
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-88ca3e5d
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-88ca3e5d
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-881cea37
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-20d89553
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-20d89553
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-96049a71
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-20d89553
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-20d89553
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-b372431a
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-88ca3e5d
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-88ca3e5d
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d813593c
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-67448007
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-67448007
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-db0038bd
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-4b6f06ec
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-4b6f06ec
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-029bb1f8
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-c41dcef1
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-3700ac90
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-dceeaa66
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-9e540001
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-1c7d8d1d
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-c7af1885
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-33cbe3d9
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d182c6dc
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-9a22b4a2
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-1f9d8e59
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-4b6f06ec
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-4b6f06ec
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-2efebc82
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-af0b27e9
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-af0b27e9
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-33307cbf
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-88ca3e5d
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-88ca3e5d
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-4a223504
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-67448007
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-67448007
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-e80b432f
+  attacker_position: atk-accb3a4c
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-20d89553
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-20d89553
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-1ddc26b2
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-6e130fc8
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-6e130fc8
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-6f458333
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-e6170ee9
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-e6170ee9
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-92208e9e
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-d6d18ce6
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-d6d18ce6
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-bb137713
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-9bf0cb8d
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-9bf0cb8d
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-d85a6bea
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-cd042314
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 4
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-cd042314
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-0f12760d
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-6e130fc8
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-6e130fc8
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-5c859920
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-e6170ee9
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-e6170ee9
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-624eb526
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-6e130fc8
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-6e130fc8
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-8a10acec
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-9bf0cb8d
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-9bf0cb8d
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-933e5d35
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-9bf0cb8d
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-9bf0cb8d
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-a08f052c
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-cd042314
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-cd042314
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-a35f1bf6
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-d6d18ce6
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-d6d18ce6
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-b068ba48
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-cd042314
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-cd042314
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-b8aa6e65
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-d6d18ce6
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-d6d18ce6
+  - edge-8af9f7aa
+  - edge-94c86287
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-c81abf97
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-e6170ee9
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 6
+  feasibility: high
+  severity_sum: 2
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-e6170ee9
+  - edge-dd4a931c
+  - edge-5074ec19
+  - edge-f0f89452
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-0f2e2ec6
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-99707e24
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-124a8df8
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-1457b95a
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-17c53ecb
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-867e7d3e
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-a5b32741
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-f4e846c9
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-ed2bc188
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-78b786a1
+  - edge-37b95b02
+  - edge-989fc99a
+  hop_count: 3
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-37b95b02
+  - edge-989fc99a
+- path_id: path-2c4e2248
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-9bf0cb8d
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-9bf0cb8d
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-49b5b04b
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-6e130fc8
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-6e130fc8
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-64622465
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-d6d18ce6
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-d6d18ce6
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-66bf81b1
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-cd042314
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-cd042314
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+- path_id: path-eb2df0b5
+  attacker_position: atk-2d392558
+  crown_jewel: jewel-358e9430
+  edges:
+  - edge-e6170ee9
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+  hop_count: 4
+  feasibility: high
+  severity_sum: 0
+  mitigation_count: 0
+  bottleneck_edges:
+  - edge-e6170ee9
+  - edge-dd4a931c
+  - edge-5b51f5a8
+  - edge-f3c575df
+summary:
+  pairs_enumerated: 3
+  total_paths: 75
+  truncated_pairs: 3
+  bottleneck_edge_count: 24

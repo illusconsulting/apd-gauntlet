@@ -116,3 +116,19 @@ def test_finding_id_pattern_accepts_tmeval_prefix():
     validator = _build_validator(schema)
     errors = list(validator.iter_errors(data["finding"]))
     assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_accepts_attack_path_analyzer_agent():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-from-apath.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_id_pattern_accepts_apath_prefix():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-from-apath.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"

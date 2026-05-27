@@ -1,0 +1,15 @@
+run_id: pbm-attack-path-20260526
+domain: pbm
+framework_version: 1.4.0
+taxonomies: [cwe, mitre_attack, d3fend]
+crown_jewels:
+  - phi_store
+  - pde_submission_pipeline
+attacker_positions:
+  - external_internet
+  - compromised_pharmacy_credential
+  - insider_with_member_service_role
+attack_path_analysis:
+  max_hop: 6
+  max_paths_per_pair: 25
+  bottleneck_threshold: 4

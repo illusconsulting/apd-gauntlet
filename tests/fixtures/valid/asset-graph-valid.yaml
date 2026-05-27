@@ -1,0 +1,116 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+nodes:
+  - node_id: atk-aaaaaaaa
+    node_type: attacker_position
+    name: external_internet
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "attacker_positions[0]"
+    confidence: high
+  - node_id: asset-bbbbbbbb
+    node_type: asset
+    name: "API Gateway"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "assets[0]"
+    confidence: high
+  - node_id: asset-cccccccc
+    node_type: asset
+    name: "Adjudication Service"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "assets[1]"
+    confidence: high
+  - node_id: asset-dddddddd
+    node_type: asset
+    name: "Member Record Store"
+    asset_type: data_store
+    data_classifications: [phi]
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "assets[2]"
+    confidence: high
+  - node_id: idn-eeeeeeee
+    node_type: identity
+    name: "pharmacy-submitter"
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "identities[0]"
+    confidence: high
+  - node_id: jewel-ffffffff
+    node_type: crown_jewel
+    name: phi_store
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "crown_jewels[0]"
+    confidence: high
+edges:
+  - edge_id: edge-11111111
+    edge_type: network_reachable
+    from: atk-aaaaaaaa
+    to: asset-bbbbbbbb
+    provenance:
+      source: threat_model
+      artifact: "00-context/threat-model-normalized.yaml"
+      locator: "entries[0]"
+    confidence: high
+    traversal_cost: 2
+  - edge_id: edge-22222222
+    edge_type: authn_required
+    from: idn-eeeeeeee
+    to: asset-bbbbbbbb
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "trust_boundaries[0]"
+    confidence: high
+    traversal_cost: 1
+  - edge_id: edge-33333333
+    edge_type: data_resides_on
+    from: asset-dddddddd
+    to: jewel-ffffffff
+    provenance:
+      source: artifact
+      artifact: "00-context/asset-inventory.yaml"
+      locator: "assets[2].data_classifications"
+    confidence: high
+    traversal_cost: 1
+  - edge_id: edge-44444444
+    edge_type: compromisable_via_finding
+    from: asset-bbbbbbbb
+    to: asset-cccccccc
+    finding_id: auth-9e8d7c6b
+    provenance:
+      source: artifact
+      artifact: "20-specialist-findings/authenticity.findings.yaml"
+      locator: "auth-9e8d7c6b"
+    confidence: high
+    traversal_cost: 2
+  - edge_id: edge-55555555
+    edge_type: mitigated_by_capability
+    from: asset-bbbbbbbb
+    to: asset-cccccccc
+    capability_id: auth-cap-12345678
+    provenance:
+      source: artifact
+      artifact: "30-specialist-capabilities/authenticity.capabilities.yaml"
+      locator: "auth-cap-12345678"
+    confidence: high
+    traversal_cost: 1
+build_summary:
+  node_count: 6
+  edge_count: 5
+  attacker_position_count: 1
+  crown_jewel_count: 1
+  finding_edges_count: 1
+  capability_edges_count: 1
+  sources_used: [asset_inventory, threat_model_normalized, findings, capabilities, domain_defaults]

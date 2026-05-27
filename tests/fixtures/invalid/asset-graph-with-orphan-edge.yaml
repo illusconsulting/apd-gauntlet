@@ -1,0 +1,30 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+nodes:
+  - node_id: atk-aaaaaaaa
+    node_type: attacker_position
+    name: external_internet
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "attacker_positions[0]"
+    confidence: high
+  - node_id: jewel-bbbbbbbb
+    node_type: crown_jewel
+    name: phi_store
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "crown_jewels[0]"
+    confidence: high
+edges:
+  - edge_id: edge-cccccccc
+    edge_type: network_reachable
+    from: atk-aaaaaaaa
+    to: asset-ffffffff
+    provenance:
+      source: artifact
+      artifact: "00-context/threat-model-normalized.yaml"
+      locator: "entries[0]"
+    confidence: high
+    traversal_cost: 1

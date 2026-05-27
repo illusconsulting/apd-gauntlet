@@ -12,6 +12,42 @@
     "framework_compat": { "type": "string", "minLength": 5 },
     "description":      { "type": "string", "minLength": 20 },
     "includes":         { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" }, "minItems": 1 },
-    "regulatory_anchors": { "type": "array", "items": { "type": "string" } }
+    "regulatory_anchors": { "type": "array", "items": { "type": "string" } },
+    "crown_jewels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "pattern":     { "type": "string", "minLength": 1, "description": "Domain-recognized crown jewel name (e.g. phi_store). Run-config can override this list, in which case domain defaults are not used." },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "attacker_positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["position", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "position":    { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "default_trust_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["boundary", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "boundary":    { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    }
   }
 }

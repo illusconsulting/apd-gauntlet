@@ -41,6 +41,30 @@ Read all nine specialist output files:
 30-auditability/immutability.capabilities.yaml
 ```
 
+### Tier-4 finding sources (read when present)
+
+When this agent is invoked AFTER the tier-4 phases have run, additionally
+read:
+
+```
+40-threat-model/threat-model.findings.yaml       # tmeval-* (threat-model-evaluator)
+40-synthesis/attack-path.findings.yaml           # apath-*  (attack-path-analyzer)
+```
+
+These files use the same `finding:` (root key) wrapper and validate against
+`finding.schema.json`. They are picked up automatically by any recursive
+`**/*.findings.yaml` scan (e.g. the validator's `_iter_records` helper),
+so dedup / clustering / coverage-matrix passes include them without
+special-casing.
+
+**Temporal note.** If the synthesizer is invoked once in Phase 5 (before
+the tier-4 phases run), the matrix reflects specialist findings only. The
+orchestrator may re-invoke this agent — or just Steps 5-8 — after Phase
+5.5 (threat-model-evaluator) and Phase 5.6 (attack-path-analyzer) complete
+to refresh the matrix with `tmeval-*` and `apath-*` findings. Missing
+tier-4 files are silent (the recursive glob simply finds no matches);
+their presence triggers automatic inclusion.
+
 ## Outputs
 
 Write to `40-synthesis/`:
@@ -82,6 +106,11 @@ If the validator CLI is unavailable, fall back to LLM-judged structural review u
 Proceed only with records that pass validation.
 
 ### Step 2: Finding clustering — merge, link, separate
+
+Tier-4 findings (`tmeval-*` from the threat-model-evaluator and `apath-*`
+from the attack-path-analyzer) participate in clustering on equal footing
+with specialist findings when their files exist in the run directory. The
+recursive `**/*.findings.yaml` scan covers them automatically.
 
 Cluster findings to identify groups that describe the same underlying concern through different lenses. Three clustering signals:
 
@@ -208,6 +237,12 @@ A technique is in the rollup if at least one finding maps to it. Capabilities ma
 Output to `attack-exposure.yaml`.
 
 ### Step 8: APD coverage matrix
+
+Tier-4 findings — `tmeval-*` from `40-threat-model/threat-model.findings.yaml`
+and `apath-*` from `40-synthesis/attack-path.findings.yaml` — are included
+in the 9xN rollup when present. The matrix cells per component list every
+finding ID that touches that (component, APD goal) pair regardless of which
+phase emitted it.
 
 For each in-scope component (per the intake brief), produce a row of nine APD goal cells:
 

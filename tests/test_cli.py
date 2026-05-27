@@ -20,7 +20,7 @@ def test_cli_version():
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
-    assert "1.3.0" in result.output
+    assert "1.4.0" in result.output
 
 
 def test_cli_refresh_cwe_invokes_refresh():

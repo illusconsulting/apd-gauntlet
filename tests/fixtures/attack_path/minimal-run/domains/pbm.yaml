@@ -1,0 +1,17 @@
+name: pbm
+display_name: "PBM Test Domain (minimal-run fixture)"
+version: "1.0.0"
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Minimal PBM domain pack used by the attack-path builder fixture test suite."
+includes:
+  - severity-rubric.md
+regulatory_anchors:
+  - HIPAA
+
+crown_jewels:
+  - pattern: phi_store
+    description: "Any data store holding protected health information."
+
+attacker_positions:
+  - position: external
+    description: "Unauthenticated network attacker on the public internet."

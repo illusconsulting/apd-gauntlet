@@ -112,6 +112,31 @@ Adding a tenth specialist is a major version change. It implies:
 
 This is intentionally hard to do — the framework's nine-goal structure is part of its identity. If you find a concern that doesn't fit existing lenses, first check the boundary calls in `apd-framework/SKILL.md`; usually one of the existing nine goals is the right home.
 
+## When to add an activation-gated optional agent
+
+The framework's nine-goal symmetry is closed, but new *cross-cutting* analyses that consume the deduped specialist outputs (or that enrich the intake) do not require a new goal. These are added as **activation-gated optional agents**: they sit at tier 0 (intake-enrichment) or tier 4 (synthesis-augmentation), the orchestrator dispatches them only when their preconditions are met, and they emit a finding-prefix the synthesizer recognizes.
+
+The four optional agents already in v1.x follow this pattern:
+
+| Agent | Tier | Activation precondition | Output prefix |
+|---|---|---|---|
+| `apd-code-recon` (v1.1+) | Tier 0 | `code_recon` enabled and codebase-memory-mcp reachable | enriches intake (`00-context/code-evidence-index.yaml`) |
+| `apd-threat-model-recon` (v1.3+) | Tier 0 | `threat_model:` path declared in run-config | enriches intake (`00-context/threat-model-normalized.yaml`) |
+| `apd-threat-model-evaluator` (v1.3+) | Tier 4 | Normalized threat model exists | `tmeval-*` findings |
+| `apd-attack-path-analyzer` (v1.4+) | Tier 4 | At least one crown jewel and at least one attacker position declared (domain pack or run-config) | `apath-*` findings |
+
+The `apd-attack-path-analyzer` is the canonical worked example. It demonstrates the full pattern: (1) declare activation preconditions in the active domain pack with run-config override; (2) emit a `*-skipped.txt` artifact when preconditions are unmet; (3) emit a `disposition: blocked` finding when the operator's explicit declaration contradicts the domain default; (4) write its discipline rules to a dedicated skill file the agent declares as required reading; (5) extend `finding.schema.json` additively with a new `agent` enum value and a new id prefix pattern.
+
+Workflow for adding a new activation-gated agent:
+
+1. **Decide tier.** Tier 0 if the agent enriches intake; tier 4 if it consumes specialist outputs.
+2. **Author the agent file** under `.claude/agents/apd-<name>.md`. Use the existing `apd-attack-path-analyzer` as a structural template — frontmatter, Required reading, Inputs and output, Discipline, Self-check.
+3. **Author the discipline skill** under `.claude/skills/apd-<name>-discipline/SKILL.md` parallel to `apd-attack-path-discipline` and `apd-threat-model-methodologies`. The discipline skill captures the never-invent rules, confidence floors, and emit/block decisions specific to the agent's analysis.
+4. **Extend `finding.schema.json` additively.** Add the new agent name to the `agent` enum; extend the `id` pattern with a new prefix; mirror the extension on `cross_references` and `merged_from`. Bump the framework version but not the schema_version (additive change).
+5. **Wire activation into the orchestrator.** Document the activation table in the agent's operator doc (e.g., `docs/attack-path-analysis.md`). The orchestrator dispatches when the precondition table evaluates to "run"; emits a skip artifact when it evaluates to "skipped silently"; or emits a `disposition: blocked` finding when it evaluates to "blocked".
+6. **Write the operator doc** at `docs/<feature>.md` and link it from `docs/architecture.md` (the agents table and the topology list), from `docs/running-the-gauntlet.md` (a peer section to "Code reconnaissance" and "Threat model evaluation"), and from this guide (the activation-gated-agent worked-example table above).
+7. **Add a test stub** asserting the agent file lints clean (`tests/test_lint_agent_apd_<name>.py`) and the discipline skill file lints clean (`tests/test_skill_apd_<name>_discipline.py`).
+
 ## Testing changes
 
 Every change should:

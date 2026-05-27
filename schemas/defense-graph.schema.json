@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/defense-graph.schema.json",
+  "title": "APD Gauntlet Defense Graph",
+  "description": "Defense overlay showing D3FEND techniques that counter attack techniques traversing bottleneck edges. Each bottleneck carries the exposed attack techniques, candidate D3FEND counters, and the capability-backing status of each.",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "bottleneck_overlays", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_by": {
+      "type": "string",
+      "enum": ["attack_path_analyzer"]
+    },
+    "bottleneck_overlays": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["edge_id", "paths_traversing", "exposed_attack_techniques", "candidate_d3fend", "existing_capability_backing", "net_new_d3fend"],
+        "additionalProperties": false,
+        "properties": {
+          "edge_id": {
+            "type": "string",
+            "pattern": "^edge-[0-9a-f]{8}$",
+            "description": "Unique identifier for this bottleneck edge"
+          },
+          "paths_traversing": {
+            "type": "integer",
+            "minimum": 2,
+            "description": "Number of attack paths that traverse this edge (must be >= 2 to be a bottleneck)"
+          },
+          "exposed_attack_techniques": {
+            "type": "array",
+            "items": {
+              "$ref": "_defs.schema.json#/$defs/attack_technique_id"
+            },
+            "description": "ATT&CK techniques that traverse this bottleneck"
+          },
+          "candidate_d3fend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["d3fend_id", "counters", "rationale"],
+              "additionalProperties": false,
+              "properties": {
+                "d3fend_id": {
+                  "$ref": "_defs.schema.json#/$defs/d3fend_id"
+                },
+                "counters": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "_defs.schema.json#/$defs/attack_technique_id"
+                  },
+                  "description": "ATT&CK techniques this D3FEND technique counters"
+                },
+                "rationale": {
+                  "type": "string",
+                  "minLength": 20,
+                  "description": "Explanation of why this D3FEND technique counters the exposed attacks"
+                }
+              }
+            },
+            "description": "D3FEND techniques that could counter attacks on this bottleneck"
+          },
+          "existing_capability_backing": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["d3fend_id", "capability_ids"],
+              "additionalProperties": false,
+              "properties": {
+                "d3fend_id": {
+                  "$ref": "_defs.schema.json#/$defs/d3fend_id"
+                },
+                "capability_ids": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$"
+                  },
+                  "description": "Existing capabilities that implement this D3FEND technique"
+                }
+              }
+            },
+            "description": "D3FEND techniques already backed by confirmed capabilities"
+          },
+          "net_new_d3fend": {
+            "type": "array",
+            "items": {
+              "$ref": "_defs.schema.json#/$defs/d3fend_id"
+            },
+            "description": "D3FEND techniques from candidate_d3fend that have no existing capability backing"
+          }
+        }
+      },
+      "description": "Defensive overlays on each bottleneck edge in the attack graph"
+    },
+    "summary": {
+      "type": "object",
+      "required": ["bottleneck_edge_count", "total_candidate_d3fend", "total_net_new_d3fend"],
+      "additionalProperties": false,
+      "properties": {
+        "bottleneck_edge_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of bottleneck edges analyzed"
+        },
+        "total_candidate_d3fend": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total unique D3FEND techniques across all bottlenecks"
+        },
+        "total_net_new_d3fend": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total D3FEND techniques without existing capability backing"
+        }
+      }
+    }
+  }
+}
