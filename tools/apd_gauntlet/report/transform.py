@@ -5,6 +5,7 @@ Python (dict / list / str / int) suitable for json.dumps.
 from __future__ import annotations
 
 import collections
+import json as _json
 import pathlib
 from typing import Any
 
@@ -327,3 +328,49 @@ def strengths_section(
             "caveats":  list(s.get("caveats") or []),
         })
     return out
+
+
+_PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
+
+
+def _nist_family_titles() -> dict[str, str]:
+    return _json.loads((_PKG_DATA / "nist-families.json").read_text())
+
+
+def _notable_for_family(
+    family: str,
+    controls: list[dict[str, Any]],
+) -> str:
+    """Build a one-liner naming the strongest and weakest control in the family."""
+    in_family = [c for c in controls if c.get("family") == family]
+    if not in_family:
+        return ""
+    covered = [c for c in in_family if c.get("posture") == "covered"]
+    gapped = [c for c in in_family if c.get("posture") == "gapped"]
+    bits: list[str] = []
+    if covered[:3]:
+        bits.append(", ".join(c["id"] for c in covered[:3]) + " strong")
+    if gapped[:3]:
+        bits.append(", ".join(c["id"] for c in gapped[:3]) + " gapped")
+    return "; ".join(bits) if bits else "mixed posture"
+
+
+def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Return rows for the NIST coverage table: one per family with counts +
+    notable one-liner. Order: descending by (covered + gapped + both).
+    """
+    family_summary = artifacts.nist_coverage.get("family_summary") or {}
+    control_list = artifacts.nist_coverage.get("control") or []
+    titles = _nist_family_titles()
+    rows: list[dict[str, Any]] = []
+    for fam, summary in family_summary.items():
+        rows.append({
+            "family":  fam,
+            "title":   titles.get(fam, fam),
+            "covered": summary.get("covered", 0),
+            "gapped":  summary.get("gapped", 0),
+            "both":    summary.get("gapped_and_covered", 0),
+            "notable": _notable_for_family(fam, control_list),
+        })
+    rows.sort(key=lambda r: -(r["covered"] + r["gapped"] + r["both"]))
+    return rows
