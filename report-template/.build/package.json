@@ -1,0 +1,16 @@
+{
+  "name": "apd-report-template-build",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contributor-only esbuild pipeline for the APD HTML report template.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.21.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "mermaid": "10.9.1"
+  }
+}
