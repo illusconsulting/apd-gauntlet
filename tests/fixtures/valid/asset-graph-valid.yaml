@@ -99,11 +99,11 @@ edges:
     edge_type: mitigated_by_capability
     from: asset-bbbbbbbb
     to: asset-cccccccc
-    capability_id: cap-12345678
+    capability_id: auth-cap-12345678
     provenance:
       source: artifact
       artifact: "30-specialist-capabilities/authenticity.capabilities.yaml"
-      locator: "cap-12345678"
+      locator: "auth-cap-12345678"
     confidence: high
     traversal_cost: 1
 build_summary:

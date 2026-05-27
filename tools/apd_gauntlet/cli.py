@@ -1,12 +1,19 @@
 """apd-gauntlet CLI entry point."""
 from __future__ import annotations
 
+import hashlib
 import json as _stdjson
 import pathlib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
+import yaml
+
+if TYPE_CHECKING:
+    from .attack_path.enumerate import EnumerationParams
+    from .attack_path.enumerate import Path as APath
+    from .attack_path.graph import Edge, Graph, Node
 
 from . import __version__
 from .build_domain_skill import build_domain_skill
@@ -393,6 +400,320 @@ def parse_threat_model_cmd(
         click.echo(f"  entries:     {normalized['extraction_summary']['entry_count']}", err=True)
     else:
         click.echo(text)
+
+
+@main.command("analyze-attack-paths")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def analyze_attack_paths(run_dir: Path) -> None:
+    """Build the asset graph, enumerate attack paths, compute D3FEND overlay, emit findings.
+
+    Reads ``run_dir/00-context/asset-inventory.yaml`` plus optional TM /
+    code-evidence artifacts and all specialist findings/capabilities. Writes:
+
+    - ``40-synthesis/asset-graph.yaml``
+    - ``40-synthesis/attack-paths.yaml``
+    - ``40-synthesis/defense-graph.yaml``
+    - ``40-synthesis/attack-path-findings.yaml``
+    """
+    from .attack_path.build import BuilderBlocked, build_graph
+    from .attack_path.d3fend_overlay import build_overlays, load_d3fend_data
+    from .attack_path.enumerate import (
+        EnumerationParams,
+        compute_bottleneck_edges,
+        enumerate_paths,
+    )
+    from .attack_path.findings import emit_findings
+
+    synth = run_dir / "40-synthesis"
+    synth.mkdir(parents=True, exist_ok=True)
+    run_cfg_path = run_dir / ".apd-run.yaml"
+    run_cfg: dict[str, Any] = (
+        yaml.safe_load(run_cfg_path.read_text()) if run_cfg_path.exists() else {}
+    ) or {}
+    tuning = run_cfg.get("attack_path_analysis", {}) or {}
+    params = EnumerationParams(
+        max_hop=int(tuning.get("max_hop", 8)),
+        max_paths_per_pair=int(tuning.get("max_paths_per_pair", 50)),
+        bottleneck_threshold=int(tuning.get("bottleneck_threshold", 5)),
+    )
+
+    try:
+        result = build_graph(run_dir)
+    except BuilderBlocked as exc:
+        _write_blocked_finding(synth, reason=str(exc))
+        click.echo(f"analyze-attack-paths: blocked - {exc}")
+        return
+
+    graph = result.graph
+    attackers = graph.nodes_by_type("attacker_position")
+    jewels = graph.nodes_by_type("crown_jewel")
+
+    findings_by_id, capabilities = _load_records(run_dir)
+
+    all_paths: list[APath] = []
+    truncated_pairs = 0
+    for atk in attackers:
+        for jwl in jewels:
+            raw = enumerate_paths(
+                graph,
+                atk.node_id,
+                jwl.node_id,
+                params,
+                findings_by_id=findings_by_id,
+            )
+            if len(raw) == params.max_paths_per_pair:
+                truncated_pairs += 1
+            all_paths.extend(raw)
+
+    bottleneck_edges = compute_bottleneck_edges(all_paths, params.bottleneck_threshold)
+    d3fend_data = load_d3fend_data()
+    overlays = build_overlays(
+        paths=all_paths,
+        bottleneck_edges=bottleneck_edges,
+        graph=graph,
+        findings_by_id=findings_by_id,
+        capabilities=capabilities,
+        d3fend_data=d3fend_data,
+    )
+    findings = emit_findings(
+        paths=all_paths,
+        overlays=overlays,
+        graph=graph,
+        findings_by_id=findings_by_id,
+        capabilities=capabilities,
+    )
+
+    _write_asset_graph(synth / "asset-graph.yaml", graph, result.sources_used)
+    _write_attack_paths(
+        synth / "attack-paths.yaml", all_paths, params, truncated_pairs, bottleneck_edges
+    )
+    _write_defense_graph(synth / "defense-graph.yaml", overlays)
+    _write_findings(synth / "attack-path-findings.yaml", findings)
+
+    click.echo(
+        f"analyze-attack-paths: wrote {len(all_paths)} paths, "
+        f"{len(bottleneck_edges)} bottlenecks, {len(findings)} findings"
+    )
+
+
+def _write_blocked_finding(synth: Path, *, reason: str) -> None:
+    """Emit a single ``disposition: blocked`` apath finding to
+    ``attack-path-findings.yaml``. Conforms to ``finding.schema.json``
+    (including the ``allOf`` rule requiring ``prerequisite_evidence`` when
+    ``disposition == "blocked"``).
+    """
+    short_hash = hashlib.sha256(reason.encode()).hexdigest()[:8]
+    doc = {
+        "schema_version": 1,
+        "findings": [
+            {
+                "schema_version": 1,
+                "id": f"apath-{short_hash}",
+                "agent": "attack_path_analyzer",
+                "apd_tier": "trustworthiness",
+                "apd_goal": "authenticity",
+                "disposition": "blocked",
+                "severity": "informational",
+                "confidence": "high",
+                "title": f"Attack-path analysis blocked: {reason}",
+                "summary": (
+                    f"The analyzer could not run because {reason}. Declare "
+                    "crown_jewels[] in the domain pack or .apd-run.yaml to "
+                    "enable attack-path analysis."
+                ),
+                "detail": (
+                    "See ADR-0010 (Attack-path analysis on partial graphs) "
+                    "for the block-on-missing-crown-jewels discipline."
+                ),
+                "evidence": [
+                    {
+                        "artifact": ".apd-run.yaml",
+                        "locator": "crown_jewels",
+                        "excerpt": "(absent or empty)",
+                    }
+                ],
+                "prerequisite_evidence": [
+                    "domain pack or run-config must declare crown_jewels[] "
+                    "and attacker_positions[]"
+                ],
+                "control_mappings": {"nist_800_53r5": ["SA-8"]},
+                "recommendation": {
+                    "posture": "required",
+                    "summary": (
+                        "Declare crown jewels and attacker positions in the "
+                        "domain pack or run-config"
+                    ),
+                    "detail": (
+                        "The PBM domain pack ships defaults (phi_store, "
+                        "pde_submission_pipeline, claim_adjudication_engine); "
+                        "see docs/attack-path-analysis.md for declaration "
+                        "patterns in other domains."
+                    ),
+                },
+            }
+        ],
+    }
+    (synth / "attack-path-findings.yaml").write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def _load_records(
+    run_dir: Path,
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    """Index findings under ``20-specialist-findings/`` by ``id`` and collect
+    all capabilities under ``30-specialist-capabilities/``. Missing
+    directories yield empty results — the analyzer must still run on
+    partial inputs.
+    """
+    findings_by_id: dict[str, dict[str, Any]] = {}
+    capabilities: list[dict[str, Any]] = []
+    fdir = run_dir / "20-specialist-findings"
+    if fdir.exists():
+        for f in sorted(fdir.glob("*.findings.yaml")):
+            doc = yaml.safe_load(f.read_text()) or {}
+            for rec in doc.get("findings", []) or []:
+                if isinstance(rec, dict) and "id" in rec:
+                    findings_by_id[rec["id"]] = rec
+    cdir = run_dir / "30-specialist-capabilities"
+    if cdir.exists():
+        for f in sorted(cdir.glob("*.capabilities.yaml")):
+            doc = yaml.safe_load(f.read_text()) or {}
+            for rec in doc.get("capabilities", []) or []:
+                if isinstance(rec, dict):
+                    capabilities.append(rec)
+    return findings_by_id, capabilities
+
+
+def _write_asset_graph(path: Path, graph: Graph, sources_used: list[str]) -> None:
+    doc = {
+        "schema_version": 1,
+        "generated_by": "attack_path_analyzer",
+        "nodes": [
+            _serialize_node(n)
+            for n in sorted(graph._nodes.values(), key=lambda n: n.node_id)
+        ],
+        "edges": [
+            _serialize_edge(e)
+            for e in sorted(graph._edges.values(), key=lambda e: e.edge_id)
+        ],
+        "build_summary": {
+            "node_count": graph.node_count,
+            "edge_count": graph.edge_count,
+            "attacker_position_count": len(graph.nodes_by_type("attacker_position")),
+            "crown_jewel_count": len(graph.nodes_by_type("crown_jewel")),
+            "finding_edges_count": sum(
+                1
+                for e in graph._edges.values()
+                if e.edge_type == "compromisable_via_finding"
+            ),
+            "capability_edges_count": sum(
+                1
+                for e in graph._edges.values()
+                if e.edge_type == "mitigated_by_capability"
+            ),
+            "sources_used": sources_used,
+        },
+    }
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def _serialize_node(n: Node) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "node_id": n.node_id,
+        "node_type": n.node_type,
+        "name": n.name,
+        "provenance": dict(n.provenance),
+        "confidence": n.confidence,
+    }
+    if n.asset_type:
+        out["asset_type"] = n.asset_type
+    if n.data_classifications:
+        out["data_classifications"] = list(n.data_classifications)
+    return out
+
+
+def _serialize_edge(e: Edge) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "edge_id": e.edge_id,
+        "edge_type": e.edge_type,
+        "from": e.from_node,
+        "to": e.to_node,
+        "provenance": dict(e.provenance),
+        "confidence": e.confidence,
+        "traversal_cost": e.traversal_cost,
+    }
+    if e.finding_id:
+        out["finding_id"] = e.finding_id
+    if e.capability_id:
+        out["capability_id"] = e.capability_id
+    return out
+
+
+def _write_attack_paths(
+    path: Path,
+    paths: list[APath],
+    params: EnumerationParams,
+    truncated: int,
+    bottleneck_edges: dict[str, list[str]],
+) -> None:
+    """Write ``attack-paths.yaml``. Each path's ``bottleneck_edges`` field is
+    computed as the intersection of the path's ``edges`` tuple with the
+    keys of the run-wide ``bottleneck_edges`` dict.
+    """
+    doc = {
+        "schema_version": 1,
+        "generated_by": "attack_path_analyzer",
+        "enumeration_parameters": {
+            "max_hop": params.max_hop,
+            "max_paths_per_pair": params.max_paths_per_pair,
+            "bottleneck_threshold": params.bottleneck_threshold,
+        },
+        "paths": [
+            {
+                "path_id": p.path_id,
+                "attacker_position": p.attacker_position,
+                "crown_jewel": p.crown_jewel,
+                "edges": list(p.edges),
+                "hop_count": p.hop_count,
+                "feasibility": p.feasibility,
+                "severity_sum": p.severity_sum,
+                "mitigation_count": p.mitigation_count,
+                "bottleneck_edges": [eid for eid in p.edges if eid in bottleneck_edges],
+            }
+            for p in paths
+        ],
+        "summary": {
+            "pairs_enumerated": len(
+                {(p.attacker_position, p.crown_jewel) for p in paths}
+            ),
+            "total_paths": len(paths),
+            "truncated_pairs": truncated,
+            "bottleneck_edge_count": len(bottleneck_edges),
+        },
+    }
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def _write_defense_graph(path: Path, overlays: list[dict[str, Any]]) -> None:
+    doc = {
+        "schema_version": 1,
+        "generated_by": "attack_path_analyzer",
+        "bottleneck_overlays": overlays,
+        "summary": {
+            "bottleneck_edge_count": len(overlays),
+            "total_candidate_d3fend": sum(
+                len(o.get("candidate_d3fend", [])) for o in overlays
+            ),
+            "total_net_new_d3fend": sum(
+                len(o.get("net_new_d3fend", [])) for o in overlays
+            ),
+        },
+    }
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
+    doc = {"schema_version": 1, "findings": findings}
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
 
 
 if __name__ == "__main__":
