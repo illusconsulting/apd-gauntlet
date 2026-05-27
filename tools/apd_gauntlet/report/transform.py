@@ -10,6 +10,7 @@ import pathlib
 import re
 from typing import Any
 
+from . import taxonomy as _taxonomy
 from .loader import RunArtifacts
 
 TIER_GOALS: dict[str, list[str]] = {
@@ -561,3 +562,113 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
             ),
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy hover dictionary
+# ---------------------------------------------------------------------------
+
+_NIST_FAMILY_DISPLAY = "NIST 800-53r5"
+_ATTACK_FAMILY_DISPLAY = "MITRE ATT&CK"
+_CWE_FAMILY_DISPLAY = "CWE"
+_D3FEND_FAMILY_DISPLAY = "MITRE D3FEND"
+
+
+def _extract_ids_from_mapping(raw: Any, *fallback_keys: str) -> list[str]:
+    """Extract string IDs from a control-mapping field that may be:
+
+    - A list of strings: ["ID1", "ID2"]
+    - A list of dicts: [{"id": "ID1", ...}, {"technique": "T1040", ...}, ...]
+    - None / missing → []
+
+    ``fallback_keys`` is the ordered list of dict keys to try when "id" is absent.
+    E.g. for mitre_attack: fallback_keys=("technique",)
+    """
+    if not raw:
+        return []
+    ids: list[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            ids.append(item)
+        elif isinstance(item, dict):
+            # Try "id" first, then each fallback key in order.
+            found = item.get("id")
+            if not found:
+                for key in fallback_keys:
+                    found = item.get(key)
+                    if found:
+                        break
+            if found and isinstance(found, str):
+                ids.append(found)
+    return ids
+
+
+def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
+    """Return {family: {ids}} across all findings + capabilities + coverage rows."""
+    out: dict[str, set[str]] = {
+        "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(),
+    }
+    for rec in artifacts.deduped_findings + artifacts.attack_path_findings:
+        cm = rec.get("control_mappings") or {}
+        out["nist"].update(cm.get("nist_800_53r5") or [])
+        out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
+        out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
+        out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
+    for rec in artifacts.deduped_capabilities:
+        cm = rec.get("control_mappings") or {}
+        out["nist"].update(cm.get("nist_800_53r5") or [])
+        out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
+        out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
+        out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
+    # Coverage rollups.
+    for c in artifacts.nist_coverage.get("control") or []:
+        out["nist"].add(c.get("id", ""))
+    for t in artifacts.attack_exposure.get("technique") or []:
+        out["attack"].add(t.get("id", ""))
+    return out
+
+
+def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
+    """Return {id: {family, title}} for every taxonomy ID referenced in the run.
+
+    Only IDs actually present in findings, capabilities, or coverage rollups are
+    included — this keeps data.js small for runs with large reference databases.
+    """
+    refs = _collect_referenced_ids(artifacts)
+    out: dict[str, dict[str, str]] = {}
+
+    # NIST 800-53r5: titles come from the nist-coverage artifact (already loaded).
+    nist_titles = {
+        c.get("id"): c.get("title", "")
+        for c in (artifacts.nist_coverage.get("control") or [])
+    }
+    for cid in refs["nist"]:
+        if not cid:
+            continue
+        out[cid] = {
+            "family": _NIST_FAMILY_DISPLAY,
+            "title":  nist_titles.get(cid, cid),
+        }
+
+    # ATT&CK techniques: titles from taxonomy module; fall back to id if absent.
+    attack = _taxonomy.attack_technique_titles()
+    for tid in refs["attack"]:
+        if not tid:
+            continue
+        out[tid] = {"family": _ATTACK_FAMILY_DISPLAY, "title": attack.get(tid, tid)}
+
+    # CWE: titles from taxonomy module; fall back to id if absent.
+    cwe = _taxonomy.cwe_titles()
+    for cid in refs["cwe"]:
+        if not cid:
+            continue
+        out[cid] = {"family": _CWE_FAMILY_DISPLAY, "title": cwe.get(cid, cid)}
+
+    # D3FEND: titles from taxonomy module; fall back to id if absent.
+    d3 = _taxonomy.d3fend_titles()
+    for did in refs["d3fend"]:
+        if not did:
+            continue
+        out[did] = {"family": _D3FEND_FAMILY_DISPLAY, "title": d3.get(did, did)}
+
+    return out
