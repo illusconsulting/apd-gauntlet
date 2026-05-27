@@ -1,0 +1,36 @@
+# templates/report-data.template.yaml
+# Emitted by apd-synthesizer alongside advisory-report.md.
+# Carries the editorially-chosen prose blocks that the HTML report depends on.
+# Falls back to algorithmic equivalents if absent.
+
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "<2-4 sentences framing the run — subject, artifact count, domain pack applicability, headline gap, headline strength.>"
+    - "<2-3 more sentences on dedup outcome, headline cluster families, blocked-on-evidence count, and what's most actionable next.>"
+
+headline_findings:
+  # The synthesizer's editorial top-N (≤ 10), ordered by reviewer priority.
+  # Every id must resolve to a finding in deduped-findings.yaml.
+  - {id: "<finding-id>", rank: 1}
+
+strengths:
+  # Confirmed capabilities with material caveats (§6 of the advisory report).
+  # Each id must resolve to a capability in deduped-capabilities.yaml.
+  - id: "<capability-id>"
+    caveats:
+      - "<caveat string>"
+
+next_steps:
+  # Reviewer-priority ordering — the tail of the advisory report.
+  # refs may include either finding ids or capability ids.
+  - rank: 1
+    text: "<actionable recommendation, one sentence>"
+    refs: ["<finding-or-capability-id>"]
+
+posture_summary:
+  # One terse line per tier, shown in the HTML Overview rail.
+  trustworthiness: "<one sentence>"
+  scalability:     "<one sentence>"
+  auditability:    "<one sentence>"
