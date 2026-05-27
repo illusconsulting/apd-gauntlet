@@ -131,13 +131,11 @@ def test_analyze_attack_paths_honors_run_config_tuning(tmp_path: Path) -> None:
 def test_analyze_attack_paths_validate_does_not_crash(
     tmp_path: Path,
 ) -> None:
-    """Regression guard: ``apd-gauntlet validate`` must continue to exit 0
-    against a run directory containing the four C-15 artifacts, even before
-    Task C-21 wires the new artifacts into validate's glob set. When C-21
-    lands, this test will still pass (validate will additionally inspect
-    the artifacts) and the sibling
-    ``test_analyze_attack_paths_emits_schema_valid_artifacts`` will catch
-    any schema drift introduced by the wiring.
+    """Regression guard: ``apd-gauntlet validate`` exits 0 against a run
+    directory containing the four C-15 artifacts. Post-C-21, validate
+    schema-checks the three graph artifacts via ``SYNTHESIS_ROLLUPS`` and
+    iterates ``attack-path.findings.yaml`` records via the ``*.findings.yaml``
+    glob — so this test now exercises real validation (not a vacuous pass).
     """
     runner = CliRunner()
     _scaffold_minimal_run(tmp_path)
@@ -152,12 +150,10 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
 ) -> None:
     """Directly validate every C-15-emitted artifact against its JSON Schema.
 
-    ``apd-gauntlet validate`` does not (yet — see Task C-21) glob for
-    ``attack-path.findings.yaml`` nor reference the three graph artifacts
-    in its ``SYNTHESIS_ROLLUPS`` map, so the sibling
-    ``test_analyze_attack_paths_validate_does_not_crash`` passes vacuously
-    for those files. This test closes that gap by loading each artifact
-    and running it through ``Draft202012Validator`` directly.
+    Independent schema check that doesn't depend on ``apd-gauntlet validate``'s
+    wiring — useful as a focused regression guard against schema drift in any
+    of the four artifact emitters, even if a future refactor changes how
+    ``validate`` discovers Phase C files.
     """
     runner = CliRunner()
     _scaffold_minimal_run(tmp_path)
