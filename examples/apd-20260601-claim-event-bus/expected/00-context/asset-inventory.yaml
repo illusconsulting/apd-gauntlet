@@ -1,0 +1,137 @@
+schema_version: 1
+generated_by: intake
+assets:
+  - asset_id: asset-1a2b3c4d
+    name: "claim-ingress-api"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§4 Event Bus Architecture"
+    confidence: high
+  - asset_id: asset-2b3c4d5e
+    name: "pharmacy-edge-gateway"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§8 Authentication (Member portal: OAuth + MFA via Okta)"
+    confidence: medium
+  - asset_id: asset-3c4d5e6f
+    name: "adjudication-service"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.1 Database (Adjudication outcomes persisted to RDS)"
+    confidence: high
+  - asset_id: asset-4d5e6f7a
+    name: "pricing-service"
+    asset_type: service
+    provenance:
+      source: threat_model
+      artifact: "00-context/threat-model-normalized.yaml"
+      locator: "tm-1a799f16 (adjudication-to-pricing)"
+    confidence: medium
+  - asset_id: asset-5e6f7a8b
+    name: "audit-log-writer"
+    asset_type: service
+    provenance:
+      source: threat_model
+      artifact: "00-context/threat-model-normalized.yaml"
+      locator: "tm-04b76ff1 (audit-log-writer)"
+    confidence: high
+  - asset_id: asset-6f7a8b9c
+    name: "audit-log-store"
+    asset_type: data_store
+    data_classifications: [phi, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.2 Audit log (audit_log table in RDS)"
+    confidence: high
+  - asset_id: asset-7a8b9c0d
+    name: "member-record-store"
+    asset_type: data_store
+    data_classifications: [phi]
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.1 Database (member_demographics and claims tables, PostgreSQL RDS)"
+    confidence: high
+  - asset_id: asset-8b9c0d1e
+    name: "pde-submission-service"
+    asset_type: service
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "crown_jewels[].pattern=pde_submission_pipeline"
+    confidence: low
+identities:
+  - identity_id: idn-aabbccdd
+    name: "pharmacy-submitter-role"
+    identity_type: external_party
+    provenance:
+      source: threat_model
+      artifact: "00-context/threat-model-normalized.yaml"
+      locator: "tm-43625e57 (pharmacy credential)"
+    confidence: high
+  - identity_id: idn-bbccddee
+    name: "adjudication-service-account"
+    identity_type: service_account
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§8 Authentication (Service-to-service shared bearer tokens)"
+    confidence: medium
+  - identity_id: idn-ccddeeff
+    name: "member-services-agent-role"
+    identity_type: human_role
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "attacker_positions[].position=insider_with_member_service_role"
+    confidence: low
+trust_boundaries:
+  - boundary_id: tb-11223344
+    name: "external_to_ingress"
+    crosses: [asset-2b3c4d5e, asset-1a2b3c4d]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 4 Trust Boundary Map (Edge → application)"
+  - boundary_id: tb-22334455
+    name: "ingress_to_adjudication"
+    crosses: [asset-1a2b3c4d, asset-3c4d5e6f]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 4 Trust Boundary Map (Application → Kafka)"
+  - boundary_id: tb-33445566
+    name: "adjudication_to_pde_submission"
+    crosses: [asset-3c4d5e6f, asset-8b9c0d1e]
+    provenance:
+      source: domain_default
+      artifact: "domains/pbm/domain.yaml"
+      locator: "default_trust_boundaries[].boundary=internal_to_pde_submission"
+  - boundary_id: tb-44556677
+    name: "adjudication_to_member_record_store"
+    crosses: [asset-3c4d5e6f, asset-7a8b9c0d]
+    provenance:
+      source: artifact
+      artifact: "00-context/context-brief.md"
+      locator: "section 4 Trust Boundary Map (Application → RDS)"
+  - boundary_id: tb-55667788
+    name: "audit_writer_to_audit_store"
+    crosses: [asset-5e6f7a8b, asset-6f7a8b9c]
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.2 Audit log (audit writer → audit_log table in RDS)"
+extraction_summary:
+  asset_count: 8
+  identity_count: 3
+  trust_boundary_count: 5
+  high_confidence_count: 7
+  medium_confidence_count: 3
+  low_confidence_count: 2

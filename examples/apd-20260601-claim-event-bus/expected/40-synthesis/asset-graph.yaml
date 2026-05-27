@@ -1,0 +1,539 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+nodes:
+- node_id: asset-1a2b3c4d
+  node_type: asset
+  name: claim-ingress-api
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA74 Event Bus Architecture"
+  confidence: high
+  asset_type: service
+- node_id: asset-2b3c4d5e
+  node_type: asset
+  name: pharmacy-edge-gateway
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA78 Authentication (Member portal: OAuth + MFA via Okta)"
+  confidence: medium
+  asset_type: service
+- node_id: asset-3c4d5e6f
+  node_type: asset
+  name: adjudication-service
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA75.1 Database (Adjudication outcomes persisted to RDS)"
+  confidence: high
+  asset_type: service
+- node_id: asset-4d5e6f7a
+  node_type: asset
+  name: pricing-service
+  provenance:
+    source: threat_model
+    artifact: 00-context/threat-model-normalized.yaml
+    locator: tm-1a799f16 (adjudication-to-pricing)
+  confidence: medium
+  asset_type: service
+- node_id: asset-5e6f7a8b
+  node_type: asset
+  name: audit-log-writer
+  provenance:
+    source: threat_model
+    artifact: 00-context/threat-model-normalized.yaml
+    locator: tm-04b76ff1 (audit-log-writer)
+  confidence: high
+  asset_type: service
+- node_id: asset-6f7a8b9c
+  node_type: asset
+  name: audit-log-store
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA75.2 Audit log (audit_log table in RDS)"
+  confidence: high
+  asset_type: data_store
+  data_classifications:
+  - phi
+  - internal
+- node_id: asset-7a8b9c0d
+  node_type: asset
+  name: member-record-store
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA75.1 Database (member_demographics and claims tables, PostgreSQL\
+      \ RDS)"
+  confidence: high
+  asset_type: data_store
+  data_classifications:
+  - phi
+- node_id: asset-8b9c0d1e
+  node_type: asset
+  name: pde-submission-service
+  provenance:
+    source: domain_default
+    artifact: domains/pbm/domain.yaml
+    locator: crown_jewels[].pattern=pde_submission_pipeline
+  confidence: low
+  asset_type: service
+- node_id: atk-2d392558
+  node_type: attacker_position
+  name: compromised_vendor_integration
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-accb3a4c
+  node_type: attacker_position
+  name: compromised_pharmacy_credential
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-e0a03f74
+  node_type: attacker_position
+  name: external_internet
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: idn-aabbccdd
+  node_type: identity
+  name: pharmacy-submitter-role
+  provenance:
+    source: threat_model
+    artifact: 00-context/threat-model-normalized.yaml
+    locator: tm-43625e57 (pharmacy credential)
+  confidence: high
+- node_id: idn-bbccddee
+  node_type: identity
+  name: adjudication-service-account
+  provenance:
+    source: artifact
+    artifact: inputs/tech_plan.md
+    locator: "\xA78 Authentication (Service-to-service shared bearer tokens)"
+  confidence: medium
+- node_id: idn-ccddeeff
+  node_type: identity
+  name: member-services-agent-role
+  provenance:
+    source: domain_default
+    artifact: domains/pbm/domain.yaml
+    locator: attacker_positions[].position=insider_with_member_service_role
+  confidence: low
+- node_id: jewel-358e9430
+  node_type: crown_jewel
+  name: phi_store
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-e9cb35a7
+  node_type: crown_jewel
+  name: pde_submission_pipeline
+  provenance:
+    source: run_config
+  confidence: high
+edges:
+- edge_id: edge-07946d39
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-43625e57
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-0ec04856
+  edge_type: trusts
+  from: asset-3c4d5e6f
+  to: asset-8b9c0d1e
+  provenance:
+    source: asset_inventory
+    locator: tb-33445566
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-1457b95a
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-8df8b2f3
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-17783b27
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-4d037558
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-1c7d8d1d
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-04b76ff1
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-20d89553
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-b9c3c1b5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-27e4ec84
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-f2d83cb5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-2a479259
+  edge_type: trusts
+  from: asset-6f7a8b9c
+  to: asset-5e6f7a8b
+  provenance:
+    source: asset_inventory
+    locator: tb-55667788
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-33cbe3d9
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-9a8c9ce4
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-37b95b02
+  edge_type: trusts
+  from: asset-5e6f7a8b
+  to: asset-6f7a8b9c
+  provenance:
+    source: asset_inventory
+    locator: tb-55667788
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-4b6f06ec
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-5eadb570
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-4f04c048
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-8df8b2f3
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-5074ec19
+  edge_type: trusts
+  from: asset-3c4d5e6f
+  to: asset-1a2b3c4d
+  provenance:
+    source: asset_inventory
+    locator: tb-22334455
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-5b51f5a8
+  edge_type: trusts
+  from: asset-3c4d5e6f
+  to: asset-7a8b9c0d
+  provenance:
+    source: asset_inventory
+    locator: tb-44556677
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-631176ba
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-99aa91ca
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-67448007
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-f2d83cb5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-67b87381
+  edge_type: trusts
+  from: asset-8b9c0d1e
+  to: asset-3c4d5e6f
+  provenance:
+    source: asset_inventory
+    locator: tb-33445566
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-6dbad8bd
+  edge_type: trusts
+  from: asset-7a8b9c0d
+  to: asset-3c4d5e6f
+  provenance:
+    source: asset_inventory
+    locator: tb-44556677
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-6e130fc8
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-f2d83cb5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-78b786a1
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-6dc432fd
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-867e7d3e
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-99aa91ca
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-88ca3e5d
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-43625e57
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-8af9f7aa
+  edge_type: trusts
+  from: asset-1a2b3c4d
+  to: asset-2b3c4d5e
+  provenance:
+    source: asset_inventory
+    locator: tb-11223344
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-94c86287
+  edge_type: trusts
+  from: asset-2b3c4d5e
+  to: asset-1a2b3c4d
+  provenance:
+    source: asset_inventory
+    locator: tb-11223344
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-989fc99a
+  edge_type: data_resides_on
+  from: asset-6f7a8b9c
+  to: jewel-358e9430
+  provenance:
+    source: asset_inventory
+  confidence: high
+  traversal_cost: 1
+- edge_id: edge-99707e24
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-9a8c9ce4
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-9a22b4a2
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-99aa91ca
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-9bf0cb8d
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-43625e57
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-af0b27e9
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-4d037558
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-bd61022c
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-b9c3c1b5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-c41dcef1
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-8df8b2f3
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-cb1c4890
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-9a8c9ce4
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-cd042314
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-5eadb570
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-d6d18ce6
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-4d037558
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-dceeaa66
+  edge_type: network_reachable
+  from: atk-accb3a4c
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-6dc432fd
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-dd4a931c
+  edge_type: trusts
+  from: asset-1a2b3c4d
+  to: asset-3c4d5e6f
+  provenance:
+    source: asset_inventory
+    locator: tb-22334455
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-decfffea
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-5eadb570
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-e6170ee9
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-1a2b3c4d
+  provenance:
+    source: threat_model
+    locator: tm-b9c3c1b5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-f0f89452
+  edge_type: compromisable_via_finding
+  from: asset-1a2b3c4d
+  to: asset-5e6f7a8b
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: tmeval-eeee5555
+  confidence: high
+  traversal_cost: 4
+  finding_id: tmeval-eeee5555
+- edge_id: edge-f29aefbf
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-6dc432fd
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-f2a4568b
+  edge_type: network_reachable
+  from: atk-e0a03f74
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-04b76ff1
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-f3c575df
+  edge_type: data_resides_on
+  from: asset-7a8b9c0d
+  to: jewel-358e9430
+  provenance:
+    source: asset_inventory
+  confidence: high
+  traversal_cost: 1
+- edge_id: edge-f4e846c9
+  edge_type: network_reachable
+  from: atk-2d392558
+  to: asset-5e6f7a8b
+  provenance:
+    source: threat_model
+    locator: tm-04b76ff1
+  confidence: high
+  traversal_cost: 2
+build_summary:
+  node_count: 16
+  edge_count: 43
+  attacker_position_count: 3
+  crown_jewel_count: 2
+  finding_edges_count: 1
+  capability_edges_count: 0
+  sources_used:
+  - asset_inventory
+  - findings
+  - capabilities
+  - threat_model_normalized
+  - code_evidence_index

@@ -10,6 +10,10 @@ artifacts:
   - { filename: iac/kafka.tf,               type: iac }
   - { filename: threat-model.json,          type: threat_model }
   - { filename: 00-context/threat-model-normalized.yaml, type: threat_model }
+  - { filename: 00-context/asset-inventory.yaml,         type: asset_inventory }
+  - { filename: 40-synthesis/asset-graph.yaml,           type: asset_graph }
+  - { filename: 40-synthesis/attack-paths.yaml,          type: attack_paths }
+  - { filename: 40-synthesis/defense-graph.yaml,         type: defense_graph }
 ---
 
 # APD Gauntlet Context Brief — Run `apd-20260601-claim-event-bus`

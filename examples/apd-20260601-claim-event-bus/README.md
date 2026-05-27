@@ -19,6 +19,24 @@ A synthetic PBM tech plan exercising every framework feature without leaking rea
 - Contradiction (capability claims at-rest encryption; finding disputes scope)
 - High-confidence ATT&CK rationales
 
+## v1.4 — attack-path analysis
+
+Phase C added an attack-path analyzer that builds an asset/identity/trust-boundary graph from intake artifacts and enumerates bounded attacker → crown-jewel paths. The example exercises this pipeline end-to-end:
+
+- `expected/.apd-run.yaml` — declares `crown_jewels`, `attacker_positions`, and `attack_path_analysis` enumeration bounds (curated subset of the PBM domain pack defaults)
+- `expected/00-context/asset-inventory.yaml` — intake artifact: 8 assets, 3 identities, 5 trust boundaries
+- `expected/40-synthesis/asset-graph.yaml` — built graph (16 nodes, 43 edges) with per-edge provenance
+- `expected/40-synthesis/attack-paths.yaml` — 75 bounded attack paths across 3 productive (attacker, jewel) pairs; 3 pairs truncated at `max_paths_per_pair=25`; 24 bottleneck edges
+- `expected/40-synthesis/defense-graph.yaml` — D3FEND overlay (zero net-new candidates: demonstrates the "no high-confidence ATT&CK on bottleneck edges" disposition)
+- `expected/40-synthesis/attack-path.findings.yaml` — 75 deterministic `apath-*` findings (all `disposition: uncertainty` per the confidence-floors-severity rule)
+- `expected/40-synthesis/attack-path-report.md` — hand-authored human-reviewable narrative with inline Mermaid
+
+Regenerate the four deterministic outputs with:
+
+```bash
+apd-gauntlet analyze-attack-paths examples/apd-20260601-claim-event-bus/expected/
+```
+
 ## Running the example
 
 ```bash

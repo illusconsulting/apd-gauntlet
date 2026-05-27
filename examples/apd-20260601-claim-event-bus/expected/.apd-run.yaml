@@ -1,8 +1,6 @@
 run_id: apd-20260601-claim-event-bus
 domain: pbm
 framework_version: 1.4.0
-threat_model: inputs/threat-model.json
-methodology_hint: stride
 taxonomies:
   - cwe
   - mitre_attack
