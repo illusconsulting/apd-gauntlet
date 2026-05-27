@@ -6,11 +6,10 @@ import pathlib
 import re
 
 import pytest
-
 from apd_gauntlet.report.emit import (
     BundleMissingError,
-    write_data_js,
     copy_bundle,
+    write_data_js,
     write_manifest,
 )
 

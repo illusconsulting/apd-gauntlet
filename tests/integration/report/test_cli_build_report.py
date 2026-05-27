@@ -6,7 +6,6 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
 from apd_gauntlet.report.build import build_report
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
@@ -56,9 +55,8 @@ def test_build_default_out_dir_is_under_synthesis(tmp_path: pathlib.Path) -> Non
 
 def test_cli_build_report_smoke(tmp_path: pathlib.Path) -> None:
     """Invoke the Click command from Python."""
-    from click.testing import CliRunner
-
     from apd_gauntlet.cli import build_report_cmd
+    from click.testing import CliRunner
 
     result = CliRunner().invoke(
         build_report_cmd,

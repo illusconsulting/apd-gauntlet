@@ -10,7 +10,6 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
 from apd_gauntlet.validate import run_cross_file_pass, run_schema_pass
 
 REPO = pathlib.Path(__file__).resolve().parents[3]

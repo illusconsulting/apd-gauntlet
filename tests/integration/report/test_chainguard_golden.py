@@ -13,7 +13,6 @@ import difflib
 import pathlib
 
 import pytest
-
 from apd_gauntlet.report.build import build_report
 
 REPO = pathlib.Path(__file__).resolve().parents[3]

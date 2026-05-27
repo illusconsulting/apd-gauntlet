@@ -4,7 +4,6 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
 from apd_gauntlet.report.loader import (
     MissingArtifactError,
     load_run,
