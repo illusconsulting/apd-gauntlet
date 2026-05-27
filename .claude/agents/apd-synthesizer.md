@@ -78,6 +78,38 @@ Write to `40-synthesis/`:
 - `apd-coverage-matrix.yaml` — APD goal × architectural component coverage
 - `rejected-records.yaml` — records that failed structural validation, with the reason per record
 - `advisory-report.md` — the human-readable advisory document
+- `report-data.yaml` — supplementary structured payload used by the HTML report generator (see schemas/report-data.schema.json + templates/report-data.template.yaml)
+
+## `report-data.yaml` — HTML report supplement
+
+After you have produced every other 40-synthesis output, emit
+`40-synthesis/report-data.yaml` matching the structure in
+`templates/report-data.template.yaml`. This file carries the
+editorial prose blocks the HTML report cannot derive algorithmically:
+
+- `exec_summary.paragraphs`: 2-4 paragraphs from your §1 Executive Summary.
+- `headline_findings`: your top-10 ranking from §4 — every `id` MUST resolve
+  to a finding in `deduped-findings.yaml`.
+- `strengths`: §6 Strengths-Notwithstanding-Gaps — each `id` resolves to a
+  capability; `caveats` lists the bounding caveats.
+- `next_steps`: the reviewer-priority ordering at the report tail. `refs[]`
+  entries may be finding ids or capability ids.
+- `posture_summary`: one terse sentence per APD tier for the Overview rail.
+
+Validate with `apd-gauntlet validate <run_dir>` — both schema and cross-file
+passes must pass before you finish.
+
+## Trailing HTML build
+
+After all 40-synthesis files including `report-data.yaml` are written and the
+validator is clean, invoke:
+
+```bash
+apd-gauntlet build-report <run_dir>
+```
+
+This is best-effort — if it fails, log the diagnostic and continue. The HTML
+report is a derived view, not part of the authoritative deliverable.
 
 ## Outputs (v1.2+ additions)
 
