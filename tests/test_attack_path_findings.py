@@ -15,7 +15,7 @@ import json
 import pathlib
 
 from apd_gauntlet.attack_path.enumerate import Path as APath
-from apd_gauntlet.attack_path.findings import emit_findings
+from apd_gauntlet.attack_path.findings import emit_findings, severity_for_risk
 from apd_gauntlet.attack_path.graph import Edge, Graph, Node
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
@@ -148,6 +148,49 @@ def _paths_sharing_edge() -> list[APath]:
     ]
 
 
+def _path_with_two_finding_edges_of_different_goals() -> tuple[Graph, APath]:
+    """Build a 3-hop graph + path with two compromisable_via_finding edges
+    whose findings carry different apd_goal values (authenticity upstream,
+    confidentiality near the jewel). Used to verify that emit_findings
+    labels the path by the worst-case category, not the first match.
+    """
+    g = Graph()
+    g.add_node(Node("atk-aaaaaaaa", "attacker_position", "external-attacker",
+                    {"source": "domain_default"}, "high"))
+    g.add_node(Node("asset-aaaaaaaa", "asset", "edge-gateway",
+                    {"source": "artifact"}, "high"))
+    g.add_node(Node("asset-bbbbbbbb", "asset", "app-server",
+                    {"source": "artifact"}, "high"))
+    g.add_node(Node("jewel-aaaaaaaa", "crown_jewel", "phi-database",
+                    {"source": "domain_default"}, "high",
+                    data_classifications=("phi",)))
+    # Edge A: attacker -> gateway, compromisable_via_finding (authenticity)
+    g.add_edge(Edge("edge-aaaaaaaa", "compromisable_via_finding",
+                    "atk-aaaaaaaa", "asset-aaaaaaaa",
+                    {"source": "artifact"}, "high", 1,
+                    finding_id="auth-aaaaaaaa"))
+    # Edge B: gateway -> app-server, compromisable_via_finding (confidentiality)
+    g.add_edge(Edge("edge-bbbbbbbb", "compromisable_via_finding",
+                    "asset-aaaaaaaa", "asset-bbbbbbbb",
+                    {"source": "artifact"}, "high", 1,
+                    finding_id="conf-bbbbbbbb"))
+    # Edge C: app-server -> jewel, data_resides_on
+    g.add_edge(Edge("edge-cccccccc", "data_resides_on",
+                    "asset-bbbbbbbb", "jewel-aaaaaaaa",
+                    {"source": "artifact"}, "high", 1))
+    p = APath(
+        path_id="path-dddddddd",
+        attacker_position="atk-aaaaaaaa",
+        crown_jewel="jewel-aaaaaaaa",
+        edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+        hop_count=3,
+        feasibility="high",
+        severity_sum=8,
+        mitigation_count=0,
+    )
+    return g, p
+
+
 def _bottleneck_overlay() -> dict:
     return {
         "edge_id": "edge-bbbbbbbb",
@@ -260,3 +303,34 @@ def test_emitted_findings_validate_against_finding_schema() -> None:
             f"finding {f['id']} failed validation: "
             f"{[e.message for e in errors]}"
         )
+
+
+def test_risk_severity_label_saturates_to_critical_at_or_above_4() -> None:
+    # severity_sum=3 -> high; severity_sum>=4 -> critical, including worst-case
+    # multi-hop sums that the old dict-based lookup silently downgraded.
+    assert severity_for_risk(3) == "high"
+    assert severity_for_risk(4) == "critical"
+    assert severity_for_risk(6) == "critical"
+    assert severity_for_risk(12) == "critical"
+
+
+def test_inference_picks_worst_case_goal_across_multiple_finding_edges() -> None:
+    # 3-hop path with two compromisable_via_finding edges:
+    #   edge A finding: apd_goal=authenticity
+    #   edge B finding: apd_goal=confidentiality (closer to jewel; worst-case)
+    # emit_findings must label the path with apd_goal=confidentiality,
+    # not the first-encountered authenticity.
+    g, p = _path_with_two_finding_edges_of_different_goals()
+    findings_by_id = {
+        "auth-aaaaaaaa": {"apd_tier": "trustworthiness", "apd_goal": "authenticity"},
+        "conf-bbbbbbbb": {"apd_tier": "trustworthiness", "apd_goal": "confidentiality"},
+    }
+    results = emit_findings(
+        paths=[p],
+        overlays=[],
+        graph=g,
+        findings_by_id=findings_by_id,
+        capabilities=[],
+    )
+    assert any(f["apd_goal"] == "confidentiality" for f in results)
+    assert not any(f["apd_goal"] == "authenticity" for f in results)

@@ -20,9 +20,49 @@ from typing import Any
 from .enumerate import Path as APath
 from .graph import Graph
 
-_SEVERITY_FOR_RISK: dict[int, str] = {3: "high", 4: "critical", 5: "critical", 6: "critical"}
 _UNCERTAINTY_SEVERITY = "low"
 _TITLE_MAX = 200
+
+# Priority order for inferring apd_goal across multiple finding-edges on a
+# path. Highest-impact category appears first so that, given a path that
+# crosses several findings of different goals, the emitted finding is labeled
+# by the worst-case category (e.g. PHI exposure dominates an upstream
+# authenticity weakness).
+_GOAL_PRIORITY: tuple[str, ...] = (
+    "confidentiality",
+    "integrity",
+    "non_repudiation",
+    "availability",
+    "authenticity",
+    "ephemeral",
+    "immutability",
+    "resilient",
+    "distributed",
+)
+
+# Priority order for inferring apd_tier across multiple finding-edges. The
+# three tiers form a dependency chain (trustworthiness underpins
+# scalability underpins auditability); when a path mixes tiers we report the
+# foundational one because a break there invalidates the layers above.
+_TIER_PRIORITY: tuple[str, ...] = (
+    "trustworthiness",
+    "scalability",
+    "auditability",
+)
+
+
+def severity_for_risk(severity_sum: int) -> str:
+    """Map ``severity_sum`` (sum of ``_SEVERITY_SCORE`` over compromisable
+    edges) to a severity label for the risk-disposition branch.
+
+    Eligible only when ``severity_sum >= 3`` (enforced by caller).
+
+    - ``sum == 3``: ``"high"`` (a single high-severity finding on the path).
+    - ``sum >= 4``: ``"critical"`` (one critical finding OR two-or-more high
+      findings OR any worse combination). Saturates at critical — multi-hop
+      worst-case paths must not be silently downgraded.
+    """
+    return "critical" if severity_sum >= 4 else "high"
 
 
 def emit_findings(
@@ -73,7 +113,7 @@ def _finding_from_path(
         title_prefix = "Low-feasibility attack path"
     elif no_mitigation and p.severity_sum >= 3:
         disposition = "risk"
-        severity = _SEVERITY_FOR_RISK.get(p.severity_sum, "high")
+        severity = severity_for_risk(p.severity_sum)
         confidence = p.feasibility
         title_prefix = "High-feasibility attack path with no capability coverage"
     else:
@@ -234,6 +274,18 @@ def _finding_from_bottleneck(
 def _infer_tier(
     g: Graph, p: APath, findings_by_id: dict[str, dict[str, Any]]
 ) -> str:
+    """Pick the apd_tier label for a path's finding.
+
+    Collects tiers from every ``compromisable_via_finding`` edge on the path
+    (not just the first) and returns the highest-priority entry in
+    ``_TIER_PRIORITY``. ``trustworthiness`` outranks ``scalability`` which
+    outranks ``auditability`` because the tiers stack as a dependency chain
+    — a break in the foundational tier invalidates the layers above, so the
+    finding should be labeled by the foundational tier when a path crosses
+    multiple. Falls back to ``"trustworthiness"`` when no finding-edges
+    contribute a tier.
+    """
+    collected: set[str] = set()
     for eid in p.edges:
         e = g.get_edge(eid)
         if (
@@ -241,14 +293,30 @@ def _infer_tier(
             and e.finding_id
             and e.finding_id in findings_by_id
         ):
-            tier = findings_by_id[e.finding_id].get("apd_tier", "trustworthiness")
-            return str(tier)
+            tier = findings_by_id[e.finding_id].get("apd_tier")
+            if isinstance(tier, str):
+                collected.add(tier)
+    for candidate in _TIER_PRIORITY:
+        if candidate in collected:
+            return candidate
     return "trustworthiness"
 
 
 def _infer_goal(
     g: Graph, p: APath, findings_by_id: dict[str, dict[str, Any]]
 ) -> str:
+    """Pick the apd_goal label for a path's finding.
+
+    Collects goals from every ``compromisable_via_finding`` edge on the path
+    and returns the highest-priority entry in ``_GOAL_PRIORITY``. Ordering
+    reflects worst-case impact: a path that crosses a ``confidentiality``
+    finding adjacent to the crown jewel dominates an upstream
+    ``authenticity`` finding, so the emitted finding is labeled
+    ``confidentiality``. When no finding-edges contribute a goal, falls
+    back to the PHI-classification heuristic on the crown-jewel node, then
+    to ``"authenticity"``.
+    """
+    collected: set[str] = set()
     for eid in p.edges:
         e = g.get_edge(eid)
         if (
@@ -256,8 +324,12 @@ def _infer_goal(
             and e.finding_id
             and e.finding_id in findings_by_id
         ):
-            goal = findings_by_id[e.finding_id].get("apd_goal", "authenticity")
-            return str(goal)
+            goal = findings_by_id[e.finding_id].get("apd_goal")
+            if isinstance(goal, str):
+                collected.add(goal)
+    for candidate in _GOAL_PRIORITY:
+        if candidate in collected:
+            return candidate
     jewel = g.get_node(p.crown_jewel)
     if "phi" in (jewel.data_classifications or ()):
         return "confidentiality"
