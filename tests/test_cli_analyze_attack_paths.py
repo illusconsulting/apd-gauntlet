@@ -8,6 +8,7 @@ optionally mutating the run-config to exercise tuning / blocked branches.
 """
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -15,8 +16,25 @@ from typing import Any
 import yaml
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "attack_path" / "minimal-run"
+REPO_ROOT = Path(__file__).parent.parent
+SCHEMA_DIR = REPO_ROOT / "schemas"
+
+
+def _build_registry() -> Registry:
+    """Build a referencing.Registry containing every schema under ``schemas/``
+    so that ``$ref``/``$id`` lookups resolve during validation.
+    """
+    resources = []
+    for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
 
 
 def _scaffold_minimal_run(
@@ -100,12 +118,72 @@ def test_analyze_attack_paths_honors_run_config_tuning(tmp_path: Path) -> None:
     assert attack_paths["enumeration_parameters"]["max_paths_per_pair"] == 10
 
 
-def test_analyze_attack_paths_validates_output_against_schemas(
+def test_analyze_attack_paths_validate_does_not_crash(
     tmp_path: Path,
 ) -> None:
+    """Regression guard: ``apd-gauntlet validate`` must continue to exit 0
+    against a run directory containing the four C-15 artifacts, even before
+    Task C-21 wires the new artifacts into validate's glob set. When C-21
+    lands, this test will still pass (validate will additionally inspect
+    the artifacts) and the sibling
+    ``test_analyze_attack_paths_emits_schema_valid_artifacts`` will catch
+    any schema drift introduced by the wiring.
+    """
     runner = CliRunner()
     _scaffold_minimal_run(tmp_path)
     result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
     assert result.exit_code == 0, result.output
     result2 = runner.invoke(main, ["validate", str(tmp_path)])
     assert result2.exit_code == 0, result2.output
+
+
+def test_analyze_attack_paths_emits_schema_valid_artifacts(
+    tmp_path: Path,
+) -> None:
+    """Directly validate every C-15-emitted artifact against its JSON Schema.
+
+    ``apd-gauntlet validate`` does not (yet — see Task C-21) glob for
+    ``attack-path-findings.yaml`` nor reference the three graph artifacts
+    in its ``SYNTHESIS_ROLLUPS`` map, so the sibling
+    ``test_analyze_attack_paths_validate_does_not_crash`` passes vacuously
+    for those files. This test closes that gap by loading each artifact
+    and running it through ``Draft202012Validator`` directly.
+    """
+    runner = CliRunner()
+    _scaffold_minimal_run(tmp_path)
+    result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+
+    synth = tmp_path / "40-synthesis"
+    registry = _build_registry()
+
+    # Top-level documents validate as a whole against their schema.
+    for filename, schema_name in [
+        ("asset-graph.yaml",    "asset-graph.schema.json"),
+        ("attack-paths.yaml",   "attack-path.schema.json"),
+        ("defense-graph.yaml",  "defense-graph.schema.json"),
+    ]:
+        doc = yaml.safe_load((synth / filename).read_text())
+        schema = json.loads((SCHEMA_DIR / schema_name).read_text())
+        validator = Draft202012Validator(schema, registry=registry)
+        errors = list(validator.iter_errors(doc))
+        assert errors == [], (
+            f"{filename} failed schema validation: "
+            f"{[e.message for e in errors]}"
+        )
+
+    # The findings file is a wrapper {schema_version, findings: [...]};
+    # finding.schema.json describes one finding record, so iterate.
+    findings_doc = yaml.safe_load(
+        (synth / "attack-path-findings.yaml").read_text()
+    )
+    finding_schema = json.loads(
+        (SCHEMA_DIR / "finding.schema.json").read_text()
+    )
+    finding_validator = Draft202012Validator(finding_schema, registry=registry)
+    for f in findings_doc["findings"]:
+        errors = list(finding_validator.iter_errors(f))
+        assert errors == [], (
+            f"finding {f.get('id')} failed schema validation: "
+            f"{[e.message for e in errors]}"
+        )
