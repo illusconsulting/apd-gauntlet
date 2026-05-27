@@ -30,7 +30,9 @@ def test_rows_uncovered_when_no_mitigations(legacy_example_run: pathlib.Path) ->
         assert by_id["T1070.002"]["coverage"] == "uncovered"
 
 
-def test_rows_covered_when_findings_zero_and_mitigations_present(legacy_example_run: pathlib.Path) -> None:
+def test_rows_covered_when_findings_zero_and_mitigations_present(
+    legacy_example_run: pathlib.Path,
+) -> None:
     """T1530 in legacy_example has zero findings, some mitigations → covered."""
     artifacts = load_run(legacy_example_run)
     rows = attack_exposure_rows(artifacts)

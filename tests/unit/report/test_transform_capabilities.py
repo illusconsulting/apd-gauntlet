@@ -4,7 +4,6 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import capability_grid, strengths_section
 
@@ -16,7 +15,9 @@ def test_capability_grid_returns_list(legacy_example_run: pathlib.Path) -> None:
     assert len(grid) == len(artifacts.deduped_capabilities)
 
 
-def test_capability_grid_each_entry_carries_tier_goal_maturity(legacy_example_run: pathlib.Path) -> None:
+def test_capability_grid_each_entry_carries_tier_goal_maturity(
+    legacy_example_run: pathlib.Path,
+) -> None:
     artifacts = load_run(legacy_example_run)
     grid = capability_grid(artifacts)
     for c in grid:

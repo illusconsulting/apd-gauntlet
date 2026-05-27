@@ -10,7 +10,9 @@ from apd_gauntlet.report.transform import apd_matrix
 def test_matrix_returns_goals_and_rows(legacy_example_run: pathlib.Path) -> None:
     artifacts = load_run(legacy_example_run)
     m = apd_matrix(artifacts)
-    assert set(m["goals"]) == {"conf", "intg", "avail", "dist", "resil", "ephem", "auth", "nonrep", "immut"}
+    assert set(m["goals"]) == {
+        "conf", "intg", "avail", "dist", "resil", "ephem", "auth", "nonrep", "immut"
+    }
     assert "goalLabels" in m
     assert len(m["rows"]) == len(artifacts.apd_coverage_matrix.get("component", []))
 

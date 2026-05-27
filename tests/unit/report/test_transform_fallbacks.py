@@ -5,11 +5,11 @@ import pathlib
 
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import (
+    build_apd_data,
     contradictions_section,
-    severity_disagreements_section,
     next_steps_section,
     posture_summary_section,
-    build_apd_data,
+    severity_disagreements_section,
 )
 
 
@@ -32,7 +32,6 @@ def test_severity_disagreements_section_shape(legacy_example_run: pathlib.Path) 
 
 
 def test_next_steps_supplied_passes_through(legacy_example_run: pathlib.Path) -> None:
-    artifacts = load_run(legacy_example_run)
     supplement = [{"rank": 1, "text": "Do the thing.", "refs": ["merged-7c2a4f91"]}]
     assert next_steps_section(supplement) == supplement
 

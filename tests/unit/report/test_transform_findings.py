@@ -17,7 +17,9 @@ def test_findings_array_carries_required_fields(legacy_example_run: pathlib.Path
     artifacts = load_run(legacy_example_run)
     arr = findings_array(artifacts, headline_supplement=None)
     for f in arr:
-        assert {"id", "title", "goal", "tier", "severity", "confidence", "disposition"}.issubset(f.keys())
+        assert {
+            "id", "title", "goal", "tier", "severity", "confidence", "disposition"
+        }.issubset(f.keys())
 
 
 def test_findings_array_supplied_headlines_set_rank(legacy_example_run: pathlib.Path) -> None:
@@ -35,7 +37,9 @@ def test_findings_array_supplied_headlines_set_rank(legacy_example_run: pathlib.
     assert ranks == [1, 2]
 
 
-def test_findings_array_fallback_picks_top_10_by_sev_then_conf(legacy_example_run: pathlib.Path) -> None:
+def test_findings_array_fallback_picks_top_10_by_sev_then_conf(
+    legacy_example_run: pathlib.Path,
+) -> None:
     """No supplement: algorithmic top-10 by (severity desc, confidence desc, id asc)."""
     _SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4, "info": 4}
     artifacts = load_run(legacy_example_run)
@@ -50,7 +54,9 @@ def test_findings_array_fallback_picks_top_10_by_sev_then_conf(legacy_example_ru
     assert headlined[0]["severity"] == best_sev
 
 
-def test_findings_array_unknown_supplement_id_dropped_silently(legacy_example_run: pathlib.Path) -> None:
+def test_findings_array_unknown_supplement_id_dropped_silently(
+    legacy_example_run: pathlib.Path,
+) -> None:
     """Schema validator catches unknown ids; transform tolerates them so a stale
     report-data.yaml doesn't break the HTML render."""
     artifacts = load_run(legacy_example_run)

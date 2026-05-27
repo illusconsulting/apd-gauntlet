@@ -40,7 +40,9 @@ def test_path_pairs_present(legacy_example_run: pathlib.Path) -> None:
     for pair in pairs:
         assert {"attacker_position", "crown_jewel", "paths"}.issubset(pair.keys())
         for p in pair["paths"]:
-            assert {"path_id", "hop_count", "severity_sum", "edges", "bottleneck_edges"}.issubset(p.keys())
+            assert {
+                "path_id", "hop_count", "severity_sum", "edges", "bottleneck_edges"
+            }.issubset(p.keys())
 
 
 def test_bottleneck_overlays_present_when_defense_graph(legacy_example_run: pathlib.Path) -> None:
@@ -62,7 +64,6 @@ def test_coverage_summary_card(legacy_example_run: pathlib.Path) -> None:
 def test_mermaid_sanitizes_adversarial_labels() -> None:
     """Asset names with <script>, brackets, newlines must not appear raw
     in the mermaid source — adopter-controlled inputs cannot inject syntax."""
-    from apd_gauntlet.report.loader import RunArtifacts
     from apd_gauntlet.report.transform import _build_mermaid
 
     graph = {

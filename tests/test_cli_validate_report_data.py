@@ -5,7 +5,6 @@ import pathlib
 
 import pytest
 import yaml
-
 from apd_gauntlet.validate import run_cross_file_pass, run_schema_pass
 
 
@@ -47,7 +46,9 @@ def minimal_run(tmp_path: pathlib.Path) -> pathlib.Path:
             "apd_goal": "confidentiality",
             "maturity": "implemented",
             "title": "A capability for testing purposes",
-            "description": "This capability demonstrates encryption in transit for all API endpoints.",
+            "description": (
+                "This capability demonstrates encryption in transit for all API endpoints."
+            ),
             "scope": "Scope text long enough to satisfy the minLength constraint.",
             "evidence": [{"artifact": "x.md", "locator": "L1", "excerpt": "ex"}],
             "control_mappings": {"nist_800_53r5": ["SC-8"]},
@@ -67,7 +68,9 @@ def test_report_data_valid_schema(minimal_run: pathlib.Path) -> None:
     """A schema-valid report-data.yaml passes the schema pass."""
     doc = {
         "schema_version": 1,
-        "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
+        "exec_summary": {
+            "paragraphs": ["A paragraph long enough for the minLength rule to accept."]
+        },
         "headline_findings": [{"id": "conf-12345678", "rank": 1}],
         "strengths": [{"id": "conf-cap-abcd1234", "caveats": ["A caveat long enough."]}],
         "next_steps": [{"rank": 1, "text": "Do the thing now.", "refs": ["conf-12345678"]}],
@@ -86,7 +89,9 @@ def test_report_data_unknown_finding_ref_fails_cross_file(minimal_run: pathlib.P
     """A headline_findings entry pointing at a non-existent finding fails cross-file."""
     doc = {
         "schema_version": 1,
-        "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
+        "exec_summary": {
+            "paragraphs": ["A paragraph long enough for the minLength rule to accept."]
+        },
         "headline_findings": [{"id": "conf-00000000", "rank": 1}],
         "strengths": [{"id": "conf-cap-abcd1234", "caveats": ["A caveat long enough."]}],
         "next_steps": [{"rank": 1, "text": "Do the thing now.", "refs": ["conf-12345678"]}],
@@ -106,7 +111,9 @@ def test_report_data_unknown_strength_ref_fails_cross_file(minimal_run: pathlib.
     """A strengths entry pointing at a non-existent capability fails cross-file."""
     doc = {
         "schema_version": 1,
-        "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
+        "exec_summary": {
+            "paragraphs": ["A paragraph long enough for the minLength rule to accept."]
+        },
         "headline_findings": [{"id": "conf-12345678", "rank": 1}],
         "strengths": [{"id": "conf-cap-zzzzzzzz", "caveats": ["A caveat long enough."]}],
         "next_steps": [{"rank": 1, "text": "Do the thing now.", "refs": ["conf-12345678"]}],
@@ -133,7 +140,9 @@ def test_report_data_unknown_next_steps_ref_fails_cross_file(minimal_run: pathli
     """A next_steps refs entry pointing at neither a finding nor a capability fails cross-file."""
     doc = {
         "schema_version": 1,
-        "exec_summary": {"paragraphs": ["A paragraph long enough for the minLength rule to accept."]},
+        "exec_summary": {
+            "paragraphs": ["A paragraph long enough for the minLength rule to accept."]
+        },
         "headline_findings": [{"id": "conf-12345678", "rank": 1}],
         "strengths": [{"id": "conf-cap-abcd1234", "caveats": ["A caveat long enough."]}],
         "next_steps": [{"rank": 1, "text": "Do the thing now.", "refs": ["nonexistent-00000000"]}],
