@@ -18,7 +18,7 @@ await build({
   bundle: true,
   minify: true,
   format: "iife",
-  jsx: "automatic",
+  jsx: "transform",
   outfile: join(OUT_DIR, "app.js"),
   loader: { ".jsx": "jsx" },
   target: ["es2020"],
