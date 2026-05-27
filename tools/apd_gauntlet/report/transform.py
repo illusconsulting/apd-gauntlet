@@ -374,3 +374,34 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
         })
     rows.sort(key=lambda r: -(r["covered"] + r["gapped"] + r["both"]))
     return rows
+
+
+def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Return rows for the ATT&CK exposure table.
+
+    coverage:
+      - 'uncovered' if mitigations list is empty
+      - 'covered'   if mitigations present and exposure_finding_count == 0
+      - 'partial'   if both findings and mitigations are present
+    """
+    raw = artifacts.attack_exposure.get("technique") or []
+    rows: list[dict[str, Any]] = []
+    for t in raw:
+        mits = [m.get("capability_id") for m in (t.get("mitigated_by_capabilities") or []) if m.get("capability_id")]
+        findings = t.get("exposure_finding_count", 0)
+        if not mits:
+            coverage = "uncovered"
+        elif findings == 0:
+            coverage = "covered"
+        else:
+            coverage = "partial"
+        rows.append({
+            "id":          t.get("id"),
+            "name":        t.get("name", ""),
+            "findings":    findings,
+            "mitigations": mits,
+            "coverage":    coverage,
+            "note":        "",
+        })
+    rows.sort(key=lambda r: (-r["findings"], r["id"]))
+    return rows
