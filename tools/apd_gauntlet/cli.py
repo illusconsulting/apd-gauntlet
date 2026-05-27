@@ -750,5 +750,24 @@ def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
 
 
+@main.command("build-report",
+              help="Generate the HTML advisory report for a completed run.")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+@click.option("--out", "out_dir", type=click.Path(path_type=pathlib.Path), default=None,
+              help="Override output directory. Default: <run_dir>/40-synthesis/report-html/")
+@click.option("--quiet", is_flag=True, help="Suppress per-file progress messages.")
+def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untyped-def]
+    from .report.build import build_report
+    from .report.emit import BundleMissingError
+    from .report.loader import MissingArtifactError
+    try:
+        target = build_report(run_dir, out_dir, quiet=quiet)
+    except (MissingArtifactError, BundleMissingError) as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from None
+    if not quiet:
+        click.echo(f"HTML report at {target}")
+
+
 if __name__ == "__main__":
     main()
