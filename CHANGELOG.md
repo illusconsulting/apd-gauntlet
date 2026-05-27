@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-26
+
+### Added
+
+- **`apd-attack-path-analyzer` tier-4 agent** — activation-gated BloodHound-style bounded enumeration over a partial provenance-and-confidence-aware graph from declared attacker positions to declared crown jewels. Findings use `agent: attack_path_analyzer` and id prefix `apath-`.
+- **Asset graph, attack-paths, defense-graph schemas** capturing nodes, edges, paths, and the D3FEND defensive overlay on bottleneck edges. Each edge carries `provenance.source` and `confidence`; the analyzer never invents nodes or edges.
+- **Asset inventory** machine-readable artifact emitted by intake at `00-context/asset-inventory.yaml` when crown jewels are declared.
+- **D3FEND defensive overlay** on bottleneck edges with capability-backing-vs-net-new partitioning. The D3FEND-must-counter-ATT&CK discipline rule (per `tools/apd_gauntlet/data/d3fend.json`) prevents name-similarity mappings.
+- **Inline Mermaid attack-path diagrams** in the advisory report (≤50 nodes per diagram; partitioned by `attacker_position` for larger graphs).
+- **Domain pack additions** for `crown_jewels[]`, `attacker_positions[]`, `default_trust_boundaries[]`. PBM domain pack ships 3 crown jewels, 5 attacker positions, and 3 default trust boundaries.
+- **Run-config additions** for `crown_jewels[]` / `attacker_positions[]` overrides plus the `attack_path_analysis` tuning block (`max_hop`, `max_paths_per_pair`, `bottleneck_threshold`).
+- **CLI subcommand `apd-gauntlet analyze-attack-paths <run_dir>`** for deterministic, headless graph build + path enumeration + D3FEND overlay + finding emission.
+- **`apd-attack-path-discipline` skill** codifying never-invent rules for nodes and edges, confidence-floors-severity rule, bounded-enumeration discipline, and the block-on-missing-crown-jewels rule.
+- **New schemas**: `asset-inventory.schema.json`, `asset-graph.schema.json`, `attack-path.schema.json`, `defense-graph.schema.json`.
+- **ADR 0010** — Attack-path analysis on partial graphs.
+- **`docs/attack-path-analysis.md`** — operator guide for declaring crown jewels and attacker positions, tuning enumeration bounds, reading the outputs.
+- **Bundled example** `examples/apd-20260601-claim-event-bus/` exercises the full v1.4 pipeline end-to-end (3 attacker positions × 2 crown jewels yields 75 paths, 24 bottleneck edges).
+
+### Changed
+
+- `finding.schema.json` — `agent` enum gains `attack_path_analyzer`; `id` / `cross_references` / `merged_from` patterns accept `apath-[0-9a-f]{8}`.
+- `run-config.schema.json` — new optional `crown_jewels`, `attacker_positions`, `attack_path_analysis` blocks (all additive).
+- `domain.schema.json` — new optional `crown_jewels`, `attacker_positions`, `default_trust_boundaries` arrays (all additive).
+- `defense-graph.schema.json` — `capability_ids` pattern corrected to accept the prefix-cap form (e.g., `auth-cap-7c2a4f91`) per `capability.schema.json`.
+- `asset-graph.schema.json` — `provenance.source` enum extended to include `asset_inventory`.
+- `apd-intake` — gains `00-context/asset-inventory.yaml` emission when crown jewels are declared.
+- `apd-orchestrator` — topology now describes 16 agents; Phase 5.6 dispatches the analyzer.
+- `apd-synthesizer` — 9×N coverage matrix scan now includes `tmeval-` and `apath-` findings from tier-4 sources.
+- Validator picks up `asset-inventory.yaml`, `asset-graph.yaml`, `attack-paths.yaml`, `defense-graph.yaml`, and `attack-path.findings.yaml`; new cross-file pass checks edge endpoints reference real `nodes[].node_id`, real findings, and real capabilities.
+- Finding/capability YAML root keys standardized on singular form (`finding:` / `capability:`) per the validator's `RECORD_KINDS` convention; loaders tolerate both forms for forgiveness.
+
+### Backward compatibility
+
+All changes additive within v1.x; `framework_compat: ">=1.0.0,<2.0.0"` continues to accept v1.4.0. A v1.1-style run with no `crown_jewels` and no `attacker_positions` produces identical output to v1.3 (analyzer skips silently and writes `40-synthesis/attack-path-analyzer-skipped.txt`).
+
 ## [1.3.0] - 2026-05-26
 
 ### Added
