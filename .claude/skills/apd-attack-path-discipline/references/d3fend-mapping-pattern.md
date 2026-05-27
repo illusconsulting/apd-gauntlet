@@ -70,7 +70,7 @@ action: discipline says no, even when the names suggest yes.
 Assume the synthesizer's deduped capability set contains one record:
 
 ```yaml
-- capability_id: cap-authn-0007
+- capability_id: auth-cap-7c2a4f91
   goal: authenticity
   title: Member portal account lockout after repeated failures
   control_mappings:
@@ -115,7 +115,7 @@ fields, no wrapping `d3fend_overlay:` key, no `edge_type`/`finding_id`):
   existing_capability_backing:
     - d3fend_id: D3-AL
       capability_ids:
-        - cap-authn-0007
+        - auth-cap-7c2a4f91
   net_new_d3fend:
     - D3-AA
     - D3-AM
@@ -137,7 +137,7 @@ The analyzer emits one `disposition: gap` attack-path finding referencing
 
 > The member-portal database is reachable from the internet via six paths that
 > all traverse edge-0042 (T1078, Valid Accounts). One existing capability,
-> `cap-authn-0007`, supplies D3-AL (Account Locking) along this edge. The
+> `auth-cap-7c2a4f91`, supplies D3-AL (Account Locking) along this edge. The
 > remaining D3FEND techniques that the MITRE attack-counter table maps to
 > T1078 — D3-AA, D3-AM, D3-CDP, D3-RUAA, D3-UAP, D3-ULA — are net-new with no
 > backing capability in the current synthesizer output.
