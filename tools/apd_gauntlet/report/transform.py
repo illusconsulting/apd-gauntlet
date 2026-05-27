@@ -768,7 +768,7 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         c.get("id"): c.get("title", "")
         for c in (artifacts.nist_coverage.get("control") or [])
     }
-    for cid in refs["nist"]:
+    for cid in sorted(refs["nist"]):
         if not cid:
             continue
         out[cid] = {
@@ -778,21 +778,21 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
 
     # ATT&CK techniques: titles from taxonomy module; fall back to id if absent.
     attack = _taxonomy.attack_technique_titles()
-    for tid in refs["attack"]:
+    for tid in sorted(refs["attack"]):
         if not tid:
             continue
         out[tid] = {"family": _ATTACK_FAMILY_DISPLAY, "title": attack.get(tid, tid)}
 
     # CWE: titles from taxonomy module; fall back to id if absent.
     cwe = _taxonomy.cwe_titles()
-    for cid in refs["cwe"]:
+    for cid in sorted(refs["cwe"]):
         if not cid:
             continue
         out[cid] = {"family": _CWE_FAMILY_DISPLAY, "title": cwe.get(cid, cid)}
 
     # D3FEND: titles from taxonomy module; fall back to id if absent.
     d3 = _taxonomy.d3fend_titles()
-    for did in refs["d3fend"]:
+    for did in sorted(refs["d3fend"]):
         if not did:
             continue
         out[did] = {"family": _D3FEND_FAMILY_DISPLAY, "title": d3.get(did, did)}
