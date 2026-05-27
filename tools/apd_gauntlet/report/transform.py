@@ -172,3 +172,71 @@ def summary_rollup(artifacts: RunArtifacts) -> dict[str, Any]:
         "contradictions": len(artifacts.contradictions),
         "severity_disagreements": len(artifacts.severity_disagreements),
     }
+
+
+def capability_grid(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Map every deduped capability to the template's flat cap-grid entry shape."""
+    out: list[dict[str, Any]] = []
+    for c in artifacts.deduped_capabilities:
+        entry: dict[str, Any] = {
+            "id":       c.get("id"),
+            "tier":     c.get("apd_tier"),
+            "goal":     c.get("apd_goal"),
+            "maturity": c.get("maturity", "implemented"),
+            "title":    c.get("title", ""),
+            "scope":    c.get("scope", ""),
+        }
+        lp_raw = c.get("lens_perspectives")
+        is_merged = c.get("id", "").startswith("cap-merged") or bool(c.get("merged") or lp_raw)
+        if is_merged and lp_raw:
+            entry["merged"] = True
+            # lens_perspectives may be a dict (key=lens name, value=dict with source_id)
+            # or a list of dicts with an apd_goal/goal field.
+            if isinstance(lp_raw, dict):
+                cross_lens = list(lp_raw.keys())
+            else:
+                cross_lens = [
+                    lp.get("apd_goal", lp.get("goal"))
+                    for lp in lp_raw
+                    if isinstance(lp, dict)
+                ]
+            if cross_lens:
+                entry["cross_lens"] = cross_lens
+        elif is_merged:
+            entry["merged"] = True
+            # No lens_perspectives but id starts with cap-merged — still flag merged
+            entry["cross_lens"] = []
+        out.append(entry)
+    return out
+
+
+def strengths_section(
+    artifacts: RunArtifacts,
+    *,
+    supplied_strengths: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Join supplied strengths (id + caveats) with capability titles.
+
+    Raises ValueError if a supplied id does not resolve to a capability — this
+    is a synthesizer authoring error caught by the validator's cross-file pass,
+    but we double-check here so build-time misuse fails loudly.
+    """
+    if not supplied_strengths:
+        return []
+    by_id = {c.get("id"): c for c in artifacts.deduped_capabilities}
+    out: list[dict[str, Any]] = []
+    for s in supplied_strengths:
+        cid = s.get("id")
+        cap = by_id.get(cid)
+        if cap is None:
+            raise ValueError(
+                f"strengths references unknown capability {cid!r}"
+            )
+        out.append({
+            "id":       cid,
+            "title":    cap.get("title", ""),
+            "goal":     cap.get("apd_goal"),
+            "maturity": cap.get("maturity", "implemented"),
+            "caveats":  list(s.get("caveats") or []),
+        })
+    return out
