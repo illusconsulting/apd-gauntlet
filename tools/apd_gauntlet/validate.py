@@ -109,6 +109,8 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "asset-graph.yaml":            "asset-graph.schema.json",
     "attack-paths.yaml":           "attack-path.schema.json",
     "defense-graph.yaml":          "defense-graph.schema.json",
+    # D: HTML report input
+    "report-data.yaml":            "report-data.schema.json",
 }
 
 # Whole-document rollup files in 00-context/ that get schema-validated by the
@@ -292,6 +294,49 @@ def run_semantic_pass(
     return report
 
 
+def _validate_report_data_cross_refs(
+    run_dir: pathlib.Path,
+    report: ValidationReport,
+) -> None:
+    """Verify report-data.yaml references point at real findings / capabilities."""
+    path = run_dir / "40-synthesis" / "report-data.yaml"
+    if not path.exists():
+        return
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError:
+        return  # schema pass already complained
+    finding_ids: set[str] = set()
+    capability_ids: set[str] = set()
+    for _p, kind, rec in _iter_records(run_dir):
+        if "_parse_error" in rec or "id" not in rec:
+            continue
+        (finding_ids if kind == "finding" else capability_ids).add(rec["id"])
+
+    for entry in data.get("headline_findings") or []:
+        rid = entry.get("id")
+        if rid and rid not in finding_ids:
+            report.errors.append(Violation(
+                path, rid,
+                f"headline_findings references unknown finding {rid!r}",
+            ))
+    for entry in data.get("strengths") or []:
+        rid = entry.get("id")
+        if rid and rid not in capability_ids:
+            report.errors.append(Violation(
+                path, rid,
+                f"strengths references unknown capability {rid!r}",
+            ))
+    for entry in data.get("next_steps") or []:
+        for rid in entry.get("refs") or []:
+            if rid not in finding_ids and rid not in capability_ids:
+                report.errors.append(Violation(
+                    path, rid,
+                    f"next_steps refs include unknown id {rid!r} "
+                    "(must match a finding or capability)",
+                ))
+
+
 def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 3: cross-file ID and artifact resolution."""
     report = ValidationReport()
@@ -417,5 +462,6 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
                     )
                 )
 
+    _validate_report_data_cross_refs(run_dir, report)
     report.files_seen = len(seen_files)
     return report
