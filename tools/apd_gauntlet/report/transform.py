@@ -399,18 +399,76 @@ def _build_cap_controls_index(capabilities: list[dict[str, Any]]) -> dict[str, s
     return index
 
 
+def _build_cap_attack_index(capabilities: list[dict[str, Any]]) -> dict[str, set[str]]:
+    """Return {attack_id: {cap_id, ...}} for all capabilities with MITRE ATT&CK mappings."""
+    index: dict[str, set[str]] = {}
+    for cap in capabilities:
+        cap_id = cap.get("id", "")
+        cm = cap.get("control_mappings") or {}
+        for tech in _extract_ids_from_mapping(cm.get("mitre_attack"), "technique"):
+            index.setdefault(tech, set()).add(cap_id)
+    return index
+
+
+def _nist_family_of(control_id: str) -> str:
+    """Return the NIST family prefix of a control id (e.g., 'AC-2(2)' → 'AC')."""
+    return control_id.split("-", 1)[0] if "-" in control_id else control_id
+
+
+def _family_row(
+    fam: str,
+    titles: dict[str, str],
+    family_controls: dict[str, list[str]],
+    cap_controls: dict[str, set[str]],
+) -> dict[str, Any]:
+    """Build a NIST rollup row from a per-family {control_id: [finding_ids]} map and
+    a {control_id: {cap_ids}} index. Used by both the coverage_by_family branch
+    and the caldera control_to_findings branch.
+    """
+    covered = gapped = both = 0
+    for ctrl_id, finding_ids in family_controls.items():
+        has_findings = bool(finding_ids)
+        has_caps = bool(cap_controls.get(ctrl_id))
+        if has_findings and has_caps:
+            both += 1
+        elif has_findings:
+            gapped += 1
+        elif has_caps:
+            covered += 1
+    return {
+        "family":  fam,
+        "title":   titles.get(fam, fam),
+        "covered": covered,
+        "gapped":  gapped,
+        "both":    both,
+        "notable": _notable_for_family_new(fam, family_controls),
+    }
+
+
 def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     """Return rows for the NIST coverage table: one per family with counts +
     notable one-liner. Order: descending by (covered + gapped + both).
 
-    Tolerates two synthesizer output shapes:
+    Tolerates four synthesizer output shapes:
 
-    Old shape — ``family_summary`` + ``control`` list present:
+    Shape A — ``family_summary`` + ``control`` list (chainguard-era):
       Uses the pre-computed counts and posture fields directly.
 
-    New shape — ``coverage_by_family`` present (no ``family_summary``):
-      Derives counts by cross-walking capabilities via
-      ``deduped_capabilities[].control_mappings.nist_800_53r5``.
+    Shape B — ``coverage_by_family`` (crAPI-era):
+      Per-family {control_id: [finding_ids]} dict. Cross-walks capabilities
+      via ``deduped_capabilities[].control_mappings.nist_800_53r5`` to derive
+      covered/gapped/both counts.
+
+    Shape C — ``controls`` map (authentik-era):
+      Per-control dict with explicit ``findings:`` and ``capabilities:`` lists.
+      Counts read directly; no cross-walk needed.
+
+    Shape D — ``control_to_findings`` map (caldera-era):
+      Flat {control_id: [finding_ids]} dict (no family grouping). Family is
+      derived from control_id prefix; capability presence comes from
+      ``_build_cap_controls_index``.
+
+    Posture semantics (B/C/D):
       - covered: controls with ≥1 capability but 0 findings
       - gapped:  controls with ≥1 finding but 0 capabilities
       - both:    controls with both findings and ≥1 capability
@@ -420,8 +478,12 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     titles = _nist_family_titles()
     rows: list[dict[str, Any]] = []
 
+    coverage_by_family = artifacts.nist_coverage.get("coverage_by_family")
+    controls_map = artifacts.nist_coverage.get("controls")
+    control_to_findings = artifacts.nist_coverage.get("control_to_findings")
+
     if family_summary:
-        # Old shape path.
+        # Shape A.
         for fam, summary in sorted(family_summary.items()):
             rows.append({
                 "family":  fam,
@@ -431,31 +493,42 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                 "both":    summary.get("gapped_and_covered", 0),
                 "notable": _notable_for_family(fam, control_list),
             })
-    else:
-        # New shape path — derive from coverage_by_family + capability cross-walk.
-        coverage_by_family = artifacts.nist_coverage.get("coverage_by_family") or {}
+    elif coverage_by_family:
+        # Shape B.
         cap_controls = _build_cap_controls_index(artifacts.deduped_capabilities)
         for fam in sorted(coverage_by_family.keys()):
             family_controls: dict[str, list[str]] = coverage_by_family[fam] or {}
-            covered = gapped = both = 0
-            for ctrl_id, finding_ids in family_controls.items():
-                has_findings = bool(finding_ids)
-                has_caps = bool(cap_controls.get(ctrl_id))
-                if has_findings and has_caps:
-                    both += 1
-                elif has_findings:
-                    gapped += 1
-                elif has_caps:
-                    covered += 1
-                # else: silent — neither findings nor capabilities cite it; skip
-            rows.append({
-                "family":  fam,
-                "title":   titles.get(fam, fam),
-                "covered": covered,
-                "gapped":  gapped,
-                "both":    both,
-                "notable": _notable_for_family_new(fam, family_controls),
-            })
+            rows.append(_family_row(fam, titles, family_controls, cap_controls))
+    elif controls_map:
+        # Shape C — authentik. Group by family; counts come from the per-control
+        # explicit findings/capabilities lists.
+        family_to_controls: dict[str, dict[str, list[str]]] = {}
+        cap_presence: dict[str, set[str]] = {}
+        for ctrl_id, ctrl_data in controls_map.items():
+            if not isinstance(ctrl_data, dict):
+                continue
+            fam = _nist_family_of(ctrl_id)
+            findings = list(ctrl_data.get("findings") or [])
+            caps = list(ctrl_data.get("capabilities") or [])
+            family_to_controls.setdefault(fam, {})[ctrl_id] = findings
+            if caps:
+                cap_presence[ctrl_id] = set(caps)
+        for fam in sorted(family_to_controls.keys()):
+            rows.append(_family_row(
+                fam, titles, family_to_controls[fam], cap_presence,
+            ))
+    elif control_to_findings:
+        # Shape D — caldera. Group the flat control map by family, then
+        # cross-walk capabilities for has_caps.
+        cap_controls = _build_cap_controls_index(artifacts.deduped_capabilities)
+        family_to_controls_d: dict[str, dict[str, list[str]]] = {}
+        for ctrl_id, finding_ids in control_to_findings.items():
+            fam = _nist_family_of(ctrl_id)
+            family_to_controls_d.setdefault(fam, {})[ctrl_id] = list(finding_ids or [])
+        for fam in sorted(family_to_controls_d.keys()):
+            rows.append(_family_row(
+                fam, titles, family_to_controls_d[fam], cap_controls,
+            ))
 
     rows.sort(key=lambda r: -(r["covered"] + r["gapped"] + r["both"]))
     return rows
@@ -475,27 +548,33 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
 
     coverage:
       - 'uncovered' if mitigations list is empty
-      - 'covered'   if mitigations present and exposure_finding_count == 0
+      - 'covered'   if mitigations present and findings count == 0
       - 'partial'   if both findings and mitigations are present
 
-    Tolerates two synthesizer output shapes:
+    Tolerates four synthesizer output shapes:
 
-    Old shape — ``technique`` (singular) list present:
+    Shape A — ``technique`` (singular) list (chainguard-era):
       Each entry has ``id``, ``name``, ``exposure_finding_count``,
       ``mitigated_by_capabilities`` (list of dicts with ``capability_id``).
 
-    New shape — ``techniques`` (plural) dict present:
-      Top-level entries may have ``citing_findings`` / ``countering_capabilities``.
-      Sub-techniques are nested under ``sub_techniques`` dict.
-      Parent entries lacking ``citing_findings`` are skipped when they only
-      carry ``sub_techniques``; both parent and sub-technique rows are emitted
-      when the parent also has its own ``citing_findings``.
+    Shape B — ``techniques`` (plural) dict (crAPI- and authentik-era):
+      Top-level entries may have ``citing_findings`` / ``countering_capabilities``
+      (crAPI) or ``findings`` / ``capabilities_with_mitigation`` (authentik) — we
+      accept either pair. Sub-techniques nested under ``sub_techniques``.
+
+    Shape C — ``technique_to_findings`` dict (caldera-era):
+      Each entry has ``description``, ``tactic``, ``findings`` and optional
+      ``sub_techniques`` (a list of IDs, not nested dicts). Mitigations are
+      derived by cross-walking ``deduped_capabilities`` ATT&CK mappings.
     """
     rows: list[dict[str, Any]] = []
 
     technique_list = artifacts.attack_exposure.get("technique")
+    techniques_dict = artifacts.attack_exposure.get("techniques")
+    technique_to_findings = artifacts.attack_exposure.get("technique_to_findings")
+
     if technique_list is not None:
-        # Old shape path.
+        # Shape A.
         for t in technique_list:
             mits = [
                 m.get("capability_id")
@@ -511,41 +590,88 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                 "coverage":    _attack_coverage_label(mits, findings),
                 "note":        "",
             })
-    else:
-        # New shape path — techniques dict with optional sub_techniques.
-        techniques_dict = artifacts.attack_exposure.get("techniques") or {}
+    elif techniques_dict is not None:
+        # Shape B — handles both crAPI key names and authentik key names.
         for tech_id in sorted(techniques_dict.keys()):
             entry = techniques_dict[tech_id]
             if not isinstance(entry, dict):
                 continue
             sub_techniques = entry.get("sub_techniques") or {}
-            parent_citing = entry.get("citing_findings")
+            parent_findings = entry.get("citing_findings")
+            if parent_findings is None:
+                parent_findings = entry.get("findings")
 
-            if parent_citing is not None:
-                # Parent entry has its own findings — emit it.
-                mits = list(entry.get("countering_capabilities") or [])
-                findings = len(parent_citing)
+            if parent_findings is not None:
+                mits = list(
+                    entry.get("countering_capabilities")
+                    or entry.get("capabilities_with_mitigation")
+                    or []
+                )
+                findings = len(parent_findings)
                 rows.append({
                     "id":          tech_id,
                     "name":        entry.get("name", ""),
                     "findings":    findings,
                     "mitigations": mits,
                     "coverage":    _attack_coverage_label(mits, findings),
-                    "note":        "",
+                    "note":        str(entry.get("notes", "") or ""),
                 })
-            # Emit sub-technique rows (sorted for determinism).
-            for sub_id in sorted(sub_techniques.keys()):
-                sub = sub_techniques[sub_id]
-                if not isinstance(sub, dict):
+            # sub_techniques may be a dict (crAPI) — emit per-sub rows. authentik's
+            # sub-technique rows appear as top-level keys (e.g., "T1110.002"),
+            # which we'll catch in the outer sort already.
+            if isinstance(sub_techniques, dict):
+                for sub_id in sorted(sub_techniques.keys()):
+                    sub = sub_techniques[sub_id]
+                    if not isinstance(sub, dict):
+                        continue
+                    mits = list(
+                        sub.get("countering_capabilities")
+                        or sub.get("capabilities_with_mitigation")
+                        or []
+                    )
+                    sub_findings = sub.get("citing_findings")
+                    if sub_findings is None:
+                        sub_findings = sub.get("findings") or []
+                    findings = len(sub_findings)
+                    rows.append({
+                        "id":          sub_id,
+                        "name":        sub.get("name", ""),
+                        "findings":    findings,
+                        "mitigations": mits,
+                        "coverage":    _attack_coverage_label(mits, findings),
+                        "note":        str(sub.get("notes", "") or ""),
+                    })
+    elif technique_to_findings is not None:
+        # Shape C — caldera. Mitigations come from capability ATT&CK cross-walk.
+        cap_attack = _build_cap_attack_index(artifacts.deduped_capabilities)
+        for tech_id in sorted(technique_to_findings.keys()):
+            entry = technique_to_findings[tech_id]
+            if not isinstance(entry, dict):
+                continue
+            findings = len(entry.get("findings") or [])
+            mits = sorted(cap_attack.get(tech_id, set()))
+            rows.append({
+                "id":          tech_id,
+                "name":        entry.get("description", "") or "",
+                "findings":    findings,
+                "mitigations": mits,
+                "coverage":    _attack_coverage_label(mits, findings),
+                "note":        "",
+            })
+            # Caldera sub_techniques is a list of IDs — emit each as its own
+            # row with no parent-supplied name. Findings/mitigations are
+            # derived from the cap index only (no per-sub finding bucket
+            # exists in this shape, so findings=0 by construction).
+            for sub_id in (entry.get("sub_techniques") or []):
+                if not isinstance(sub_id, str):
                     continue
-                mits = list(sub.get("countering_capabilities") or [])
-                findings = len(sub.get("citing_findings") or [])
+                sub_mits = sorted(cap_attack.get(sub_id, set()))
                 rows.append({
                     "id":          sub_id,
-                    "name":        sub.get("name", ""),
-                    "findings":    findings,
-                    "mitigations": mits,
-                    "coverage":    _attack_coverage_label(mits, findings),
+                    "name":        "",
+                    "findings":    0,
+                    "mitigations": sub_mits,
+                    "coverage":    _attack_coverage_label(sub_mits, 0),
                     "note":        "",
                 })
 
@@ -591,31 +717,97 @@ def _artifact_label(finding: dict[str, Any]) -> str:
     return "(unattributed)"
 
 
+def _posture(has_findings: bool, has_caps: bool) -> str:
+    if has_findings and has_caps:
+        return "both"
+    if has_findings:
+        return "gapped"
+    if has_caps:
+        return "covered"
+    return "silent"
+
+
+def _matrix_rows_from_dedup(
+    artifacts: RunArtifacts,
+    goal_has_caps: dict[str, bool] | None = None,
+) -> list[dict[str, Any]]:
+    """Synthesise (component, goal) rows by reading deduped findings + caps
+    directly. Used for the caldera ``matrix`` shape (which only carries counts)
+    and as a graceful default when no recognized matrix shape is present.
+
+    ``goal_has_caps`` may be pre-supplied; otherwise it's derived from
+    deduped_capabilities.apd_goal.
+    """
+    all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
+
+    if goal_has_caps is None:
+        goal_has_caps = {}
+        for c in artifacts.deduped_capabilities:
+            g = c.get("apd_goal")
+            if g:
+                goal_has_caps[g] = True
+
+    # artifact_label → set of goals with findings under it.
+    artifact_goal_findings: dict[str, set[str]] = {}
+    for f in all_findings:
+        g = f.get("apd_goal")
+        if not g:
+            continue
+        label = _artifact_label(f)
+        artifact_goal_findings.setdefault(label, set()).add(g)
+
+    rows: list[dict[str, Any]] = []
+    for artifact_name in sorted(artifact_goal_findings.keys()):
+        goals_with_findings = artifact_goal_findings[artifact_name]
+        cells: dict[str, str] = {}
+        for full_goal, short in _GOAL_SHORT.items():
+            cells[short] = _posture(
+                full_goal in goals_with_findings,
+                goal_has_caps.get(full_goal, False),
+            )
+        rows.append({"component": artifact_name, "cells": cells})
+    return rows
+
+
 def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
     """Return the data.apd_matrix block: goals[], goalLabels{}, rows[{component, cells}].
 
-    Tolerates two synthesizer output shapes:
+    Tolerates four synthesizer output shapes:
 
-    Old shape — ``component`` list present:
+    Shape A — ``component`` list (chainguard-era):
       Each component entry has ``name`` and ``cells`` keyed by full goal name,
       each cell containing ``findings``, ``capabilities``, and ``posture``.
 
-    New shape — ``coverage`` goal-keyed dict present:
-      Synthesises per-component rows by grouping findings under each goal by
-      their ``evidence[0].artifact`` string (Option B from spec).
-      Capabilities for a goal are taken from the goal's ``capabilities`` list.
-      Posture per (component, goal) cell:
-        - ``'both'``    if the component has findings and the goal has capabilities
-        - ``'gapped'``  if findings but no capabilities under the goal
-        - ``'covered'`` if no findings for this component but capabilities exist
-        - ``'silent'``  otherwise
+    Shape B — ``coverage`` goal-keyed dict (crAPI-era):
+      Per-goal tier-keyed finding ID lists + ``capabilities`` list. Rows
+      synthesised by grouping findings under each goal by their
+      ``evidence[0].artifact`` (component-by-artifact).
+
+    Shape C — ``goals`` goal-keyed dict (authentik-era):
+      Per-goal explicit ``findings: [{id, severity, disposition}]`` +
+      ``capabilities: [{id, maturity}]`` lists. Component rows synthesised the
+      same way as shape B.
+
+    Shape D — ``matrix`` goal-keyed counts (caldera-era):
+      Only per-goal totals + per-taxonomy counts; no finding IDs. Falls back
+      to deriving rows from deduped findings/capabilities directly.
+
+    Posture per (component, goal) cell:
+      - ``'both'``    findings present and goal has capabilities
+      - ``'gapped'``  findings present but no capabilities under the goal
+      - ``'covered'`` no findings for this component but capabilities exist
+      - ``'silent'``  otherwise
     """
     goals = list(_GOAL_LABEL_SHORT.keys())
     rows: list[dict[str, Any]] = []
 
     component_list = artifacts.apd_coverage_matrix.get("component")
+    coverage = artifacts.apd_coverage_matrix.get("coverage")
+    goals_map = artifacts.apd_coverage_matrix.get("goals")
+    matrix_map = artifacts.apd_coverage_matrix.get("matrix")
+
     if component_list is not None:
-        # Old shape path.
+        # Shape A.
         for comp in component_list:
             cells_in = comp.get("cells") or {}
             cells_out: dict[str, str] = {}
@@ -624,54 +816,88 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
                 posture = cell.get("posture", "silent")
                 cells_out[short] = _POSTURE_TO_CELL.get(posture, "silent")
             rows.append({"component": comp.get("name", ""), "cells": cells_out})
-    else:
-        # New shape path — synthesise rows from goal-keyed coverage dict.
-        coverage = artifacts.apd_coverage_matrix.get("coverage") or {}
-
-        # Build a lookup: finding_id → finding record (for evidence[0].artifact).
+    elif coverage is not None:
+        # Shape B — synthesise rows from goal-keyed tier-bucketed finding ID lists.
         all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
         finding_by_id: dict[str, dict[str, Any]] = {
             f["id"]: f for f in all_findings if f.get("id")
         }
 
-        # Collect all artifact labels across all goals.
+        tier_keys = ("critical", "high", "medium", "low", "informational",
+                     "blocked", "uncertainty")
+
         all_artifacts: set[str] = set()
         for full_goal in _GOAL_SHORT:
             goal_data = coverage.get(full_goal) or {}
-            for tier_key in ("critical", "high", "medium", "low", "informational",
-                             "blocked", "uncertainty"):
+            for tier_key in tier_keys:
                 for fid in (goal_data.get(tier_key) or []):
                     f = finding_by_id.get(fid)
                     if f:
                         all_artifacts.add(_artifact_label(f))
-                    # IDs with no loaded finding get attributed to (unattributed).
 
-        # For each artifact, build its row.
         for artifact_name in sorted(all_artifacts):
             row_cells: dict[str, str] = {}
             for full_goal, short in _GOAL_SHORT.items():
                 goal_data = coverage.get(full_goal) or {}
                 has_caps = bool(goal_data.get("capabilities"))
-                # Gather findings under this goal attributed to this artifact.
                 goal_finding_ids: list[str] = []
-                for tier_key in ("critical", "high", "medium", "low", "informational",
-                                 "blocked", "uncertainty"):
+                for tier_key in tier_keys:
                     for fid in (goal_data.get(tier_key) or []):
                         f = finding_by_id.get(fid)
                         label = _artifact_label(f) if f else "(unattributed)"
                         if label == artifact_name:
                             goal_finding_ids.append(fid)
-                has_findings = bool(goal_finding_ids)
-                if has_findings and has_caps:
-                    posture = "both"
-                elif has_findings:
-                    posture = "gapped"
-                elif has_caps:
-                    posture = "covered"
-                else:
-                    posture = "silent"
-                row_cells[short] = posture
+                row_cells[short] = _posture(
+                    bool(goal_finding_ids), has_caps,
+                )
             rows.append({"component": artifact_name, "cells": row_cells})
+    elif goals_map is not None:
+        # Shape C — authentik. Goal entries carry explicit finding {id,...} lists.
+        all_findings_c = artifacts.deduped_findings + artifacts.attack_path_findings
+        finding_by_id_c: dict[str, dict[str, Any]] = {
+            f["id"]: f for f in all_findings_c if f.get("id")
+        }
+
+        # Per goal: artifact_label → list of finding ids.
+        goal_to_artifact: dict[str, set[str]] = {}
+        goal_has_caps_c: dict[str, bool] = {}
+        all_artifacts_c: set[str] = set()
+        for full_goal in _GOAL_SHORT:
+            goal_data = goals_map.get(full_goal) or {}
+            goal_has_caps_c[full_goal] = bool(goal_data.get("capabilities"))
+            per_goal_artifacts: set[str] = set()
+            for f_rec in (goal_data.get("findings") or []):
+                fid = f_rec.get("id") if isinstance(f_rec, dict) else None
+                f = finding_by_id_c.get(fid) if fid else None
+                label = _artifact_label(f) if f else "(unattributed)"
+                per_goal_artifacts.add(label)
+                all_artifacts_c.add(label)
+            goal_to_artifact[full_goal] = per_goal_artifacts
+
+        for artifact_name in sorted(all_artifacts_c):
+            cells: dict[str, str] = {}
+            for full_goal, short in _GOAL_SHORT.items():
+                cells[short] = _posture(
+                    artifact_name in goal_to_artifact.get(full_goal, set()),
+                    goal_has_caps_c.get(full_goal, False),
+                )
+            rows.append({"component": artifact_name, "cells": cells})
+    elif matrix_map is not None:
+        # Shape D — caldera. The ``matrix`` map carries only totals, so derive
+        # the per-component rows from deduped findings directly. Goal capability
+        # presence is signalled by ``capabilities_total > 0`` in matrix_map when
+        # available; otherwise fall back to deduped_capabilities.apd_goal.
+        goal_has_caps_d: dict[str, bool] = {}
+        for full_goal in _GOAL_SHORT:
+            entry = matrix_map.get(full_goal) or {}
+            if "capabilities_total" in entry:
+                goal_has_caps_d[full_goal] = (entry.get("capabilities_total") or 0) > 0
+        # Fill remaining gaps from deduped_capabilities.
+        for c in artifacts.deduped_capabilities:
+            g = c.get("apd_goal")
+            if g and g not in goal_has_caps_d:
+                goal_has_caps_d[g] = True
+        rows = _matrix_rows_from_dedup(artifacts, goal_has_caps=goal_has_caps_d)
 
     return {
         "goals":      goals,
@@ -1201,22 +1427,40 @@ def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
         out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
         out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
         out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
-    # Coverage rollups — handle both old and new shapes.
-    # Old shape: nist_coverage has a "control" list with id fields.
+    # Coverage rollups — handle all four shapes.
+    # Shape A: nist_coverage has a "control" list with id fields.
     for c in artifacts.nist_coverage.get("control") or []:
         out["nist"].add(c.get("id", ""))
-    # New shape: nist_coverage has "coverage_by_family" dict.
+    # Shape B: nist_coverage has "coverage_by_family" dict.
     for _fam, fam_controls in (artifacts.nist_coverage.get("coverage_by_family") or {}).items():
         out["nist"].update(fam_controls.keys() if isinstance(fam_controls, dict) else [])
-    # Old shape: attack_exposure has a "technique" list with id fields.
+    # Shape C: nist_coverage has "controls" map (authentik).
+    for ctrl_id in (artifacts.nist_coverage.get("controls") or {}):
+        out["nist"].add(ctrl_id)
+    # Shape D: nist_coverage has "control_to_findings" flat dict (caldera).
+    for ctrl_id in (artifacts.nist_coverage.get("control_to_findings") or {}):
+        out["nist"].add(ctrl_id)
+
+    # Shape A: attack_exposure has a "technique" list with id fields.
     for t in artifacts.attack_exposure.get("technique") or []:
         out["attack"].add(t.get("id", ""))
-    # New shape: attack_exposure has "techniques" dict (with optional sub_techniques).
+    # Shape B: attack_exposure has "techniques" dict (with optional sub_techniques
+    # nested as a dict for crAPI). Authentik-era sub-techniques are top-level keys.
     for tech_id, entry in (artifacts.attack_exposure.get("techniques") or {}).items():
         out["attack"].add(tech_id)
         if isinstance(entry, dict):
-            for sub_id in (entry.get("sub_techniques") or {}):
-                out["attack"].add(sub_id)
+            subs = entry.get("sub_techniques") or {}
+            if isinstance(subs, dict):
+                for sub_id in subs:
+                    out["attack"].add(sub_id)
+    # Shape C: attack_exposure has "technique_to_findings" dict (caldera).
+    # Caldera sub_techniques is a list of IDs, not nested dicts.
+    for tech_id, entry in (artifacts.attack_exposure.get("technique_to_findings") or {}).items():
+        out["attack"].add(tech_id)
+        if isinstance(entry, dict):
+            for sub_id in (entry.get("sub_techniques") or []):
+                if isinstance(sub_id, str):
+                    out["attack"].add(sub_id)
     return out
 
 
