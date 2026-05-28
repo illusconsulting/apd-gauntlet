@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Non-repudiation in a PBM is a direct regulatory obligation, not a defense-in-depth nice-to-have. HIPAA Security Rule §164.312(b) (Audit Controls) requires actor-attributed records of activity on systems containing PHI, and §164.528 (Accounting of Disclosures) requires the PBM to produce defensible disclosure records to members on request — both fail open if the audit chain attributes actions to a shared system account, a sidecar identity, or an unbound session. CMS Part D PDE submission additionally requires auditable provenance for every claim record reconciled against rebate and risk-adjustment payments. The load-bearing surfaces are the PHI-access audit (record-level, not table-level), the PA-decision audit (which clinician, on which member, with what override rationale), and the configuration-change audit (formulary, PA criteria, MAC list, contract pricing).
+
 ## Common finding patterns
 
 **Pattern: Admin configuration changes logged but actor attribution is system account, not the human operator.**

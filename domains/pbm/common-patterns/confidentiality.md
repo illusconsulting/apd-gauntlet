@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Confidentiality failure in a PBM is the dominant regulatory-enforcement vector: any PHI disclosure affecting 500 or more members triggers HHS, media, and individual notification under 45 CFR §164.408, and the OCR Resolution Agreement floor for PBM-scale breaches is in the seven figures before plan-sponsor indemnity claims arrive. Beyond PHI, CMS Part D PDE data carries its own confidentiality envelope under the Part D Data Use Agreement, and rebate-tier and MAC pricing are commercially-confidential under most manufacturer and plan-sponsor master service agreements. The load-bearing surfaces are PHI-store reads (claim history, eligibility, PA decisions), member-portal export and EOB-download paths, and every vendor-egress channel — COB, accumulator, rebate aggregator, mail-order fulfillment, and specialty pharmacy.
+
 ## Common finding patterns
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style and severity.

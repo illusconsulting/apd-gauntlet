@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Authenticity in a PBM gates both PHI access and the lawfulness of prescription transmission. Pharmacist credential strength is the upstream control on every PHI surface a clinical user touches — SAML/OIDC federation against the pharmacy or health-system SSO is the dominant authentication path, and HIPAA Security Rule §164.312(d) person-or-entity authentication is the regulatory anchor. Separately, NCPDP SCRIPT digital signatures gate the lawfulness of electronic prescription transmission under DEA EPCS rules at 21 CFR §1311, and PDE submission signing is what CMS uses to bind a Part D claim record to its submitting sponsor. The load-bearing surfaces are the pharmacist-portal SSO path (including step-up for PHI export and PA override), the NCPDP signed-message path for SCRIPT transactions, and the PDE-submission signing chain.
+
 ## Common finding patterns
 
 **Pattern: Service-to-service inside cluster uses shared secret tokens, not mTLS.**

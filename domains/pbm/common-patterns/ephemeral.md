@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Ephemerality is the single most leveraged control on PBM vendor-integration breach surface: long-lived service-account credentials — SCIM tokens to plan-sponsor IdPs, PDE-submission API keys, COB and accumulator integration credentials, mail-order and specialty fulfillment service accounts — are the dominant root cause in published PBM and healthcare-clearinghouse breach post-mortems, and HIPAA Security Rule §164.308(a)(4) access-management expectations bite hardest on credentials that outlive the personnel and contractual relationships that justified them. Long-lived operator sessions create a parallel problem on the audit side: actor attribution decays as a session ages across shift changes and role transitions. The load-bearing surfaces are vendor SCIM and provisioning tokens, PDE-submission API keys and CMS-side credentials, and the COB and accumulator integration credentials that touch member-level PHI.
+
 ## Common finding patterns
 
 **Pattern: Service account credentials are static long-lived secrets in application config.**

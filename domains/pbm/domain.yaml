@@ -2,7 +2,7 @@ name: pbm
 display_name: "Pharmacy Benefit Management"
 version: 1.0.0
 framework_compat: ">=1.0.0,<2.0.0"
-description: "PBM-specialized severity rubric and pattern library. Anchored to HIPAA breach-notification thresholds, CMS Part D submission integrity, URAC accreditation requirements, and SOC 2."
+description: "PBM-specialized severity rubric and pattern library for pharmacy-benefit-management platforms — real-time claims adjudication engines, mail-order and specialty pharmacy fulfillment, member-facing portals and mobile apps, pharmacy-network submission ingress (NCPDP D.0 over switches such as RelayHealth or Change Healthcare), CMS Part D Prescription Drug Event (PDE) reporting pipelines, and eligibility/coordination-of-benefits integrations with health plans, Medicare, and Medicaid agencies. The defining domain risk is the convergence of mass PHI disclosure under HIPAA breach-notification thresholds with CMS Part D PDE-submission-integrity fraud, which together carry both 45 CFR §164.408 federal breach-notification consequence (HHS Secretary plus media plus individual notice for 500+ affected individuals) and 42 CFR §423.322 PDE-data-integrity consequence (CMS reopening of payment determinations, plan-payment recovery, and potential False Claims Act exposure). The threat model orientation is PHI confidentiality plus clinical-decision integrity (drug-utilization-review and prior-authorization outcomes that directly affect member health) plus audit defensibility for regulator inquiry — a posture distinct from generic healthcare-application or insurance-application concerns, which typically lack the real-time adjudication-engine surface and the regulator-anchored PDE submission obligation. Anchored to HIPAA Privacy and Security Rules, HITECH breach notification, CMS Part D reporting requirements, URAC PBM accreditation standards, and HITRUST CSF / SOC 2 Type II Trust Services Criteria."
 includes:
   - severity-rubric.md
   - consequential-actions.md
@@ -18,10 +18,16 @@ includes:
   - common-patterns/non-repudiation.md
   - common-patterns/immutability.md
 regulatory_anchors:
-  - HIPAA
-  - "CMS Part D"
-  - URAC
-  - "SOC 2"
+  - "HIPAA Privacy Rule (45 CFR 164 Subpart E)"
+  - "HIPAA Security Rule (45 CFR 164 Subpart C)"
+  - "HITECH Act breach notification (74 FR 42740 / 45 CFR 164 Subpart D)"
+  - "NIST SP 800-66 Rev 2 (HIPAA Security Rule implementation guidance)"
+  - "NIST SP 800-53r5 (selected control families: AC, AU, IA, SC, SI)"
+  - "NCPDP Telecommunication Standard D.0"
+  - "MITRE ATT&CK Enterprise"
+  - "CMS Part D PDE Submission (42 CFR 423.322)"
+  - "URAC PBM Accreditation Standards"
+  - "SOC 2 Type II (Trust Services Criteria 2017)"
 crown_jewels:
   - pattern: phi_store
     description: "Member PHI store carrying demographics, claims history, prescriber/diagnosis associations subject to HIPAA breach-notification thresholds."

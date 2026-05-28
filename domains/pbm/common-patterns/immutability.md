@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Immutability in a PBM is governed by overlapping multi-year retention floors that the architecture must satisfy without depending on operator discipline: HIPAA at 45 CFR §164.316(b)(2) sets a 6-year retention floor on policies, procedures, and audit-relevant records; CMS Part D at 42 CFR §423.505(d) requires PDE and related records to be retained for 10 years; and DEA controlled-substance prescription records under 21 CFR §1304.04 require 2-year retention with chain-of-custody integrity. Object-lock, append-only stores, and tamper-evident hashing are the proportional controls — operator-deletable storage tiers cannot satisfy any of these floors. The load-bearing surfaces are the audit-log store (HIPAA chain), the PDE-submission archive and its CMS-reconciliation deltas (Part D chain), and the claim-adjudication history (which feeds both PDE and DEA chains, plus rebate and member-dispute defense).
+
 ## Common finding patterns
 
 **Pattern: Audit log written to a mutable RDS table; no append-only enforcement.**

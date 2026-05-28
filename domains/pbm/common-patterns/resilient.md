@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Resilience in a PBM is sized around predictable demand spikes that hit the pharmacy ingress path: seasonal flu and vaccination surges, COVID and respiratory-virus waves, and the structural Jan-1 / Oct-15 open-enrollment transitions when tens of millions of members move between plans and refill their entire chronic regimen in the first weeks of new coverage. Brittle behavior at the ingress queue, the eligibility cache, or the PA workflow engine under these spikes converts directly to denied or delayed dispensing and to SLA penalties under plan-sponsor agreements aligned with 42 CFR §423.505. The load-bearing surfaces are the pharmacy-submission queue and its backpressure semantics, the eligibility-and-accumulator cache layer (cold-cache behavior on Jan-1 is the canonical failure mode), and the PA workflow engine where retry storms on vendor degradation are the dominant outage shape.
+
 ## Common finding patterns
 
 **Pattern: No circuit breaker on PHI-containing vendor call (eligibility, drug pricing).**

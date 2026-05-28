@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Integrity in a PBM is the bridge between data and physical dispensing: a corrupted claim-adjudication response can authorize the wrong drug, the wrong quantity, or the wrong copay at the pharmacy counter, and PDE-submission integrity under 42 CFR §423.322 is what CMS audits against for Part D reconciliation, rebate true-up, and risk-adjustment payment accuracy. Formulary configuration is similarly load-bearing — a silent tier or PA-criteria mutation propagates as a clinical-decision defect across the entire dispensing network within the next refresh cycle. The most consequential surfaces are NCPDP D.0 and SCRIPT transaction handlers (request and response), PDE batch files and their reconciliation deltas, and the formulary editor with its publish-and-fanout pipeline.
+
 ## Common finding patterns
 
 **Pattern: Event bus messages lack producer signatures; consumers trust payload contents.**

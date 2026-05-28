@@ -2,6 +2,8 @@
 
 These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
 
+Distribution in a PBM is not an optimization — it is a contractual SLO and a clinical-safety property. Regional adjudication failures cascade directly to dispensing in the affected pharmacy network, and most plan-sponsor master service agreements require multi-AZ resilience at minimum and multi-region failover for the adjudication path, with CMS Part D §423.505(b) downstream-entity expectations layered on top. The load-bearing surfaces are the claim-router fan-out (pharmacy ingress to adjudication-engine instances), the PDE-submission pipeline (where partition or batch-loss silently breaks CMS reconciliation), and the formulary-update fanout that must reach every adjudication shard before the published effective date.
+
 ## Common finding patterns
 
 **Pattern: Stateful component (e.g. Valkey, RDS primary) in single AZ.**
