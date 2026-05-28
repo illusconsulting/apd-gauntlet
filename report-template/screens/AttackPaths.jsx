@@ -6,6 +6,20 @@ function AttackPaths({ data }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
   const mermaidRef = React.useRef(null);
+  const mermaidFocusedRef = React.useRef(null);
+
+  // Helper: parse SVG string, strip Mermaid's inline sizing attributes so our
+  // CSS controls the width, and return the DOM node.
+  function parseSvgNode(svg) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svg, "image/svg+xml");
+    const node = doc.documentElement;
+    // Strip Mermaid's inline sizing so our CSS controls the width.
+    node.removeAttribute("style");
+    node.removeAttribute("width");
+    node.removeAttribute("height");
+    return node;
+  }
 
   React.useEffect(() => {
     if (!ap || !window.mermaid || !mermaidRef.current) return;
@@ -17,15 +31,18 @@ function AttackPaths({ data }) {
     window.mermaid
       .render("apd-asset-graph", ap.mermaid)
       .then(({ svg }) => {
-        // Parse the sanitized SVG string into a DOM node and append it,
-        // rather than assigning innerHTML, so any residual script-like
-        // attributes are filtered by the SVG parser context.
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(svg, "image/svg+xml");
-        const node = doc.documentElement;
-        mermaidRef.current.replaceChildren(node);
+        mermaidRef.current.replaceChildren(parseSvgNode(svg));
       })
       .catch((e) => { mermaidRef.current.textContent = "Graph render failed: " + e.message; });
+
+    if (ap.mermaid_path_focused && mermaidFocusedRef.current) {
+      window.mermaid
+        .render("apd-paths-focused", ap.mermaid_path_focused)
+        .then(({ svg }) => {
+          mermaidFocusedRef.current.replaceChildren(parseSvgNode(svg));
+        })
+        .catch((e) => { mermaidFocusedRef.current.textContent = "Graph render failed: " + e.message; });
+    }
   }, [ap]);
 
   if (!ap) {
@@ -125,6 +142,13 @@ function AttackPaths({ data }) {
         <h3 className="attack-paths__section-h">Asset graph</h3>
         <div ref={mermaidRef} className="attack-paths__mermaid" />
       </section>
+
+      {ap.mermaid_path_focused && (
+        <section className="attack-paths__graph">
+          <h3 className="attack-paths__section-h">Path-focused graph</h3>
+          <div ref={mermaidFocusedRef} className="attack-paths__mermaid attack-paths__mermaid--focused" />
+        </section>
+      )}
 
       <section className="attack-paths__pairs">
         <h3 className="attack-paths__section-h">Enumerated paths</h3>

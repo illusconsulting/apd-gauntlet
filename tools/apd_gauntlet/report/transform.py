@@ -749,6 +749,98 @@ def _build_mermaid(asset_graph: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_mermaid_path_focused(
+    asset_graph: dict[str, Any],
+    paths: list[dict[str, Any]],
+) -> str | None:
+    """Build a focused Mermaid graph LR showing only nodes/edges in enumerated paths.
+
+    Returns None when ``paths`` is empty (nothing to focus on).
+
+    The focused subgraph:
+    - Uses ``graph LR`` so attacker → ... → crown_jewel reads left-to-right.
+    - Includes only nodes touched by path edges.
+    - Includes only edges that appear in enumerated paths.
+    - Labels edges with the edge_type short label for context.
+    """
+    if not paths:
+        return None
+
+    raw_nodes: list[dict[str, Any]] = asset_graph.get("nodes") or []
+    raw_edges: list[dict[str, Any]] = asset_graph.get("edges") or []
+
+    node_by_id: dict[str, dict[str, Any]] = {
+        str(n.get("node_id", "")): n for n in raw_nodes if isinstance(n, dict)
+    }
+    edge_by_id: dict[str, dict[str, Any]] = {
+        str(e.get("edge_id", "")): e for e in raw_edges if isinstance(e, dict)
+    }
+
+    # Collect the edge IDs referenced by all paths.
+    path_edge_ids: list[str] = []
+    seen_edge_ids: set[str] = set()
+    for p in paths:
+        for eid in (p.get("edges") or []):
+            if eid not in seen_edge_ids:
+                path_edge_ids.append(eid)
+                seen_edge_ids.add(eid)
+
+    # Collect node IDs touched by those edges.
+    touched_node_ids: set[str] = set()
+    for eid in path_edge_ids:
+        e = edge_by_id.get(eid, {})
+        touched_node_ids.add(str(e.get("from", "")))
+        touched_node_ids.add(str(e.get("to", "")))
+    touched_node_ids.discard("")
+
+    if not touched_node_ids:
+        return None
+
+    # Edge type → short label for edge annotation.
+    _EDGE_LABEL: dict[str, str] = {
+        "compromisable_via_finding": "finding",
+        "finding": "finding",
+        "mitigated_by_capability": "capability",
+        "capability": "capability",
+        "trust_boundary": "trust",
+        "trusts": "trust",
+    }
+
+    lines = ["graph LR"]
+
+    # Emit only the touched nodes, preserving node_type shapes.
+    id_remap: dict[str, str] = {}
+    for raw_id in sorted(touched_node_ids):
+        n = node_by_id.get(raw_id, {})
+        safe_id = _safe_node_id(raw_id, f"n_{len(id_remap)}")
+        id_remap[raw_id] = safe_id
+        label = _safe_label(str(n.get("name") or raw_id))
+        ntype = n.get("node_type", "")
+        prefix = {
+            "attacker_position": "((",
+            "crown_jewel": "{{",
+            "service": "[",
+            "data_store": "[(",
+            "secret_store": "[(",
+        }.get(ntype, "[")
+        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]"}[prefix]
+        lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
+
+    # Emit only path edges, annotated with edge_type label.
+    for eid in path_edge_ids:
+        e = edge_by_id.get(eid, {})
+        src_raw = str(e.get("from", ""))
+        dst_raw = str(e.get("to", ""))
+        src = id_remap.get(src_raw)
+        dst = id_remap.get(dst_raw)
+        if src and dst:
+            raw_type = str(e.get("edge_type", ""))
+            edge_label = _EDGE_LABEL.get(raw_type, raw_type or "edge")
+            lines.append(f"  {src} -->|{edge_label}| {dst}")
+
+    return "\n".join(lines)
+
+
 def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
     """Return the data.attack_paths block, or None when v1.4 artifacts are absent."""
     if artifacts.attack_paths is None or artifacts.asset_graph is None:
@@ -903,6 +995,7 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
 
     result: dict[str, Any] = {
         "mermaid": _build_mermaid(artifacts.asset_graph),
+        "mermaid_path_focused": _build_mermaid_path_focused(artifacts.asset_graph, paths),
         "pairs":   pairs,
         "bottleneck_overlays": overlays,
         "bottleneck_threshold": bottleneck_threshold,
