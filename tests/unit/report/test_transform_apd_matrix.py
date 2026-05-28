@@ -30,9 +30,12 @@ def test_matrix_cells_use_short_posture_keys(example_run: pathlib.Path) -> None:
 def test_matrix_posture_gapped_and_covered_becomes_both(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
     m = apd_matrix(artifacts)
-    # The crAPI coverage matrix uses a goal-keyed 'coverage' structure rather than
-    # per-component rows; if component rows are present, verify 'both' posture maps correctly.
-    rows_with_both = [r for r in m["rows"] if any(v == "both" for v in r["cells"].values())]
+    # The current crAPI coverage matrix uses a goal-keyed 'coverage' structure
+    # rather than per-component rows, so apd_matrix() returns an empty row list.
+    # When the synthesizer emits per-component rows, at least one cell will map
+    # to 'both' (the legacy_example-era shape). Skip cleanly when rows are absent.
     if not m["rows"]:
-        pytest.skip("crAPI coverage matrix has no component rows; 'both' posture tested via unit below")
-    assert rows_with_both or True  # structural check: 'both' cells are legal when rows exist
+        pytest.skip("no per-component rows in coverage matrix; nothing to test")
+    assert any(
+        v == "both" for r in m["rows"] for v in r["cells"].values()
+    ), "expected at least one 'both' cell across all rows"

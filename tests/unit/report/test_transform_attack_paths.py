@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pathlib
 
-import pytest
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import attack_paths_data
 
