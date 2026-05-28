@@ -945,13 +945,35 @@
   max-width: none !important;     /* defeat Mermaid's inline style="max-width: NNNpx" */
   height: auto !important;
 }
-.attack-paths__mermaid svg .node text {
-  font-size: 12px !important;     /* slightly larger; readable at scroll */
+/* Mermaid 10+ renders node labels inside <foreignObject> as HTML <div> nodes,
+   not as <text> elements. Target both so labels are visible regardless of the
+   renderer Mermaid picks based on the security level. */
+.attack-paths__mermaid svg .nodeLabel,
+.attack-paths__mermaid svg .node .label,
+.attack-paths__mermaid svg .node text,
+.attack-paths__mermaid svg foreignObject div {
+  font-size: 13px !important;
+  color: var(--ink) !important;
+  fill: var(--ink) !important;
+  font-family: var(--font-sans) !important;
+}
+.attack-paths__mermaid svg .edgeLabel,
+.attack-paths__mermaid svg .edgeLabel rect,
+.attack-paths__mermaid svg .edgeLabel foreignObject div {
+  font-size: 11px !important;
+  color: var(--ink-2) !important;
+  fill: var(--ink-2) !important;
+}
+.attack-paths__mermaid--focused {
+  /* Cap the focused-subgraph container so the SVG doesn't stretch the whole page */
+  max-width: 720px;
+  overflow-x: visible;
 }
 .attack-paths__mermaid--focused svg {
-  min-width: unset;   /* focused subgraph is small enough to fit without forced scroll */
-  max-width: 100%;
-  height: auto;
+  /* Defeat the parent's !important min-width for the focused subgraph */
+  min-width: unset !important;
+  max-width: 100% !important;
+  height: auto !important;
 }
 .attack-pair {
   border: 1px solid var(--border-2);
