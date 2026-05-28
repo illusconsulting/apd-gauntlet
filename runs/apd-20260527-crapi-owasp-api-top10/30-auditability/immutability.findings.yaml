@@ -1,0 +1,394 @@
+finding:
+  - schema_version: 1
+    id: immut-e50364e4
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Audit substrate is mutable — no append-only, WORM, or hash-chain on the (absent) audit log"
+    summary: "Per the rubric audit class must be immutable; crAPI's nonexistent audit log is necessarily mutable. The introduced audit (nonrep-7fad26d8) must include immutability design."
+    detail: |
+      Per the active domain pack's required-immutable data classes,
+      audit log entries must not change once written. crAPI has no
+      audit log (nonrep-7fad26d8); the operational stdout streams that
+      stand in for audit are written to per-container log files that
+      docker/k8s log drivers manage with rotation and no immutability
+      guarantee.
+
+      The Immutability finding is the design-time concern: when audit
+      is introduced per nonrep-7fad26d8, the storage substrate must
+      enforce immutability. The rubric's "Audit log written to a
+      mutable RDS table or document collection; no append-only
+      enforcement, no WORM substrate" pattern applies directly to any
+      naïve audit implementation that lands in Postgres or Mongo
+      alongside business data.
+
+      Severity is high per the rubric pattern. Combined with
+      nonrep-7fad26d8 the merged finding carries both concerns;
+      synthesizer should merge.
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "Tamper-evidence on stored logs (currently none)"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No audit-log retention or schema"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(2)", "AU-9(3)", "AU-11", "SI-7", "SI-7(8)"]
+      mitre_attack:
+        - technique: "T1070"
+          sub_technique: null
+          tactic: "TA0005"
+          rationale: "Mutable audit storage enables Indicator Removal — an attacker who gains write access to the audit store can delete or modify their attribution."
+      cwe: ["CWE-117", "CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Couple with nonrep-7fad26d8: ship audit to a WORM substrate (object-lock-enabled S3, append-only Loki, or hash-chained Postgres audit-table)."
+      detail: |
+        Three architecture options:
+        (1) Object-store: ship audit events as JSONL to S3 with
+        object-lock (compliance mode) per-day retention period of
+        ≥1 year.
+        (2) Append-only log: ship to Loki or Elastic in a mode that
+        rejects modifications; use a separate write-only-role for
+        the audit producer.
+        (3) Hash-chained Postgres audit-table: each row carries
+        `prev_hash` and `current_hash = sha256(prev_hash || row_data)`;
+        daily chain-head anchored to an external trust store
+        (separate KMS, external timestamp authority).
+        Pick option (1) for production-adjacent; (3) for self-
+        contained.
+    related_concerns: [non_repudiation, confidentiality, ephemeral]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: immut-6df2b421
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: high
+    confidence: high
+    title: "Backup immutability not addressed — no backups exist (avail-8ad04f0e); ransomware resilience absent"
+    summary: "Per the rubric backups must be immutable (object-lock, WORM); crAPI has no backups, so backup immutability is structurally absent."
+    detail: |
+      Per the active domain pack's required-immutable data classes,
+      backup snapshots must be immutable via object-lock, WORM media,
+      or write-locked storage. Per avail-8ad04f0e and tech_plan §6,
+      crAPI has no backup procedure at all — so backup immutability
+      is moot until backups exist.
+
+      The Immutability finding is the design-time framing: when
+      backups are introduced (per avail-8ad04f0e), they must be
+      immutable from inception. The rubric's "Backup retention meets
+      minimum but no object-lock or compliance-mode immutability
+      applied" pattern would otherwise apply; in crAPI's case the
+      finding is "the backup mechanism itself is absent, and when
+      designed must include immutability".
+
+      Disposition is `blocked` because the prerequisite is the
+      backup-introduction (avail-8ad04f0e). Severity is high per the
+      rubric.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "Backups: unspecified. No backup, restore, or PITR procedure ships"
+      - artifact: runbook.md
+        locator: "§11 Tear down"
+        excerpt: "The -v flag wipes the named volumes (Postgres data, Mongo data, ChromaDB embeddings). Without it, restart preserves accounts and orders"
+    prerequisite_evidence:
+      - "Backup procedure introduction per avail-8ad04f0e"
+      - "Choice of backup substrate (object storage, tape, etc.) for immutability mechanism selection"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "CP-9(1)", "CP-9(8)", "MP-4", "SI-7"]
+      mitre_attack:
+        - technique: "T1490"
+          sub_technique: null
+          tactic: "TA0040"
+          rationale: "Absence of immutable backups means ransomware that destroys primary data cannot be recovered from; the inhibit-system-recovery defensive posture is structurally weak."
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "When backups are introduced (avail-8ad04f0e), use S3 object-lock in compliance mode with retention ≥30 days for primary backups, ≥1 year for monthlies."
+      detail: |
+        Couple with avail-8ad04f0e. The backup-target must support
+        immutability: S3 (object-lock compliance mode, configured at
+        bucket creation) is the standard pattern. Retention: daily
+        backups locked 30 days, weekly locked 90 days, monthly locked
+        1 year. Lock-mode must be `compliance` (not `governance`) so
+        even AWS root cannot delete during the lock window.
+    related_concerns: [availability, confidentiality, ephemeral]
+    cross_references: [avail-8ad04f0e]
+
+  - schema_version: 1
+    id: immut-79a844dd
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Configuration is partly compose-file, partly env-var, partly hardcoded — no drift detection"
+    summary: "Static credentials in compose, ENABLE_LOG4J/SHELL flags as env, hard-coded gateway basic-auth credential; no declared baseline, no drift detection."
+    detail: |
+      The system's configuration surface is spread across:
+      - compose env stanzas (postgres/mongo credentials, JWT_SECRET,
+        ENABLE_LOG4J, ENABLE_SHELL_INJECTION, LOG_LEVEL)
+      - mounted files (services/identity/jwks.json, per-service certs)
+      - hardcoded in service binaries (gateway-service basic-auth per
+        S-5)
+      - container images themselves (the crAPI service images)
+
+      There is no declared baseline configuration ("the
+      production-intended state is X"), no drift detection ("the
+      actual state diverged from declared by Y"), no signed-commit
+      requirement on configuration changes.
+
+      Per the rubric's "Configuration is partly IaC, partly manual;
+      no drift detection between declared and actual state" pattern,
+      severity is medium when deploy parameters are manual; the
+      ENABLE_LOG4J/SHELL flags are in the medium-to-high band because
+      flipping one silently activates a critical vulnerability per
+      intg-8d97cd9f.
+
+      For the demo intent — operator-controlled, single-host —
+      drift detection is overkill. For any shared deploy this is the
+      operational-posture gap.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 Implicit posture facts"
+        excerpt: "Postgres + Mongo creds are static literals in the compose file. JWT_SECRET=crapi shipped alongside the RS256 keys. ENABLE_LOG4J=false flag exists. ENABLE_SHELL_INJECTION=false flag exists"
+      - artifact: threat-model.md
+        locator: "§1 S-5"
+        excerpt: "presumably hard-coded in the identity service binary"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "CM-2(2)", "CM-3", "CM-3(1)", "CM-6", "CM-6(1)", "CM-6(2)"]
+      cwe: ["CWE-1357"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "For any shared deploy, declare baseline in IaC (Helm values + compose with required overrides); add a Helm-diff-based drift check."
+      detail: |
+        Move ENABLE_LOG4J / ENABLE_SHELL_INJECTION out of env entirely
+        (per intg-8d97cd9f) — eliminates the most dangerous drift.
+        For remaining config, declare the baseline in
+        `deploy/helm/values.yaml` (or `deploy/docker/.env.example`)
+        with the production-intended values. Add a `make
+        config-drift` target that diffs the running config against
+        the declared baseline and exits non-zero on drift.
+    related_concerns: [integrity, authenticity]
+    cross_references: [intg-8d97cd9f]
+
+  - schema_version: 1
+    id: immut-c97f668f
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Configuration repository — protected branches, force-push prevention, signed-commits unspecified"
+    summary: "Per the rubric, the configuration repo should require protected branches and signed commits; the project's repo settings are not in input scope."
+    detail: |
+      The rubric's "Configuration repository allows history rewrite —
+      no protected branches, no force-push prevention, no
+      signed-commit requirement" pattern applies to the upstream
+      OWASP crAPI repository's commit-discipline posture. The input
+      set does not include the upstream repo's branch-protection
+      configuration.
+
+      The Immutability concern is on the supply-chain side: any
+      configuration change to the upstream `deploy/docker/docker-compose.yml`
+      or the `services/identity/jwks.json` must be attributable and
+      tamper-resistant. Without protected branches and signed commits,
+      a maintainer-account compromise yields silent config change in
+      the published artifact.
+
+      Disposition is `blocked` because the project-repo settings are
+      not in the gauntlet's scope. Severity is medium per the rubric.
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Source"
+        excerpt: "synthesised from the upstream OWASP crAPI documentation and the shipped artifacts"
+    prerequisite_evidence:
+      - "GitHub repo branch-protection settings for the upstream OWASP/crAPI repository"
+      - "Signed-commit requirement status on the main branch"
+    control_mappings:
+      nist_800_53r5: ["CM-3", "CM-3(1)", "SI-7(8)", "SA-10", "SR-4"]
+      cwe: ["CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "Recommend to the upstream maintainers: enable protected main, require signed commits, require PR review for security-sensitive paths."
+      detail: |
+        Upstream-recommend: enable branch protection on `main` with
+        required PR review, required CI passing, required signed
+        commits via GPG/sigstore. Add CODEOWNERS for
+        `deploy/`, `services/identity/jwks.json`,
+        `services/identity/src/main/.../JwtFilter.java`, and the
+        challenge catalog. Run cosign/gitsign for signed-commit
+        verification.
+    related_concerns: [authenticity, integrity]
+    cross_references: []
+
+  - schema_version: 1
+    id: immut-b74ae78a
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No SBOM, no per-deployment artifact-provenance history"
+    summary: "Per the rubric SBOM versioning with per-deployment retention should link deployed image digest to source commit; not present in crAPI artifacts."
+    detail: |
+      Per the rubric's "SBOM and artifact-provenance history not
+      retained — only current SBOM stored" pattern, the upstream
+      crAPI project does not appear to publish per-version SBOMs nor
+      a SLSA-level provenance attestation linking deployed image
+      digest to source-commit hash through the build pipeline.
+
+      The Immutability concern is the supply-chain attribution
+      horizon: when a deploy uses `crapi/crapi-identity:${VERSION}`,
+      the chain from running image to source commit is not
+      verifiable. Combined with the unsigned-image gap
+      (auth-04fcfb9a), an operator cannot prove provenance.
+
+      Severity is medium per the rubric. For the demo intent, this
+      is acceptable; for any deploy that needs to demonstrate
+      provenance (compliance, vendor due-diligence), the gap is
+      material.
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Operational hygiene"
+        excerpt: "Default JWKS contains private-key components. Self-signed certificates shipped under each service's certs/ directory"
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "crapi/crapi-identity:${VERSION}"
+    control_mappings:
+      nist_800_53r5: ["SR-4", "SR-4(3)", "CM-8", "AU-11", "SR-11"]
+      mitre_attack:
+        - technique: "T1195"
+          sub_technique: "T1195.002"
+          tactic: "TA0001"
+          rationale: "Absent SBOM and provenance attestation prevent detection of supply-chain compromise (image substitution between source and deploy)."
+      cwe: []
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "Upstream recommendation: publish SBOMs per release; integrate SLSA-3 build provenance."
+      detail: |
+        Upstream-recommend: publish CycloneDX or SPDX SBOMs alongside
+        each published image; integrate with GitHub Actions to emit
+        SLSA-3 provenance attestation per build. Operators can verify
+        at deploy time via `cosign verify-attestation`. Document the
+        verification step in runbook.md as the supply-chain audit
+        bullet.
+    related_concerns: [authenticity, ephemeral]
+    cross_references: [auth-04fcfb9a]
+
+  - schema_version: 1
+    id: immut-49cb874c
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Cryptographic key lifecycle events not auditable — no record of jwks.json mutation"
+    summary: "Per the rubric key creation/rotation/destruction events must be auditable; crAPI has no mechanism to record jwks.json or credential changes."
+    detail: |
+      The rubric's required-immutable data classes include
+      "cryptographic key lifecycle events — key creation, rotation,
+      revocation, destruction". crAPI ships no such audit. When an
+      operator drops a replacement `jwks.json` per runbook §5,
+      there's no record of the change beyond the filesystem mtime.
+      When datastore credentials are rotated per runbook §6, there's
+      no record of the change beyond the env-var swap.
+
+      Combined with ephem-30d38360 (no rotation procedure at all),
+      this is a chicken-and-egg: rotation is GAP so audit-of-rotation
+      is moot; when rotation is added, audit emission must be part
+      of the rotation script.
+
+      Severity is medium because the demo-intent bounds the
+      operational impact; for any production-adjacent posture this
+      is the audit-side of the rotation gap.
+    evidence:
+      - artifact: runbook.md
+        locator: "§5 Rotate the JWT signing key"
+        excerpt: "GAP. No documented procedure ships in the input set"
+      - artifact: runbook.md
+        locator: "§6 Rotate datastore credentials"
+        excerpt: "GAP. The Postgres and Mongo passwords (crapisecretpassword) are hardcoded"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-12", "SC-12", "IA-5"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023", "API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Couple with ephem-30d38360: rotation scripts emit key-lifecycle audit events to the audit pipeline."
+      detail: |
+        When rotation tooling is added per ephem-30d38360 / ephem-22c2358c /
+        ephem-b95a7d11, each rotation script emits a
+        `crypto.key.rotated` event with `{key_type, old_kid, new_kid,
+        rotator_identity, timestamp}` to the audit pipeline introduced
+        per nonrep-7fad26d8. Equivalent for datastore-credential
+        rotation and chatbot-credential rotation.
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: [ephem-30d38360, nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: immut-56949f0a
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Retention policy for any data class is unspecified"
+    summary: "Per the rubric retention must be declared per-data-class with regulatory citation; crAPI inputs are silent on every retention horizon."
+    detail: |
+      Per the active domain pack's required-immutable data classes,
+      retention should be declared per-data-class with regulatory
+      citation. crAPI's inputs are silent on retention for users,
+      orders, vehicles, mechanic_reports, audit (which doesn't exist
+      per nonrep-7fad26d8), backups (which don't exist per
+      avail-8ad04f0e), or any other class.
+
+      Per the rubric's "Retention duration not specified in artifacts"
+      pattern, disposition is `blocked` and the prerequisite is a
+      declared retention policy keyed per the deploy's regulatory
+      anchors. For the demo intent, no retention is appropriate; for
+      any other deploy, the policy must be declared.
+
+      Severity is medium pending the deploy-intent prerequisite.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§10 Out-of-scope"
+        excerpt: "Operational hardening. crAPI does not target production deployment. No on-call posture, no SLO commitments, no key rotation, no log retention"
+      - artifact: agents.md
+        locator: "§Implication for the APD review"
+        excerpt: "Recognize that no operational-evidence artifact (paged-runbook, on-call schedule, SLA, incident postmortem) will exist; absence is the evidence"
+    prerequisite_evidence:
+      - "Deploy intent (demo / production-contemplated) and corresponding regulatory anchors"
+      - "Per-data-class retention table"
+    control_mappings:
+      nist_800_53r5: ["AU-11", "AU-11(1)", "SI-12"]
+      cwe: []
+      owasp_api_top10: []
+    recommendation:
+      posture: consider
+      summary: "For any non-demo deploy, declare per-data-class retention in tech_plan §11 with regulatory citation."
+      detail: |
+        For demo: continue as-is. For non-demo: declare retention per
+        data class — audit ≥1 year (PCI-equivalent), backups 30
+        days online + 1 year archive, user records per applicable
+        privacy law (GDPR-equivalent typically 6 years post-account-
+        closure for financial records), session data ≤30 days.
+    related_concerns: [non_repudiation, availability, confidentiality]
+    cross_references: [nonrep-7fad26d8, avail-8ad04f0e]

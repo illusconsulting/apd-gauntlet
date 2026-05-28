@@ -1,0 +1,76 @@
+capability:
+  - schema_version: 1
+    id: auth-cap-125067f9
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "RS256 asymmetric JWT mint + JWKS publication (OIDC-style identity provenance)"
+    description: |
+      Per ADR-0002, identity mints RS256 JWTs and publishes the
+      verification material at the standard `/.well-known/jwks.json`
+      path. The asymmetric posture is the canonical OIDC identity
+      provenance pattern.
+    maturity: implemented
+    scope: |
+      Confirmed: the mint and JWKS-publication mechanism. Significantly
+      weakened in practice by (a) default private key in repo
+      (conf-c66f08cf), (b) verifier multi-algorithm acceptance
+      (auth-09ae00ed), (c) no rotation procedure (ephem-30d38360).
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "crapi-identity mints RS256-signed JWTs"
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "The default algorithm is RS256 with a single signing key whose JWKS is published at /.well-known/jwks.json"
+    control_mappings:
+      nist_800_53r5: ["IA-5(2)", "SC-12", "SC-17", "IA-2"]
+      mitre_attack:
+        - technique: "T1606"
+          tactic: "TA0006"
+          rationale: "Asymmetric JWT minting counters web-credential forgery; RS256+JWKS publication is the reference countermeasure against forged credential issuance."
+      mitre_attack_mitigations:
+        - id: "M1041"
+          rationale: "Asymmetric signing means verifiers do not hold signing capability; defeats verifier-side credential theft (T1552.001 against verifier hosts)."
+      d3fend:
+        - technique: "D3-IAA"
+          counters_attack: ["T1606"]
+          rationale: "Identity provenance via cryptographically-signed JWT issued by a designated authority is an instance of identity-assertion-attestation that counters web-credential forgery when the verifier is correctly configured (which crAPI is not — auth-09ae00ed)."
+    caveats:
+      - "Default private key in repo (conf-c66f08cf)"
+      - "Verifier accepts multiple algorithms (auth-09ae00ed)"
+      - "No rotation procedure (ephem-30d38360)"
+      - "Per-service verifier consistency not enforced (dist-0a56c5f0)"
+    related_concerns: [confidentiality, integrity, ephemeral, distributed]
+
+  - schema_version: 1
+    id: auth-cap-9703a609
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "OpenAPI bearerAuth security scheme declared on every authenticated path"
+    description: |
+      The OpenAPI specification declares `bearerAuth` as the security
+      scheme on every non-public path. This is the declared intent:
+      "every protected endpoint requires Authorization: Bearer <jwt>".
+      The declaration is the contract.
+    maturity: designed
+    scope: |
+      Confirmed in the spec. NOT confirmed in implementation —
+      challenge 14 explicitly contradicts ("at least one privileged
+      endpoint has no auth check at all") and INV-AUTH-001 documents
+      the contradiction. The spec is aspirational; the handlers
+      diverge.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "The session token (a JWT) is included as Authorization: Bearer <token> per the OpenAPI bearerAuth security scheme"
+      - artifact: invariants.md
+        locator: "INV-AUTH-001"
+        excerpt: "Asserted in: OpenAPI bearerAuth security scheme on every non-signup/login/forget-password path. Reviewer note: Challenge 14 explicitly contradicts this"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "AC-3"]
+    caveats:
+      - "Challenge 14: at least one privileged endpoint lacks auth (unconfirmed endpoint)"
+      - "OpenAPI is documentation; handlers diverge"
+    related_concerns: [integrity]

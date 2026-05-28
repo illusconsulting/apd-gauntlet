@@ -1,0 +1,226 @@
+finding:
+  - schema_version: 1
+    id: merged-c829ffc8
+    agent: synthesizer
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default JWT signing key + multi-algorithm verifier accepts forgeries — cluster-wide identity trust broken"
+    summary: "Merged: (a) services/identity/jwks.json ships private-key components by default, (b) verifier accepts alg:none, HS256-confusion, jku-fetch, kid-traversal; cluster auth is forgeable."
+    detail: |
+      Merged from three specialist findings (conf-c66f08cf Confidentiality,
+      intg-15c04a1c Integrity, auth-09ae00ed Authenticity).
+
+      The architectural concern combines two failures: (a) the default
+      install ships an RSA private key in `services/identity/jwks.json`
+      committed to the repo, and (b) the verifier accepts at least four
+      documented JWT forgery patterns. Either failure independently
+      yields forge-any-identity capability; together they are critical
+      authentication-bypass.
+
+      Severity is critical per "Forgeable session tokens at platform
+      scope" and "Authentication bypass to high-privilege functions
+      with no factor required" — both rubric clauses independently
+      apply.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication"
+        excerpt: "crAPI ships a default jwks.json containing the private key components (d, p, q, dp, dq, qi)"
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Consequences"
+        excerpt: "Algorithm-confusion (RS256 ↔ HS256) is the headline forgery vector"
+      - artifact: tech_plan.md
+        locator: "§9 JWT vulnerabilities #15"
+        excerpt: "Four documented variants: RS256↔HS256 algorithm confusion, alg:none on dashboard, jku misuse, kid path traversal"
+    lens_perspectives:
+      confidentiality:
+        summary: "Private signing key disclosed via repo commit; defaults compromise the trust anchor."
+        detail: "conf-c66f08cf framing — focuses on the key material disclosure."
+      integrity:
+        summary: "Verifier accepts forged tokens via multiple algorithm-confusion patterns; tamper detection on the JWT fails."
+        detail: "intg-15c04a1c framing — focuses on the verifier's tamper-detection failure."
+      authenticity:
+        summary: "Identity provenance broken: verifier cannot cryptographically prove the asserted identity is genuine."
+        detail: "auth-09ae00ed framing — focuses on the identity-verifiability collapse."
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)", "SC-12(2)", "SC-13", "IA-2", "IA-2(1)", "IA-2(8)", "IA-5(2)", "SI-7", "SI-7(1)", "SC-23", "SC-23(3)", "SC-17", "SC-28(1)"]
+      mitre_attack:
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Signing key checked into repository is a credential-in-files disclosure that enables forge-any-JWT against the entire cluster."}
+        - {technique: "T1606", sub_technique: null, tactic: "TA0006", rationale: "Verifier accepts forged web credentials due to absent algorithm pin, jku fetch, and kid-as-path."}
+        - {technique: "T1550", sub_technique: "T1550.001", tactic: "TA0008", rationale: "Forged JWT is presented as a valid application access token to every downstream service."}
+      cwe: ["CWE-321", "CWE-347", "CWE-345", "CWE-22", "CWE-798", "CWE-287"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Generate fresh per-install keypair; pin alg:RS256; remove JWT_SECRET; allowlist jku; restrict kid to known set."
+      detail: |
+        (1) Generate a fresh RSA-2048 keypair on install; remove the
+        committed jwks.json from the repo. (2) Pin the verifier to
+        alg:RS256 only — reject all other algorithm values at the
+        library configuration layer. (3) Remove JWT_SECRET entirely;
+        if HS256 is needed, it must use a distinct secret not derived
+        from the RSA keypair. (4) Allowlist the jku header to the
+        configured IDENTITY_SERVICE URL; reject any other jku value.
+        (5) Restrict kid to a declared set of known identifiers;
+        reject path-traversal-shaped kid values.
+    related_concerns: [ephemeral, distributed, immutability, non_repudiation]
+    cross_references: [ephem-30d38360, dist-0a56c5f0]
+
+  - schema_version: 1
+    id: merged-44bdb663
+    agent: synthesizer
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Shared plaintext admin/crapisecretpassword on Postgres+Mongo, all services, repo-tracked"
+    summary: "Merged: single shared credential in compose env (Confidentiality disclosure) collapses datastore tier into one failure domain (Distributed) and enables direct DB write bypass of service-layer controls."
+    detail: |
+      Merged from conf-3e324699 and dist-c047a7c0. The plaintext
+      credential is both a credential-disclosure concern
+      (Confidentiality) and a topology-of-trust concern (Distributed).
+      The same fix — per-service users + rotation — addresses both.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "user/password admin / crapisecretpassword (hardcoded in deploy/docker/docker-compose.yml)"
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Decision"
+        excerpt: "Both datastores accept the same admin credential. Every service needs either datastore authenticates as admin"
+    lens_perspectives:
+      confidentiality:
+        summary: "Credential is plaintext in repo; anyone with repo or container access has datastore admin."
+        detail: "conf-3e324699 framing — the credential-itself disclosure."
+      distributed:
+        summary: "Single shared credential collapses N service trust domains into one datastore trust domain; service compromise yields full datastore."
+        detail: "dist-c047a7c0 framing — the topology-of-trust concern."
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-5(7)", "SC-12", "SC-28(1)", "AC-2", "AC-6", "AC-6(1)", "AC-6(5)", "SC-7"]
+      mitre_attack:
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Credentials in compose file are credentials-in-files disclosure granting full datastore read/write."}
+      cwe: ["CWE-798", "CWE-256", "CWE-250"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Provision per-service Postgres+Mongo users with collection-scoped grants; remove static creds from compose; rotate per-deploy."
+      detail: |
+        Create per-service Postgres users (identity_svc, workshop_svc,
+        community_svc, chatbot_svc) each with table-scoped grants per
+        architecture-index. Equivalent per-service Mongo roles. Remove
+        admin/crapisecretpassword from compose env stanzas. Rotate
+        credentials per-deploy via init-container or CI secret
+        injection. Document the rotation procedure in runbook §6.
+    related_concerns: [authenticity, ephemeral, integrity]
+    cross_references: [ephem-22c2358c]
+
+  - schema_version: 1
+    id: merged-514507e6
+    agent: synthesizer
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "SSRF on contact_mechanic with unbounded rate — cloud metadata + internal services exfiltration"
+    summary: "Merged: (a) no URL allowlist on outbound fetch, (b) no input validation on URL field, (c) no rate limit, (d) response body returned to caller."
+    detail: |
+      Merged from conf-cf457739 (Confidentiality / data exfiltration),
+      intg-5c659bdb (Integrity / input validation), and avail-6af5aff7
+      (Availability / rate limit). The single architectural fix —
+      input-validating typed URL with allowlist + per-token rate limit
+      + no response-body return — closes all three concerns.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 SSRF #11"
+        excerpt: "mechanic_api URL fetched server-side, returning the HTTP response body to the caller. No allowlist"
+      - artifact: tech_plan.md
+        locator: "§9 No Rate Limit #6"
+        excerpt: "No throttle on the contact-mechanic submission endpoint; arbitrary outbound webhook fan-out"
+    lens_perspectives:
+      confidentiality:
+        summary: "Response body returned to caller enables cloud-metadata + internal-service data extraction."
+        detail: "conf-cf457739 framing."
+      integrity:
+        summary: "URL field accepts arbitrary string; no validation, no IP-resolution check, no DNS-rebinding defense."
+        detail: "intg-5c659bdb framing."
+      availability:
+        summary: "Unbounded request rate exhausts outbound socket/worker pool; reflective-DoS launchpad."
+        detail: "avail-6af5aff7 framing."
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-7(5)", "AC-4", "SC-8(1)", "SI-10", "SC-5", "SC-5(1)", "SC-6", "SI-13"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "SSRF on a public-facing endpoint with response body returned to caller enables cloud-metadata and internal-service data extraction."}
+        - {technique: "T1499", sub_technique: "T1499.003", tactic: "TA0040", rationale: "Unbounded outbound-fetch endpoint enables application-exhaustion DoS through resource starvation."}
+      cwe: ["CWE-918", "CWE-441", "CWE-770", "CWE-400", "CWE-20"]
+      owasp_api_top10: ["API7:2023", "API4:2023"]
+    recommendation:
+      posture: required
+      summary: "Add typed URL field with hostname allowlist + IP-resolution check; per-token rate limit (10/min); do not return fetched body to caller."
+      detail: |
+        (1) Replace the free-text mechanic_api URL field with a typed
+        URL that validates against an allowlist of known-good hostnames
+        at the service layer. (2) Resolve the hostname to IP before
+        fetch and reject RFC-1918 / link-local / loopback ranges to
+        block SSRF. (3) Apply a UserRateThrottle of 10/min on the
+        contact_mechanic endpoint. (4) Do not return the HTTP response
+        body to the caller — return only a confirmation of delivery.
+    related_concerns: [authenticity, resilient]
+
+  - schema_version: 1
+    id: merged-d2e871f5
+    agent: synthesizer
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Chatbot prompt-injection drives admin actions; embedded credential breaks attribution"
+    summary: "Merged: (a) chatbot holds admin credential, (b) prompt-injection induces tool calls under admin authority, (c) downstream audit attributes to admin not prompt author."
+    detail: |
+      Merged from intg-078ee9f6 (Integrity write-path), auth-55e76c4d
+      (Authenticity credential-binding), nonrep-fc423071 (Non-
+      Repudiation attribution), ephem-b95a7d11 (Ephemeral rotation).
+      Four-lens merge; single fix.
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Role"
+        excerpt: "API_USER=admin@example.com / API_PASSWORD=Admin!123 — a privileged crAPI credential used to act on behalf of users"
+      - artifact: tech_plan.md
+        locator: "§9 LLM #16/17/18"
+        excerpt: "Chatbot prompt-injection: client-side rendering injection (#16), credential extraction (#17), action-on-behalf-of (#18)"
+    lens_perspectives:
+      integrity:
+        summary: "Prompt-injection bypasses input validation on the chatbot tool surface; user prompt drives crAPI write-path."
+        detail: "intg-078ee9f6 framing."
+      authenticity:
+        summary: "Embedded admin credential makes the chatbot a credential proxy; identity-to-actor binding is broken."
+        detail: "auth-55e76c4d framing."
+      non_repudiation:
+        summary: "Downstream audit (if any) attributes to admin@example.com, not prompt author."
+        detail: "nonrep-fc423071 framing."
+      ephemeral:
+        summary: "Embedded credential has no rotation procedure; compromise is permanent and undetectable."
+        detail: "ephem-b95a7d11 framing."
+    control_mappings:
+      nist_800_53r5: ["SI-10", "AC-3", "AC-6", "AC-6(1)", "AC-6(5)", "IA-9", "IA-2", "AU-3", "AU-3(1)", "AU-10", "IA-5"]
+      mitre_attack:
+        - {technique: "T1078", sub_technique: null, tactic: "TA0004", rationale: "Embedded admin credential is a valid-account that prompt-injection coerces into use for privileged operations on behalf of unprivileged users."}
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Long-lived admin credential in container env; single exposure (image pull, prompt-injection extraction) yields permanent admin authority."}
+      cwe: ["CWE-77", "CWE-285", "CWE-269", "CWE-94", "CWE-798", "CWE-223"]
+      owasp_api_top10: ["API5:2023", "API8:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Remove embedded credential; chatbot acts under prompt author's bearer; tool-call allowlist per user role; audit every chat-driven call."
+      detail: |
+        (1) Remove API_USER/API_PASSWORD from the chatbot container env.
+        (2) The chatbot service must receive the prompt author's bearer
+        token from the frontend and forward it to downstream crAPI
+        endpoints — acting under the caller's identity, not admin.
+        (3) Declare a tool-call allowlist per user role (e.g., standard
+        users cannot trigger order-status changes via chatbot). (4)
+        Emit an audit event for every chatbot → crAPI call with the
+        prompt_author_sub, tool_name, and outcome fields.
+    related_concerns: [confidentiality]

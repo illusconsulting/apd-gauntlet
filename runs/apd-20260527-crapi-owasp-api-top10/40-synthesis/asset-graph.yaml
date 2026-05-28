@@ -1,0 +1,464 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+nodes:
+- node_id: asset-a1b2c3d4
+  node_type: asset
+  name: crapi-identity
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7crapi-identity"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - pii
+  - secret
+- node_id: asset-a3b4c5d6
+  node_type: asset
+  name: API_USER/API_PASSWORD (chatbot admin credential)
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7crapi-chatbot"
+  confidence: high
+  asset_type: secret_store
+  data_classifications:
+  - secret
+- node_id: asset-a7b8c9d0
+  node_type: asset
+  name: mongodb
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA76 MongoDB 4.4"
+  confidence: high
+  asset_type: data_store
+  data_classifications:
+  - pii
+  - confidential
+- node_id: asset-b2c3d4e5
+  node_type: asset
+  name: crapi-workshop
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7crapi-workshop"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - pii
+  - confidential
+- node_id: asset-b8c9d0e1
+  node_type: asset
+  name: chromadb
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7chromadb"
+  confidence: medium
+  asset_type: data_store
+  data_classifications:
+  - internal
+- node_id: asset-c3d4e5f6
+  node_type: asset
+  name: crapi-community
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7crapi-community"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - pii
+- node_id: asset-c9d0e1f2
+  node_type: asset
+  name: mailhog
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA77 OTP delivery"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - pii
+  - secret
+- node_id: asset-d0e1f2a3
+  node_type: asset
+  name: api.mypremiumdealership.com
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7api.mypremiumdealership.com"
+  confidence: high
+  asset_type: external_dependency
+  data_classifications:
+  - pii
+  - pci
+- node_id: asset-d4e5f6a7
+  node_type: asset
+  name: crapi-chatbot
+  provenance:
+    source: artifact
+    artifact: architecture-index.md
+    locator: "\xA7crapi-chatbot"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - pii
+  - secret
+  - confidential
+- node_id: asset-e1f2a3b4
+  node_type: asset
+  name: services/identity/jwks.json (private key)
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA74 Authentication"
+  confidence: high
+  asset_type: secret_store
+  data_classifications:
+  - secret
+- node_id: asset-e5f6a7b8
+  node_type: asset
+  name: crapi-web
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA73 boundary #1"
+  confidence: high
+  asset_type: service
+  data_classifications:
+  - public
+- node_id: asset-f2a3b4c5
+  node_type: asset
+  name: JWT_SECRET env var
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA74 Authentication"
+  confidence: high
+  asset_type: secret_store
+  data_classifications:
+  - secret
+- node_id: asset-f6a7b8c9
+  node_type: asset
+  name: postgresdb
+  provenance:
+    source: artifact
+    artifact: tech_plan.md
+    locator: "\xA76 PostgreSQL 14"
+  confidence: high
+  asset_type: data_store
+  data_classifications:
+  - pii
+  - pci
+  - confidential
+- node_id: atk-264bde5f
+  node_type: attacker_position
+  name: internal_lateral_attacker
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-2a628eed
+  node_type: attacker_position
+  name: authenticated_user_seeking_authz_bypass
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-3f205280
+  node_type: attacker_position
+  name: compromised_admin_session
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-404a3c86
+  node_type: attacker_position
+  name: unauthenticated_internet
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-43ba1c0a
+  node_type: attacker_position
+  name: supply_chain_attacker
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-5331accf
+  node_type: attacker_position
+  name: compromised_user_session_token
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-5ec33a11
+  node_type: attacker_position
+  name: compromised_oauth_client_credentials
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-82a39ff7
+  node_type: attacker_position
+  name: authenticated_low_priv_user_with_bola_target
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: atk-a3d36625
+  node_type: attacker_position
+  name: compromised_third_party_integration
+  provenance:
+    source: run_config
+    artifact: .apd-run.yaml
+  confidence: high
+- node_id: jewel-10ff98db
+  node_type: crown_jewel
+  name: session_token_signing_keys
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-168c256c
+  node_type: crown_jewel
+  name: backup_artifact_store
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-277b3f04
+  node_type: crown_jewel
+  name: third_party_integration_secrets
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-3257f37f
+  node_type: crown_jewel
+  name: pii_profile_store
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-47b02c84
+  node_type: crown_jewel
+  name: payment_methods_store
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-4da600e8
+  node_type: crown_jewel
+  name: audit_log_store
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-61f49a34
+  node_type: crown_jewel
+  name: authorization_decision_engine
+  provenance:
+    source: run_config
+  confidence: high
+- node_id: jewel-681465d8
+  node_type: crown_jewel
+  name: user_credentials_store
+  provenance:
+    source: run_config
+  confidence: high
+edges:
+- edge_id: edge-14dc1488
+  edge_type: trusts
+  from: asset-d0e1f2a3
+  to: asset-a1b2c3d4
+  provenance:
+    source: asset_inventory
+    locator: tb-c3d4e5f6
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-180d1bc6
+  edge_type: trusts
+  from: asset-d0e1f2a3
+  to: asset-d4e5f6a7
+  provenance:
+    source: asset_inventory
+    locator: tb-f6a7b8c9
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-263809a8
+  edge_type: trusts
+  from: asset-c9d0e1f2
+  to: asset-a1b2c3d4
+  provenance:
+    source: asset_inventory
+    locator: tb-d4e5f6a7
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-28d7da4a
+  edge_type: trusts
+  from: asset-a1b2c3d4
+  to: asset-c9d0e1f2
+  provenance:
+    source: asset_inventory
+    locator: tb-d4e5f6a7
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-2f1b48b5
+  edge_type: trusts
+  from: asset-a7b8c9d0
+  to: asset-f6a7b8c9
+  provenance:
+    source: asset_inventory
+    locator: tb-e5f6a7b8
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-39c2482c
+  edge_type: trusts
+  from: asset-a1b2c3d4
+  to: asset-e5f6a7b8
+  provenance:
+    source: asset_inventory
+    locator: tb-b2c3d4e5
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-3ac4d1ea
+  edge_type: compromisable_via_finding
+  from: asset-a1b2c3d4
+  to: asset-e5f6a7b8
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: auth-04fcfb9a
+  confidence: medium
+  traversal_cost: 4
+  finding_id: auth-04fcfb9a
+- edge_id: edge-3e7ec374
+  edge_type: mitigated_by_capability
+  from: asset-f6a7b8c9
+  to: asset-a7b8c9d0
+  provenance:
+    source: artifact
+    artifact: specialist capabilities
+    locator: ephem-cap-fd22b084
+  confidence: medium
+  traversal_cost: 1
+  capability_id: ephem-cap-fd22b084
+- edge_id: edge-4229174b
+  edge_type: trusts
+  from: asset-f6a7b8c9
+  to: asset-a7b8c9d0
+  provenance:
+    source: asset_inventory
+    locator: tb-e5f6a7b8
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-4befd218
+  edge_type: compromisable_via_finding
+  from: asset-f6a7b8c9
+  to: asset-a7b8c9d0
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: dist-04709717
+  confidence: high
+  traversal_cost: 2
+  finding_id: dist-04709717
+- edge_id: edge-64206946
+  edge_type: trusts
+  from: asset-e5f6a7b8
+  to: asset-d0e1f2a3
+  provenance:
+    source: asset_inventory
+    locator: tb-a1b2c3d4
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-893ef9ab
+  edge_type: trusts
+  from: asset-a1b2c3d4
+  to: asset-d0e1f2a3
+  provenance:
+    source: asset_inventory
+    locator: tb-c3d4e5f6
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-9deebce9
+  edge_type: compromisable_via_finding
+  from: asset-a7b8c9d0
+  to: asset-b8c9d0e1
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: conf-bd613330
+  confidence: medium
+  traversal_cost: 4
+  finding_id: conf-bd613330
+- edge_id: edge-af537978
+  edge_type: mitigated_by_capability
+  from: asset-f6a7b8c9
+  to: asset-a7b8c9d0
+  provenance:
+    source: artifact
+    artifact: specialist capabilities
+    locator: immut-cap-8e77982d
+  confidence: medium
+  traversal_cost: 1
+  capability_id: immut-cap-8e77982d
+- edge_id: edge-afec4150
+  edge_type: compromisable_via_finding
+  from: asset-b8c9d0e1
+  to: asset-d0e1f2a3
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: resil-373918f9
+  confidence: high
+  traversal_cost: 4
+  finding_id: resil-373918f9
+- edge_id: edge-bd7b23ca
+  edge_type: trusts
+  from: asset-d0e1f2a3
+  to: asset-e5f6a7b8
+  provenance:
+    source: asset_inventory
+    locator: tb-a1b2c3d4
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-cd3c67a5
+  edge_type: compromisable_via_finding
+  from: asset-f6a7b8c9
+  to: asset-b8c9d0e1
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: conf-cf457739
+  confidence: high
+  traversal_cost: 2
+  finding_id: conf-cf457739
+- edge_id: edge-e6943346
+  edge_type: trusts
+  from: asset-d4e5f6a7
+  to: asset-d0e1f2a3
+  provenance:
+    source: asset_inventory
+    locator: tb-f6a7b8c9
+  confidence: high
+  traversal_cost: 2
+- edge_id: edge-fc765f23
+  edge_type: trusts
+  from: asset-e5f6a7b8
+  to: asset-a1b2c3d4
+  provenance:
+    source: asset_inventory
+    locator: tb-b2c3d4e5
+  confidence: high
+  traversal_cost: 2
+build_summary:
+  node_count: 30
+  edge_count: 19
+  attacker_position_count: 9
+  crown_jewel_count: 8
+  finding_edges_count: 5
+  capability_edges_count: 2
+  sources_used:
+  - asset_inventory
+  - findings
+  - capabilities
+  - threat_model_normalized

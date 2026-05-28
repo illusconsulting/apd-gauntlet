@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## v1.5.1 — 2026-05-27
+
+### Added
+
+- **`api-security` domain pack** under `domains/api-security/` — 14 files (878 lines) anchored to OWASP API Top 10 (2023), PCI-DSS 4.0, GDPR, NIST 800-63B, SOC 2. Ships 8 crown jewels and 9 attacker positions covering authenticated/unauthenticated/compromised attacker scenarios common to API-style production systems. Severity rubric calibrates to API1-API10 categories + breach-notification thresholds.
+- **Canonical example fixture run** at `runs/apd-20260527-crapi-owasp-api-top10/` — full APD gauntlet output against OWASP crAPI v1.1.5 (Apache-2.0, intentionally vulnerable multi-service automotive B2C demo). 63 deduped findings + 22 capabilities + complete 40-synthesis output including `report-data.yaml`. Used by Phase D HTML report integration tests as the golden fixture.
+
+### Changed
+
+- Phase D tests now reference `example_run` fixture (was `legacy_example_run`); pointed at the crAPI run.
+- `report-template/data.js` (dev template demo data) regenerated from the crAPI run.
+- `tests/fixtures/report-html/crapi-golden-data.js` replaces `legacy_example-golden-data.js` as the golden-output regression check.
+
+### Known limitations
+
+- 5 transform tests skip cleanly because crAPI's synthesizer-emitted YAML files use shape variants (`techniques:` dict vs `technique:` list in attack-exposure.yaml; goal-keyed vs component-keyed apd-coverage-matrix; missing family_summary in nist-coverage) that the v1.5.0 transforms don't yet normalize. Tracked as a polish item — transforms should be made tolerant of both shapes in a follow-up.
+
 ## v1.5.0 — 2026-05-27
 
 ### Added

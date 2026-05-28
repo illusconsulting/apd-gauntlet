@@ -1,0 +1,386 @@
+finding:
+  - schema_version: 1
+    id: dist-1f123cef
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Single-host topology by design — identity is a cluster-wide SPOF"
+    summary: "All services run on one host per agents.md and the t2.micro deploy target; identity service compromise or outage produces total cluster auth failure."
+    detail: |
+      Per `agents.md` and tech_plan §10, crAPI is intentionally a
+      single-host deploy. Every service shares the host's failure
+      domain — a host reboot, kernel panic, or compose-daemon crash
+      takes everything down simultaneously. The identity service in
+      particular is the JWT-issuer that every other service depends on
+      for verification — its compromise yields cluster-wide auth
+      bypass (the threat-model framing) and its outage yields cluster-
+      wide auth failure (the availability framing).
+
+      The Distributed concern is purely structural: the system is by
+      design a single failure domain. For the demo intent (single
+      practitioner, one laptop) this is appropriate. For any production-
+      adjacent posture it is the first finding.
+
+      Severity is high per "Single-AZ deployment of the authentication
+      service, session store, or payment service" — the rubric clause
+      explicitly anchors on the auth-tier SPOF. The fact that crAPI is a
+      single host (not just single AZ) is structurally identical for
+      blast radius.
+    evidence:
+      - artifact: agents.md
+        locator: "§Intended runtime"
+        excerpt: "Default target: a single host (laptop, t2.micro-class VM, or Vagrant guest on the operator's workstation). Project explicitly targets 1 vCPU / 1 GB RAM"
+      - artifact: architecture-index.md
+        locator: "§crapi-identity Trust boundary"
+        excerpt: "All other services treat identity as the JWT authority. Compromise of identity → cluster-wide auth bypass"
+      - artifact: tech_plan.md
+        locator: "§10 Out-of-scope"
+        excerpt: "crAPI does not target production deployment"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "CP-7", "SC-36", "CP-2"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For any non-demo deploy, split into ≥2 AZs with identity as the foundational replicated service."
+      detail: |
+        Demo intent is unchanged — single host is the right choice for
+        the project as documented. For any production-adjacent deploy:
+        (a) replicate identity across ≥2 availability zones with shared
+        Postgres replication or per-AZ Postgres + cross-region async
+        replica, (b) externalize JWKS to a CDN-fronted endpoint so
+        verifiers don't depend on per-AZ identity availability, (c)
+        document the failover-trigger in `runbook.md`.
+    related_concerns: [availability, resilient, authenticity]
+    cross_references: []
+
+  - schema_version: 1
+    id: dist-04709717
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Postgres and Mongo are single-instance with no replication topology"
+    summary: "Datastore deployment is single-container; no replica set on Mongo, no streaming replication on Postgres; any volume corruption is total data loss."
+    detail: |
+      Per tech_plan §6, Postgres 14 and Mongo 4.4 are deployed as single
+      containers from upstream images. There is no replication topology
+      declared — no Postgres streaming replication, no Mongo replica
+      set (Mongo 4.4 explicitly requires `--replSet` for replication;
+      the upstream image does not enable it). The Helm `values-pv.yaml`
+      variant adds persistent volumes but does not change the topology
+      from single-instance.
+
+      Combined with avail-8ad04f0e (no backups), this is a structural
+      data-loss SPOF: a single corrupted volume is unrecoverable. The
+      cross-store consistency concern (intg-b097f9a8) is also tightly
+      coupled — both datastores would need coordinated replication
+      strategies and crAPI ships none.
+
+      Severity is high per the rubric's Distributed SPOF clause and per
+      the data-loss potential. For the demo intent the impact is
+      bounded (operator accepts wipe-on-restart per runbook §11).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "PostgreSQL 14 (postgresdb). Single database crapi. MongoDB 4.4 (mongodb). Same fixed credentials"
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Decision"
+        excerpt: "Both datastores accept the same admin credential"
+    control_mappings:
+      nist_800_53r5: ["SC-36", "CP-7", "CP-9", "SC-7"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For any non-demo deploy, configure Postgres streaming replication and Mongo replSet; document coordinated-failover behavior."
+      detail: |
+        For demo: explicitly document in tech_plan §10 that single-
+        instance is intentional. For non-demo: (a) enable Postgres
+        streaming replication to a hot standby with synchronous_commit
+        appropriate to the deploy's RPO; (b) configure Mongo as a 3-node
+        replica set with `priority` settings reflecting AZ placement;
+        (c) document the cross-store failover ordering (Postgres primary
+        promotes → Mongo primary promotes → application reconnect) in
+        the runbook.
+    related_concerns: [availability, integrity, ephemeral]
+    cross_references: [avail-8ad04f0e]
+
+  - schema_version: 1
+    id: dist-5e588812
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Service-to-service authentication via shared single JWKS — coupled failure with identity"
+    summary: "Every service fetches JWKS from identity at startup and per-request; identity unavailability degrades every verifier."
+    detail: |
+      Per ADR-0002, downstream services fetch JWKS from
+      `IDENTITY_SERVICE=crapi-identity:8080`. Cache-time-to-live for
+      the fetched JWKS is not documented; a naive implementation
+      re-fetches per-request (Spring's default is to cache, but Go and
+      Python libraries vary). When identity is down, every verifier's
+      JWKS cache eventually expires and authentication fails cluster-
+      wide.
+
+      This is a Distributed finding because the topology choice ("verify
+      against live identity") creates a coupling that makes the
+      single-host SPOF concretely worse: not just "identity dies and
+      can't issue new tokens" but "identity dies and existing tokens
+      fail verification too".
+
+      Severity is medium per the rubric's "In-process state in the
+      application tier" clause (the JWKS cache is the in-process state
+      whose staleness becomes a coupled failure). It escalates to high
+      if the cache TTL is very short or if no cache exists.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "Other services consume IDENTITY_SERVICE=crapi-identity:8080 to validate bearer JWTs against the JWKS endpoint http://crapi-identity:8080/.well-known/jwks.json"
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "Every service has to pick a JWT library in its native ecosystem and configure algorithm-pinning, kid handling, jku allowlisting, and signature enforcement consistently"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-22", "CP-13"]
+      cwe: ["CWE-754"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document and harden per-service JWKS cache: TTL 1 hour, retain last-known-good on fetch failure."
+      detail: |
+        Document a JWKS cache policy: TTL 1 hour, retain last-known-good
+        for at least 24 hours on subsequent fetch failures so identity
+        outage does not immediately cascade to verifier outage. Spring:
+        configure `NimbusJwtDecoder` with explicit `jwksSetCache`
+        settings. Python: cache the JWKS via `cachetools.TTLCache`. Go:
+        explicit JWKS cache with `time.AfterFunc` refresh. Cross-ref
+        ephem-jwks-rotation — TTL and rotation cadence are coupled.
+    related_concerns: [resilient, availability, authenticity, ephemeral]
+    cross_references: [dist-1f123cef]
+
+  - schema_version: 1
+    id: dist-c047a7c0
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Single shared datastore credential collapses blast radius across services"
+    summary: "Every service authenticates to Postgres and Mongo as the same admin user; service compromise yields full datastore read/write everywhere."
+    detail: |
+      Per ADR-0004 and tech_plan §6, all services use the single
+      `admin / crapisecretpassword` credential. From a Distributed lens,
+      this collapses the failure-domain isolation that a per-service
+      credential would provide: any service compromise (SQL injection
+      in workshop, NoSQL injection in community, prompt-injection in
+      chatbot, SSRF in workshop reaching another service's API) yields
+      direct datastore access with full privileges.
+
+      The Distributed framing is about the topology of trust: the
+      datastore tier has no per-service trust boundary. The
+      Confidentiality framing (credential exposure in conf-3e324699)
+      and Authenticity framing (auth-shared-datastore-cred) cover the
+      credential-itself and identity-strength angles. This finding
+      covers the topology angle — there is one tier of trust where
+      there should be N.
+
+      Severity is high per "Single-AZ deployment" structural class —
+      the rubric anchors on the auth-tier SPOF, and the datastore tier
+      under shared credential is functionally a single trust domain
+      for every service.
+    evidence:
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Decision"
+        excerpt: "Both datastores accept the same admin credential (admin / crapisecretpassword, hardcoded in deploy/docker/docker-compose.yml). Every service authenticates as admin; no per-service user separation"
+      - artifact: invariants.md
+        locator: "INV-OPS-001"
+        excerpt: "Contradicted — single shared admin / crapisecretpassword for Postgres and Mongo"
+    control_mappings:
+      nist_800_53r5: ["AC-6", "AC-6(1)", "AC-6(5)", "IA-5", "SC-7"]
+      cwe: ["CWE-250"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Provision per-service Postgres users and per-service Mongo users with table/collection-scoped grants."
+      detail: |
+        Per-service users: `identity_svc` (GRANT on users, vehicles,
+        vehicle_locations, profile_videos), `workshop_svc` (GRANT on
+        mechanics, service_requests, mechanic_reports, products,
+        orders, credit, coupons), `community_svc` (GRANT on coupons
+        for the dual-store join only), `chatbot_svc` (read-only on
+        users for the on-behalf-of resolution). Mongo equivalent via
+        per-database roles. Combine with conf-3e324699 (credential
+        rotation) so each per-service credential is also rotated
+        per-deploy.
+    related_concerns: [authenticity, confidentiality, ephemeral]
+    cross_references: [conf-3e324699]
+
+  - schema_version: 1
+    id: dist-bc4789b6
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No network policy in shipped Helm values restricts in-cluster reachability"
+    summary: "Helm values.yaml does not declare a NetworkPolicy; any pod can reach Postgres, Mongo, ChromaDB, or any service in default Kubernetes."
+    detail: |
+      Per `prior-audit.md` "Operational gaps", the shipped Helm chart
+      does not include a NetworkPolicy. In default Kubernetes
+      networking (no CNI policy enforcement), every pod can reach every
+      other pod on every port. Combined with conf-3e324699 (plaintext
+      credentials) and the SSRF in conf-cf457739, this is the
+      structural amplifier: a compromised workshop pod can hit
+      Postgres directly, bypass community to reach Mongo, hit ChromaDB
+      directly, or pivot to identity's JWKS publishing endpoint to
+      manipulate verifier behavior.
+
+      Disposition is `blocked` because the Helm values.yaml content is
+      not in the input set; the prerequisite is the rendered chart and
+      a determination of whether NetworkPolicy is enforced by the
+      cluster's CNI.
+
+      Severity is medium because the impact is bounded by datastore
+      credential separation (which dist-c047a7c0 shows is also
+      absent). For deploys where dist-c047a7c0 is remediated and
+      network policy remains absent, severity escalates to high.
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No network policy in shipped Helm values"
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Invariants"
+        excerpt: "Datastore network reachability is service-mesh-internal only. Held in compose by not exposing :5432/:27017; not enforced at the network-policy layer in Helm"
+    prerequisite_evidence:
+      - "deploy/helm/values.yaml content showing NetworkPolicy resources (or their absence)"
+      - "Cluster CNI declaration (Calico, Cilium, etc.) and whether it enforces NetworkPolicy"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-7(5)", "SC-7(21)", "AC-4"]
+      cwe: ["CWE-732"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Add per-service NetworkPolicy resources to the Helm chart restricting datastore and inter-service reachability."
+      detail: |
+        For each service in the Helm chart, add a NetworkPolicy that
+        (a) restricts ingress to the documented inbound set per
+        architecture-index.md (e.g., postgresdb accepts ingress only
+        from identity/workshop/community/chatbot pod selectors;
+        chromadb accepts ingress only from chatbot), (b) restricts
+        egress to the documented outbound set (e.g., chatbot egresses
+        to ChromaDB, Postgres, Mongo, identity — and to the external
+        LLM provider via a namespace-default-allow rule). Document the
+        policy set in `deploy/helm/README.md`.
+    related_concerns: [authenticity, confidentiality, ephemeral]
+    cross_references: [dist-c047a7c0, conf-cf457739]
+
+  - schema_version: 1
+    id: dist-0a56c5f0
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Heterogeneous JWT-verifier implementations across language stacks (no shared verification module)"
+    summary: "ADR-0001 documents that each service picks its own JWT library; verifier consistency is operator-discipline, not enforced; algorithm-pinning drifts."
+    detail: |
+      Per ADR-0001 Consequences, every service must pick a JWT library
+      in its native ecosystem and configure algorithm-pinning, `kid`
+      handling, `jku` allowlisting, and signature enforcement
+      consistently. "There is no shared verification module."
+
+      The Distributed concern is the topology of trust enforcement: a
+      single authentication tier (identity) feeds N independent
+      verification surfaces (workshop, community, chatbot) where the
+      enforcement quality is not pinned by architecture. Per
+      challenge 15 evidence, the consistency does not in fact hold —
+      the four documented JWT forgery patterns each succeed against
+      one or more verifiers and not necessarily all.
+
+      Severity is medium per the rubric's "In-process state in the
+      application tier preventing horizontal scale" pattern as adapted
+      to verifier consistency: the state here is not memory but
+      configuration drift. The Integrity team writes the
+      verifier-quality finding (intg-15c04a1c); this finding holds
+      the topology-of-verification concern.
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "JWT verification is heterogeneous — every service picks its own library; challenges page (#15) documents consistency does not hold. No shared verification module"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-5(2)", "SC-23", "CM-2"]
+      cwe: ["CWE-345", "CWE-347"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Adopt a verifier-validation matrix in CI: a single test suite that hits every service's verifier with the same forgery samples."
+      detail: |
+        Add `tests/verifier-consistency/` that issues the four
+        challenge-15 forgery patterns against each service's
+        `/.well-known/jwks.json`-consuming endpoint and asserts
+        rejection. Wire to CI so per-language verifier drift fails the
+        build. Document the policy in `architecture-index.md` and
+        cross-link to ADR-0001's "verifier heterogeneity" consequence
+        as the closed-loop.
+    related_concerns: [authenticity, integrity]
+    cross_references: [intg-15c04a1c]
+
+  - schema_version: 1
+    id: dist-c5b2799b
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Mailhog is a single instance with in-memory storage — OTP delivery is a SPOF"
+    summary: "Mailhog stores captured emails in an in-memory ring buffer; container restart drops every captured OTP."
+    detail: |
+      Per architecture-index `§mailhog`, captured emails live in an
+      in-memory ring buffer. A container restart loses every captured
+      OTP, password-reset email, and email-change notification.
+      Combined with the lack of any production SMTP path (ADR-0003), a
+      restart of the mailhog container during user activity strands
+      the user mid-flow with no way to recover the in-flight OTP.
+
+      The Distributed concern is the topology choice: mailhog is the
+      OTP delivery system and it has no persistence. For the demo
+      intent this is appropriate (restart-during-class is rare). For
+      any deploy where users rely on async OTP delivery, the
+      stateless mailhog is a structural SPOF.
+
+      Severity is medium because the demo-intent posture makes this
+      tolerable; it escalates if any deploy treats mailhog as a
+      production-grade OTP path.
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§mailhog Datastores touched"
+        excerpt: "In-memory ring buffer"
+      - artifact: adrs/0003-mailhog-for-otp-delivery.md
+        locator: "Decision"
+        excerpt: "Mailhog stores every captured message in an in-memory ring buffer"
+    control_mappings:
+      nist_800_53r5: ["CP-7", "SI-13", "SC-36"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, swap Mailhog for a real SMTP relay; for demo, document the restart-loses-OTPs constraint."
+      detail: |
+        For demo: document explicitly in `runbook.md` that mailhog
+        container restart loses captured OTPs; ask users to re-issue
+        if needed. For non-demo: swap to a real SMTP relay (SES,
+        SendGrid, Postmark) with a configured `SMTP_HOST` that is not
+        a Mailhog catcher.
+    related_concerns: [availability, authenticity, ephemeral]
+    cross_references: []

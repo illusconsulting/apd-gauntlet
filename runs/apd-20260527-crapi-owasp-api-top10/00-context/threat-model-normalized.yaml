@@ -1,0 +1,547 @@
+schema_version: 1
+generated_by: threat_model_recon
+source_artifact: inputs/threat-model.md
+methodology: stride
+
+# Cross-cutting residual questions (human reference only, not schema-validated):
+# - Key rotation procedure for JWKS, JWT_SECRET, datastore creds, gateway basic-auth, chatbot admin
+# - Backup / restore
+# - Audit log retention
+# - Per-service least-privilege at datastore layer
+# - TLS posture (disabled by default; self-signed certs)
+# - Inbound WAF / rate-limit at web ingress
+
+extraction_summary:
+  entry_count: 32
+  high_confidence_count: 20
+  medium_confidence_count: 6
+  low_confidence_count: 6
+  parser_used: "apd-gauntlet threat-model-recon (STRIDE) + LLM extraction"
+
+entries:
+  # ---- Spoofing ----
+  - entry_id: tm-3bd686cf
+    asset: identity-jwt-verifier
+    threat: "JWT algorithm-confusion (RS256 → HS256) at identity — attacker re-signs JWT with alg:HS256 using base64-encoded public modulus as HMAC key; verifier accepts."
+    mitigation: null
+    methodology: stride
+    source_locator: "§1 S-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack:
+        - T1606
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+      - ephemeral
+
+  - entry_id: tm-0476fedf
+    asset: identity-dashboard
+    threat: "alg:none acceptance on dashboard endpoint — /identity/api/v2/user/dashboard reads sub claim without signature verification."
+    mitigation: null
+    methodology: stride
+    source_locator: "§1 S-2"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+
+  - entry_id: tm-bdd9861f
+    asset: identity-jwt-verifier
+    threat: "jku header misuse — verifier fetches JWK from attacker-controlled URL via jku header."
+    mitigation: null
+    methodology: stride
+    source_locator: "§1 S-3"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+
+  - entry_id: tm-51f46e19
+    asset: identity-jwt-verifier
+    threat: "kid path-traversal — kid set to ../../../../../../dev/null + all-zero HMAC key accepted."
+    mitigation: null
+    methodology: stride
+    source_locator: "§1 S-4"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+
+  - entry_id: tm-e8cff545
+    asset: identity-to-gateway-basic-auth
+    threat: "Gateway-service basic-auth credential reuse / guessing — identity authenticates to gateway-service with basic-auth; credential is hard-coded and not documented."
+    mitigation: null
+    methodology: stride
+    source_locator: "§1 S-5"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - ephemeral
+      - confidentiality
+
+  - entry_id: tm-0f06e8c9
+    asset: identity-forget-password
+    threat: "Email-only identity claim for password reset — forget-password initiates a reset against any email; combined with OTP brute force = account takeover."
+    mitigation: "v2/check-otp has a rate limit; v3 does not."
+    methodology: stride
+    source_locator: "§1 S-6"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - availability
+
+  # ---- Tampering ----
+  - entry_id: tm-61895b4d
+    asset: workshop-shop-orders
+    threat: "Mass-assignment on shop orders (negative quantity) — POST /workshop/api/shop/orders accepts quantity:-100; signed delta applied to credit."
+    mitigation: null
+    methodology: stride
+    source_locator: "§2 T-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+      - confidentiality
+
+  - entry_id: tm-9a6ff002
+    asset: identity-video-update
+    threat: "Mass-assignment on internal video properties — shadow update path accepts arbitrary internal fields (conversion_params)."
+    mitigation: null
+    methodology: stride
+    source_locator: "§2 T-2"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+
+  - entry_id: tm-08b057fa
+    asset: community-coupon-and-workshop-apply-coupon
+    threat: "NoSQL/SQL injection on coupons — validate-coupon parses body into Mongo selector; apply_coupon concatenates SQL."
+    mitigation: null
+    methodology: stride
+    source_locator: "§2 T-3"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+      - confidentiality
+
+  - entry_id: tm-1a0b8bac
+    asset: workshop-shop-orders-price
+    threat: "Server trusts client price calculation — if unit_price/total in request body is persisted verbatim, attacker pays arbitrary amount."
+    mitigation: null
+    methodology: stride
+    source_locator: "§2 T-4"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+
+  - entry_id: tm-6dcf1b2c
+    asset: chatbot-genai-chat
+    threat: "Chatbot prompt-injection inducing privileged actions — prompt induces chatbot agent loop to call privileged endpoints as embedded admin (Admin!123)."
+    mitigation: null
+    methodology: stride
+    source_locator: "§2 T-5"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: T
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+      - authenticity
+      - non_repudiation
+
+  # ---- Repudiation ----
+  - entry_id: tm-57a8e49c
+    asset: all-services
+    threat: "Absence of audit log for financial actions — no immutable record of who initiated balance-affecting actions; LOG_LEVEL=INFO stdout only."
+    mitigation: null
+    methodology: stride
+    source_locator: "§3 R-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: R
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - non_repudiation
+      - immutability
+      - availability
+
+  - entry_id: tm-63f2efec
+    asset: identity-jwt-revocation
+    threat: "Absence of a token-revocation list — 7-day JWT TTL with no JTI deny-list; attacker session persists past owner remediation."
+    mitigation: null
+    methodology: stride
+    source_locator: "§3 R-2"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: R
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - ephemeral
+      - authenticity
+      - resilient
+
+  - entry_id: tm-146b9878
+    asset: chatbot-to-services
+    threat: "Chatbot actions not attributable to originating user — chatbot acts under admin@example.com; downstream audit (if any) attributes to admin, not user."
+    mitigation: null
+    methodology: stride
+    source_locator: "§3 R-3"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: R
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - non_repudiation
+      - authenticity
+
+  # ---- Information Disclosure ----
+  - entry_id: tm-358121ed
+    asset: identity-vehicle-location-and-community-recent-posts
+    threat: "BOLA #1: Vehicle location across users — vehicleId leaks via community recent-posts; /vehicle/{id}/location returns owner name + GPS."
+    mitigation: null
+    methodology: stride
+    source_locator: "§4 I-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+
+  - entry_id: tm-04e2ff71
+    asset: workshop-mechanic-report
+    threat: "BOLA #2: Mechanic reports across users — sequential integer report_id with no ownership check."
+    mitigation: null
+    methodology: stride
+    source_locator: "§4 I-2"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+
+  - entry_id: tm-7f3a5f9e
+    asset: identity-dashboard-and-identity-videos
+    threat: "Excessive data exposure in dashboard / videos — endpoint serializes underlying ORM object; internal fields (conversion_params) reach client."
+    mitigation: null
+    methodology: stride
+    source_locator: "§4 I-3"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - integrity
+
+  - entry_id: tm-0a8dd251
+    asset: workshop-contact-mechanic
+    threat: "SSRF #11 enables internal metadata exfiltration — user-supplied URL fetched server-side; reaches localhost, 169.254.169.254, internal services."
+    mitigation: null
+    methodology: stride
+    source_locator: "§4 I-4"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack:
+        - T1190
+    inferred_apd_goals:
+      - confidentiality
+      - integrity
+      - authenticity
+
+  - entry_id: tm-9ea5d86b
+    asset: jwks-endpoint
+    threat: "Public JWKS endpoint leaks algorithm + key — endpoint publishes RS256 public key; normal but enables S-1 algorithm confusion."
+    mitigation: "Standard OIDC posture for public key publication."
+    methodology: stride
+    source_locator: "§4 I-5"
+    extraction_confidence: low
+    framework_refs:
+      stride_letter: I
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+
+  - entry_id: tm-490e79b8
+    asset: mailhog-ui
+    threat: "Mailhog :8025 exposes every OTP — no auth on web UI; anyone on the same network reads every signup/password-reset OTP."
+    mitigation: "LISTEN_IP=127.0.0.1 default provides partial protection."
+    methodology: stride
+    source_locator: "§4 I-6"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+      - ephemeral
+
+  - entry_id: tm-baf5177e
+    asset: docker-compose-env
+    threat: "Postgres/Mongo/ChromaDB plaintext credentials in compose — admin/crapisecretpassword in repo; readable via docker inspect."
+    mitigation: null
+    methodology: stride
+    source_locator: "§4 I-7"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+      - ephemeral
+
+  - entry_id: tm-adb6c1c7
+    asset: gateway-service-vin-lookup
+    threat: "Gateway-service VIN-to-PII oracle — deterministic faker-seeded PII; VIN enumeration = bulk PII/payment-data disclosure."
+    mitigation: "basic-auth only."
+    methodology: stride
+    source_locator: "§4 I-8"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: I
+      linddun_letter: D_isclosure
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+
+  # ---- Denial of Service ----
+  - entry_id: tm-453749c2
+    asset: workshop-contact-mechanic
+    threat: "No rate limit on contact_mechanic — high-volume burst exhausts outbound socket/worker pool; also reflective-DoS launchpad."
+    mitigation: null
+    methodology: stride
+    source_locator: "§5 D-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability
+      - resilient
+
+  - entry_id: tm-fa8b1e83
+    asset: identity-otp-check
+    threat: "Unbounded OTP brute force on v3/check-otp — 4-digit OTP space, no rate limit on v3 variant."
+    mitigation: "v2 rate-limited."
+    methodology: stride
+    source_locator: "§5 D-2"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability
+      - authenticity
+
+  - entry_id: tm-2de9fe7a
+    asset: chatbot-genai-chat
+    threat: "Chatbot LLM cost amplification — long prompts billed to operator's API key; no cap, no per-user limit."
+    mitigation: null
+    methodology: stride
+    source_locator: "§5 D-3"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability
+      - ephemeral
+
+  - entry_id: tm-b07c4ee4
+    asset: compose-resource-limits
+    threat: "Tight compose CPU/memory limits encourage exhaustion — cpus:0.8, memory:384M per service; any of D-1/D-2/D-3 lands on a thin pod."
+    mitigation: null
+    methodology: stride
+    source_locator: "§5 D-4"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability
+      - resilient
+      - distributed
+
+  # ---- Elevation of Privilege ----
+  - entry_id: tm-fd6ca4bb
+    asset: identity-admin-videos
+    threat: "BFLA #7: non-admin reaches admin video delete — DELETE /identity/api/v2/admin/videos/{id} accepts any user token."
+    mitigation: null
+    methodology: stride
+    source_locator: "§6 E-1"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: E
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+
+  - entry_id: tm-097c87c8
+    asset: unknown-endpoint
+    threat: "Unauthenticated access (challenge 14) — at least one privileged endpoint accepts unauthenticated callers; not named in catalog."
+    mitigation: null
+    methodology: stride
+    source_locator: "§6 E-2"
+    extraction_confidence: low
+    framework_refs:
+      stride_letter: E
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+
+  - entry_id: tm-e1762d0a
+    asset: identity-user-update
+    threat: "Mass-assignment to role field on user update — self-update binds role:admin to user record."
+    mitigation: null
+    methodology: stride
+    source_locator: "§6 E-3"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: E
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - integrity
+      - authenticity
+
+  - entry_id: tm-d1dfd00e
+    asset: chatbot-genai-chat
+    threat: "Chatbot admin-credential abuse — prompt-injection invokes privileged endpoints with embedded admin credentials."
+    mitigation: null
+    methodology: stride
+    source_locator: "§6 E-4"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: E
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+      - integrity
+      - non_repudiation
+
+  - entry_id: tm-21b04b62
+    asset: datastore-direct-access
+    threat: "Postgres/Mongo plaintext creds → bypass to admin — direct DB connection with leaked creds; flip users.role='admin'."
+    mitigation: null
+    methodology: stride
+    source_locator: "§6 E-5"
+    extraction_confidence: high
+    framework_refs:
+      stride_letter: E
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - confidentiality
+      - authenticity
+      - integrity
+
+  # ---- Additional cross-cutting (D-4 secondary context) ----
+  - entry_id: tm-393f82f6
+    asset: compose-resource-limits
+    threat: "Compose resource limits secondary context — overlapping thread exhaustion across D-1/D-2/D-3 vectors amplifies above."
+    mitigation: null
+    methodology: stride
+    source_locator: "§5 D-4"
+    extraction_confidence: low
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability
+      - distributed

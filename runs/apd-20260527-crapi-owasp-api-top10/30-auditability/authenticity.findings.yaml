@@ -1,0 +1,466 @@
+finding:
+  - schema_version: 1
+    id: auth-09ae00ed
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "JWT verifier accepts multiple algorithms (alg:none, HS256-confusion, jku-fetch, kid-traversal) — token-issuance trust chain broken"
+    summary: "Identity service verifier accepts at least four documented JWT forgery patterns; cluster-wide identity assertion is forgeable."
+    detail: |
+      The Authenticity framing of the same architectural concern that
+      Integrity surfaces (intg-15c04a1c): the JWT mint and verify chain
+      is the identity provenance for the entire cluster. Per ADR-0002,
+      every service trusts identity-issued tokens. The four challenge-15
+      forgery patterns — alg:none, RS256↔HS256 confusion, jku abuse,
+      kid path-traversal — each independently break that trust chain.
+
+      The Authenticity lens is the cryptographic verifiability of the
+      identity claim. A forgeable token means the identity is *not*
+      verifiable; the system accepts an unverified or attacker-forged
+      identity assertion as authentic. This is the foundational
+      Authenticity failure.
+
+      Severity is critical per the API security rubric's "Authentication
+      bypass to high-privilege functions with no factor required" and
+      "Forgeable session tokens at platform scope" clauses — both
+      independently apply. The four patterns together yield forge-any-
+      identity capability with no factor.
+
+      This finding is the Authenticity sibling to intg-15c04a1c
+      (verifier-side schema/tamper-detection) and conf-c66f08cf (the
+      private-key-in-repo Confidentiality framing). Synthesizer should
+      merge across the three lenses.
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Consequences"
+        excerpt: "Algorithm-confusion (RS256 ↔ HS256) is the headline forgery vector. Verifier libraries trusting the JWT header's alg allow re-signing as HS256 using the public modulus"
+      - artifact: tech_plan.md
+        locator: "§9 JWT vulnerabilities #15"
+        excerpt: "Four variants: RS256↔HS256 algorithm confusion (public JWK as HMAC key). Signature-validation bypass on dashboard. jku trust — attacker-controlled JWKS URL. kid path traversal"
+      - artifact: invariants.md
+        locator: "INV-AUTH-002"
+        excerpt: "Challenge 15 #1 contradicts — HS256 tokens signed with the public modulus as the HMAC key are accepted"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-2(8)", "IA-5(2)", "SC-23", "SC-23(3)", "SC-17"]
+      mitre_attack:
+        - technique: "T1606"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "Verifier accepts forged web credentials due to absent algorithm pin, jku fetch, and kid-as-path; the identity provenance chain is broken at the verification step."
+        - technique: "T1550"
+          sub_technique: "T1550.001"
+          tactic: "TA0008"
+          rationale: "Forged JWT is presented as a valid application access token to every downstream service; lateral movement to admin scope via forged sub=admin token."
+      cwe: ["CWE-347", "CWE-345", "CWE-287"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Pin alg:RS256, remove JWT_SECRET, allowlist jku, restrict kid to known set — couple with intg-15c04a1c."
+      detail: |
+        See intg-15c04a1c for the verifier-configuration steps. The
+        Authenticity-specific addition: declare in tech_plan §4 the
+        identity provenance — "identity service is the only token
+        issuer; verifiers MUST pin alg:RS256 and MUST validate against
+        the published JWKS; no other key source is acceptable". Add an
+        integration test in CI per dist-0a56c5f0 that asserts the
+        four challenge-15 forgery patterns are rejected by every
+        verifier.
+    related_concerns: [integrity, ephemeral, confidentiality]
+    cross_references: [intg-15c04a1c, conf-c66f08cf]
+
+  - schema_version: 1
+    id: auth-4ef8b512
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "BFLA — admin video-delete reachable by non-admin tokens"
+    summary: "DELETE /identity/api/v2/admin/videos/{video_id} accepts any authenticated user token; no role check on the /admin/* prefix."
+    detail: |
+      Per challenge 7 / E-1, the admin-prefixed endpoint accepts non-admin
+      tokens — the role claim is never checked. The Authenticity framing:
+      the identity assertion is verified (the token signature checks out
+      per the alg-confusion gaps aside) but the *role* claim within the
+      verified identity is not enforced. The authorization side of
+      authentication fails.
+
+      The threat-model E-1 entry notes the pattern generalizes:
+      `/workshop/api/shop/orders/all` and `/workshop/api/management/users/all`
+      are also admin-shaped per naming, and their auth posture is not
+      stated in inputs.
+
+      Severity is high per "BFLA exposing admin functions to authenticated
+      low-privilege users" in the API security rubric. The clause
+      enumerates "missing role check on a privilege-altering operation"
+      as the canonical case.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 BFLA #7"
+        excerpt: "The admin path DELETE /identity/api/v2/admin/videos/{video_id} does not check the caller's role; non-admin tokens are accepted"
+      - artifact: invariants.md
+        locator: "INV-AUTH-004"
+        excerpt: "Challenge 7 contradicts on DELETE /identity/api/v2/admin/videos/{video_id}"
+      - artifact: threat-model.md
+        locator: "§6 E-1"
+        excerpt: "Non-admin caller hits the admin path with a normal user token; identity does not check the role claim"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "AC-3", "AC-6", "AC-6(1)", "AC-6(7)"]
+      mitre_attack:
+        - technique: "T1078"
+          sub_technique: null
+          tactic: "TA0004"
+          rationale: "Missing role check on an admin-prefixed endpoint lets a valid low-privilege account perform admin operations."
+      cwe: ["CWE-285", "CWE-269", "CWE-862"]
+      owasp_api_top10: ["API5:2023"]
+    recommendation:
+      posture: required
+      summary: "Add role check to /admin/* prefix in identity; audit /shop/orders/all, /management/users/all for the same pattern."
+      detail: |
+        (1) In identity's Spring security filter chain, add a path-
+        matched authorization rule:
+        `.requestMatchers("/identity/api/v2/admin/**").hasAuthority("admin")`.
+        (2) In workshop, audit `/shop/orders/all`, `/management/users/all`
+        for the same pattern — if they currently lack role checks,
+        apply per-endpoint Django `@permission_classes([IsAdminUser])`.
+        (3) Add integration tests asserting non-admin tokens get 403 on
+        every `/admin/*` path.
+    related_concerns: [integrity, non_repudiation]
+    cross_references: []
+
+  - schema_version: 1
+    id: auth-0925a719
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No MFA on any authentication surface — including admin"
+    summary: "Per tech_plan §4, There is no MFA; no FIDO2/WebAuthn, no TOTP, no SMS fallback (even degraded), no step-up auth on admin actions."
+    detail: |
+      Per tech_plan §4 explicitly: "There is no MFA." Every
+      authentication surface — signup, login, password reset, admin
+      actions — relies on a single factor (password or password-reset
+      OTP). Admin video-delete (BFLA notwithstanding), admin order
+      enumeration, and admin user enumeration all execute against the
+      same single-factor token.
+
+      The rubric clause "MFA optional on administrative surfaces (OWASP
+      API2)" rates this critical when on PII or payment admin. crAPI's
+      admin surfaces touch user-record enumeration and video deletion;
+      the broader gateway-service path reaches faker-seeded PII / payment
+      data. Severity is critical per the rubric for the PII-admin
+      framing.
+
+      For the demo intent the absence of MFA is expected and acceptable;
+      this finding is the structural finding against the architecture,
+      not a procedural complaint against the operator.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "There is no MFA"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No MFA at any authentication surface"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-2(2)", "IA-2(6)", "IA-2(8)", "AC-6"]
+      mitre_attack:
+        - technique: "T1078"
+          sub_technique: null
+          tactic: "TA0004"
+          rationale: "Absence of MFA on admin surfaces means a stolen or forged password (or session token) yields admin authority with no second-factor barrier."
+      cwe: ["CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Add TOTP MFA on login (optional for user, required for admin); add WebAuthn for admin step-up."
+      detail: |
+        (1) Add TOTP enrollment endpoint and verification on login;
+        store TOTP secret in identity's database with appropriate
+        encryption (cross-ref conf-bd613330). (2) Make TOTP required
+        for any account with admin authority. (3) Add WebAuthn (FIDO2)
+        as a registered second factor for admin accounts (phishing-
+        resistant). (4) Implement step-up authentication for
+        privilege-altering operations (admin video delete, role
+        assignment, etc.) — require a re-MFA within the past 5 minutes.
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: []
+
+  - schema_version: 1
+    id: auth-b57f022f
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OTP-based password reset is single-factor account-recovery (no second-factor or knowledge-of-prior-password requirement)"
+    summary: "Forget-password initiates a reset with email-only identity claim; OTP success completes account recovery with no additional verification."
+    detail: |
+      Per tech_plan §4 and the threat-model S-6 entry, the password-
+      reset flow accepts the email as the sole identity claim. The OTP
+      verification (which is itself weak per avail-e96ad7ff) is the
+      only barrier between request and password change.
+
+      Authentication-quality on account-recovery is a sharper concern
+      than authentication-quality on login: the recovery flow exists
+      specifically to grant access to accounts whose primary
+      credential is unknown to the user. Without a second factor or
+      knowledge-of-prior-password requirement, any party who can read
+      the OTP (mailhog at :8025, attacker who can brute force, S-6
+      enumeration combined with OTP weakness) gets the account.
+
+      Severity is high per "MFA bypass or weak MFA on PII or payment
+      surfaces" — the forget-password path is the MFA-bypass
+      equivalent when MFA is absent (auth-0925a719). The rubric
+      specifically calls out recovery-code endpoints without rate
+      limiting; this is the OTP-flow equivalent.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication endpoints"
+        excerpt: "POST /identity/api/auth/forget-password — OTP email dispatch"
+      - artifact: threat-model.md
+        locator: "§1 S-6"
+        excerpt: "Attacker enumerates emails and initiates a password reset against the victim. With the 4-digit OTP brute-forced via S-OTP below, account takeover is complete"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-2", "IA-2(8)", "AC-7"]
+      cwe: ["CWE-640", "CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Require knowledge of prior password OR registered MFA factor for password reset; rate-limit forget-password (cross-ref avail-c1ffcf8e)."
+      detail: |
+        (1) Modify the password-reset flow: after OTP success, require
+        either (a) the user's MFA factor (TOTP/WebAuthn per
+        auth-0925a719), or (b) knowledge of the prior password (which
+        contradicts the "forgot password" case but is appropriate for
+        "change password from logged-in state"). (2) For genuine
+        forget-password where the user has no MFA registered, require
+        a 24-hour delay between OTP-success and password-change-
+        applied, with notification to the email address. (3) Apply
+        rate limits from avail-c1ffcf8e.
+    related_concerns: [ephemeral, availability]
+    cross_references: [avail-c1ffcf8e, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: auth-5b90d6c3
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Service-to-service authentication relies on bearer JWTs, not mTLS or workload identity"
+    summary: "Per tech_plan §3 boundary #2, all inter-service traffic is plain HTTP with no mTLS; identity is asserted via bearer tokens that are themselves forgeable (auth-09ae00ed)."
+    detail: |
+      In-cluster service-to-service traffic uses bearer JWTs for
+      authentication and plaintext HTTP for transport. There is no
+      mTLS, no SPIFFE/SPIRE workload identity, no service-mesh
+      identity binding. The web tier presents `Host` and
+      `X-Forwarded-*` headers that backend services trust (per
+      tech_plan §3 boundary #2).
+
+      Per the rubric clause "Service-to-service inside the cluster
+      uses shared bearer tokens, not mTLS or workload identity" —
+      severity is high. The lateral-movement amplification is concrete:
+      an attacker who reaches one service-internal pod (e.g., via
+      SSRF in workshop reaching identity directly) can forge whatever
+      headers the next service trusts.
+
+      For the demo intent on a single host this is acceptable. For
+      any deploy with multiple network zones or untrusted in-cluster
+      traffic, the absence of mTLS is the structural identity gap.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #2"
+        excerpt: "web → backend services. Plain HTTP inside the Compose network unless TLS_ENABLED=true. No mutual TLS. Backend services trust X-Forwarded-* headers"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No network policy in shipped Helm values"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "SC-8(1)", "SC-23", "IA-3", "IA-9"]
+      mitre_attack:
+        - technique: "T1557"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "Plaintext in-cluster traffic with header-trust posture allows in-cluster observers to intercept and forge inter-service requests."
+      cwe: ["CWE-319", "CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "For any non-demo deploy, enable mTLS via a service mesh (Istio/Linkerd) with SPIFFE workload identity."
+      detail: |
+        For demo: continue with HTTP. For non-demo: install a service
+        mesh (Linkerd is the lighter option) configured to enforce
+        mTLS on every in-cluster hop. Issue per-pod SPIFFE identities
+        and require services to authenticate inbound traffic against
+        the trust domain rather than relying on header trust. Add an
+        AuthorizationPolicy that scopes each service to its documented
+        inbound set per architecture-index.md.
+    related_concerns: [distributed, confidentiality, ephemeral]
+    cross_references: [dist-bc4789b6]
+
+  - schema_version: 1
+    id: auth-55e76c4d
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Chatbot embeds admin credential; prompt-injection bypasses identity provenance entirely"
+    summary: "API_USER=admin@example.com / API_PASSWORD=Admin!123 is held in chatbot env; prompt-injection drives privileged calls under that identity."
+    detail: |
+      The Authenticity framing of intg-078ee9f6: the chatbot's embedded
+      admin credential is a static valid-account that the chatbot uses
+      to act on user behalf. When a prompt induces the chatbot's agent
+      loop to call a privileged endpoint, the identity assertion on
+      that call is `admin@example.com` — not the prompt author.
+
+      The downstream verifiers see a legitimate admin JWT (signed by
+      identity for the chatbot's session) and authorize accordingly.
+      The identity-provenance chain is intact at the cryptographic
+      layer but the *binding to a real human actor* is broken: the
+      chatbot acts as a credential proxy.
+
+      Severity is high per "Service-to-service inside the cluster uses
+      shared bearer tokens" combined with "BFLA exposing admin
+      functions" — the chatbot is the bridge.
+
+      Three-lens merge candidate with intg-078ee9f6 (Integrity) and
+      nonrep-chatbot-attribution (Non-Repudiation).
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Role"
+        excerpt: "Holds API_USER=admin@example.com / API_PASSWORD=Admin!123 — a privileged crAPI credential used to act on behalf of users when handling chatbot actions"
+      - artifact: threat-model.md
+        locator: "§2 T-5"
+        excerpt: "Because the chatbot holds API_USER=admin@example.com / API_PASSWORD=Admin!123, the call hits identity / workshop as that admin and executes"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-9", "AC-3", "AC-6", "AC-6(1)"]
+      mitre_attack:
+        - technique: "T1078"
+          sub_technique: null
+          tactic: "TA0004"
+          rationale: "Embedded admin credential plus prompt-injection-driven calls means a low-privilege user's prompt produces requests that downstream services authenticate as admin."
+      cwe: ["CWE-269", "CWE-285"]
+      owasp_api_top10: ["API5:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Remove the embedded admin credential; have chatbot act under the prompt author's bearer token."
+      detail: |
+        See intg-078ee9f6 for the full architectural change. From the
+        Authenticity angle specifically: any chatbot-driven crAPI call
+        MUST carry the prompt author's bearer token as the identity
+        assertion, not an embedded admin credential. The chatbot's
+        "agent loop" should be constrained to operations the prompt
+        author is authorized for — downstream authorization checks
+        then constrain blast radius automatically.
+    related_concerns: [integrity, non_repudiation, ephemeral]
+    cross_references: [intg-078ee9f6, ephem-b95a7d11]
+
+  - schema_version: 1
+    id: auth-04fcfb9a
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: medium
+    confidence: medium
+    title: "Container images not signed; no admission control verifies image authenticity"
+    summary: "No mention of cosign/notation signatures or admission-control policy; image-pull trust relies on the registry alone."
+    detail: |
+      Per the rubric's "Container images deployed without signature
+      verification or admission control" pattern, the absence of any
+      image-signing posture is a supply-chain authenticity gap. crAPI
+      pulls upstream images (postgres, mongo, chromadb, mailhog) and
+      crAPI's own (crapi/crapi-identity, etc.) with no signature
+      verification step documented.
+
+      The Authenticity concern: when a deploy pulls `crapi/crapi-identity:
+      ${VERSION}`, there is no cryptographic proof that the image content
+      matches what the crAPI maintainers published. Registry compromise
+      or DNS poisoning yields silent image substitution.
+
+      Severity is medium per the rubric's image-signing pattern. For the
+      demo intent (single operator pulling from public registries) the
+      impact is bounded by registry trust. For any deploy that trusts
+      crAPI as a teaching target rather than as a malware-delivery
+      surface, this would be material.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "crapi/crapi-web:${VERSION}, crapi/crapi-identity:${VERSION}"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No on-call rotation. No SLO commitment to anyone using the deployed instance"
+    control_mappings:
+      nist_800_53r5: ["SI-7", "SR-4", "SR-4(3)", "SR-4(4)", "SR-11", "CM-5"]
+      cwe: ["CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "For the upstream project: sign crAPI images via cosign and publish the public verification key; document operator verification."
+      detail: |
+        Sign published crAPI images via cosign in the project's CI/CD
+        pipeline. Publish the verification public key alongside the
+        OpenAPI spec. Document in `runbook.md` how to verify before
+        pulling: `cosign verify --key crapi.pub crapi/crapi-identity:${VERSION}`.
+        For Helm-based deploys, integrate via cosign-policy-controller
+        as an admission webhook.
+    related_concerns: [ephemeral, immutability, integrity]
+    cross_references: [ephem-edcc17b4]
+
+  - schema_version: 1
+    id: auth-c990b0ff
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "AAL target undeclared (NIST SP 800-63B AAL1/AAL2/AAL3 not stated for any surface)"
+    summary: "No Authenticator Assurance Level target is stated in tech_plan, ADRs, or invariants; cannot evaluate MFA-strength against a defined target."
+    detail: |
+      Per the rubric's "AAL undeclared" pattern, the absence of an
+      Authenticator Assurance Level target means the gauntlet cannot
+      evaluate authentication strength against a defined standard.
+
+      crAPI's authentication posture (single-factor password, OTP
+      account recovery, no MFA) implicitly targets AAL1 — but AAL1 is
+      NIST's lowest tier and is generally inappropriate for any system
+      handling PII at scale.
+
+      Disposition is `blocked` rather than `gap` because the
+      remediation is to declare a target, and the target choice
+      depends on the deploy intent (per agents.md the demo intent
+      makes AAL1 acceptable; for any other intent AAL2 minimum).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "There is no MFA. There is no documented session-revocation surface (no /logout endpoint in the OpenAPI spec)"
+      - artifact: agents.md
+        locator: "§Intended runtime"
+        excerpt: "Default target: a single host (laptop, t2.micro-class VM, or Vagrant guest)"
+    prerequisite_evidence:
+      - "AAL target declaration per deploy intent (AAL1 acceptable for demo; AAL2 minimum for any production-adjacent)"
+      - "Per-surface AAL declaration: user surface AAL X, admin surface AAL Y"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-2(2)", "IA-2(8)"]
+      cwe: ["CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add an AAL target declaration to tech_plan §4; couple with auth-0925a719's MFA introduction."
+      detail: |
+        Add to tech_plan §4: "User surface targets AAL1 (demo intent);
+        admin surface targets AAL2 (requires MFA per auth-0925a719)."
+        For any production-adjacent deploy, raise the user-surface
+        target to AAL2.
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: [auth-0925a719]

@@ -1,0 +1,461 @@
+finding:
+  - schema_version: 1
+    id: nonrep-7fad26d8
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No application-level audit log for consequential actions across any service"
+    summary: "Per runbook §8 and threat-model R-1, no audit log exists; only LOG_LEVEL=INFO stdout from containers. No actor attribution, no event schema, no retention."
+    detail: |
+      Per runbook §8 ("Inspect audit data") explicitly: "GAP. No
+      application-level audit log is shipped. Containers emit to
+      stdout at LOG_LEVEL=INFO; aggregation is operator-provided."
+      Per the threat-model R-1 entry, there is no immutable record of
+      who initiated financial actions, password resets, vehicle
+      additions, mechanic-report submissions, or any other consequential
+      action enumerated in the active domain pack's consequential-
+      actions list.
+
+      The Non-Repudiation lens evaluates audit coverage against the
+      domain pack's consequential-actions list. The list includes
+      authentication events, authorization decisions, PII access,
+      payment events, session lifecycle, OAuth/OIDC events,
+      administrative configuration, third-party integration,
+      break-glass, and data-subject rights events — every single
+      category is uncovered in crAPI.
+
+      Severity is high per "Partial audit gap on consequential-action
+      flows" — except this is total absence, not partial gap. The
+      rubric escalates "Audit trail loss covering credential or
+      payment events" to critical; given crAPI's payment surface
+      (gateway-service, credit/orders) and credential surface
+      (login, OTP, password-reset), the critical-tier rubric clause
+      also applies. Holding at high because the demo-intent context
+      bounds the production impact, but for any production-adjacent
+      deploy this would be critical.
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "GAP. No application-level audit log is shipped. Containers emit to stdout at LOG_LEVEL=INFO; aggregation is operator-provided"
+      - artifact: threat-model.md
+        locator: "§3 R-1"
+        excerpt: "There is no immutable record of who initiated the action, from what IP, with what token. Forensic reconstruction is impossible"
+      - artifact: invariants.md
+        locator: "INV-OPS-003"
+        excerpt: "No audit log exists; only INFO-level service logs to stdout (threat-model R-1, R-3)"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No audit-log retention or schema"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-3", "AU-3(1)", "AU-3(3)", "AU-6", "AU-12", "AU-12(1)"]
+      mitre_attack:
+        - technique: "T1562"
+          sub_technique: "T1562.008"
+          tactic: "TA0005"
+          rationale: "Absence of any audit log means an attacker does not need to disable audit; the defender has no audit to disable. Detection-evasion is the default."
+      cwe: ["CWE-778", "CWE-223"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Define an audit event schema, emit per consequential action with actor attribution, ship to a separate sink."
+      detail: |
+        Phased rollout:
+        (1) Define audit-event schema: `{event_id, timestamp,
+        service, actor_sub, actor_role, ip, user_agent, action,
+        resource_type, resource_id, outcome, additional_context}`.
+        (2) Per-service: emit audit events for the consequential
+        actions in the api-security domain pack — authentication
+        (success/failure, by category), authorization decisions
+        (allow/deny on consequential operations), PII access
+        (per-record, with field set), payment events, session
+        lifecycle, admin-config changes, break-glass.
+        (3) Ship to a separate aggregator (Elastic, Loki, CloudWatch)
+        with retention per the rubric's immutability-class list
+        (audit retention ≥ 1 year online + 1 year archive per
+        PCI-DSS-equivalent guidance, even though crAPI is not PCI).
+        (4) Cross-ref immut-audit-mutability for the immutability-
+        side concerns and resil-776fc650 for the JTI deny-list which
+        also requires audit emission.
+    related_concerns: [immutability, availability, authenticity]
+    cross_references: []
+
+  - schema_version: 1
+    id: nonrep-fc423071
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Chatbot-driven actions attribute to admin@example.com, not the prompt author"
+    summary: "Per threat-model R-3, chatbot calls hit downstream services with API_USER admin credential; downstream audit (when present) records admin as actor."
+    detail: |
+      Even setting aside the broader audit-absence concern
+      (nonrep-7fad26d8), the chatbot architecture would defeat actor
+      attribution even if downstream audit existed: the chatbot
+      authenticates downstream as `admin@example.com`. Any future
+      audit at workshop, community, or identity for a chatbot-
+      originated call would record the admin as actor, not the prompt
+      author.
+
+      The runbook §7 explicit statement applies here: "Compromise of
+      any of these is silent — there is no audit trail that
+      distinguishes legitimate chatbot calls from prompt-injection-
+      driven calls". The Non-Repudiation lens: forensic attribution
+      is structurally impossible for any chatbot-driven action.
+
+      Three-lens merge candidate with intg-078ee9f6 (Integrity write-
+      path / prompt-injection) and auth-55e76c4d (Authenticity
+      credential-binding).
+
+      Severity is high per "Audit entries on consequential actions
+      lack actor attribution — actor field is 'system' or a shared
+      service account" — exact match.
+    evidence:
+      - artifact: threat-model.md
+        locator: "§3 R-3"
+        excerpt: "A chatbot-triggered action lands at workshop with Authorization: Bearer <admin-jwt>. Audit trail (if any) at workshop attributes it to admin@example.com, not the chat session user"
+      - artifact: runbook.md
+        locator: "§7"
+        excerpt: "no audit trail that distinguishes legitimate chatbot calls from prompt-injection-driven calls"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-3(1)", "AU-10", "AU-10(1)", "AU-12"]
+      mitre_attack:
+        - technique: "T1078"
+          sub_technique: null
+          tactic: "TA0004"
+          rationale: "Chatbot's admin valid-account submerges the prompt-author identity; downstream audit cannot attribute to the real actor without explicit on-behalf-of propagation."
+      cwe: ["CWE-223", "CWE-282"]
+      owasp_api_top10: ["API5:2023", "API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Couple with auth-55e76c4d / intg-078ee9f6: chatbot acts under prompt-author token; if proxying retained, propagate a verified on-behalf-of header that audit captures."
+      detail: |
+        Primary fix per auth-55e76c4d: chatbot acts under the prompt
+        author's bearer token; downstream attribution is correct
+        automatically. If admin-credential proxy is retained for any
+        reason (transitional state), require: (a) every chatbot →
+        crAPI call carries `X-On-Behalf-Of: <prompt_author_sub>`,
+        signed by the chatbot service identity; (b) downstream audit
+        emits both `actor_sub` (chatbot's admin) and `on_behalf_of_sub`
+        (prompt author); (c) chatbot service identity is itself
+        audited at its own service tier as a credential consumer.
+    related_concerns: [authenticity, integrity, ephemeral]
+    cross_references: [intg-078ee9f6, auth-55e76c4d]
+
+  - schema_version: 1
+    id: nonrep-fa2c351c
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OTP issuance and verification not audit-logged at application layer"
+    summary: "Per ADR-0003, OTP delivery is unattributed at the application layer; mailhog records SMTP envelope but identity does not audit-log dispatch."
+    detail: |
+      Per ADR-0003 Consequences: "OTP delivery is unattributed at the
+      application layer. Mailhog records the SMTP envelope but the
+      identity service does not audit-log the dispatch event."
+
+      The Non-Repudiation gap is acute on the OTP path because OTP
+      issuance + verification is the account-recovery surface and is
+      the recovery-attempt evidence horizon. Without audit, the
+      operator cannot reconstruct: who initiated a reset, when, from
+      what IP, with what user-agent, whether the OTP was successfully
+      verified or merely brute-forced (avail-e96ad7ff), whether the
+      reset completed.
+
+      Runbook §10 ("Respond to user account takeover") tries to
+      reconstruct via the Mailhog inbox, but Mailhog stores the
+      envelope only (not the requester IP) and the in-memory ring
+      buffer evicts on restart (dist-c5b2799b).
+
+      Severity is high per "Audit retention shorter than the longest
+      plausible breach-detection window" combined with the OTP-specific
+      consequential-action coverage gap.
+    evidence:
+      - artifact: adrs/0003-mailhog-for-otp-delivery.md
+        locator: "Consequences"
+        excerpt: "OTP delivery is unattributed at the application layer. Mailhog records the SMTP envelope but the identity service does not audit-log the dispatch event"
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "Inspect the identity Postgres for recent password_reset events; correlate against the Mailhog inbox for OTP-delivery records. No source IP / user-agent in the audit trail"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-3", "AU-12", "AU-10"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Audit-log OTP issuance and verification per the schema in nonrep-7fad26d8 with source IP / user-agent."
+      detail: |
+        Per nonrep-7fad26d8's audit-schema framework, ensure the
+        OTP-flow events are explicitly covered: `auth.otp.issued`
+        (with email_target_hash, requester_ip, user_agent), and
+        `auth.otp.verified` (with outcome, attempts_in_window). The
+        issuance event must be emitted from the identity service at
+        the moment the OTP is generated and stored — not just relied
+        on from mailhog observability.
+    related_concerns: [immutability, availability, authenticity]
+    cross_references: [nonrep-7fad26d8, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: nonrep-304b32af
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No source IP / user-agent attribution on any consequential action"
+    summary: "Runbook §10 explicitly states no source IP / user-agent in the audit trail; per-request actor context is missing entirely."
+    detail: |
+      Beyond the absence of any audit log (nonrep-7fad26d8), the
+      runbook §10 entry highlights that even an introduced audit
+      pipeline would need to capture per-request context that crAPI
+      does not currently propagate to the application layer: source
+      IP, user-agent, request-id, correlation-id.
+
+      In particular, the web ingress passes traffic to backend
+      services with `X-Forwarded-*` headers (per tech_plan §3 boundary
+      #2) but the backend services' trust-or-extract posture for these
+      headers is not specified. If the backend services do extract
+      X-Forwarded-For for the would-be audit, they need to either
+      trust OpenResty's setting (vulnerable to upstream header
+      injection if a client supplies X-Forwarded-For pre-ingress) or
+      extract from OpenResty's last hop only.
+
+      Severity is high per the same Non-Repudiation rubric pattern:
+      "actor field is system or a shared service account" — here the
+      actor record is missing entirely, which is structurally worse.
+    evidence:
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "There is no source IP / user-agent in the audit trail (no audit trail exists; see runbook §8)"
+      - artifact: tech_plan.md
+        locator: "§3 boundary #2"
+        excerpt: "Backend services trust the Host and X-Forwarded-* headers as the web tier presents them"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-3(1)", "AU-3(3)"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Propagate source IP, user-agent, request-id from OpenResty into backend services; include in every audit event."
+      detail: |
+        (1) OpenResty: set `X-Real-IP` from `$remote_addr` (the actual
+        connecting IP, not from any client-supplied X-Forwarded-For),
+        set `X-Request-ID` with a UUID per request, pass `User-Agent`
+        through. (2) Backend services: extract from
+        `X-Real-IP` / `X-Request-ID` / `User-Agent`, never trust
+        `X-Forwarded-For` from beyond the OpenResty hop. (3) Audit-log
+        emitter (from nonrep-7fad26d8) carries all three on every
+        event.
+    related_concerns: [authenticity, integrity]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-9faa010e
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Audit shipping reliability — no documented log-shipper, retention, or buffering posture"
+    summary: "Runbook §8 punts log-shipper, retention, schema, and tamper-evidence to operator; no posture in inputs."
+    detail: |
+      Per runbook §8, the gaps in the audit pipeline are: log shipper
+      (Fluent Bit, Filebeat) collecting per-container stdout;
+      retention policy; schema for audit events; tamper-evidence on
+      stored logs. All four are operator-provided, none documented.
+
+      The Non-Repudiation concern at the shipping layer is that even
+      with an introduced audit-emit per nonrep-7fad26d8, if shipping
+      is fire-and-forget (no buffering, no acknowledgment) the
+      consumer-side failure produces silent loss. Per the rubric's
+      "Audit shipping is fire-and-forget; consumer-side failure
+      produces silent loss" pattern this is high severity.
+
+      Disposition is `blocked` because the operator's chosen shipping
+      stack determines the appropriate buffering, retry, and dead-
+      letter posture. Severity is medium because the deeper
+      audit-absence concern (nonrep-7fad26d8) renders this concern
+      moot until the underlying gap is closed.
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "What an operator would need: A log shipper (Fluent Bit/Filebeat) per-container stdout. A retention policy. An audit event schema (currently none). Tamper-evidence on stored logs"
+    prerequisite_evidence:
+      - "Operator-chosen log shipper and aggregator stack"
+      - "Retention policy declaration"
+      - "Audit shipping reliability posture: buffer, retry, dead-letter, acknowledgment"
+    control_mappings:
+      nist_800_53r5: ["AU-4", "AU-5", "AU-5(1)", "AU-5(2)"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Couple with nonrep-7fad26d8 — when audit emission is added, ship via a buffered, retry-aware shipper with documented dead-letter."
+      detail: |
+        Recommend Fluent Bit with TCP output to a managed
+        aggregator (Elastic, Loki, CloudWatch). Configure the output
+        with `Retry_Limit 5`, buffering on local disk for ≥1 hour,
+        dead-letter to a local file on persistent failure. Document
+        the chosen stack in runbook.md §8.
+    related_concerns: [availability, immutability]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-c32e3967
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Time-source policy unspecified — audit timestamps will be local clocks without drift bounds"
+    summary: "No NTP policy, no time-source authority, no drift bounds documented; per-container clocks drift independently."
+    detail: |
+      Per the rubric's "No time-source policy" pattern, the input set
+      is silent on NTP discipline. In multi-container deployments
+      (compose, k8s), per-container clocks may drift independently;
+      the host clock may not be NTP-synced; audit timestamps from
+      different services may not be totally-ordered.
+
+      For the demo intent (single-host, short-lived runs) this is
+      acceptable. For any deploy where audit is intended for forensic
+      reconstruction, drift between identity, workshop, and community
+      timestamps produces a reconstruction gap.
+
+      Disposition is `blocked` because the time-source posture is
+      host/deploy-level concern (Docker uses the host clock by
+      default) and the appropriate remediation depends on substrate.
+      Severity is medium pending the deeper audit-absence resolution
+      (nonrep-7fad26d8).
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "A schema for what counts as an audit event (currently none — see threat-model R-1, R-3). Tamper-evidence on stored logs (currently none)"
+    prerequisite_evidence:
+      - "Host time-source posture (NTP server, drift monitoring)"
+      - "Per-container clock-source declaration"
+    control_mappings:
+      nist_800_53r5: ["AU-8", "AU-8(1)"]
+      cwe: ["CWE-829"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: consider
+      summary: "Document NTP posture: chrony or systemd-timesyncd on host; per-container clocks inherit; drift bound <1s for audit consistency."
+      detail: |
+        Add a `runbook.md §13 Time discipline` section: host runs
+        chrony with a documented NTP pool, drift monitored via
+        `chronyc tracking`, alert if drift >100ms. Containers inherit
+        host clock by default; this is correct for the demo. For
+        production-adjacent: per-pod sidecar with PTP if sub-millisecond
+        drift required.
+    related_concerns: [immutability]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-b9ba65ab
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No audit-of-audit-access; audit access controls undefined because audit does not exist"
+    summary: "Per the rubric audit-read access should be a separately-audited consequential action; crAPI has no audit so no controls on audit access exist either."
+    detail: |
+      Per the rubric's "Audit-read access uncontrolled" pattern, audit
+      access should be gated by a separate role and itself audited
+      (audit-of-audit-access). For crAPI this is structurally moot
+      because no audit log exists (nonrep-7fad26d8), but the finding
+      is worth recording so the audit-introduction in
+      nonrep-7fad26d8 carries the access-control expectation forward.
+
+      Severity is medium because the concern is contingent on the
+      underlying audit-absence remediation. When audit is added,
+      access controls and audit-of-audit emission must be designed
+      in from the start, not retrofitted.
+    evidence:
+      - artifact: runbook.md
+        locator: "§8"
+        excerpt: "What an operator would need: A log shipper. A retention policy. A schema. Tamper-evidence on stored logs"
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No audit-log retention or schema"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(4)", "AU-9(6)", "AC-5", "AC-6"]
+      cwe: ["CWE-732"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Design audit-introduction (nonrep-7fad26d8) with separate-role audit access and audit-of-audit-access emission."
+      detail: |
+        Coupled with nonrep-7fad26d8: the audit aggregator chosen
+        should support a separate read-role (Elastic role-based,
+        CloudWatch IAM, Loki ACL). Audit access itself emits an event
+        — every audit query is captured with the querying operator's
+        identity, the query text, and the result count. This is the
+        audit-of-audit-access pattern; without it, an insider can
+        identify what's been observed and adjust behavior.
+    related_concerns: [authenticity, confidentiality]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-af88acb6
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Break-glass and emergency-action audit not designed; runbook lacks emergency-action procedure"
+    summary: "Per the rubric break-glass should be specially audited; crAPI's runbook does not enumerate break-glass actions and no audit emits exist."
+    detail: |
+      The rubric's break-glass pattern: emergency actions (break-glass
+      auth, emergency policy override, emergency credential rotation,
+      DR failover initiation) should produce a distinguishable audit
+      stream routed to security-review independent of normal audit
+      consumption.
+
+      crAPI's runbook §10 enumerates only account-takeover response
+      (which is essentially a procedure for accepting the failure
+      because session-revocation is impossible per resil-776fc650).
+      There is no documented break-glass action, no emergency
+      credential rotation procedure, no DR failover initiation.
+
+      Severity is medium because the demo-intent makes break-glass
+      formally unnecessary; for any production-adjacent deploy this
+      coupled with nonrep-7fad26d8 is the operational-posture gap
+      preventing emergency response.
+    evidence:
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "Cannot invalidate the attacker's session"
+      - artifact: agents.md
+        locator: "§Operator capabilities"
+        excerpt: "The operator is not expected to: Respond to security incidents"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-12(1)", "AC-6(9)", "AC-6(10)", "IR-4"]
+      cwe: []
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: consider
+      summary: "For any non-demo deploy, add break-glass procedures and dedicated audit streams."
+      detail: |
+        Add `runbook.md §14 Emergency Procedures`: (a) break-glass
+        identity bootstrap when identity is down (pre-issued admin
+        token in sealed envelope); (b) emergency credential rotation
+        when the chatbot admin credential or datastore credential is
+        compromised; (c) DR failover initiation when the host is
+        unrecoverable. Each procedure emits an `emergency.*` audit
+        event that routes to a dedicated security-review channel
+        independent of normal audit consumption.
+    related_concerns: [resilient, availability, ephemeral]
+    cross_references: [resil-776fc650, ephem-22c2358c]

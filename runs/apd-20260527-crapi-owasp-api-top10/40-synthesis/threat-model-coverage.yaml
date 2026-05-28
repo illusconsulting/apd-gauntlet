@@ -1,0 +1,159 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+
+# Coverage of normalized threat entries against the dedup'd finding set.
+# Original coverage details and cross-cutting residual questions coverage
+# are preserved in threat-model-coverage-report.md for human reference.
+
+surface_coverage:
+  # ---- Spoofing surface cluster ----
+  - surface: identity-jwt-verifier
+    categories_present: [spoofing, information_disclosure]
+    categories_absent: []
+    tm_entry_count: 3
+    tm_entry_ids: [tm-3bd686cf, tm-bdd9861f, tm-51f46e19]
+
+  - surface: identity-dashboard
+    categories_present: [spoofing, information_disclosure]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-0476fedf, tm-7f3a5f9e]
+
+  - surface: identity-to-gateway-basic-auth
+    categories_present: [spoofing]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-e8cff545]
+
+  - surface: identity-forget-password
+    categories_present: [spoofing, denial_of_service]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-0f06e8c9, tm-fa8b1e83]
+
+  # ---- Tampering surface cluster ----
+  - surface: workshop-shop-orders
+    categories_present: [tampering]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-61895b4d, tm-1a0b8bac]
+
+  - surface: identity-video-update
+    categories_present: [tampering]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-9a6ff002]
+
+  - surface: community-coupon-and-workshop-apply-coupon
+    categories_present: [tampering]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-08b057fa]
+
+  - surface: chatbot-genai-chat
+    categories_present: [tampering, denial_of_service, elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 3
+    tm_entry_ids: [tm-6dcf1b2c, tm-2de9fe7a, tm-d1dfd00e]
+
+  # ---- Repudiation surface cluster ----
+  - surface: all-services-audit
+    categories_present: [repudiation]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-57a8e49c]
+
+  - surface: identity-jwt-revocation
+    categories_present: [repudiation]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-63f2efec]
+
+  - surface: chatbot-to-services
+    categories_present: [repudiation]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-146b9878]
+
+  # ---- Information Disclosure surface cluster ----
+  - surface: identity-vehicle-location
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-358121ed]
+
+  - surface: workshop-mechanic-report
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-04e2ff71]
+
+  - surface: workshop-contact-mechanic
+    categories_present: [information_disclosure, denial_of_service]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-0a8dd251, tm-453749c2]
+
+  - surface: jwks-endpoint
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-9ea5d86b]
+
+  - surface: mailhog-ui
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-490e79b8]
+
+  - surface: docker-compose-env
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-baf5177e]
+
+  - surface: gateway-service-vin-lookup
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-adb6c1c7]
+
+  # ---- Denial of Service surface cluster ----
+  - surface: compose-resource-limits
+    categories_present: [denial_of_service]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-b07c4ee4, tm-393f82f6]
+
+  # ---- Elevation of Privilege surface cluster ----
+  - surface: identity-admin-videos
+    categories_present: [elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-fd6ca4bb]
+
+  - surface: unknown-endpoint
+    categories_present: []
+    categories_absent: [elevation_of_privilege]
+    tm_entry_count: 1
+    tm_entry_ids: [tm-097c87c8]
+
+  - surface: identity-user-update
+    categories_present: [elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-e1762d0a]
+
+  - surface: datastore-direct-access
+    categories_present: [elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-21b04b62]
+
+summary:
+  total_entries: 32
+  contradictions_emitted: 0
+  silences_emitted: 1
+  coverage_gaps_emitted: 0
+  surfaces_examined: 22

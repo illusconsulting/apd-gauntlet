@@ -9,6 +9,6 @@ REPO = pathlib.Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture
-def legacy_example_run() -> pathlib.Path:
+def example_run() -> pathlib.Path:
     """Path to the canonical example run shipped in the repo."""
-    return REPO / "runs" / "apd-legacy-example-run"
+    return REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"

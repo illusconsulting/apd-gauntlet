@@ -240,7 +240,7 @@ def _lens_perspective_source_ids(raw: Any) -> list[Any]:
     """Extract source_id values from lens_perspectives — tolerates list or dict shape.
 
     List shape (standard):  [{source_id: "x", ...}, ...]  → ["x", ...]
-    Dict shape (legacy_example): {lens_name: {source_id: "x", ...}, ...} → ["x", ...]
+    Dict shape (legacy runs): {lens_name: {source_id: "x", ...}, ...} → ["x", ...]
     """
     if isinstance(raw, dict):
         return [v.get("source_id") for v in raw.values() if isinstance(v, dict)]
@@ -615,7 +615,7 @@ def _normalise_agent_severities(d: dict[str, Any]) -> list[dict[str, Any]]:
     Accepted input shapes:
     1. ``agents: [{lens: "x", severity: "high"}, ...]``  (planned schema)
     2. ``lens_severities: [{lens: "x", severity: "high"}, ...]``  (alternate key)
-    3. ``agent_severities: {lens_name: "severity", ...}``  (legacy_example fixture shape)
+    3. ``agent_severities: {lens_name: "severity", ...}``  (legacy fixture shape)
     """
     # Shape 1 & 2: list under agents / lens_severities
     agents_raw = d.get("agents") or d.get("lens_severities")

@@ -1,0 +1,62 @@
+capability:
+  - schema_version: 1
+    id: resil-cap-35c0088d
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "depends_on: service_healthy gating in compose enforces startup order"
+    description: |
+      Per ADR-0004 Enforcement, healthchecks gate startup ordering via
+      `depends_on: condition: service_healthy`. This bounds the
+      partial-failure space at start: a service does not begin
+      accepting requests until its declared upstream dependencies
+      report healthy.
+    maturity: implemented
+    scope: |
+      Confirmed for compose deploy. Helm equivalents (initContainers,
+      readiness gates) not in the input set.
+    evidence:
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Enforcement"
+        excerpt: "Healthchecks gate startup ordering (depends_on: condition: service_healthy)"
+      - artifact: runbook.md
+        locator: "§2 Health checks"
+        excerpt: "Each service ships a health.sh invoked by the compose healthcheck: block"
+    control_mappings:
+      nist_800_53r5: ["CP-10", "SI-13"]
+    caveats:
+      - "Healthchecks are shallow (avail-898bfad0)"
+      - "Helm-side ordering not in evidence"
+      - "Startup-only; runtime degradation not addressed by this mechanism"
+    related_concerns: [availability, distributed]
+
+  - schema_version: 1
+    id: resil-cap-c6fc34e3
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Multi-provider chatbot architecture supports provider fallback (not yet implemented)"
+    description: |
+      The chatbot supports 8 pluggable LLM providers (OpenAI, Anthropic,
+      Azure OpenAI, Bedrock, Vertex, Groq, Mistral, Cohere). The
+      architecture supports per-call provider selection, which is the
+      natural substrate for provider-failure fallback even though the
+      fallback path is not wired today (resil-373918f9).
+    maturity: designed
+    scope: |
+      Confirmed: multi-provider support is in place. NOT confirmed:
+      automatic fallback on provider failure — see resil-373918f9 for
+      the gap.
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Role"
+        excerpt: "Embeddings over the OpenAPI spec, chat completion against pluggable LLM providers (openai, anthropic, azure_openai, bedrock, vertex, groq, mistral, cohere)"
+      - artifact: tech_plan.md
+        locator: "§1"
+        excerpt: "with pluggable LLM backends (OpenAI, Anthropic, Bedrock, Vertex, Groq, Mistral, Cohere, Azure OpenAI)"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13"]
+    caveats:
+      - "Provider selection is per-deploy, not per-call"
+      - "No automatic fallback on provider failure documented"
+    related_concerns: [availability, distributed]

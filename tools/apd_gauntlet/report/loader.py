@@ -10,7 +10,7 @@ trigger `MissingArtifactError` when absent. Optional artifacts (attack-paths,
 threat-model coverage, `report-data.yaml`) return `None` so the caller can
 substitute algorithmic fallbacks.
 
-Fixture-shape notes (apd-legacy-example-run):
+Fixture-shape notes (apd-20260527-crapi-owasp-api-top10 and earlier runs):
   - `.apd-run.yaml` uses `domain: <name>` (a bare string) rather than the
     planned `domain_pack: {name: ..., version: ...}` block.  The loader
     accepts both forms: it checks `run_cfg["domain_pack"]` first, then falls

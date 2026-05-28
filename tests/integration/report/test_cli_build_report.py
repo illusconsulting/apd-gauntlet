@@ -1,4 +1,4 @@
-"""End-to-end integration: build_report against the legacy_example fixture writes
+"""End-to-end integration: build_report against the crAPI fixture writes
 the expected directory structure to tmp_path.
 """
 from __future__ import annotations
@@ -9,7 +9,7 @@ import pytest
 from apd_gauntlet.report.build import build_report
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-FIXTURE_RUN = REPO / "runs" / "apd-legacy-example-run"
+FIXTURE_RUN = REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"
 
 
 @pytest.fixture(autouse=True)

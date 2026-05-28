@@ -1,0 +1,40 @@
+run_id: apd-20260527-crapi-owasp-api-top10
+subject: "OWASP crAPI v1.1.5 — automotive B2C demonstration platform (Apache-2.0)"
+domain: api-security
+framework_version: 1.5.0
+code_recon: disabled  # crAPI repo is at /tmp/crAPI; not indexed in the project's CBM graph
+# code_recon: enabled  # hard-fail if CBM not reachable
+# code_recon: disabled # skip code-recon entirely
+# cbm_project: <project-name>  # optional CBM project pointer override
+taxonomies:
+  - cwe
+  - mitre_attack
+  - d3fend
+  - owasp_api_top10
+  - owasp_top10
+threat_model: threat-model.md
+methodology_hint: stride
+
+# Mirrored from domains/api-security/domain.yaml because the attack-path
+# builder's domain-pack lookup uses run_dir/domains/, not the repo's
+# domains/ directory. Explicit declaration here is the supported workaround.
+crown_jewels:
+  - user_credentials_store
+  - payment_methods_store
+  - pii_profile_store
+  - session_token_signing_keys
+  - authorization_decision_engine
+  - audit_log_store
+  - backup_artifact_store
+  - third_party_integration_secrets
+
+attacker_positions:
+  - unauthenticated_internet
+  - authenticated_low_priv_user_with_bola_target
+  - authenticated_user_seeking_authz_bypass
+  - compromised_user_session_token
+  - compromised_oauth_client_credentials
+  - compromised_third_party_integration
+  - compromised_admin_session
+  - supply_chain_attacker
+  - internal_lateral_attacker

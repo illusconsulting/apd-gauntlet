@@ -1,11 +1,11 @@
-# tests/integration/report/test_legacy_example_golden.py
-"""Golden-output test: build_report against the legacy_example fixture must
+# tests/integration/report/test_example_golden.py
+"""Golden-output test: build_report against the crAPI fixture must
 produce byte-identical data.js to the checked-in fixture.
 
 Update protocol: when a transform changes intentionally, run
-`python -m apd_gauntlet build-report runs/apd-legacy-example-run
+`python -m apd_gauntlet build-report runs/apd-20260527-crapi-owasp-api-top10
 --out /tmp/golden && cp /tmp/golden/data.js tests/fixtures/report-html/
-legacy_example-golden-data.js` and commit alongside the transform change.
+crapi-golden-data.js` and commit alongside the transform change.
 """
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ import pytest
 from apd_gauntlet.report.build import build_report
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-FIXTURE_RUN = REPO / "runs" / "apd-legacy-example-run"
-GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "legacy_example-golden-data.js"
+FIXTURE_RUN = REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"
+GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "crapi-golden-data.js"
 
 pytestmark = pytest.mark.skipif(
     not (REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "index.html").exists(),
