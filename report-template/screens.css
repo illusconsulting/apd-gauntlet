@@ -940,7 +940,14 @@
   padding: var(--space-4);
   overflow-x: auto;
 }
-.attack-paths__mermaid svg { max-width: 100%; height: auto; }
+.attack-paths__mermaid svg {
+  min-width: 1600px;   /* force readable scale for 40+ node graphs; user scrolls */
+  max-width: none;     /* override any inherited 100% constraint */
+  height: auto;
+}
+.attack-paths__mermaid svg .node text {
+  font-size: 11px;     /* explicit, in case Mermaid defaults change across versions */
+}
 .attack-pair {
   border: 1px solid var(--border-2);
   border-radius: 6px;
