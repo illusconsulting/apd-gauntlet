@@ -41,7 +41,13 @@ def test_path_pairs_present(example_run: pathlib.Path) -> None:
     # edge connectivity; we assert structure not count.
     assert isinstance(pairs, list)
     for pair in pairs:
-        assert {"attacker_position", "crown_jewel", "paths"}.issubset(pair.keys())
+        assert {
+            "attacker_position", "attacker_position_name",
+            "crown_jewel", "crown_jewel_name",
+            "paths",
+        }.issubset(pair.keys())
+        assert isinstance(pair["attacker_position_name"], str)
+        assert isinstance(pair["crown_jewel_name"], str)
         for p in pair["paths"]:
             assert {
                 "path_id", "hop_count", "severity_sum", "edges", "bottleneck_edges"
@@ -53,6 +59,18 @@ def test_bottleneck_overlays_present_when_defense_graph(example_run: pathlib.Pat
     data = attack_paths_data(artifacts)
     assert data is not None
     assert isinstance(data["bottleneck_overlays"], list)
+    # bottleneck_threshold is passed through from enumeration_parameters (may be None)
+    assert "bottleneck_threshold" in data
+    # asset_graph_summary must be fully populated
+    assert "asset_graph_summary" in data
+    gs = data["asset_graph_summary"]
+    for key in (
+        "node_count", "edge_count", "attacker_position_count", "crown_jewel_count",
+        "asset_count", "identity_count",
+        "trust_boundary_edge_count", "finding_derived_edge_count", "capability_derived_edge_count",
+    ):
+        assert key in gs, f"asset_graph_summary missing key: {key}"
+        assert isinstance(gs[key], int), f"asset_graph_summary[{key!r}] must be int"
 
 
 def test_coverage_summary_card(example_run: pathlib.Path) -> None:
@@ -135,6 +153,145 @@ def test_asset_graph_summary_always_present(example_run: pathlib.Path) -> None:
     gs = data["asset_graph_summary"]
     assert isinstance(gs["node_count"], int)
     assert isinstance(gs["edge_count"], int)
+
+
+def test_edges_detailed_carries_node_names_and_edge_type() -> None:
+    """edges_detailed must carry from_name, to_name, edge_type, and finding_id
+    when the edge is compromisable_via_finding."""
+    from apd_gauntlet.report.loader import RunArtifacts
+
+    art = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={
+            "enumeration_parameters": {"bottleneck_threshold": 5},
+            "paths": [
+                {
+                    "attacker_position": "atk-001",
+                    "crown_jewel": "jewel-001",
+                    "path_id": "p-001",
+                    "hop_count": 1,
+                    "feasibility": "high",
+                    "severity_sum": 8,
+                    "mitigation_count": 0,
+                    "edges": ["edge-001"],
+                    "bottleneck_edges": [],
+                }
+            ],
+        },
+        asset_graph={
+            "nodes": [
+                {
+                    "node_id": "atk-001", "name": "Compromised Admin",
+                    "node_type": "attacker_position",
+                },
+                {
+                    "node_id": "jewel-001", "name": "Secret Key Store",
+                    "node_type": "crown_jewel",
+                },
+            ],
+            "edges": [
+                {
+                    "edge_id": "edge-001",
+                    "edge_type": "compromisable_via_finding",
+                    "from": "atk-001",
+                    "to": "jewel-001",
+                    "finding_id": "conf-abc123",
+                    "confidence": "high",
+                }
+            ],
+        },
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data = attack_paths_data(art)
+    assert data is not None
+    assert len(data["pairs"]) == 1
+    pair = data["pairs"][0]
+    assert pair["attacker_position_name"] == "Compromised Admin"
+    assert pair["crown_jewel_name"] == "Secret Key Store"
+    assert len(pair["paths"]) == 1
+    path = pair["paths"][0]
+    assert "edges_detailed" in path
+    assert len(path["edges_detailed"]) == 1
+    ed = path["edges_detailed"][0]
+    assert ed["from_name"] == "Compromised Admin"
+    assert ed["to_name"] == "Secret Key Store"
+    assert ed["edge_type"] == "compromisable_via_finding"
+    assert ed["finding_id"] == "conf-abc123"
+    assert ed["capability_id"] is None
+    assert ed["is_bottleneck"] is False
+
+
+def test_attack_paths_max_edge_traversal_count_is_int() -> None:
+    """max_edge_traversal_count must be an int at top level of attack_paths_data."""
+    from apd_gauntlet.report.loader import RunArtifacts
+
+    # Zero-path case.
+    art_empty = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={"paths": []},
+        asset_graph={"nodes": [], "edges": []},
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data_empty = attack_paths_data(art_empty)
+    assert data_empty is not None
+    assert isinstance(data_empty["max_edge_traversal_count"], int)
+    assert data_empty["max_edge_traversal_count"] == 0
+
+    # Single-path case — the one edge is traversed once.
+    art_one = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={
+            "paths": [
+                {
+                    "attacker_position": "atk-x",
+                    "crown_jewel": "jewel-x",
+                    "path_id": "p-x",
+                    "hop_count": 1,
+                    "feasibility": "high",
+                    "severity_sum": 4,
+                    "mitigation_count": 0,
+                    "edges": ["edge-x"],
+                    "bottleneck_edges": [],
+                }
+            ]
+        },
+        asset_graph={
+            "nodes": [
+                {"node_id": "atk-x", "name": "Attacker", "node_type": "attacker_position"},
+                {"node_id": "jewel-x", "name": "Jewel", "node_type": "crown_jewel"},
+            ],
+            "edges": [{
+                "edge_id": "edge-x",
+                "edge_type": "compromisable_via_finding",
+                "from": "atk-x",
+                "to": "jewel-x",
+                "confidence": "high",
+            }],
+        },
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data_one = attack_paths_data(art_one)
+    assert data_one is not None
+    assert isinstance(data_one["max_edge_traversal_count"], int)
+    assert data_one["max_edge_traversal_count"] == 1
 
 
 def test_mermaid_sanitizes_adversarial_labels() -> None:

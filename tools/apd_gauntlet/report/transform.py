@@ -755,21 +755,84 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
         return None
     paths = artifacts.attack_paths.get("paths") or []
 
+    # Build lookup maps for nodes and edges.
+    raw_nodes = artifacts.asset_graph.get("nodes") or []
+    raw_edges = artifacts.asset_graph.get("edges") or []
+    node_by_id: dict[str, dict[str, Any]] = {
+        str(n.get("node_id", "")): n for n in raw_nodes if isinstance(n, dict)
+    }
+    edge_by_id: dict[str, dict[str, Any]] = {
+        str(e.get("edge_id", "")): e for e in raw_edges if isinstance(e, dict)
+    }
+
+    def _node_name(node_id: str) -> str:
+        node = node_by_id.get(node_id)
+        if node:
+            return str(node.get("name") or node_id)
+        return node_id
+
+    def _edges_detailed(
+        edge_ids: list[str],
+        bottleneck_edge_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        bottleneck_set = set(bottleneck_edge_ids)
+        for eid in edge_ids:
+            e = edge_by_id.get(eid, {})
+            from_id = str(e.get("from", ""))
+            to_id = str(e.get("to", ""))
+            raw_type = str(e.get("edge_type", ""))
+            # Normalise edge_type to the three canonical values.
+            if raw_type == "trusts":
+                edge_type = "trust_boundary"
+            elif raw_type in ("compromisable_via_finding", "finding"):
+                edge_type = "compromisable_via_finding"
+            elif raw_type in ("mitigated_by_capability", "capability"):
+                edge_type = "mitigated_by_capability"
+            else:
+                edge_type = raw_type or "trust_boundary"
+            out.append({
+                "edge_id":       eid,
+                "from_id":       from_id,
+                "from_name":     _node_name(from_id),
+                "to_id":         to_id,
+                "to_name":       _node_name(to_id),
+                "edge_type":     edge_type,
+                "finding_id":    (
+                    e.get("finding_id") if edge_type == "compromisable_via_finding" else None
+                ),
+                "capability_id": (
+                    e.get("capability_id") if edge_type == "mitigated_by_capability" else None
+                ),
+                "confidence":    str(e.get("confidence", "")),
+                "is_bottleneck": eid in bottleneck_set,
+            })
+        return out
+
     # Group paths by (attacker_position, crown_jewel).
     pairs_by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for p in paths:
         key = (p.get("attacker_position", ""), p.get("crown_jewel", ""))
+        edge_ids = p.get("edges", [])
+        bottleneck_ids = p.get("bottleneck_edges", [])
         pairs_by_key.setdefault(key, []).append({
             "path_id":          p.get("path_id"),
             "hop_count":        p.get("hop_count"),
             "feasibility":      p.get("feasibility"),
             "severity_sum":     p.get("severity_sum"),
             "mitigation_count": p.get("mitigation_count"),
-            "edges":            p.get("edges", []),
-            "bottleneck_edges": p.get("bottleneck_edges", []),
+            "edges":            edge_ids,
+            "bottleneck_edges": bottleneck_ids,
+            "edges_detailed":   _edges_detailed(edge_ids, bottleneck_ids),
         })
     pairs = [
-        {"attacker_position": k[0], "crown_jewel": k[1], "paths": v}
+        {
+            "attacker_position":      k[0],
+            "attacker_position_name": _node_name(k[0]),
+            "crown_jewel":            k[1],
+            "crown_jewel_name":       _node_name(k[1]),
+            "paths":                  v,
+        }
         for k, v in sorted(pairs_by_key.items())
     ]
 
@@ -777,8 +840,50 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
     if artifacts.defense_graph is not None:
         overlays = artifacts.defense_graph.get("bottleneck_overlays") or []
 
-    node_count = len(artifacts.asset_graph.get("nodes") or [])
-    edge_count = len(artifacts.asset_graph.get("edges") or [])
+    # Pull bottleneck_threshold from enumeration_parameters.
+    enum_params = artifacts.attack_paths.get("enumeration_parameters") or {}
+    bottleneck_threshold: int | None = enum_params.get("bottleneck_threshold")
+
+    # Compute max_edge_traversal_count: max number of paths that include any single edge.
+    edge_path_counts: dict[str, int] = {}
+    for p in paths:
+        for eid in (p.get("edges") or []):
+            edge_path_counts[eid] = edge_path_counts.get(eid, 0) + 1
+    max_edge_traversal_count: int = max(edge_path_counts.values(), default=0)
+
+    # Build asset_graph_summary with full breakdown.
+    node_type_counts: dict[str, int] = {}
+    for n in raw_nodes:
+        ntype = str(n.get("node_type", "other"))
+        node_type_counts[ntype] = node_type_counts.get(ntype, 0) + 1
+
+    edge_type_counts: dict[str, int] = {}
+    for e in raw_edges:
+        raw_type = str(e.get("edge_type", ""))
+        if raw_type == "trusts":
+            cat = "trust_boundary"
+        elif raw_type in ("compromisable_via_finding", "finding"):
+            cat = "finding_derived"
+        elif raw_type in ("mitigated_by_capability", "capability"):
+            cat = "capability_derived"
+        else:
+            cat = "other"
+        edge_type_counts[cat] = edge_type_counts.get(cat, 0) + 1
+
+    node_count = len(raw_nodes)
+    edge_count = len(raw_edges)
+
+    asset_graph_summary: dict[str, Any] = {
+        "node_count":               node_count,
+        "edge_count":               edge_count,
+        "attacker_position_count":  node_type_counts.get("attacker_position", 0),
+        "crown_jewel_count":        node_type_counts.get("crown_jewel", 0),
+        "asset_count":              node_type_counts.get("asset", 0),
+        "identity_count":           node_type_counts.get("identity", 0),
+        "trust_boundary_edge_count":    edge_type_counts.get("trust_boundary", 0),
+        "finding_derived_edge_count":   edge_type_counts.get("finding_derived", 0),
+        "capability_derived_edge_count": edge_type_counts.get("capability_derived", 0),
+    }
 
     # Build a helpful explanation when no paths were enumerated but the graph exists.
     pairs_empty_explanation: str | None = None
@@ -800,6 +905,8 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
         "mermaid": _build_mermaid(artifacts.asset_graph),
         "pairs":   pairs,
         "bottleneck_overlays": overlays,
+        "bottleneck_threshold": bottleneck_threshold,
+        "max_edge_traversal_count": max_edge_traversal_count,
         "summary": {
             "total_paths":  len(paths),
             "total_pairs":  len(pairs),
@@ -808,10 +915,7 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
                 if artifacts.defense_graph is not None else 0
             ),
         },
-        "asset_graph_summary": {
-            "node_count": node_count,
-            "edge_count": edge_count,
-        },
+        "asset_graph_summary": asset_graph_summary,
     }
     if pairs_empty_explanation is not None:
         result["pairs_empty_explanation"] = pairs_empty_explanation

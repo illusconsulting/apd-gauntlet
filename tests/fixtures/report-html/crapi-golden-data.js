@@ -4023,6 +4023,8 @@ window.APD_DATA = {
     "mermaid": "graph TD\n  asset-a1b2c3d4[\"crapi-identity\"]\n  asset-a3b4c5d6[\"API_USER/API_PASSWORD (chatbot admin credential)\"]\n  asset-a7b8c9d0[\"mongodb\"]\n  asset-b2c3d4e5[\"crapi-workshop\"]\n  asset-b8c9d0e1[\"chromadb\"]\n  asset-c3d4e5f6[\"crapi-community\"]\n  asset-c9d0e1f2[\"mailhog\"]\n  asset-d0e1f2a3[\"api.mypremiumdealership.com\"]\n  asset-d4e5f6a7[\"crapi-chatbot\"]\n  asset-e1f2a3b4[\"services/identity/jwks.json (private key)\"]\n  asset-e5f6a7b8[\"crapi-web\"]\n  asset-f2a3b4c5[\"JWT_SECRET env var\"]\n  asset-f6a7b8c9[\"postgresdb\"]\n  atk-264bde5f((\"internal_lateral_attacker\"))\n  atk-2a628eed((\"authenticated_user_seeking_authz_bypass\"))\n  atk-3f205280((\"compromised_admin_session\"))\n  atk-404a3c86((\"unauthenticated_internet\"))\n  atk-43ba1c0a((\"supply_chain_attacker\"))\n  atk-5331accf((\"compromised_user_session_token\"))\n  atk-5ec33a11((\"compromised_oauth_client_credentials\"))\n  atk-82a39ff7((\"authenticated_low_priv_user_with_bola_target\"))\n  atk-a3d36625((\"compromised_third_party_integration\"))\n  jewel-10ff98db{{\"session_token_signing_keys\"}}\n  jewel-168c256c{{\"backup_artifact_store\"}}\n  jewel-277b3f04{{\"third_party_integration_secrets\"}}\n  jewel-3257f37f{{\"pii_profile_store\"}}\n  jewel-47b02c84{{\"payment_methods_store\"}}\n  jewel-4da600e8{{\"audit_log_store\"}}\n  jewel-61f49a34{{\"authorization_decision_engine\"}}\n  jewel-681465d8{{\"user_credentials_store\"}}\n  asset-d0e1f2a3 --> asset-a1b2c3d4\n  asset-d0e1f2a3 --> asset-d4e5f6a7\n  asset-c9d0e1f2 --> asset-a1b2c3d4\n  asset-a1b2c3d4 --> asset-c9d0e1f2\n  asset-a7b8c9d0 --> asset-f6a7b8c9\n  asset-a1b2c3d4 --> asset-e5f6a7b8\n  asset-a1b2c3d4 --> asset-e5f6a7b8\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-e5f6a7b8 --> asset-d0e1f2a3\n  asset-a1b2c3d4 --> asset-d0e1f2a3\n  asset-a7b8c9d0 --> asset-b8c9d0e1\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-b8c9d0e1 --> asset-d0e1f2a3\n  asset-d0e1f2a3 --> asset-e5f6a7b8\n  asset-f6a7b8c9 --> asset-b8c9d0e1\n  asset-d4e5f6a7 --> asset-d0e1f2a3\n  asset-e5f6a7b8 --> asset-a1b2c3d4",
     "pairs": [],
     "bottleneck_overlays": [],
+    "bottleneck_threshold": 5,
+    "max_edge_traversal_count": 0,
     "summary": {
       "total_paths": 0,
       "total_pairs": 0,
@@ -4030,7 +4032,14 @@ window.APD_DATA = {
     },
     "asset_graph_summary": {
       "node_count": 30,
-      "edge_count": 19
+      "edge_count": 19,
+      "attacker_position_count": 9,
+      "crown_jewel_count": 8,
+      "asset_count": 13,
+      "identity_count": 0,
+      "trust_boundary_edge_count": 12,
+      "finding_derived_edge_count": 5,
+      "capability_derived_edge_count": 2
     },
     "pairs_empty_explanation": "No (attacker, crown-jewel) paths were enumerated for this run. The asset graph has 30 nodes / 19 edges but those edges don't form a chain from any declared attacker position to any declared crown jewel. This is common for runs where finding evidence references documents (e.g., tech_plan.md) rather than specific asset names — the analyzer can't synthesize edges from prose. To enable path enumeration, enrich 00-context/asset-inventory.yaml with explicit trust boundaries connecting attacker positions to crown jewels, OR have specialists tag finding evidence with the asset_id of the affected component."
   },
