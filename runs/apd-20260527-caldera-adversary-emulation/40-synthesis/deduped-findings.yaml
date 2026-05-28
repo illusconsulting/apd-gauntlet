@@ -1,0 +1,563 @@
+schema_version: 1
+run_id: apd-20260527-caldera-adversary-emulation
+generated_by: apd-synthesizer
+generated_at: 2026-05-27T13:00:00Z
+methodology: "Findings clustered by component+concern; merge when same root cause via different lenses, link when concerns share evidence but differ in lens."
+
+stats:
+  total_input_findings: 41
+  merged_clusters: 0
+  linked_clusters: 7
+  unique_findings_after_dedup: 41
+  by_severity:
+    critical: 8
+    high: 19
+    medium: 13
+    low: 0
+    informational: 1
+  by_disposition:
+    gap: 35
+    risk: 1
+    uncertainty: 0
+    blocked: 5
+  by_tier:
+    trustworthiness: 18
+    scalability: 14
+    auditability: 18
+
+finding:
+  # ============ Trustworthiness — Confidentiality ============
+  - id: conf-e223c03d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default cookie-encryption key and salt enable session takeover when --insecure is used"
+    summary: "conf/default.yml ships encryption_key=ADMIN123 and crypt_salt=REPLACE_WITH_RANDOM_VALUE; --insecure deploys derive a Fernet key any attacker can reproduce."
+    cluster_id: cluster-default-credentials
+    links: [conf-01d02036, auth-1c9a7b78, ephem-608839d8, ephem-cc497fed]
+  - id: conf-01d02036
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default operator API keys ship in conf/default.yml"
+    cluster_id: cluster-default-credentials
+    links: [conf-e223c03d, auth-31296050, ephem-608839d8]
+  - id: conf-aabbd48f
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Harvested credentials accumulate across engagements with a single platform-wide Fernet key"
+    cluster_id: cluster-result-data-lifecycle
+    links: [ephem-d6c8d458, immut-de3cc948, immut-6352dd54]
+  - id: conf-88726ba8
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Cross-operator data access within a group — no per-engagement ACL"
+    cluster_id: cluster-engagement-isolation
+    links: [intg-899da63b, nonrep-1f49427b, nonrep-58511e00]
+  - id: conf-056edb0c
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Default HTTP transport on operator console and agent listener leaks credentials and beacons"
+    cluster_id: cluster-channel-security
+    links: [intg-f6c14927, auth-c1c1d0cb]
+  - id: conf-6414f95a
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Backup snapshot encryption posture undocumented for data/backup/"
+  - id: conf-bcbd4cb9
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: risk
+    severity: medium
+    confidence: high
+    title: "Builder plugin compiles payloads with operator-supplied ldflags — embeds may leak"
+
+  # ============ Trustworthiness — Integrity ============
+  - id: intg-81c06dfa
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Plugin modules load with no signature verification, no manifest pinning, no hash check"
+    cluster_id: cluster-plugin-supply-chain
+    links: [auth-ec69906a, ephem-1065948c, dist-dbaf5c57, nonrep-5f137373, immut-df8094e4]
+  - id: intg-899da63b
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Engagement scope (ROE) is not platform-enforced — commands proceed without a target-attestation gate"
+    cluster_id: cluster-engagement-roe
+    links: [conf-88726ba8, nonrep-58511e00, ephem-06509c27]
+  - id: intg-f6c14927
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Commands queued to implants carry no per-command signature — channel-only authentication"
+    cluster_id: cluster-channel-security
+    links: [conf-056edb0c, auth-c1c1d0cb]
+  - id: intg-5152e7ba
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Result data stored without per-record integrity hashing — chain-of-custody is not preserved"
+    cluster_id: cluster-result-data-lifecycle
+    links: [immut-de3cc948, nonrep-1f49427b]
+  - id: intg-712b4709
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Ability-file watcher reloads YAML without integrity attribution"
+  - id: intg-3575082e
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Beacon payload deserialization differs per contact — no platform-side payload shape validation"
+
+  # ============ Trustworthiness — Availability ============
+  - id: avail-c583c332
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No declared SLO or availability target for operator console, orchestrator, or any listener"
+  - id: avail-623b8e59
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Single asyncio process is a blast-radius SPOF — one blocking call takes everything down"
+    cluster_id: cluster-single-process-spof
+    links: [dist-85515eec, dist-dbaf5c57, resil-ca256373]
+  - id: avail-e4b13596
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Beacon listener has no rate limit — agent registry grows unboundedly under flood"
+    cluster_id: cluster-listener-resilience
+    links: [resil-83950e96]
+  - id: avail-8d19a4b5
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Builder plugin invokes go build with no concurrency cap or disk-usage bound"
+  - id: avail-5399f916
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No DR / BCP posture — engagement state lives only on one server's filesystem"
+    cluster_id: cluster-single-process-spof
+    links: [dist-85515eec, immut-6352dd54]
+
+  # ============ Scalability — Distributed ============
+  - id: dist-85515eec
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No multi-host / multi-region topology — single-host deployment is the documented model"
+    cluster_id: cluster-single-process-spof
+    links: [avail-623b8e59, avail-5399f916]
+  - id: dist-dbaf5c57
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin runtime shares process with every other in-process service — no isolation boundary at all"
+    cluster_id: cluster-plugin-supply-chain
+    links: [intg-81c06dfa, resil-ca256373]
+  - id: dist-68e9d200
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No data-residency binding for harvested data — operator chooses host, harvested data follows"
+  - id: dist-a464c95f
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Listener topology is single-point-of-presence per protocol — defender blocking and operator failover are both trivial"
+  - id: dist-018ec97e
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Containerized deployment isolation posture undocumented"
+
+  # ============ Scalability — Resilient ============
+  - id: resil-ca256373
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No circuit breaker, no bulkhead between operator-console traffic and beacon-handling traffic"
+    cluster_id: cluster-single-process-spof
+    links: [avail-623b8e59, dist-dbaf5c57]
+  - id: resil-83950e96
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Beacon retry strategy is per-implant — no platform-side aggregate cap on target-network callback storms"
+    cluster_id: cluster-listener-resilience
+    links: [avail-e4b13596]
+  - id: resil-f57932c6
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Plugin enable() failures aggregated into errors[] but no graceful-degradation policy"
+  - id: resil-ca36d2ac
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Timeout posture on contact decoders unspecified — slow-decode attacks may stall the event loop"
+
+  # ============ Scalability — Ephemeral ============
+  - id: ephem-608839d8
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "API keys, encryption_key, crypt_salt are long-lived; rotation requires manual restart"
+    cluster_id: cluster-default-credentials
+    links: [conf-e223c03d, conf-01d02036, auth-31296050]
+  - id: ephem-cc497fed
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Operator session cookies remain valid after password change — no session invalidation"
+    cluster_id: cluster-default-credentials
+    links: [conf-e223c03d, auth-1c9a7b78]
+  - id: ephem-d6c8d458
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Long-lived team-server pattern accumulates harvested credentials indefinitely"
+    cluster_id: cluster-result-data-lifecycle
+    links: [conf-aabbd48f, immut-6352dd54]
+  - id: ephem-1065948c
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Plugin update cadence unspecified — plugin code is mutable in-place without version pinning"
+    cluster_id: cluster-plugin-supply-chain
+    links: [intg-81c06dfa, auth-ec69906a]
+  - id: ephem-06509c27
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Operator session cannot be bound to engagement authorization window"
+    cluster_id: cluster-engagement-roe
+    links: [intg-899da63b, ephem-cc497fed]
+
+  # ============ Auditability — Authenticity ============
+  - id: auth-1c9a7b78
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No MFA in core — operator authentication relies on single-factor password or API key"
+    cluster_id: cluster-default-credentials
+    links: [conf-e223c03d, conf-01d02036, ephem-cc497fed]
+  - id: auth-0e31c9b1
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Implant has no cryptographic identity — paw alone is the registration token"
+    cluster_id: cluster-implant-trust
+    links: [auth-c1c1d0cb, intg-f6c14927]
+  - id: auth-c1c1d0cb
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No certificate pinning at implant — listener TLS termination yields command-substitution"
+    cluster_id: cluster-implant-trust
+    links: [auth-0e31c9b1, intg-f6c14927, conf-056edb0c]
+  - id: auth-ec69906a
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin authorship is unverified — no signing root, no provenance attestation"
+    cluster_id: cluster-plugin-supply-chain
+    links: [intg-81c06dfa, ephem-1065948c]
+  - id: auth-31296050
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "API-key path attributes only to a group, not a specific operator"
+    cluster_id: cluster-default-credentials
+    links: [conf-01d02036, ephem-608839d8, nonrep-79ed516c]
+  - id: auth-5911ace7
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Some /api/v2 handlers may be exempt from @check_authorization via __caldera_unauthenticated__"
+
+  # ============ Auditability — Non-Repudiation ============
+  - id: nonrep-d8bf1096
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No structured audit emitter exists — operator actions are unattributable in a defensible record"
+    cluster_id: cluster-audit-vacuum
+    links: [nonrep-79ed516c, nonrep-1f49427b, nonrep-5f137373, nonrep-58511e00, immut-b0fd1144]
+  - id: nonrep-79ed516c
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Command-issued events not audited — every implant command lacks defensible attribution"
+    cluster_id: cluster-audit-vacuum
+    links: [nonrep-d8bf1096, intg-899da63b]
+  - id: nonrep-1f49427b
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Result-data reads are not audited — operator access to harvested credentials leaves no trail"
+    cluster_id: cluster-audit-vacuum
+    links: [nonrep-d8bf1096, conf-88726ba8]
+  - id: nonrep-5f137373
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin lifecycle (enable / disable / load) events not audited"
+    cluster_id: cluster-audit-vacuum
+    links: [nonrep-d8bf1096, intg-81c06dfa, immut-df8094e4]
+  - id: nonrep-58511e00
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Engagement lifecycle events have no first-class object and no audit"
+    cluster_id: cluster-engagement-roe
+    links: [nonrep-d8bf1096, intg-899da63b]
+  - id: nonrep-19e51298
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Time-source reliability for event ordering not specified"
+
+  # ============ Auditability — Immutability ============
+  - id: immut-b0fd1144
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No append-only / WORM substrate for operator-action audit log — the audit log itself does not exist"
+    cluster_id: cluster-audit-vacuum
+    links: [nonrep-d8bf1096]
+  - id: immut-df8094e4
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin install records are not retained — plugin removal erases prior-install history"
+    cluster_id: cluster-plugin-supply-chain
+    links: [intg-81c06dfa, nonrep-5f137373]
+  - id: immut-de3cc948
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Result-data store is mutable by anyone with filesystem write — no WORM, no per-record signature"
+    cluster_id: cluster-result-data-lifecycle
+    links: [intg-5152e7ba, conf-aabbd48f]
+  - id: immut-6352dd54
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No retention enforcement for any data class — no automated lifecycle, no legal-hold mechanism"
+    cluster_id: cluster-result-data-lifecycle
+    links: [ephem-d6c8d458, conf-aabbd48f]
+  - id: immut-88339a4a
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Configuration drift between conf/<env>.yml and runtime state is not detected"
+
+cross_lens_clusters:
+  - id: cluster-default-credentials
+    title: "Default-credential / single-factor / lifecycle compound"
+    findings: [conf-e223c03d, conf-01d02036, auth-1c9a7b78, auth-31296050, ephem-608839d8, ephem-cc497fed]
+    severity: critical
+    summary: "Default-shipped credentials + no MFA + no zero-downtime rotation + 7-day session TTL with no deny-list."
+
+  - id: cluster-plugin-supply-chain
+    title: "Plugin-supply-chain compound"
+    findings: [intg-81c06dfa, auth-ec69906a, ephem-1065948c, dist-dbaf5c57, nonrep-5f137373, immut-df8094e4]
+    severity: critical
+    summary: "No plugin signature + no sandbox + no audit + no immutable install record."
+
+  - id: cluster-implant-trust
+    title: "Implant-trust compound (paw-only + no cert pinning)"
+    findings: [auth-0e31c9b1, auth-c1c1d0cb, intg-f6c14927, conf-056edb0c]
+    severity: critical
+    summary: "Paw-only identity + no cert pinning + no per-command signature + default HTTP = listener-substitution turns every implant attacker-controlled."
+
+  - id: cluster-engagement-roe
+    title: "Engagement / ROE / CFAA compound"
+    findings: [intg-899da63b, ephem-06509c27, nonrep-58511e00, conf-88726ba8]
+    severity: critical
+    summary: "No first-class Engagement + no scope enforcement + no audit + no per-engagement ACL."
+
+  - id: cluster-audit-vacuum
+    title: "Audit-vacuum compound (no events, no immutable storage)"
+    findings: [nonrep-d8bf1096, nonrep-79ed516c, nonrep-1f49427b, nonrep-5f137373, nonrep-58511e00, immut-b0fd1144]
+    severity: critical
+    summary: "No structured audit emitter + no WORM substrate for the (nonexistent) log."
+
+  - id: cluster-single-process-spof
+    title: "Single-process SPOF compound"
+    findings: [avail-623b8e59, avail-5399f916, dist-85515eec, dist-dbaf5c57, resil-ca256373]
+    severity: high
+    summary: "One asyncio process hosts everything + no topology + no bulkhead + no DR."
+
+  - id: cluster-result-data-lifecycle
+    title: "Result-data lifecycle compound"
+    findings: [conf-aabbd48f, intg-5152e7ba, immut-de3cc948, immut-6352dd54, ephem-d6c8d458]
+    severity: high
+    summary: "Single platform-wide key + no per-record integrity + mutable substrate + no retention policy."
+
+  - id: cluster-channel-security
+    title: "Channel-security compound (default HTTP, no per-command sig)"
+    findings: [conf-056edb0c, intg-f6c14927, auth-c1c1d0cb]
+    severity: high
+    summary: "Default HTTP transport + channel-only auth + no cert pinning."
+
+  - id: cluster-listener-resilience
+    title: "Listener-resilience compound"
+    findings: [avail-e4b13596, resil-83950e96]
+    severity: medium
+    summary: "No rate limit + no aggregate retry cap."

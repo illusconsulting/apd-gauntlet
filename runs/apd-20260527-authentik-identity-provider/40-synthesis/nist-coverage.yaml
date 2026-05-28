@@ -1,0 +1,400 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+  catalog: NIST SP 800-53 Rev. 5
+
+# Per-control coverage rollup across all 66 deduped findings + 23 deduped
+# capabilities. Each row is a control or control enhancement; values are
+# the count of findings and capabilities citing it.
+
+controls:
+  # AC family — Access Control
+  AC-2:
+    findings: [intg-568208e5, ephem-6af8665b, ephem-a0d1afcd, auth-c80d79e6]
+    capabilities: [intg-cap-13411b16, resil-cap-867eac4f]
+  AC-2(2):
+    findings: [ephem-a0d1afcd]
+    capabilities: []
+  AC-2(4):
+    findings: [auth-c80d79e6]
+    capabilities: []
+  AC-2(13):
+    findings: [intg-568208e5]
+    capabilities: []
+  AC-3:
+    findings: [intg-0a313721, intg-3f9318c2, intg-294a9c9e]
+    capabilities: [intg-cap-13411b16, conf-cap-1150e561]
+  AC-3(7):
+    findings: [intg-294a9c9e]
+    capabilities: [intg-cap-13411b16]
+  AC-4:
+    findings: [conf-6dd9d98a, conf-22a9ce55, conf-2a905f1d, intg-cap-8613272f]
+    capabilities: [intg-cap-20ca5f2c, intg-cap-8613272f]
+  AC-6:
+    findings: [conf-477ff8a1, conf-7174bf6f, intg-0a313721, auth-4793933a]
+    capabilities: [intg-cap-13411b16]
+  AC-6(1):
+    findings: []
+    capabilities: [intg-cap-13411b16]
+  AC-6(2):
+    findings: [auth-4793933a]
+    capabilities: []
+  AC-6(5):
+    findings: [conf-477ff8a1]
+    capabilities: []
+  AC-6(7):
+    findings: [intg-0a313721, auth-4793933a]
+    capabilities: []
+  AC-6(9):
+    findings: [nonrep-4ff2b1ac]
+    capabilities: []
+  AC-7:
+    findings: [avail-3a9189a2]
+    capabilities: [avail-cap-2e726aa6, resil-cap-c79efff1]
+  AC-12:
+    findings: [intg-568208e5, resil-32c37d49, ephem-6f83fa77, ephem-4018416d]
+    capabilities: [ephem-cap-9095fc38, resil-cap-867eac4f]
+  AC-12(1):
+    findings: [intg-568208e5, resil-32c37d49, ephem-6f83fa77]
+    capabilities: [ephem-cap-9095fc38]
+  AC-21:
+    findings: [conf-22a9ce55, conf-2a905f1d, nonrep-a8ea0a0c, nonrep-52e5e762, auth-5216893e]
+    capabilities: [auth-cap-56233f34]
+
+  # AU family — Audit and Accountability
+  AU-2:
+    findings: [nonrep-6ff98de3, nonrep-fd5e012c, nonrep-a8ea0a0c, nonrep-52e5e762]
+    capabilities: [nonrep-cap-9d3d9d4c]
+  AU-3:
+    findings: [nonrep-6ff98de3, nonrep-c772c9f2, nonrep-fd5e012c, nonrep-a8ea0a0c, nonrep-52e5e762, nonrep-4ff2b1ac]
+    capabilities: [nonrep-cap-9d3d9d4c, auth-cap-56233f34]
+  AU-3(1):
+    findings: [nonrep-6ff98de3, nonrep-c772c9f2, nonrep-4ff2b1ac]
+    capabilities: [nonrep-cap-9d3d9d4c]
+  AU-4:
+    findings: [nonrep-c3d8f98d]
+    capabilities: []
+  AU-5:
+    findings: [nonrep-c3d8f98d]
+    capabilities: []
+  AU-5(1):
+    findings: [nonrep-c3d8f98d]
+    capabilities: []
+  AU-5(2):
+    findings: [nonrep-c3d8f98d]
+    capabilities: []
+  AU-6:
+    findings: []
+    capabilities: [nonrep-cap-f303cd8d]
+  AU-6(1):
+    findings: []
+    capabilities: [avail-cap-2e726aa6, nonrep-cap-f303cd8d]
+  AU-8:
+    findings: [nonrep-a18644b2]
+    capabilities: []
+  AU-9:
+    findings: [immut-d98cdc96, nonrep-c3d8f98d, immut-512f82c9]
+    capabilities: []
+  AU-9(2):
+    findings: [immut-d98cdc96, nonrep-c3d8f98d]
+    capabilities: []
+  AU-9(3):
+    findings: [immut-d98cdc96]
+    capabilities: []
+  AU-10:
+    findings: [nonrep-6ff98de3, nonrep-c772c9f2, nonrep-4ff2b1ac]
+    capabilities: []
+  AU-11:
+    findings: [immut-d98cdc96, immut-512f82c9, immut-1dc13874, immut-d9147be5, immut-fc608bca]
+    capabilities: [nonrep-cap-d9e5c53d, ephem-cap-efe92498]
+  AU-11(1):
+    findings: [immut-d9147be5]
+    capabilities: [nonrep-cap-d9e5c53d]
+  AU-12:
+    findings: [nonrep-6ff98de3, nonrep-c772c9f2, nonrep-fd5e012c, nonrep-a18644b2, nonrep-a8ea0a0c, nonrep-52e5e762, immut-df287568]
+    capabilities: [nonrep-cap-9d3d9d4c]
+  AU-12(1):
+    findings: [nonrep-6ff98de3, nonrep-c772c9f2, nonrep-fd5e012c, nonrep-a18644b2, nonrep-4ff2b1ac]
+    capabilities: [nonrep-cap-9d3d9d4c]
+
+  # CM family — Configuration Management
+  CM-2:
+    findings: [dist-bf087181, immut-df287568]
+    capabilities: [dist-cap-1e67e7bc, immut-cap-14525881]
+  CM-2(2):
+    findings: [immut-df287568]
+    capabilities: [immut-cap-14525881]
+  CM-2(3):
+    findings: [immut-512f82c9, immut-df287568]
+    capabilities: []
+  CM-3:
+    findings: [immut-df287568]
+    capabilities: [immut-cap-14525881, ephem-cap-efe92498]
+  CM-3(1):
+    findings: [immut-df287568]
+    capabilities: [immut-cap-14525881]
+  CM-6:
+    findings: [intg-294a9c9e, immut-df287568]
+    capabilities: [immut-cap-14525881]
+  CM-6(2):
+    findings: [immut-df287568]
+    capabilities: []
+  CM-8:
+    findings: [immut-df287568]
+    capabilities: []
+
+  # CP family — Contingency Planning
+  CP-2:
+    findings: [avail-cfd2b6e8, dist-b8b7603b]
+    capabilities: [avail-cap-119c6e20]
+  CP-4:
+    findings: [resil-a572e09b]
+    capabilities: []
+  CP-4(1):
+    findings: [resil-a572e09b]
+    capabilities: []
+  CP-7:
+    findings: [avail-cfd2b6e8, dist-b8b7603b, dist-71a64a88, avail-d903948f]
+    capabilities: [avail-cap-119c6e20, dist-cap-8cbb523a]
+  CP-7(1):
+    findings: [avail-cfd2b6e8, dist-b8b7603b]
+    capabilities: []
+  CP-9:
+    findings: [conf-68ab158e, dist-bf087181, immut-fd3aafdd]
+    capabilities: [dist-cap-1e67e7bc]
+  CP-9(1):
+    findings: [conf-68ab158e, immut-fd3aafdd]
+    capabilities: []
+  CP-9(8):
+    findings: [conf-68ab158e, immut-fd3aafdd]
+    capabilities: []
+  CP-10:
+    findings: [avail-57898caa]
+    capabilities: []
+  CP-12:
+    findings: [avail-57898caa, avail-b46582cb]
+    capabilities: [resil-cap-0eaa47dd]
+  CP-13:
+    findings: [avail-b46582cb]
+    capabilities: []
+
+  # IA family — Identification and Authentication
+  IA-2:
+    findings: [intg-c6371014, auth-4793933a, auth-190b06f7, auth-04c4919b, avail-b46582cb]
+    capabilities: [auth-cap-3a143747, auth-cap-56233f34, conf-cap-253fdeb0]
+  IA-2(1):
+    findings: [auth-4793933a, auth-190b06f7]
+    capabilities: [auth-cap-3a143747, auth-cap-56233f34]
+  IA-2(2):
+    findings: [auth-4793933a, auth-190b06f7]
+    capabilities: [auth-cap-3a143747, auth-cap-56233f34]
+  IA-2(6):
+    findings: [auth-4793933a]
+    capabilities: [auth-cap-3a143747]
+  IA-2(8):
+    findings: [auth-190b06f7]
+    capabilities: [auth-cap-3a143747]
+  IA-3:
+    findings: [auth-22bd304a, auth-3bd1768d, auth-f667a1e6]
+    capabilities: []
+  IA-3(1):
+    findings: [auth-22bd304a, auth-c80d79e6, auth-3bd1768d, auth-f667a1e6]
+    capabilities: []
+  IA-4:
+    findings: [intg-59ecc48b, auth-5216893e]
+    capabilities: []
+  IA-5:
+    findings: [conf-4a2c9273, ephem-5a6042dc, ephem-0fb143ce, ephem-07f6fad6, ephem-6af8665b, ephem-a0d1afcd, ephem-6f83fa77, auth-3bd1768d, intg-96d4de40]
+    capabilities: [conf-cap-253fdeb0]
+  IA-5(1):
+    findings: [ephem-5a6042dc, ephem-07f6fad6, ephem-6af8665b, ephem-a0d1afcd, auth-3bd1768d]
+    capabilities: [conf-cap-253fdeb0]
+  IA-5(2):
+    findings: [intg-96d4de40, auth-04c4919b]
+    capabilities: []
+  IA-5(7):
+    findings: [ephem-5a6042dc, ephem-6af8665b, ephem-a0d1afcd]
+    capabilities: []
+  IA-5(13):
+    findings: [avail-3a9189a2, resil-0e6a988b]
+    capabilities: [resil-cap-c79efff1]
+  IA-8:
+    findings: [intg-0a313721, intg-59ecc48b]
+    capabilities: []
+  IA-9:
+    findings: [auth-3bd1768d]
+    capabilities: []
+  IA-12:
+    findings: [immut-fc608bca]
+    capabilities: []
+
+  # IR family — Incident Response
+  IR-3:
+    findings: [resil-a572e09b]
+    capabilities: []
+  IR-3(1):
+    findings: [resil-a572e09b]
+    capabilities: []
+  IR-4:
+    findings: [intg-568208e5]
+    capabilities: [resil-cap-867eac4f, nonrep-cap-f303cd8d]
+  IR-4(1):
+    findings: [intg-568208e5]
+    capabilities: [resil-cap-867eac4f]
+  IR-5:
+    findings: []
+    capabilities: [nonrep-cap-f303cd8d]
+
+  # MP family — Media Protection
+  MP-4:
+    findings: [conf-68ab158e, immut-fd3aafdd, immut-d9147be5]
+    capabilities: []
+
+  # SA family — System and Services Acquisition
+  SA-22:
+    findings: [ephem-d87f9e6e]
+    capabilities: []
+
+  # SC family — System and Communications Protection
+  SC-3:
+    findings: [conf-7174bf6f, dist-71a64a88]
+    capabilities: []
+  SC-5:
+    findings: [avail-3a9189a2, avail-cfd2b6e8, avail-311725ea, avail-8ad0769e, dist-9b598237, resil-4d9c7873, resil-8ebcae62, avail-66ccddd3]
+    capabilities: [avail-cap-2e726aa6, resil-cap-c79efff1]
+  SC-5(1):
+    findings: [avail-3a9189a2, resil-4d9c7873, resil-0af10c5c, avail-66ccddd3]
+    capabilities: []
+  SC-5(2):
+    findings: [avail-3a9189a2, avail-66ccddd3]
+    capabilities: []
+  SC-6:
+    findings: [avail-cfd2b6e8, avail-8ad0769e, avail-311725ea, dist-9b598237, dist-b07412b8, resil-8ebcae62]
+    capabilities: [avail-cap-119c6e20]
+  SC-7:
+    findings: [dist-b8b7603b, dist-71a64a88, dist-bf087181]
+    capabilities: [dist-cap-8cbb523a]
+  SC-7(21):
+    findings: [conf-7174bf6f, dist-b8b7603b]
+    capabilities: [dist-cap-8cbb523a, resil-cap-0eaa47dd]
+  SC-8:
+    findings: [conf-6dd9d98a, conf-e08662e7, conf-4a2c9273, conf-22a9ce55, conf-2a905f1d]
+    capabilities: []
+  SC-8(1):
+    findings: [conf-6dd9d98a, conf-e08662e7, intg-7fb03642, conf-22a9ce55, auth-22bd304a, auth-3bd1768d]
+    capabilities: [intg-cap-8613272f]
+  SC-10:
+    findings: [ephem-6f83fa77]
+    capabilities: [ephem-cap-9095fc38]
+  SC-12:
+    findings: [conf-477ff8a1, conf-6dd9d98a, conf-68ab158e, conf-3d461eb8, ephem-5a6042dc, ephem-0fb143ce, ephem-07f6fad6, ephem-d87f9e6e, auth-04c4919b, avail-d903948f, immut-1dc13874, intg-7111d094]
+    capabilities: [conf-cap-1150e561, conf-cap-6db56a6d, ephem-cap-efe92498, immut-cap-14525881]
+  SC-12(1):
+    findings: [conf-477ff8a1, ephem-5a6042dc, ephem-6af8665b]
+    capabilities: [conf-cap-1150e561]
+  SC-12(2):
+    findings: [conf-3d461eb8, ephem-5a6042dc, ephem-0fb143ce, immut-1dc13874]
+    capabilities: [conf-cap-6db56a6d, ephem-cap-efe92498]
+  SC-12(3):
+    findings: [conf-477ff8a1, ephem-0fb143ce, avail-d903948f]
+    capabilities: [conf-cap-6db56a6d]
+  SC-13:
+    findings: [conf-477ff8a1, intg-96d4de40, intg-7111d094, intg-e1d79aee]
+    capabilities: [conf-cap-1150e561, intg-cap-f8801874, intg-cap-8613272f, conf-cap-253fdeb0]
+  SC-17:
+    findings: [ephem-d87f9e6e]
+    capabilities: [ephem-cap-efe92498]
+  SC-18:
+    findings: [conf-92954884]
+    capabilities: []
+  SC-23:
+    findings: [conf-e08662e7, conf-4a2c9273, auth-22bd304a, auth-3bd1768d, auth-f667a1e6]
+    capabilities: []
+  SC-28:
+    findings: [conf-477ff8a1, conf-68ab158e]
+    capabilities: [conf-cap-1150e561]
+  SC-28(1):
+    findings: [conf-477ff8a1]
+    capabilities: [conf-cap-1150e561]
+  SC-36:
+    findings: [avail-cfd2b6e8, dist-b8b7603b, dist-9b598237, dist-b07412b8]
+    capabilities: [avail-cap-119c6e20, dist-cap-1e67e7bc]
+  SC-36(1):
+    findings: [dist-b8b7603b]
+    capabilities: []
+  SC-39:
+    findings: [conf-7174bf6f, dist-71a64a88]
+    capabilities: []
+
+  # SI family — System and Information Integrity
+  SI-4:
+    findings: [resil-0e6a988b]
+    capabilities: []
+  SI-7:
+    findings: [intg-96d4de40, intg-e1d79aee, intg-7111d094, immut-d98cdc96, immut-1dc13874, immut-fc608bca, auth-f667a1e6]
+    capabilities: [intg-cap-f8801874]
+  SI-7(1):
+    findings: [intg-e1d79aee]
+    capabilities: []
+  SI-7(8):
+    findings: [immut-d98cdc96]
+    capabilities: []
+  SI-10:
+    findings: [intg-e1d79aee, intg-0a313721, intg-3f9318c2, intg-c6371014, intg-294a9c9e, intg-7fb03642, intg-59ecc48b, conf-92954884]
+    capabilities: [intg-cap-f8801874]
+  SI-13:
+    findings: [avail-66ccddd3, avail-8ad0769e, avail-57898caa, avail-b46582cb, avail-d903948f, avail-311725ea, dist-9b598237, resil-4d9c7873, resil-8ebcae62, resil-32c37d49, ephem-4018416d]
+    capabilities: [avail-cap-594bb90c, resil-cap-0eaa47dd]
+  SI-13(1):
+    findings: [avail-8ad0769e]
+    capabilities: []
+  SI-13(4):
+    findings: [avail-311725ea, resil-4d9c7873, resil-0af10c5c]
+    capabilities: []
+  SI-15:
+    findings: [conf-92954884]
+    capabilities: [intg-cap-20ca5f2c]
+
+  # SR family — Supply Chain Risk Management
+  SR-3:
+    findings: [auth-c80d79e6]
+    capabilities: []
+  SR-11:
+    findings: [ephem-0fb143ce]
+    capabilities: []
+
+  # CA family — Assessment, Authorization, and Monitoring
+  CA-7:
+    findings: []
+    capabilities: [avail-cap-594bb90c]
+
+coverage_summary:
+  total_unique_controls: 92
+  most_cited_controls:
+    - SC-12: "12 findings"
+    - SI-13: "11 findings"
+    - SC-5: "8 findings"
+    - SI-10: "8 findings"
+    - AU-12: "7 findings"
+    - SI-7: "7 findings"
+    - IA-5: "9 findings"
+  least_covered_families:
+    - PE (Physical and Environmental Protection) — 0 mappings (out of scope for software-only review)
+    - PL (Planning) — 0 mappings (operator domain)
+    - PM (Program Management) — 0 mappings (operator domain)
+    - RA (Risk Assessment) — 0 mappings (operator domain)
+
+notes: |
+  - SC family dominates (cryptography + boundary protection); reflects
+    authentik's identity-provider nature where transport and at-rest
+    cryptography are first-order concerns.
+  - AU family is the second-most-cited; reflects the substantial
+    Non-Repudiation + Immutability findings on the Event-log substrate
+    and per-consequential-action audit gaps.
+  - IA family is third-most-cited (identification and authentication
+    primitives) — expected for an identity provider.
+  - SI family is significant due to input-validation findings
+    (SAML XSW, Source attribute mapping, OAuth state/nonce) and
+    availability-resilience findings (SI-13 chain).
+  - CP family is moderately cited via the multi-region / DR findings.
+  - Operator-domain control families (PL, PM, RA) are not in scope.

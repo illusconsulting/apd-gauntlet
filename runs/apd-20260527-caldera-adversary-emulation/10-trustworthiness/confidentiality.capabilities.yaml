@@ -1,0 +1,95 @@
+schema_version: 1
+agent: confidentiality
+capability:
+  - schema_version: 1
+    id: conf-cap-ce39d07c
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Optional Fernet at-rest encryption for data/results/ via FileSvc"
+    description: |
+      FileSvc provides Fernet symmetric encryption for files under
+      data/results/ when encrypt_files is true (the documented default).
+      The Fernet key is derived from encryption_key + crypt_salt via
+      PBKDF2-HMAC-SHA256. Provides at-rest confidentiality against
+      attackers who obtain only the result files without the config.
+    maturity: designed
+    scope: |
+      Confirmed for result files under data/results/ when
+      encrypt_files: true. Not addressed: per-engagement key derivation
+      (single platform-wide key — see finding conf-aabbd48f); backup
+      tree under data/backup/ (see finding conf-6414f95a); key rotation
+      cadence (see ephemeral finding).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "FileSvc can also encrypt arbitrary files (payload at-rest) with Fernet (encrypt_files: true)"
+    control_mappings:
+      nist_800_53r5: [SC-13, SC-28, "SC-28(1)"]
+      mitre_attack_mitigations: []
+    caveats:
+      - "Single platform-wide key — no per-engagement isolation."
+      - "Key derived from operator-supplied conf values; default values are well-known."
+      - "No documented rotation cadence."
+      - "Backup tree encryption posture undocumented."
+
+  - schema_version: 1
+    id: conf-cap-9f572979
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Encrypted session cookie storage via aiohttp_session"
+    description: |
+      Operator session state is stored client-side as an encrypted
+      cookie using aiohttp_session.EncryptedCookieStorage; the Fernet
+      key is derived from encryption_key + crypt_salt. Provides
+      tamper-evidence (Fernet HMAC) and confidentiality (the operator
+      cannot inspect their own session content; an interceptor cannot
+      forge or read).
+    maturity: designed
+    scope: |
+      Confirmed for the operator browser session. Not addressed:
+      session invalidation on credential change (see INV-AUTH-003 —
+      cookies remain valid for session_expiration_days even after
+      password change); cookie-storage protection from server-side
+      compromise; key separation from at-rest result encryption.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "aiohttp_session.EncryptedCookieStorage derives a Fernet key from encryption_key + crypt_salt via PBKDF2-HMAC-SHA256"
+    control_mappings:
+      nist_800_53r5: ["SC-23(3)", AC-12, "AC-12(1)"]
+    caveats:
+      - "Default session_expiration_days = 7; no session deny-list."
+      - "Same Fernet key as the at-rest result encryption — key separation absent."
+      - "Default key in --insecure deploys is publicly known."
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: conf-cap-0d91e0de
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Optional TLS termination via ssl plugin"
+    description: |
+      The ssl plugin terminates TLS for the operator console and
+      proxies to the same aiohttp backend on :8443. Mitigates
+      passive on-path interception of credentials and beacon
+      payloads when enabled.
+    maturity: designed
+    scope: |
+      Confirmed for operator console (:8443) when ssl plugin enabled.
+      Not addressed: agent listeners (each contact module chooses
+      its own transport posture); TLS is not the default; certificate
+      provisioning and rotation are operator-improvised.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 'Trust boundaries' #1"
+        excerpt: "Default deploy is HTTP on :8888 unless the ssl plugin is enabled"
+    control_mappings:
+      nist_800_53r5: [SC-8, "SC-8(1)", SC-13]
+    caveats:
+      - "Plugin-optional; default is HTTP."
+      - "Does not extend to /beacon agent listener."
+      - "No certificate pinning at agent."
+    related_concerns: [authenticity, integrity]

@@ -1,0 +1,375 @@
+schema_version: 1
+agent: integrity
+finding:
+  - schema_version: 1
+    id: intg-81c06dfa
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Plugin modules load with no signature verification, no manifest pinning, no hash check"
+    summary: "AppService.load_plugins imports each plugins/<name>/hook.py without any integrity check; an attacker who can write to plugins/ has full server privilege on next start."
+    detail: |
+      AppService.load_plugins iterates the plugins: list in
+      conf/<env>.yml and import_module()s each. There is no
+      signature verification, no manifest pinning, no hash check,
+      no transparency log, and no allowlist beyond the operator's
+      conf list. ADR-0002 documents this as a load-bearing trust
+      assumption — but the second-order consequence is what the
+      gauntlet must score: a single write to plugins/<name>/hook.py
+      (via supply-chain compromise of a community plugin, a
+      typosquat, a compromised author account, or a backdoored
+      dependency) yields full server privilege on next start.
+
+      Critical per the security-tooling rubric clause "Plugin code
+      execution by untrusted source" — a malicious plugin executes
+      in the platform's privileged context with access to the
+      Fernet key, the agent registry, the result store, and the
+      builder plugin (which can compile attacker-chosen implants).
+      Also engages the weapons-platform-misuse axis: a backdoored
+      plugin can issue commands to every fielded implant.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5 'Plugin model'"
+        excerpt: "There is no plugin signature verification. There is no runtime sandbox."
+      - artifact: adrs/0002-plugin-runtime-without-signature-verification.md
+        locator: "ADR body"
+        excerpt: "plugin runtime without signature verification"
+      - artifact: invariants.md
+        locator: "INV-PLUGIN-001"
+        excerpt: "This is the trust assumption the platform's plugin model rests on"
+    control_mappings:
+      nist_800_53r5: [SI-7, "SI-7(1)", "SI-7(15)", SR-4, "SR-4(3)", SR-11, CM-5]
+      mitre_attack:
+        - technique: T1195
+          sub_technique: "T1195.002"
+          tactic: TA0001
+          rationale: "Plugin loader imports any code in plugins/ without verification, enabling supply-chain compromise of the platform."
+        - technique: T1505
+          sub_technique: null
+          tactic: TA0003
+          rationale: "Loaded plugin code is a long-lived server component running with platform privilege."
+      cwe: [CWE-494, CWE-829, CWE-915]
+    recommendation:
+      posture: required
+      summary: "Verify plugin signatures against a community-maintained signing root at load time; fail-closed on verification failure."
+      detail: |
+        Add a plugin manifest format that declares
+        (author, version, digest, signature, dependency lockfile).
+        Add a verify-on-load pass in AppService.load_plugins that
+        rejects any plugin whose signature does not validate against
+        an operator-configured signing root. Surface the verification
+        outcome to the non_repudiation finding's structured audit
+        sink. For community plugins, adopt a transparency log
+        (sigstore-style) so the operator can audit which signing root
+        signed which version. Fail-closed: a verification failure
+        refuses to start the server (with --plugin-allow-unsigned
+        opt-in for research deployments).
+      references:
+        - "in-toto attestation framework"
+        - "Sigstore (sigstore.dev)"
+        - "SLSA Level 2+ build attestation"
+    related_concerns: [authenticity, non_repudiation, immutability]
+
+  - schema_version: 1
+    id: intg-899da63b
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Engagement scope (ROE) is not platform-enforced — commands proceed without a target-attestation gate"
+    summary: "No first-class Engagement or ROE object; the platform has no enforcement gate; an operator can target any host the implant can reach. CFAA exposure follows."
+    detail: |
+      Tech plan §1 explicitly states: "Rules-of-engagement (ROE) and
+      target-scope are operator-declared and operator-enforced; the
+      platform does not constrain which hosts an operator may execute
+      abilities against, nor does it carry an authoritative
+      engagement-scope artifact." The runbook §7 marks this as GAP.
+      INV-AUTHZ-002 reviewer-notes that no per-engagement isolation
+      exists.
+
+      Critical per the security-tooling rubric clause "Unauthorized
+      engagement-initiation capability" — the rubric explicitly names
+      CFAA exposure (18 U.S.C. § 1030) as the legally-load-bearing
+      consequence. The finding's severity is on the
+      weapons-platform-misuse axis: the platform is supposed to be
+      the enforcement layer between operator intent and target
+      reachability, and it abdicates that role.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§1 'System purpose'"
+        excerpt: "ROE and target-scope are operator-declared and operator-enforced; the platform does not constrain which hosts an operator may execute abilities against"
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture'"
+        excerpt: "Engagement scope (ROE) is operator-declared. The platform has no Engagement object, no scope policy enforcement"
+      - artifact: runbook.md
+        locator: "§7 (GAP marker)"
+        excerpt: "GAP: ROE enforcement not documented"
+    control_mappings:
+      nist_800_53r5: [AC-3, AC-4, "AC-4(8)", CM-7, SI-10, AC-16]
+      mitre_attack:
+        - technique: T1190
+          sub_technique: null
+          tactic: TA0001
+          rationale: "Absence of ROE enforcement gate at command-issue time enables out-of-scope target engagement via the public API."
+      cwe: [CWE-285, CWE-732]
+      owasp_api_top10: ["API5:2023", "API1:2023"]
+    recommendation:
+      posture: required
+      summary: "Introduce a first-class Engagement object with target-inventory enforcement; reject command issuance against any target not in the active engagement's target_inventory."
+      detail: |
+        Add an Engagement first-class object with fields
+        (engagement_id, operator, customer_reference, target_inventory,
+        authorization_window_start, authorization_window_end,
+        roe_document_digest, signed_attestation). Bind every
+        Operation, Agent, Link to an engagement_id at create time.
+        Add a check in PlanningService.generate_link that refuses to
+        emit a Link whose target agent's reachable target is not in
+        the active engagement's target_inventory. Add a defense-in-
+        depth check at ContactService.handle_heartbeat that refuses
+        to upsert an agent whose source IP is not in
+        target_inventory. Surface allow/deny decisions to the
+        structured audit log proposed by the non_repudiation finding.
+      references:
+        - "MITRE Caldera v6 roadmap discussion (if any) — see prior-audit.md"
+        - "Pentest-as-a-Service vendor enforcement patterns"
+    related_concerns: [authenticity, non_repudiation, ephemeral]
+
+  - schema_version: 1
+    id: intg-f6c14927
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Commands queued to implants carry no per-command signature — channel-only authentication"
+    summary: "Agent beacons receive base64-encoded instruction lists; authentication is per-contact channel only; no separately-keyed per-command signature the implant verifies."
+    detail: |
+      ContactService.handle_heartbeat returns a JSON response carrying
+      a list of queued instructions; each is a base64-encoded command
+      plus optional parser. The HTTP contact provides no command-level
+      signature; other contacts may layer encryption obfuscators but
+      none described provide a signature key separate from the channel.
+      An attacker who compromises the listener (or who runs MITM on
+      the default HTTP transport — see conf-056edb0c) can substitute
+      commands the implant will execute as if they came from the
+      operator.
+
+      High per the security-tooling rubric clause "Implant command
+      issued without per-command signature verification at the
+      implant" — escalates to critical (per the rubric's "Implant
+      callback channel substitution") when combined with the lack of
+      certificate pinning at the implant and the default HTTP
+      transport.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication' step 2"
+        excerpt: "a list of queued instructions (each is a base64-encoded command, optionally with a parser to apply to the result)"
+      - artifact: adrs/0003-agent-callback-encryption-by-protocol.md
+        locator: "ADR-0003 body"
+        excerpt: "agent callback encryption is per-protocol"
+      - artifact: threat-model.md
+        locator: "T-1"
+        excerpt: "on-path attacker between implant and listener modifies result payloads or substitutes commands; no per-command signature"
+    control_mappings:
+      nist_800_53r5: [SI-7, SC-23, IA-3, "IA-3(1)", "SC-23(3)"]
+      mitre_attack:
+        - technique: T1557
+          sub_technique: null
+          tactic: TA0006
+          rationale: "Channel-only authentication of operator commands lets an on-path or listener-compromise attacker substitute commands without forging the channel."
+        - technique: T1078
+          sub_technique: null
+          tactic: TA0004
+          rationale: "Substituted commands execute under the implant's already-trusted callback relationship to the listener."
+      cwe: [CWE-345, CWE-347]
+    recommendation:
+      posture: required
+      summary: "Sign every queued instruction with a key held only at the orchestrator; implant verifies signature before execution."
+      detail: |
+        Introduce a command-signing key managed at PlanningService.
+        Every queued instruction is signed at queue-time. Update the
+        sandcat / manx default implants to ship a verification routine
+        and refuse to execute on signature failure. The signing key
+        must be distinct from listener TLS material so listener
+        compromise alone does not yield command-substitution. Surface
+        signature-verification failures from the implant back to the
+        non_repudiation audit sink.
+      references:
+        - "MITRE D3FEND D3-MA (Message Authentication)"
+    related_concerns: [authenticity, confidentiality, non_repudiation]
+
+  - schema_version: 1
+    id: intg-5152e7ba
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Result data stored without per-record integrity hashing — chain-of-custody is not preserved"
+    summary: "data/results/ Result records are Fernet-encrypted but not content-hashed; an operator with filesystem access can edit a captured Result without detection."
+    detail: |
+      The Fernet wrapper provides confidentiality plus HMAC-based
+      tamper-evidence of the ciphertext, but the integrity check is
+      keyed by the same key that performs encryption — the operator
+      holding the encryption_key can re-encrypt a modified plaintext
+      and the wrapper does not detect change. There is no per-record
+      external signature, no content-addressed identifier, no
+      timestamp-authority anchor. INV-AUTHZ-002 and the threat-model
+      T-2 confirm the chain-of-custody gap.
+
+      High per the security-tooling rubric clause "Implant binary
+      modifiable post-build" applied to the result-side analog — the
+      rubric notes that destruction of chain-of-custody impairs
+      dispute resolution. The result records are the
+      customer-deliverable provenance under typical engagement
+      contracts; the inability to detect post-capture mutation
+      undermines the platform's role as evidence custodian.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "FileSvc can also encrypt arbitrary files (payload at-rest) with Fernet"
+      - artifact: threat-model.md
+        locator: "T-2"
+        excerpt: "operator with filesystem access edits a captured Result under data/results/ to falsify a customer-deliverable finding"
+    control_mappings:
+      nist_800_53r5: [SI-7, "SI-7(6)", AU-9, "AU-9(3)", MP-4]
+      mitre_attack:
+        - technique: T1565
+          sub_technique: "T1565.001"
+          tactic: TA0040
+          rationale: "Operator-writable Fernet-encrypted store allows post-capture mutation of stored result data without tamper detection by a key-separate verifier."
+      cwe: [CWE-345, CWE-353]
+    recommendation:
+      posture: required
+      summary: "Layer a per-record signature signed with an orchestrator-only key independent of FileSvc's encryption_key; verify on every read."
+      detail: |
+        At Result-capture time, hash the captured payload (SHA-256)
+        and sign the hash with a separately-managed
+        result_integrity_key held only at PlanningService /
+        RestService (not exposed to FileSvc). Store the (hash,
+        signature) pair as an immutable sidecar record per Result.
+        Verify on every read; refuse to return result content when
+        signature verification fails. Cross-references the
+        immutability finding on result-record retention.
+      references:
+        - "NIST SP 800-92 §3.3"
+    related_concerns: [immutability, non_repudiation, confidentiality]
+
+  - schema_version: 1
+    id: intg-712b4709
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Ability-file watcher reloads YAML without integrity attribution"
+    summary: "AppService starts an ability-file watcher that reloads data/abilities/*.yml on change; reloads are silent (no audit, no signature) and the planner picks them up on next operation."
+    detail: |
+      AppService.start_sniffer_untrusted_agents and the related
+      ability-file watcher per architecture-index.md reload ability
+      definitions when files under data/abilities/ change. The reload
+      is silent: there is no integrity check against a signed
+      manifest, no operator attribution for the change, and no event
+      emit. An operator (or post-compromise attacker) who modifies a
+      stored ability changes what the planner will issue on the next
+      operation. Threat-model T-3 confirms the gap.
+
+      Medium per the security-tooling rubric clause "No audit on
+      plugin module load" applied to the ability-file analog — the
+      ability YAML controls what command the planner queues; a
+      mutation here is functionally equivalent to a plugin mutation
+      in its effect on what the platform issues. Escalates to high
+      if combined with plugin-load mutability findings.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2.1 'Top-level entrypoint' step 5"
+        excerpt: "ability-file watcher"
+      - artifact: threat-model.md
+        locator: "T-3"
+        excerpt: "ability-file watcher reloads modified YAML without integrity check"
+    control_mappings:
+      nist_800_53r5: [SI-7, "SI-7(2)", CM-3, "CM-3(1)", AU-2]
+      mitre_attack:
+        - technique: T1565
+          sub_technique: "T1565.003"
+          tactic: TA0040
+          rationale: "Live mutation of ability YAML alters runtime behavior of the planner without any platform-side detection."
+      cwe: [CWE-345]
+    recommendation:
+      posture: recommended
+      summary: "Hash ability files at load time and surface (sha256, file_path, mtime, operator) to the structured audit emitter on every reload."
+      detail: |
+        Capture per-ability sha256 at load. On watcher-triggered
+        reload, compare new sha256 to the prior; emit a structured
+        audit event (ability_modified) including file_path, prior
+        sha256, new sha256, operator identity (from process owner
+        context if not directly attributable). Reject reload when
+        the file's signature does not match a manifest, if a plugin
+        signature scheme is later adopted (cross-ref intg-81c06dfa).
+    related_concerns: [non_repudiation, immutability, authenticity]
+
+  - schema_version: 1
+    id: intg-3575082e
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Beacon payload deserialization differs per contact — no platform-side payload shape validation"
+    summary: "Each contact module decides its own decoder (base64 default, obfuscators added by plugins); a buggy contact decoder is an in-process RCE vector."
+    detail: |
+      Tech plan §7 documents that each contact module decides its
+      own on-wire format; ContactService.handle_heartbeat is a thin
+      adapter that calls into the contact's decode_bytes. There is
+      no platform-side validation of the decoded payload's shape
+      (no schema enforcement, no field-type check, no length cap
+      beyond aiohttp's client_max_size). Threat-model E-3 confirms
+      the variability.
+
+      Medium per the security-tooling rubric clause "Plugin sandbox
+      escape" applied to the contact-decoder analog — a buggy
+      plugin-contributed decoder in the platform's privileged
+      context. The vector parallels CVE-2025-27364 (pre-auth RCE
+      in this area per prior-audit.md). Escalates to high if a
+      decoder calls eval/pickle/yaml.unsafe_load on attacker bytes.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "Each contact module decides its own on-wire format"
+      - artifact: prior-audit.md
+        locator: "CVE-2025-27364 reference"
+        excerpt: "pre-auth RCE"
+      - artifact: threat-model.md
+        locator: "E-3"
+        excerpt: "beacon payload deserialization paths vary by contact"
+    control_mappings:
+      nist_800_53r5: [SI-10, SI-7, "SI-7(15)"]
+      mitre_attack:
+        - technique: T1190
+          sub_technique: null
+          tactic: TA0001
+          rationale: "Untrusted-source decoder running in-process is the same exploit class as CVE-2025-27364."
+      cwe: [CWE-502, CWE-20]
+    recommendation:
+      posture: recommended
+      summary: "Define a contact-decoder contract (input bytes → typed beacon record), validate at the platform layer, and ban unsafe deserializers."
+      detail: |
+        Introduce a BeaconRecord typed schema (paw, platform,
+        architecture, facts, results) and require every contact
+        decoder to return that type. Validate the result at the
+        ContactService boundary before any service invocation. Ban
+        pickle, yaml.unsafe_load, marshal, dill in contact-module
+        code paths via a CI lint. Add fuzz tests for every shipped
+        contact decoder.
+      references:
+        - "PEP 690 — Lazy imports for plugin isolation discussion"
+    related_concerns: [authenticity, availability]

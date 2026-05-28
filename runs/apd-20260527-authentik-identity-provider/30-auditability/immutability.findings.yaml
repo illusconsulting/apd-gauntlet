@@ -1,0 +1,590 @@
+finding:
+  - schema_version: 1
+    id: immut-d98cdc96
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Event audit records live in mutable PostgreSQL rows with no hash-chain, no WORM substrate, no append-only enforcement"
+    summary: "Per threat-model R-2 and `tech_plan.md` §8, Event records are standard ORM rows in PostgreSQL; attacker with DB write or Expression-policy RCE can edit/delete them."
+    detail: |
+      Threat-model R-2: "An attacker with database write access (or
+      expression-engine code execution per T-1) deletes or modifies
+      Event records to hide their tracks. PostgreSQL has no
+      cryptographic tamper-evidence by default; the rows are
+      mutable ... Existing mitigation: event forwarding is
+      recommended ... Out-of-the-box, what fraction of operators
+      configure log forwarding? The shipped configuration does not
+      enable it. Without forwarding, the database-resident Event log
+      is mutable and there is no tamper-evidence."
+
+      The identity-security immutability-classes catalog frames this
+      directly: "Authentication event log — credential-compromise
+      reconstruction depends on a tamper-evident authn record ...
+      Retention floor must match or exceed the longest plausible
+      breach-detection window." The authentik Event records are not
+      tamper-evident in the platform: no per-stream hash-chain, no
+      WORM substrate, no signed-entry discipline.
+
+      Severity is high per the identity-security severity rubric:
+      this matches the High clause "Authentication event log written
+      to a mutable RDS table or document collection; no append-only
+      enforcement, no WORM substrate, no hash-chain. Severity: high
+      (authn log alteration breaks every regulatory accountability
+      claim; combines with any Non-Repudiation gap into a critical-
+      merged record — the authn log is the first thing an attacker
+      tampers with after gaining IdP-admin)." This is precisely the
+      pattern. Cross-references the Non-Repudiation findings on
+      audit-pipeline operator-driven forwarding (nonrep-c3d8f98d).
+    evidence:
+      - artifact: threat-model.md
+        locator: "§R-2 'Audit-log immutability and tamper-evidence', Attack scenario"
+        excerpt: "An attacker with database write access (or expression-engine code execution per T-1) deletes or modifies Event records to hide their tracks. PostgreSQL has no cryptographic"
+      - artifact: tech_plan.md
+        locator: "§8 'Data model', Event entry"
+        excerpt: "Event — append-only audit record. Action, app, context (JSON), user, client_ip. Created by Flow execution, by direct API actions, and by ak_create_event(...) calls from Expression"
+    control_mappings:
+      nist_800_53r5:
+        - "AU-9"
+        - "AU-9(2)"
+        - "AU-9(3)"
+        - "AU-11"
+        - "SI-7"
+        - "SI-7(8)"
+      mitre_attack:
+        - technique: "T1070"
+          sub_technique: null
+          tactic: "TA0005"
+          rationale: "Mutable Postgres-resident Event rows allow an attacker with DB write access (via Expression-policy RCE per ADR-0001 or DB compromise) to clear or modify audit entries, defeating Indicator Removal countermeasures."
+        - technique: "T1565"
+          sub_technique: null
+          tactic: "TA0040"
+          rationale: "Direct ORM access to Event rows enables Data Manipulation of the audit substrate; the row says 'admin X executed Y' but the row is editable."
+      cwe:
+        - "CWE-117"
+        - "CWE-285"
+      owasp_top10:
+        - "A09:2021"
+    recommendation:
+      posture: required
+      summary: "Add per-stream hash-chaining for Event records; ship a chain-verifier; anchor chain heads daily to a separate trust domain (operator's external KMS signature, or an external timestamp authority)."
+      detail: |
+        Three changes:
+
+        1. **Per-stream hash-chaining**: each Event row includes a
+           `prev_hash` (SHA-256 of the prior Event in its stream) and
+           a `signature` (HMAC or asymmetric over the row contents
+           plus prev_hash, keyed by a chain-signing key distinct
+           from AUTHENTIK_SECRET_KEY). Chain-break is detectable on
+           audit read.
+        2. **Chain-head anchoring**: the per-stream chain head is
+           signed daily by an operator-controlled external key (KMS
+           signature) and published to a separate trust domain
+           (separate cloud account, external timestamp authority,
+           transparency log). Tampering can be detected against the
+           anchored chain head.
+        3. **Audit-read-time verification**: the audit query
+           endpoint verifies chain continuity at read time and
+           surfaces chain breaks as a security-relevant Event of its
+           own.
+
+        This converts the audit posture from "trust the database" to
+        "verify the chain at read time," which is the proportional
+        defense against the T1070 attack class.
+
+        Cross-references the Non-Repudiation finding nonrep-c3d8f98d
+        (shipped log forwarding) — the chain-head anchoring is the
+        complementary control to log forwarding.
+      references:
+        - "external: NIST SP 800-92 §5.3 (Audit log integrity)"
+        - "external: RFC 9162 (Certificate Transparency Logs — applicable hash-chain pattern)"
+    related_concerns: [non_repudiation, integrity, confidentiality]
+    cross_references: [nonrep-c3d8f98d]
+
+  - schema_version: 1
+    id: immut-fd3aafdd
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Backup immutability (object-lock / compliance-mode / WORM) for PostgreSQL dumps is not documented; deletion-by-single-credential is the canonical ransomware target"
+    summary: "Per `runbook.md` §8 and `sys-mgmt/ops/backup-restore.md`, backup-encryption is operator-driven and backup-immutability is not mentioned; the IdP backup is post-breach recovery anchor for every dependent app."
+    detail: |
+      Runbook §8 documents `pg_dump` / `pg_restore` / continuous-
+      archiving as the backup tools. Neither the runbook nor the
+      ADR-0004 covers backup immutability. The
+      identity-security immutability-classes catalog flags this
+      directly: "Backup snapshots — ransomware resilience for the
+      credential store, the session store, the consent store, the
+      audit log, and the key-lifecycle records. Immutability via
+      object-lock (compliance mode), WORM media, or write-locked
+      tape. Mutability or deletion-by-single-credential is a critical
+      finding because the IdP backup is the post-breach recovery
+      anchor for every dependent application."
+
+      The identity-security severity rubric High clause: "Backup
+      snapshots of the credential store, the session store, and the
+      key-lifecycle records meet retention but no object-lock or
+      compliance-mode immutability is applied. Severity: high
+      (backups vulnerable to ransomware deletion; the IdP backup is
+      the post-breach recovery anchor for every dependent
+      application; deletion-by-single-credential is the canonical
+      ransomware target)."
+
+      Severity is high per the rubric. Cross-references Confidentiality
+      finding conf-68ab158e (backup-file encryption GAP) and Ephemeral
+      finding ephem-5a6042dc (secret_key rotation GAP) — together
+      these describe the operator-improvised backup story that is the
+      typical failure mode.
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 'Backup and restore', PostgreSQL paragraph"
+        excerpt: "PostgreSQL is the critical-path backup target. Documented tools: pg_dump for single-database dump. pg_dumpall for cluster-level dump. Continuous archiving for PITR."
+    control_mappings:
+      nist_800_53r5:
+        - "CP-9"
+        - "CP-9(1)"
+        - "CP-9(8)"
+        - "MP-4"
+        - "AU-11"
+      mitre_attack:
+        - technique: "T1485"
+          sub_technique: null
+          tactic: "TA0040"
+          rationale: "Backup destruction (T1485) deletes the IdP's post-breach recovery substrate; without object-lock the backup can be deleted with the same credential that performs the breach."
+        - technique: "T1490"
+          sub_technique: null
+          tactic: "TA0040"
+          rationale: "Inhibit System Recovery — deletion of the IdP backup prevents restoration of the identity authority; every dependent application loses its restoration anchor."
+      cwe:
+        - "CWE-1188"
+        - "CWE-693"
+    recommendation:
+      posture: required
+      summary: "Update `sys-mgmt/ops/backup-restore.md` with mandatory object-lock / compliance-mode posture for backup destinations; retention period set to longest applicable regulatory minimum; document the cross-credential separation between backup-write and backup-delete."
+      detail: |
+        Add to the backup runbook:
+
+        - **Object-lock requirement**: backup destination (S3, Azure
+          Blob, GCS, etc.) MUST have object-lock or compliance-mode
+          retention enabled with retention period set to the longest
+          applicable regulatory minimum (typically 7 years for SOC 2;
+          per per-customer obligation for HIPAA/PCI/FedRAMP)
+        - **Credential separation**: the credential that writes
+          backups MUST NOT have delete permission on existing objects;
+          a separate (operator-only, manually-attended) credential
+          performs lifecycle deletion past retention
+        - **Periodic restore validation**: quarterly restore exercise
+          from object-lock-protected backup verifies the chain works
+        - **Cross-region replication of backups**: tie this to the
+          multi-region recommendation from Distributed finding
+          dist-b8b7603b
+
+        Cross-references Confidentiality finding conf-68ab158e
+        (backup encryption) — same runbook section.
+      references:
+        - "external: AWS S3 Object Lock compliance mode"
+        - "external: NIST SP 800-34 Rev. 1 §3.4.2 (Backup integrity)"
+    related_concerns: [confidentiality, availability, distributed]
+    cross_references: [conf-68ab158e, dist-b8b7603b]
+
+  - schema_version: 1
+    id: immut-512f82c9
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OAuth UserConsent records appear to be mutable; consent revocation as a new event vs. consent-record overwrite is not asserted"
+    summary: "Per the identity-security immutability-classes catalog, consent records must preserve the proof-of-prior-consent obligation across the consent window even after revocation."
+    detail: |
+      The identity-security immutability-classes catalog: "Consent
+      grant records (OAuth/OIDC and SAML attribute-release
+      acknowledgements) — GDPR Article 6(1)(a) lawful-basis evidence
+      for the processing that occurred during the consent window.
+      Consent withdrawal must be recorded as a new event, never as
+      overwriting the prior grant. The proof-of-prior-consent
+      obligation outlives the grant itself." The corresponding High-
+      severity rubric clause: "OAuth/OIDC consent records mutable —
+      consent revocation overwrites the consent record rather than
+      recording revocation as a new event. Severity: high (the
+      proof-of-consent for processing that occurred during the
+      consent window is destroyed; GDPR Article 6(1)(a) defense fails
+      for any processing that occurred during the consent window)."
+
+      The authentik inputs document UserConsent records
+      (`tech_plan.md` §8 data model implicitly via the consent stage)
+      but do not enumerate the consent-lifecycle discipline. Whether
+      revocation creates a new event vs. updates the existing record
+      is not asserted. For an IdP that needs to support GDPR
+      Article 15 (data subject access) and Article 5(2) (accountability),
+      this is consequential — the consent history must be
+      reconstructable.
+
+      Severity is high per the rubric. Cross-references the Non-
+      Repudiation finding nonrep-a8ea0a0c (per-use consent audit).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 stage taxonomy, consent bullet"
+        excerpt: "consent — OAuth scope consent prompt."
+      - artifact: tech_plan.md
+        locator: "§8 'Data model', overview"
+        excerpt: "Application — façade for Providers; carries the access policy binding."
+    prerequisite_evidence:
+      - "Consent-lifecycle specification: does revocation create a new ConsentRevocation record or update the UserConsent in place?"
+      - "Per-user consent history queryability"
+      - "Retention policy for revoked consent records (must outlive the consent window for accountability)"
+    control_mappings:
+      nist_800_53r5:
+        - "AU-11"
+        - "AU-9"
+        - "CM-2(3)"
+        - "AC-21"
+    recommendation:
+      posture: required
+      summary: "Make consent grant and revocation immutable append-only events; UserConsent represents 'currently effective' state derived from the event stream; per-Provider per-user query returns the full history."
+      detail: |
+        Event-sourced consent model:
+
+        - `OAuthConsentGranted` event records the grant (user,
+          client_id, scope set, expiry, source flow, AAL claim) — never
+          mutated
+        - `OAuthConsentRevoked` event records the revocation (user,
+          client_id, scope set, source — user-initiated / admin /
+          credential change) — never mutated; does not delete the
+          prior grant event
+        - `UserConsent` is the derived "currently effective consent"
+          read-model, materialised from the event stream; revoking
+          consent updates the read-model but does not destroy the
+          history
+        - The full consent history is queryable for Article 15 data
+          subject access requests and for breach-investigation
+          forensic reconstruction
+
+        Cross-references nonrep-a8ea0a0c (per-use consent audit) — the
+        full picture is "consent granted, consent used, consent
+        revoked" all immutably captured.
+      references:
+        - "external: GDPR Article 6(1)(a) (consent as lawful basis)"
+        - "external: GDPR Article 15 (data subject access to consent history)"
+    related_concerns: [non_repudiation, confidentiality]
+    cross_references: [nonrep-a8ea0a0c]
+
+  - schema_version: 1
+    id: immut-1dc13874
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Signing-key rotation history retention is not enumerated; after-the-fact 'which kid signed which token at what time' verification not supported"
+    summary: "Per the identity-security immutability-classes catalog, signing-key lifecycle records must be queryable for post-incident token-verification; the inputs document rotation capability but not rotation-history retention."
+    detail: |
+      The identity-security immutability-classes catalog: "Cryptographic
+      key lifecycle records — key creation, rotation, revocation, and
+      destruction events. Required for proving NIST SP 800-63B
+      §5.1.4 key-management discipline ... The JWKS rotation history
+      specifically must be queryable for after-the-fact assertion
+      validation." The corresponding High clause: "Signing-key
+      rotation history not retained — only the current and previous
+      kid are queryable; older kids are dropped from JWKS-history
+      table. Severity: high (after-the-fact verification of 'which
+      kid signed which token at what time' is impossible; post-
+      incident compromise scoping fails)."
+
+      The authentik inputs describe per-Provider signing-key rotation
+      (`runbook.md` §6, ADR-0004) but not the JWKS rotation history
+      retention. For a signing-key-compromise incident, the response
+      requires: identify when the new key took effect, identify all
+      tokens signed under the (now-suspect) old key during its
+      active window, revoke / re-issue accordingly. Without rotation
+      history retention, the question "is this token from before or
+      after the rotation?" cannot be answered.
+
+      Severity is high per the rubric. Cross-references Ephemeral
+      finding ephem-0fb143ce (rotation cadence) and Non-Repudiation
+      finding nonrep-c772c9f2 (per-token audit anchor).
+    evidence:
+      - artifact: runbook.md
+        locator: "§6 'Provider signing-key rotation', steps 4-5"
+        excerpt: "For OAuth providers, the JWKS endpoint at /application/o/<slug>/jwks/ automatically reflects the new key. RPs that fetch the JWKS will pick up the new key on"
+      - artifact: adrs/0004-encrypted-secrets-via-certificatekeypair.md
+        locator: "§Consequences > Positive, paragraph 3"
+        excerpt: "each is individually rotatable."
+    prerequisite_evidence:
+      - "JWKS rotation history retention specification: how long are old kids retained in the JWKS history table?"
+      - "Per-key active-window tracking (kid X was active from T1 to T2)"
+      - "Linkage from per-token audit Event (Non-Repudiation nonrep-c772c9f2) to the kid that signed it"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-12"
+        - "SC-12(2)"
+        - "AU-11"
+        - "SI-7"
+      mitre_attack:
+        - technique: "T1606"
+          sub_technique: "T1606.001"
+          tactic: "TA0006"
+          rationale: "Investigation of T1606.001 (Forge Web Credentials) after signing-key compromise requires kid-level rotation history to scope blast radius; absent history, every token issued ever is suspect or none are."
+      cwe:
+        - "CWE-778"
+        - "CWE-916"
+    recommendation:
+      posture: required
+      summary: "Retain signing-key rotation history indefinitely (or for the longest applicable regulatory retention); make every kid that has ever been published queryable with its active window, rotation event, and revocation event."
+      detail: |
+        Add a `JWKSKeyHistory` model: every kid ever published has a
+        row with `kid`, `key_provider`, `not_before`, `not_after`
+        (active window), `rotation_event_id`, `revocation_event_id`
+        (if any), `signing_algorithm`, `public_key` (PEM/JWK form for
+        verification). Retention is at minimum the longest token
+        lifetime issued under the kid plus the longest applicable
+        regulatory retention.
+
+        The Per-Token Issuance Event from nonrep-c772c9f2 captures
+        the `signing_kid`; the JWKSKeyHistory table closes the loop —
+        "this token was signed by kid X; kid X was active T1 to T2;
+        tokens signed in that window are subject to investigation."
+      references:
+        - "external: NIST SP 800-57 Part 1 Rev. 5 §5.3.4 (Key lifecycle records)"
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: [ephem-0fb143ce, nonrep-c772c9f2]
+
+  - schema_version: 1
+    id: immut-df287568
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Federation-trust changes (signing-key rotation, attribute-release-policy change, redirect_uri allowlist edits) lack GitOps drift detection between declared and actual state"
+    summary: "Per the identity-security immutability-classes catalog, federation-trust configuration history must be retained; the inputs document blueprint-driven configuration but not drift detection."
+    detail: |
+      The identity-security immutability-classes catalog: "Federation-
+      trust establishment records — the human approval trail for
+      SP/IdP onboarding, the metadata-validation evidence, the
+      contact attestation. Required for post-compromise attribution if
+      a federated party turns out to be malicious or compromised."
+      And: "Configuration history — RBAC policy changes, ABAC policy
+      changes, federation-trust changes (signing-key rotation,
+      attribute-release-policy mutation, redirect_uri allowlist
+      edits), audit-pipeline configuration."
+
+      The corresponding High-severity rubric clause: "Federation-trust
+      configuration partly IaC, partly manual via admin console; no
+      drift detection between declared and actual federation-trust
+      state. Severity: high (federation-trust mutations are admin-tier
+      consequential actions; manual mutation breaks GitOps attribution,
+      evades signed-commit discipline, and produces 'where did this SP
+      entry come from?' forensic gaps)."
+
+      The authentik inputs document Blueprints (`tech_plan.md` §8, §11)
+      as the declarative configuration apply mechanism, and runbook §10
+      hardening recommends "force changes through filesystem blueprints
+      in `/blueprints/`" — but the in-admin-console editing of Providers,
+      Sources, Flows is still supported, and the inputs do not document
+      drift detection between blueprint-declared state and admin-UI-
+      modified state.
+
+      Severity is high per the rubric. Cross-references Integrity
+      finding intg-294a9c9e (Policy binding-mode defaults) and Non-
+      Repudiation finding nonrep-4ff2b1ac (admin-action audit context).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture', secrets bullet"
+        excerpt: "Rotation is blueprint-driven."
+      - artifact: runbook.md
+        locator: "§10 'Production hardening checklist', API blocklist bullet"
+        excerpt: "Block /api/v3/policies/expression*, /api/v3/propertymappings*, /api/v3/managed/blueprints*, /api/v3/stages/captcha* at the reverse proxy. Force changes through filesystem blueprints in /blueprints/."
+    control_mappings:
+      nist_800_53r5:
+        - "CM-2"
+        - "CM-2(2)"
+        - "CM-2(3)"
+        - "CM-3"
+        - "CM-3(1)"
+        - "CM-6"
+        - "CM-6(2)"
+        - "CM-8"
+        - "AU-12"
+      mitre_attack:
+        - technique: "T1098"
+          sub_technique: null
+          tactic: "TA0003"
+          rationale: "Admin-UI mutation of federation trust (Provider redirect_uri allowlist, attribute mapping, signing key) bypasses GitOps attribution; an attacker with admin access can mutate the trust surface without leaving a config-repo commit attribution."
+      cwe:
+        - "CWE-732"
+        - "CWE-1188"
+    recommendation:
+      posture: required
+      summary: "Ship a drift-detection subsystem comparing blueprint-declared state to live state for Flows / Stages / Policies / Providers / Sources / RBAC / federation-trust; surface drifts on a dashboard; emit drift events to audit; require operator-acknowledgment of drift before reconciliation."
+      detail: |
+        Continuous drift detection:
+
+        - Worker periodically reconciles `/blueprints/` filesystem
+          state against live Flow / Stage / Policy / Provider / Source
+          / RBAC state
+        - Drift between declared and live emits a `ConfigDriftDetected`
+          Event of severity high, with the affected object, the
+          declared state, the live state, and the diff
+        - Dashboard tile `Dashboards > Configuration Drift` lists all
+          current drifts
+        - Operator can either (a) accept live state and update the
+          blueprint to match, or (b) reconcile back to blueprint
+          (overwriting live state). Both are audit-emitting.
+
+        Together with the Non-Repudiation finding nonrep-4ff2b1ac
+        (admin-action audit context) and runbook §10 hardening
+        recommendation, this closes the "where did this Provider come
+        from?" forensic gap.
+      references:
+        - "external: GitOps principles (declarative state + drift detection + reconciliation)"
+    related_concerns: [non_repudiation, integrity]
+    cross_references: [nonrep-4ff2b1ac]
+
+  - schema_version: 1
+    id: immut-d9147be5
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Per-audit-class retention policy is not enumerated; the platform-wide '365 days' default does not differentiate authn / token / consent / federation / key-lifecycle / admin retention"
+    summary: "Per the identity-security immutability-classes catalog, per-class retention should align with regulatory requirements; the authentik default is a single platform-wide value."
+    detail: |
+      `runbook.md` §4 / `INV-OPS-002`: "Default retention: 365 days
+      (configurable in System > Settings)." This is a single
+      platform-wide retention value. The identity-security
+      immutability-classes catalog calls for per-class retention
+      aligned to regulatory exposure: authentication events (longest
+      plausible breach-detection window), authorization decision log
+      (SOC 2 CC6.3 + GDPR 5(2)), consent records (GDPR Article 6(1)(a)
+      proof-of-prior-consent obligation outliving the grant window),
+      token issuance log (after-the-fact signing-key compromise scope),
+      cryptographic key lifecycle records (NIST 800-63B + PCI 3.6),
+      federation-trust establishment (post-compromise attribution).
+
+      Disposition is blocked: the inputs document the global
+      retention default; the per-class differentiation is unconfirmed.
+      Severity is medium because the consequence depends on regulatory
+      exposure — operators with SOC 2 or PCI commitments must
+      manually compose per-class retention from the global default
+      and operator-driven log forwarding.
+    evidence:
+      - artifact: runbook.md
+        locator: "§4 'Audit log inspection and forwarding'"
+        excerpt: "Default retention: 365 days (configurable in System > Settings)."
+      - artifact: invariants.md
+        locator: "§INV-OPS-002"
+        excerpt: "Event audit trail retention default is 365 days"
+    prerequisite_evidence:
+      - "Per-audit-class retention policy (authentication, authorization, consent, federation, admin, token-lifecycle, key-lifecycle)"
+      - "Per-class regulatory anchor (which compliance regime drives each retention)"
+      - "Enforcement mechanism (storage-tier lifecycle vs. application-level)"
+      - "Legal-hold override procedure"
+    control_mappings:
+      nist_800_53r5:
+        - "AU-11"
+        - "AU-11(1)"
+        - "MP-4"
+    recommendation:
+      posture: recommended
+      summary: "Add per-audit-class retention configuration: separate retention values for authentication, authorization, consent, federation, admin, token-lifecycle, key-lifecycle event classes; document the per-class regulatory anchors."
+      detail: |
+        Per-class retention defaults aligned to identity-security
+        common patterns:
+
+        - Authentication events: 7 years (SOC 2 / breach-detection
+          window per NIST 800-92)
+        - Authorization events: 7 years (SOC 2 CC6.3)
+        - Token issuance / lifecycle: longest active token lifetime
+          plus 7 years (post-incident reconstruction)
+        - Consent grant + revocation: indefinite (GDPR 6(1)(a)
+          accountability)
+        - Federation-trust changes: indefinite (post-compromise
+          attribution)
+        - Admin actions: 7 years (SOC 2 CC8.1)
+        - Key-lifecycle events: indefinite (NIST 800-63B §5.1.4)
+
+        Each retention configurable; document the per-class regulatory
+        anchor in `sys-mgmt/events/retention.md`.
+      references:
+        - "external: NIST SP 800-92 §3.5 (Audit retention guidance)"
+    related_concerns: [non_repudiation, availability]
+    cross_references: []
+
+  - schema_version: 1
+    id: immut-fc608bca
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Identity-proofing artifact retention (IAL2/IAL3 verification evidence) is not addressed in inputs"
+    summary: "Per the identity-security immutability-classes catalog, NIST 800-63A IAL claims require retention of underlying proofing evidence; the authentik inputs do not address IAL claim issuance or evidence retention."
+    detail: |
+      The identity-security immutability-classes catalog: "Identity-
+      proofing artifacts — NIST SP 800-63A IAL3 in-person
+      verification records, IAL2 attribute-verification records
+      (driver's-license image, attribute-source attestation). Required
+      for proving the IAL claim that the IdP asserts to downstream
+      RPs." The authentik inputs focus on AAL (authenticator
+      assurance) and FAL (federation assurance) but do not address
+      IAL (identity assurance) issuance or evidence retention. For
+      deployments where authentik is the identity-proofing IdP (vs.
+      consuming an IAL claim from an upstream Source), this is a
+      load-bearing capability gap.
+
+      Disposition is uncertainty: the absence of IAL framing in the
+      inputs may reflect that authentik does not target IAL2/IAL3
+      proofing (relying on upstream Sources for identity proofing
+      and asserting only AAL+FAL itself), in which case the IAL claim
+      to downstream RPs would inherit from the Source. Severity is
+      medium because the consequence depends on deployment posture —
+      for an IdP claiming IAL3 to downstream RPs, this is high; for
+      an IdP that explicitly does not assert IAL, this is
+      informational.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'MFA assurance' paragraph"
+        excerpt: "authentik does not expose a single AAL knob; assurance is composed by the Flow author from the available authenticator-validate stage configuration."
+    prerequisite_evidence:
+      - "Whether authentik supports IAL claim issuance (vs. inheriting from upstream Source)"
+      - "If yes: identity-proofing evidence retention policy"
+      - "If yes: IAL claim communication to downstream RPs (via OIDC `acr` or SAML AuthnContext)"
+    control_mappings:
+      nist_800_53r5:
+        - "IA-12"
+        - "AU-11"
+        - "SI-7"
+    recommendation:
+      posture: consider
+      summary: "Clarify in the OAuth/SAML provider docs whether authentik asserts an IAL claim and, if so, the retention discipline for the underlying proofing evidence."
+      detail: |
+        Two-part documentation:
+
+        1. State explicitly that authentik does not issue IAL2/IAL3
+           proofing claims; deployments that need IAL claims to
+           downstream RPs source them from an upstream IAL-proofing
+           IdP (e.g., a corporate IdP that performs identity
+           verification) and pass through via the federated `acr` /
+           AuthnContextClassRef
+        2. If IAL claim issuance IS a future feature, document the
+           identity-proofing-artifact retention policy aligned to
+           NIST 800-63A
+
+        For most deployments, option 1 is the realistic posture —
+        the documentation just needs to make it explicit.
+      references:
+        - "external: NIST SP 800-63A (Identity Proofing and Enrollment)"
+    related_concerns: [authenticity, non_repudiation]
+    cross_references: []

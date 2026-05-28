@@ -1,0 +1,62 @@
+schema_version: 1
+agent: availability
+capability:
+  - schema_version: 1
+    id: avail-cap-b6a750af
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Health endpoint at /api/v2/health (unauthenticated)"
+    description: |
+      The /api/v2/health endpoint is one of the few
+      __caldera_unauthenticated__ handlers and returns a basic
+      liveness JSON plus an errors[] block reflecting any plugin
+      whose enable() raised. Provides a coarse liveness signal for
+      external monitoring.
+    maturity: implemented
+    scope: |
+      Confirmed as a documented and runbook-cited endpoint. Not
+      addressed: SLO/SLI definition (see avail-c583c332); deep
+      health-check that synthetically exercises listener
+      authenticate-deliver path (see resilient finding); rate-limit
+      on the unauthenticated endpoint itself.
+    evidence:
+      - artifact: runbook.md
+        locator: "§2 'Health checks'"
+        excerpt: "curl -s http://localhost:8888/api/v2/health"
+      - artifact: tech_plan.md
+        locator: "§10 'API surfaces'"
+        excerpt: "/api/v2/health ... __caldera_unauthenticated__"
+    control_mappings:
+      nist_800_53r5: [SI-4, CP-10]
+    caveats:
+      - "Shallow liveness; no synthetic implant-callback exercise."
+      - "Unauthenticated endpoint with no rate-limit documented."
+
+  - schema_version: 1
+    id: avail-cap-1e1a88ee
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Bounded request body size via aiohttp client_max_size"
+    description: |
+      The aiohttp Application is initialised with
+      client_max_size = client_max_size_mb * 1024 * 1024 (default
+      1 MB for non-/api/v2 calls). /api/v2 uses
+      api_upload_max_size_mb (default 100 MB). Bounds memory pressure
+      from oversize uploads.
+    maturity: designed
+    scope: |
+      Confirmed for HTTP request bodies on the aiohttp Application.
+      Not addressed: non-HTTP contact protocols (DNS, FTP, TCP, UDP,
+      websocket, SSH); per-route limits below the global cap;
+      streaming-upload behavior.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§10 'API surfaces'"
+        excerpt: "client_max_size=client_max_size_mb * 1024 * 1024 (default 1 MB)"
+    control_mappings:
+      nist_800_53r5: [SC-5, SC-6]
+    caveats:
+      - "Global cap only; no per-route or per-endpoint differentiation beyond v1/v2."
+      - "Non-HTTP contacts have their own (un-documented) limits."

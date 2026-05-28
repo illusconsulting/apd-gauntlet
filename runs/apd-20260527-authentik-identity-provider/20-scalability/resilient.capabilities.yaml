@@ -1,0 +1,124 @@
+capability:
+  - schema_version: 1
+    id: resil-cap-c79efff1
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Reputation-driven anti-brute-force counters (post-IncludeSec 2025.12 fix replacing session-based retries)"
+    description: |
+      Per `prior-audit.md` IncludeSec M1 remediation: "Fixed in 2025.12
+      by replacing session-based retries with reputation-driven
+      counters (PR #18643)." The Reputation policy now drives login
+      retry counting in a way that is not bypassable via the race
+      condition that affected the prior session-based scheme. Per
+      `customize/policies/types/index.mdx`, the Reputation policy
+      scores per-IP and per-user signals and can be bound as a Stage
+      gating policy.
+    maturity: implemented
+    scope: |
+      Confirmed via the prior-audit retest evidence (PR #18643). Not
+      addressed in this capability: default binding to the shipped
+      flows is operator-action-required (Availability finding
+      avail-3a9189a2 — the capability exists; the default flows do
+      not use it). Older 2025.2.x supported track operators should
+      confirm backport status (threat-model D-2 residual).
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§IncludeSec 2025-09, M1 row"
+        excerpt: "Fixed in 2025.12 by replacing session-based retries with reputation-driven counters (PR #18643)"
+    control_mappings:
+      nist_800_53r5:
+        - "AC-7"
+        - "SC-5"
+        - "IA-5(13)"
+      mitre_attack_mitigations:
+        - id: "M1036"
+          rationale: "Account Use Policies — reputation-driven counters resist the prior race-condition bypass and provide a generalized rate-limit primitive countering T1110 brute force."
+    caveats:
+      - "Default flows do not bind Reputation policy out of the box; operator must bind it."
+      - "2025.2.x supported track operators should confirm backport per threat-model D-2 residual."
+    related_concerns: [availability, authenticity]
+
+  - schema_version: 1
+    id: resil-cap-0eaa47dd
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Outpost failure isolation: standalone outposts crash without taking down Server"
+    description: |
+      Per ADR-0003 §Positive paragraph 3, "An outpost crash does not
+      take down the Server. A Server restart does not require
+      simultaneously restarting every outpost." The standalone outposts
+      (Proxy, LDAP, RADIUS, RAC) each run in their own process / pod /
+      container and are designed as independent failure domains. This
+      is the Resilient companion to the Distributed capability
+      dist-cap-8cbb523a.
+    maturity: designed
+    scope: |
+      Confirmed for the four standalone outposts. Not addressed:
+      embedded outpost is in-process and therefore shares failure
+      domain with Core (Distributed finding dist-71a64a88). Outpost
+      reconnect / config-refresh behavior on Server restart is
+      mentioned but specific RTO is not enumerated.
+    evidence:
+      - artifact: adrs/0003-outpost-architecture-for-protocol-handlers.md
+        locator: "§Consequences > Positive, paragraph 3"
+        excerpt: "Failure isolation. An outpost crash does not take down the Server. A Server restart does not require simultaneously restarting every outpost."
+    control_mappings:
+      nist_800_53r5:
+        - "SC-7"
+        - "SC-7(21)"
+        - "SI-13"
+        - "CP-12"
+    caveats:
+      - "Embedded outpost violates this isolation (Distributed finding dist-71a64a88)."
+      - "Outpost-restart-on-Server-restart RTO not enumerated."
+    related_concerns: [distributed, availability]
+
+  - schema_version: 1
+    id: resil-cap-867eac4f
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Account Lockdown stage (Enterprise) provides atomic compromise-response with single audit Event"
+    description: |
+      Per `security/account-lockdown.md` and `invariants.md` INV-OPS-001,
+      the Account Lockdown stage (Enterprise, 2025.5+) atomically:
+      deactivates the user, sets an unusable password, terminates all
+      active sessions, revokes all API tokens, app passwords, recovery
+      tokens, verification tokens, and OAuth2 grants, and emits a
+      single audit Event with the operator-provided reason. This is
+      the proportional incident-response mechanism for a confirmed
+      account compromise, providing the transactional integrity that
+      the multi-step Community-tier procedure (Integrity finding
+      intg-568208e5) lacks.
+    maturity: designed
+    scope: |
+      Confirmed for Enterprise installs. Not addressed: Community
+      installs require the multi-step manual procedure that is racy
+      (Integrity finding intg-568208e5); cached LDAP outpost bind
+      mode is not invalidated by Account Lockdown without a separate
+      mechanism (Resilient finding resil-32c37d49); the audit Event
+      lacks actor authentication context (threat-model R-4).
+    evidence:
+      - artifact: invariants.md
+        locator: "§INV-OPS-001"
+        excerpt: "Account Lockdown atomically deactivates user + sessions + tokens. Holds for Enterprise installs."
+      - artifact: runbook.md
+        locator: "§12 'Account compromise response (Lockdown)', single-action steps"
+        excerpt: "This single action deactivates the user, sets an unusable password, terminates all active sessions, revokes all API / app-password / recovery / verification / OAuth2"
+    control_mappings:
+      nist_800_53r5:
+        - "AC-2"
+        - "AC-12"
+        - "IR-4"
+        - "IR-4(1)"
+        - "AU-12"
+      mitre_attack_mitigations:
+        - id: "M1018"
+          rationale: "User Account Management — Account Lockdown atomically revokes a compromised account's tokens and sessions, countering T1078 (Valid Accounts) post-compromise persistence."
+    caveats:
+      - "Enterprise-only feature; Community-tier operators run a manual multi-step procedure with race-condition exposure (intg-568208e5)."
+      - "Cached LDAP outpost bind cache is not invalidated without separate WebSocket push (resil-32c37d49)."
+      - "Audit Event lacks actor AAL / source IP / geo context (threat-model R-4)."
+    related_concerns: [integrity, non_repudiation, ephemeral]

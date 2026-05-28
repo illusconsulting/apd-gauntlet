@@ -1,0 +1,347 @@
+schema_version: 1
+agent: non_repudiation
+finding:
+  - schema_version: 1
+    id: nonrep-d8bf1096
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No structured audit emitter exists — operator actions are unattributable in a defensible record"
+    summary: "Tech plan §11 confirms 'no production-grade audit story'; Python logging to stdout is the only event stream; no operator-action attribution beyond aiohttp request logs."
+    detail: |
+      Tech plan §11 explicitly states "No production-grade audit
+      story. The platform emits Python logging calls to stdout/rich;
+      there is no structured audit log, no operator-action
+      attribution beyond the session cookie, no immutable event
+      store." INV-AUTH-001 reviewer-notes the gap: "Python logging
+      may emit a line for login success / failure depending on log
+      level; there is no structured audit emitter, no signed event
+      record, no operator-attributable trail beyond aiohttp access
+      logs." Runbook §8 (GAP marker) confirms the audit pipeline is
+      undocumented.
+
+      The security-tooling consequential-action surface from the
+      active domain pack enumerates: operator authentication events,
+      engagement lifecycle, implant lifecycle, plugin lifecycle,
+      command execution against implants, result data access,
+      customer-data egress, administrative changes, c2 channel
+      changes, audit-of-audit, break-glass. Caldera has zero
+      structured coverage of any class.
+
+      Critical per the security-tooling rubric clause "Audit trail
+      loss or alterability covering operator actions, command-issued
+      events, or result-data access" — the rubric explicitly notes
+      this "destroys legal defensibility under CFAA, destroys ROE
+      attestation, destroys customer-deliverable provenance".
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture'"
+        excerpt: "No production-grade audit story ... no structured audit log, no operator-action attribution"
+      - artifact: invariants.md
+        locator: "INV-AUTH-001"
+        excerpt: "there is no structured audit emitter, no signed event record, no operator-attributable trail"
+      - artifact: runbook.md
+        locator: "§8 (GAP marker)"
+        excerpt: "GAP: audit shipping not documented"
+    control_mappings:
+      nist_800_53r5: [AU-2, AU-3, "AU-3(1)", "AU-3(3)", AU-6, AU-8, AU-9, "AU-9(2)", "AU-9(3)", AU-10, AU-12, "AU-12(1)", "AU-12(3)"]
+      mitre_attack:
+        - technique: T1070
+          sub_technique: null
+          tactic: TA0005
+          rationale: "Absent structured audit, indicators of attacker activity are not collected — equivalent to defender-side log removal at the source."
+      cwe: [CWE-778, CWE-779]
+    recommendation:
+      posture: required
+      summary: "Add a structured audit emitter that covers the full security-tooling consequential-action surface; ship to an external sink with hash-chained durability."
+      detail: |
+        Introduce an AuditEvent typed schema (actor, action, target,
+        engagement_id, outcome, timestamp, signed_chain_link).
+        Instrument the consequential-action surfaces enumerated in
+        the security-tooling pack: auth events, engagement lifecycle,
+        implant lifecycle, plugin lifecycle, command issuance,
+        command authorization decisions, result-data reads, exports,
+        cross-tenant attempts, admin changes, signing-key lifecycle,
+        listener config changes, break-glass, DR failover. Ship to an
+        external sink (Loki, Splunk, S3 with object lock). Hash-chain
+        per day, anchor the daily chain-head externally (transparency
+        log or a separate cloud account). Sign each event with an
+        audit_log_signing_key held in a KMS that is read-only to the
+        Caldera process.
+      references:
+        - "NIST SP 800-92 §3"
+        - "ATNA / IHE audit framework for the audit format"
+    related_concerns: [immutability, authenticity, integrity, confidentiality]
+
+  - schema_version: 1
+    id: nonrep-79ed516c
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Command-issued events not audited — every implant command lacks defensible attribution"
+    summary: "Tech plan: command issued via PlanningService produces a Link in-memory; no structured audit emit captures (operator, target_implant, command, engagement, timestamp)."
+    detail: |
+      Tech plan §7 describes command flow: planner queues
+      instructions, ContactService returns them on next beacon. The
+      Link record captures the executed step in the Operation, but
+      tech plan §11 confirms no structured audit emit on command
+      issuance. INV-AUTHZ-001 reviewer-note flags the gap for ad-hoc
+      manual flows ("REST POSTs that bypass the standard operation
+      pipeline may not" carry operator attribution). The
+      security-tooling consequential-action surface lists "Command
+      issued" as the highest-volume audit class and "the load-bearing
+      class for after-action review and dispute resolution".
+
+      Critical per the security-tooling rubric clause "Audit trail
+      loss or alterability covering ... command-issued events" — the
+      rubric notes "regulators and customers treat absence-of-audit
+      as presumption of misuse." For a weapons platform, the
+      inability to prove which operator issued which command against
+      which implant for which engagement is the load-bearing CFAA
+      defensibility failure.
+    cross_references:
+      - nonrep-d8bf1096
+      - intg-899da63b
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication' step 2"
+        excerpt: "a list of queued instructions (each is a base64-encoded command, optionally with a parser)"
+      - artifact: invariants.md
+        locator: "INV-AUTHZ-001"
+        excerpt: "The Link record does not emit a structured audit event when the command is queued to the implant"
+    control_mappings:
+      nist_800_53r5: [AU-2, AU-3, AU-10, "AU-10(1)", "AU-10(2)", AU-12, "AU-12(3)"]
+      mitre_attack:
+        - technique: T1070
+          sub_technique: null
+          tactic: TA0005
+          rationale: "Absent command-issuance audit, an operator denying a specific command has plausible deniability; an attacker using the platform cannot be distinguished from legitimate operators."
+      cwe: [CWE-778]
+    recommendation:
+      posture: required
+      summary: "Emit a structured command_issued event on every planner.queue and every REST-driven manual issuance."
+      detail: |
+        Instrument PlanningService.generate_link AND every REST
+        handler that creates a Link to emit a command_issued audit
+        event. Schema:
+        (event_id, operator_id, target_implant_paw, engagement_id,
+        command_identifier, command_text_or_hash, authorization_decision,
+        roe_check_outcome, issued_at, signed_chain_link). Capture
+        BOTH allow and deny — denied authorization attempts are the
+        highest-signal events for insider-threat detection.
+    related_concerns: [authenticity, immutability, integrity]
+
+  - schema_version: 1
+    id: nonrep-1f49427b
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Result-data reads are not audited — operator access to harvested credentials leaves no trail"
+    summary: "DataService / RestService read paths for harvested credentials, screenshots, files emit no structured audit event; no per-record access trail."
+    detail: |
+      The security-tooling consequential-action surface lists result-
+      data reads ("Operator reads harvested credentials per-record",
+      "Operator reads captured screenshots per-screenshot", "Bulk
+      result export") as required audit content. Caldera's
+      DataService emits no events on read; the operator's REST GET
+      for /api/v2/operations/{id}/output leaves no trail beyond
+      aiohttp's per-request access log. For an insider-threat
+      scenario (compromised operator account exfiltrating every
+      customer's harvested credentials), the platform produces no
+      forensic evidence.
+
+      High per the security-tooling rubric clause "Audit trail loss
+      ... covering ... result-data access" — escalates to critical
+      when paired with the cross-operator access gap (conf-88726ba8)
+      because operator B reads operator A's results with no record
+      of either operator's identity attached to the read.
+    cross_references:
+      - nonrep-d8bf1096
+      - conf-88726ba8
+    evidence:
+      - artifact: runbook.md
+        locator: "§3 'Inspect captured operation evidence'"
+        excerpt: "curl -s -H 'KEY: <api_key_red>' http://localhost:8888/api/v2/operations/{op_id}/output"
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "Operator activity is observable only via aiohttp's request logs"
+    control_mappings:
+      nist_800_53r5: [AU-2, AU-3, AU-6, AU-9, "AC-6(9)"]
+      mitre_attack:
+        - technique: T1213
+          sub_technique: null
+          tactic: TA0009
+          rationale: "Without read-audit, an insider's bulk extraction of harvested data from data/results/ produces no record."
+      cwe: [CWE-778]
+    recommendation:
+      posture: required
+      summary: "Emit a result_access event on every operator read of a Result record; capture record_id, operator_id, engagement_id, byte count."
+      detail: |
+        Wrap every DataService and RestService method that returns
+        harvested-credential, screenshot, file, or command-output
+        content with an audit-emit. Schema:
+        (event_id, operator_id, accessed_record_id, accessed_kind,
+        engagement_id, byte_count, accessed_at, signed_chain_link).
+        Bulk exports add (record_count, field_set, destination).
+        Cross-tenant attempt detection: emit on any read where the
+        record's engagement_id is not in the operator's active
+        engagement context.
+    related_concerns: [confidentiality, immutability, authenticity]
+
+  - schema_version: 1
+    id: nonrep-5f137373
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin lifecycle (enable / disable / load) events not audited"
+    summary: "AppService.load_plugins, plugin enable() outcomes, plugin disable on conf edit + restart leave no structured audit trail."
+    detail: |
+      Tech plan §5 confirms plugin loading happens at startup via
+      import_module. Runbook §2 notes Python logging may emit info
+      on plugin enable. There is no structured audit event capturing
+      (plugin_name, version_digest, signature_outcome, source,
+      loaded_at, loaded_by). Threat-model R-3 confirms the gap.
+      Plugin-load events are required content under the
+      security-tooling consequential-action surface and the
+      immutability data-class list.
+
+      High per the security-tooling rubric clause "No audit on plugin
+      module load" — escalates to critical when paired with the
+      mutable-without-signature plugin store (intg-81c06dfa) because
+      incident reconstruction (which malicious plugin was loaded
+      when) is impossible.
+    cross_references:
+      - intg-81c06dfa
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5 'Plugin model'"
+        excerpt: "imported by AppService.load_plugins at server start; its enable() method runs with full server privilege"
+      - artifact: threat-model.md
+        locator: "R-3"
+        excerpt: "no structured audit captures which plugin loaded when, with what version digest"
+    control_mappings:
+      nist_800_53r5: [AU-2, AU-12, CM-3, "CM-3(1)", SR-4]
+      mitre_attack:
+        - technique: T1505
+          sub_technique: null
+          tactic: TA0003
+          rationale: "Absent plugin-load audit, a backdoored plugin's installation cannot be reconstructed during incident response."
+      cwe: [CWE-778]
+    recommendation:
+      posture: required
+      summary: "Emit plugin_load and plugin_enable_failed events with version digest and signature outcome on every plugin lifecycle transition."
+      detail: |
+        Instrument AppService.load_plugins to emit a plugin_load
+        event per plugin: (plugin_name, version, file_digest,
+        signature_outcome, source_registry, dependency_lockfile_digest,
+        loaded_at, server_start_id). On enable() exception, emit
+        plugin_enable_failed with reason. On conf-edit-driven plugin
+        toggle, emit plugin_enable / plugin_disable with operator_id.
+    related_concerns: [authenticity, immutability, integrity]
+
+  - schema_version: 1
+    id: nonrep-58511e00
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Engagement lifecycle events have no first-class object and no audit"
+    summary: "No first-class Engagement object; therefore no engagement_start / engagement_scope_change / engagement_close events; ROE attestation cannot be cryptographically sealed."
+    detail: |
+      Tech plan §1 and §11 confirm there is no first-class
+      Engagement, no ROE artifact in the platform. The security-tooling
+      consequential-action surface enumerates engagement lifecycle
+      events as the second-highest-volume audit class (after command
+      issuance). Without a first-class Engagement object, there is
+      nowhere to bind audit events to; ROE attestation cannot be
+      cryptographically sealed (the immutability requirement); after-
+      action review cannot reconstruct which scope was in force when
+      a given command issued.
+
+      High per the security-tooling rubric clause "Audit trail loss
+      ... covering operator actions" — escalates to critical (per
+      "Unauthorized engagement-initiation capability") because
+      without engagement audit, every command issuance is
+      challengeable as out-of-scope.
+    cross_references:
+      - intg-899da63b
+      - nonrep-79ed516c
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture'"
+        excerpt: "Engagement scope (ROE) is operator-declared. The platform has no Engagement object"
+      - artifact: threat-model.md
+        locator: "WP-1, WP-2"
+        excerpt: "CFAA exposure — out-of-scope engagement initiation; ROE violation"
+    control_mappings:
+      nist_800_53r5: [AU-2, AU-3, AU-10, AU-12, AC-3, AC-16]
+      mitre_attack: []
+      cwe: [CWE-778]
+    recommendation:
+      posture: required
+      summary: "Introduce Engagement first-class object (per intg-899da63b) and emit engagement_start, engagement_scope_change, engagement_close events; cryptographically seal the start record."
+      detail: |
+        After the Engagement object exists, emit engagement_start
+        with (operator_id, customer_reference, target_inventory
+        digest, authorization_window, roe_document_digest, signed
+        attestation). Emit engagement_scope_change for any later
+        modification with diff + operator + reason. Emit
+        engagement_close with ROE-closure attestation. The start
+        event is the legally-load-bearing record; sign it with the
+        audit_log_signing_key.
+    related_concerns: [immutability, authenticity, integrity]
+
+  - schema_version: 1
+    id: nonrep-19e51298
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Time-source reliability for event ordering not specified"
+    summary: "Tech plan and runbook do not document NTP integrity, monotonic-counter usage, or any time-source attestation for events."
+    detail: |
+      Even if a structured audit emitter is added (per nonrep-d8bf1096),
+      its forensic value depends on reliable, monotonic, attestable
+      timestamps. Tech plan does not specify NTP source, monotonic
+      counter usage, or timestamp authority anchoring. For a weapons
+      platform whose audit feeds CFAA defense, after-action review,
+      and customer-deliverable provenance, timestamp ambiguity
+      (clock skew, NTP poisoning, time-travel by an attacker with
+      filesystem access) is a defensibility erosion.
+
+      Medium per the security-tooling rubric (no specific clause; the
+      rubric's "Audit trail loss" clause covers absent records but
+      not timestamp integrity). Documenting the time-source
+      expectation is a prerequisite for any audit credibility claim.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "no structured audit emitter"
+    control_mappings:
+      nist_800_53r5: [AU-8, "AU-8(1)"]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Specify time-source posture: require NTP synchronization, use CLOCK_MONOTONIC for event ordering, anchor daily chain-head to an external timestamp authority."
+      detail: |
+        Document the time-source expectation in the runbook: NTP
+        sync required; CLOCK_MONOTONIC counter for intra-event
+        ordering; daily audit chain-head anchored to an external
+        TSA (RFC 3161) or a public transparency log.
+    related_concerns: [immutability, integrity]

@@ -1,0 +1,37 @@
+schema_version: 1
+agent: immutability
+capability:
+  - schema_version: 1
+    id: immut-cap-dfe5518d
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    title: "DataService periodic save_state writes object graph to data/backup/"
+    description: |
+      DataService.save_state periodically writes the in-memory
+      first-class object graph to data/backup/, providing a
+      coarse rollback point for accidental in-memory data loss.
+      The mechanism preserves last-known-good state but does not
+      provide WORM semantics — backups are overwritten.
+    maturity: implemented
+    scope: |
+      Confirmed for first-class objects in DataService scope. Not
+      addressed: data/backup/ is mutable / overwritten (so does
+      not satisfy any of the security-tooling immutability classes);
+      no off-host replication; no signature on the backup tree;
+      cadence not documented.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "data/backup/ # periodic state dumps"
+      - artifact: architecture-index.md
+        locator: "DataService section"
+        excerpt: "save_state / restore_state"
+    control_mappings:
+      nist_800_53r5: [CP-9, CP-10]
+    caveats:
+      - "Backup is mutable / overwritten — not WORM."
+      - "Cadence is not documented."
+      - "No off-host replication."
+      - "No signature on the backup tree."
+    related_concerns: [availability, confidentiality]

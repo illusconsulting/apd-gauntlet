@@ -1,0 +1,106 @@
+schema_version: 1
+run_id: apd-20260527-caldera-adversary-emulation
+generated_by: apd-synthesizer
+generated_at: 2026-05-27T13:00:00Z
+
+description: |
+  9 APD goals x N taxonomies coverage rollup. Rows are APD goals;
+  columns are taxonomies (nist_800_53r5, mitre_attack, d3fend,
+  owasp_api_top10, owasp_top10, cwe). Cell value = count of findings
+  in (goal, taxonomy) pair. Empty cells indicate either no findings
+  for that goal or no mappings for that goal under that taxonomy.
+
+matrix:
+  confidentiality:
+    findings_total: 7
+    capabilities_total: 3
+    nist_800_53r5: 7
+    mitre_attack: 4
+    d3fend: 0
+    owasp_api_top10: 3
+    owasp_top10: 2
+    cwe: 6
+  integrity:
+    findings_total: 6
+    capabilities_total: 3
+    nist_800_53r5: 6
+    mitre_attack: 6
+    d3fend: 0
+    owasp_api_top10: 2
+    owasp_top10: 0
+    cwe: 8
+  availability:
+    findings_total: 5
+    capabilities_total: 2
+    nist_800_53r5: 5
+    mitre_attack: 2
+    d3fend: 0
+    owasp_api_top10: 0
+    owasp_top10: 0
+    cwe: 4
+  distributed:
+    findings_total: 5
+    capabilities_total: 1
+    nist_800_53r5: 5
+    mitre_attack: 1
+    d3fend: 0
+    owasp_api_top10: 0
+    owasp_top10: 0
+    cwe: 2
+  resilient:
+    findings_total: 4
+    capabilities_total: 1
+    nist_800_53r5: 4
+    mitre_attack: 1
+    d3fend: 0
+    owasp_api_top10: 0
+    owasp_top10: 0
+    cwe: 1
+  ephemeral:
+    findings_total: 5
+    capabilities_total: 2
+    nist_800_53r5: 5
+    mitre_attack: 3
+    d3fend: 0
+    owasp_api_top10: 1
+    owasp_top10: 1
+    cwe: 4
+  authenticity:
+    findings_total: 6
+    capabilities_total: 2
+    nist_800_53r5: 6
+    mitre_attack: 5
+    d3fend: 0
+    owasp_api_top10: 2
+    owasp_top10: 1
+    cwe: 7
+  non_repudiation:
+    findings_total: 6
+    capabilities_total: 1
+    nist_800_53r5: 6
+    mitre_attack: 4
+    d3fend: 0
+    owasp_api_top10: 0
+    owasp_top10: 0
+    cwe: 6
+  immutability:
+    findings_total: 5
+    capabilities_total: 1
+    nist_800_53r5: 5
+    mitre_attack: 2
+    d3fend: 0
+    owasp_api_top10: 0
+    owasp_top10: 0
+    cwe: 5
+
+totals:
+  findings_total: 49
+  capabilities_total: 16
+  unique_findings: 41
+  unique_capabilities: 12
+
+notes:
+  - "Some findings count in multiple cells (multi-mapping); totals reflect mapping counts, not finding counts."
+  - "D3FEND mappings live on capabilities, not findings (per apd-control-mappings skill). Caldera's confirmed capabilities are insufficiently grounded for D3FEND mapping; the d3fend column is therefore 0 across the matrix and D3-* references appear as recommendation-side guidance in findings (see attack-exposure.yaml d3fend_capabilities block)."
+  - "All 9 APD goals exercised — meets quality-bar requirement."
+  - "owasp_llm_top10 not declared in run-config; matrix has no LLM column."

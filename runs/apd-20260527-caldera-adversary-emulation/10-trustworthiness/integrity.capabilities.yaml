@@ -1,0 +1,89 @@
+schema_version: 1
+agent: integrity
+capability:
+  - schema_version: 1
+    id: intg-cap-27c5021a
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "aiohttp_apispec request validation middleware on /api/v2 handlers"
+    description: |
+      The /api/v2 subapp registers
+      apispec_request_validation_middleware and validation_middleware
+      ahead of every handler. Request bodies are validated against
+      the handler's declared marshmallow schema before reaching the
+      handler logic. Provides typed-schema input validation on the
+      modern REST surface.
+    maturity: designed
+    scope: |
+      Confirmed for handlers under /api/v2/*. Not addressed:
+      /api/v1/* legacy endpoints (CampaignPack, AdvancedPack), the
+      /beacon agent listener path, plugin-contributed routes outside
+      /api/v2.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§10 'API surfaces'"
+        excerpt: "All handlers go through pass_option_middleware + apispec_request_validation_middleware + validation_middleware"
+    control_mappings:
+      nist_800_53r5: [SI-10, SC-16]
+    caveats:
+      - "Coverage is /api/v2 only; /api/v1 and plugin routes bypass."
+      - "Validation is shape-only; no semantic constraints (e.g., target-in-ROE)."
+    related_concerns: [authenticity]
+
+  - schema_version: 1
+    id: intg-cap-61ba338f
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "URL and ldflags sanitization in FileSvc for sandcat builder"
+    description: |
+      FileSvc enforces URL_SANITIZATION_REGEX and
+      ALLOWED_LDFLAG_REGEXES when applying operator-supplied values
+      to a go build invocation. Constrains the surface that can be
+      injected into a compiled implant binary.
+    maturity: designed
+    scope: |
+      Confirmed for sandcat builds through the builder plugin via
+      FileSvc. Not addressed: completeness against bypasses
+      (see conf-bcbd4cb9); other plugin-contributed payload
+      compilation paths.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 'Shipped plugins'"
+        excerpt: "URL_SANITIZATION_REGEX and ALLOWED_LDFLAG_REGEXES in file_svc.py constrain what can be injected"
+    control_mappings:
+      nist_800_53r5: [SI-10, "AC-4(8)"]
+    caveats:
+      - "Regex deny model — completeness against evasions not audited."
+      - "No positive allowlist for variable names."
+
+  - schema_version: 1
+    id: intg-cap-c933c8e0
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "Untrusted-agent sniffer demotes silent agents in agent registry"
+    description: |
+      AppService starts a background untrusted-agent sniffer that
+      marks Agent records as 'untrusted' when their last_seen
+      exceeds the untrusted_timer threshold (default 90s). Provides
+      a coarse liveness signal to the planner and the operator UI.
+    maturity: implemented
+    scope: |
+      Confirmed for in-memory Agent records. Not addressed: registry
+      cleanup (silent agents are demoted, not evicted; see avail
+      finding); no cryptographic identity check on resurrected paws.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 'Top-level entrypoint' step 5"
+        excerpt: "background tasks: untrusted-agent sniffer"
+      - artifact: architecture-index.md
+        locator: "AppService section"
+        excerpt: "start_sniffer_untrusted_agents()"
+    control_mappings:
+      nist_800_53r5: [SI-4]
+    caveats:
+      - "Demotion only; no eviction or rate-limit on registration."
+      - "No cryptographic identity binding to the paw."
+    related_concerns: [availability, authenticity]

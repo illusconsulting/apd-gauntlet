@@ -1,0 +1,292 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+  catalog: MITRE ATT&CK Enterprise
+
+# Per-technique attack-exposure rollup: which findings cite the technique,
+# and which capabilities cite a mitigation that defends against it.
+# Net exposure = findings count - capabilities count (positive = uncovered;
+# zero = balanced).
+
+techniques:
+  T1040:
+    name: "Network Sniffing"
+    tactic: "TA0006 Credential Access"
+    findings: [conf-6dd9d98a, conf-e08662e7]
+    capabilities_with_mitigation: []
+    net_exposure: 2
+    notes: "PostgreSQL TLS default-off and outpost-WS TLS unenumerated; both addressed by deployment-time TLS-required changes."
+
+  T1078:
+    name: "Valid Accounts"
+    tactic: "TA0001 Initial Access"
+    findings: [auth-4793933a, intg-0a313721, ephem-6af8665b, intg-7fb03642, auth-c80d79e6]
+    capabilities_with_mitigation: [auth-cap-3a143747, intg-cap-13411b16, resil-cap-867eac4f]
+    net_exposure: 2
+    notes: "Admin MFA default + Source-attribute privilege injection + SCIM static token + forward-auth header trust + federation onboarding all touch T1078 from different angles. Mitigations (WebAuthn, RBAC, Account Lockdown) cover but do not eliminate."
+
+  T1098:
+    name: "Account Manipulation"
+    tactic: "TA0003 Persistence"
+    findings: [intg-0a313721, immut-df287568]
+    capabilities_with_mitigation: []
+    net_exposure: 2
+    notes: "Source attribute mapping to is_superuser; admin-tier UI mutations bypassing GitOps. Both addressable by platform-enforced privileged-field deny + drift detection."
+
+  T1110:
+    name: "Brute Force"
+    tactic: "TA0006 Credential Access"
+    findings: [avail-3a9189a2]
+    capabilities_with_mitigation: [avail-cap-2e726aa6, resil-cap-c79efff1]
+    net_exposure: -1
+    notes: "Default-no-rate-limit gap covered by Reputation policy primitive (post-IncludeSec 2025.12 fix). Binding the Reputation policy by default would close this entirely."
+
+  T1110.002:
+    name: "Brute Force: Password Cracking"
+    tactic: "TA0006"
+    findings: []
+    capabilities_with_mitigation: [conf-cap-253fdeb0]
+    net_exposure: -1
+    notes: "argon2-cffi password hashing raises offline-brute-force cost."
+
+  T1110.003:
+    name: "Brute Force: Password Spraying"
+    tactic: "TA0006"
+    findings: [avail-3a9189a2]
+    capabilities_with_mitigation: [auth-cap-3a143747, resil-cap-c79efff1]
+    net_exposure: -1
+
+  T1199:
+    name: "Trusted Relationship"
+    tactic: "TA0001 Initial Access"
+    findings: [intg-0a313721, auth-c80d79e6]
+    capabilities_with_mitigation: []
+    net_exposure: 2
+    notes: "Compromised upstream Source IdP + malicious-RP onboarding without domain-control validation."
+
+  T1212:
+    name: "Exploitation for Credential Access"
+    tactic: "TA0006"
+    findings: [conf-7174bf6f]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+    notes: "Embedded outpost shared-process bug reveals master secret_key."
+
+  T1485:
+    name: "Data Destruction"
+    tactic: "TA0040 Impact"
+    findings: [avail-cfd2b6e8, immut-fd3aafdd, dist-b8b7603b]
+    capabilities_with_mitigation: []
+    net_exposure: 3
+    notes: "PostgreSQL SPOF + backup mutability + missing multi-region = catastrophic-data-loss exposure. Object-lock + multi-region remediation."
+
+  T1490:
+    name: "Inhibit System Recovery"
+    tactic: "TA0040"
+    findings: [immut-fd3aafdd]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+
+  T1499:
+    name: "Endpoint Denial of Service"
+    tactic: "TA0040"
+    findings: [dist-9b598237, resil-4d9c7873]
+    capabilities_with_mitigation: []
+    net_exposure: 2
+    notes: "Substrate concentration + no-circuit-breaker = self-DoS surface."
+
+  T1499.001:
+    name: "Endpoint Denial of Service: OS Exhaustion Flood"
+    tactic: "TA0040"
+    findings: [resil-4d9c7873]
+    capabilities_with_mitigation: [intg-cap-f8801874]
+    net_exposure: 0
+    notes: "defusedxml mitigates XML-bomb / XXE class on SAML path; broader OS-resource exhaustion remains unaddressed (timeouts, circuit breakers)."
+
+  T1528:
+    name: "Steal Application Access Token"
+    tactic: "TA0006"
+    findings: [resil-0e6a988b, nonrep-c772c9f2]
+    capabilities_with_mitigation: []
+    net_exposure: 2
+    notes: "Refresh-token reuse detection absent + per-token audit anchor absent = stolen token has indefinite value AND post-incident reconstruction fails."
+
+  T1550:
+    name: "Use Alternate Authentication Material"
+    tactic: "TA0008 Lateral Movement"
+    findings: [resil-0e6a988b]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+
+  T1550.001:
+    name: "Use Alternate Authentication Material: Application Access Token"
+    tactic: "TA0008"
+    findings: [resil-0e6a988b]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+
+  T1552:
+    name: "Unsecured Credentials"
+    tactic: "TA0006"
+    findings: [conf-477ff8a1, ephem-5a6042dc]
+    capabilities_with_mitigation: [conf-cap-1150e561]
+    net_exposure: 1
+    notes: "Master-key in process env + no rotation cadence; field-level encryption covers the at-rest half but the in-process-env reachability remains."
+
+  T1552.001:
+    name: "Unsecured Credentials: Credentials in Files"
+    tactic: "TA0006"
+    findings: [conf-477ff8a1, ephem-07f6fad6, ephem-5a6042dc]
+    capabilities_with_mitigation: [conf-cap-1150e561]
+    net_exposure: 2
+
+  T1556:
+    name: "Modify Authentication Process"
+    tactic: "TA0006"
+    findings: [intg-0a313721, auth-4793933a]
+    capabilities_with_mitigation: [auth-cap-3a143747]
+    net_exposure: 1
+    notes: "Admin-tier compromise + missing-MFA-default = Flow-rewrite-to-disable-MFA scenario. WebAuthn covers the AAL3 authenticator strength but not the admin-tier compromise gate."
+
+  T1556.006:
+    name: "Modify Authentication Process: MFA Bypass"
+    tactic: "TA0006"
+    findings: [auth-190b06f7]
+    capabilities_with_mitigation: [auth-cap-3a143747]
+    net_exposure: 0
+    notes: "SMS-fallback on AAL3 flow allowed by platform; WebAuthn capability mitigates if operator structurally blocks the SMS path per Flow."
+
+  T1557:
+    name: "Adversary-in-the-Middle"
+    tactic: "TA0006"
+    findings: [auth-f667a1e6]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+    notes: "RAC 'Ignore Server certificate' bypass."
+
+  T1565:
+    name: "Data Manipulation"
+    tactic: "TA0040"
+    findings: [immut-d98cdc96]
+    capabilities_with_mitigation: []
+    net_exposure: 1
+
+  T1606:
+    name: "Forge Web Credentials"
+    tactic: "TA0006"
+    findings: [intg-3f9318c2]
+    capabilities_with_mitigation: [conf-cap-6db56a6d]
+    net_exposure: 0
+    notes: "Per-Provider key isolation contains forge-once blast radius to the affected RP."
+
+  T1606.001:
+    name: "Forge Web Credentials: Web Cookies"
+    tactic: "TA0006"
+    findings: [conf-477ff8a1, intg-96d4de40, intg-3f9318c2, ephem-0fb143ce, immut-1dc13874]
+    capabilities_with_mitigation: [conf-cap-1150e561]
+    net_exposure: 4
+    notes: "Heavy cluster on the JWT-forgery surface: master-key reachability + HMAC fallback + redirect-URI regex + rotation cadence + rotation history. Substantial uncovered exposure."
+
+  T1606.002:
+    name: "Forge Web Credentials: SAML Tokens"
+    tactic: "TA0006"
+    findings: [intg-e1d79aee]
+    capabilities_with_mitigation: [intg-cap-f8801874]
+    net_exposure: 0
+    notes: "SAML XSW uncertainty balanced by defusedxml+xmlsec dependency posture; net-zero pending code-level review."
+
+  T1621:
+    name: "Multi-Factor Authentication Request Generation"
+    tactic: "TA0006"
+    findings: [avail-3a9189a2, auth-190b06f7]
+    capabilities_with_mitigation: [auth-cap-3a143747]
+    net_exposure: 1
+    notes: "MFA fatigue / push-bombing surface on the MFA-challenge endpoint without default rate-limit; WebAuthn capability addresses by being non-bumpable."
+
+  T1070:
+    name: "Indicator Removal"
+    tactic: "TA0005 Defense Evasion"
+    findings: [nonrep-6ff98de3, nonrep-c3d8f98d, immut-d98cdc96]
+    capabilities_with_mitigation: []
+    net_exposure: 3
+    notes: "Audit-pipeline mutability + helper-non-emission + Event-log mutable rows = T1070 wide-open. Hash-chaining + log forwarding remediation."
+
+# Tactic-level rollup
+tactics:
+  TA0001:
+    name: "Initial Access"
+    techniques_referenced: [T1078, T1199]
+    findings_total: 7
+    capabilities_with_mitigation_total: 3
+
+  TA0003:
+    name: "Persistence"
+    techniques_referenced: [T1078, T1098]
+    findings_total: 7
+    capabilities_with_mitigation_total: 3
+
+  TA0005:
+    name: "Defense Evasion"
+    techniques_referenced: [T1070]
+    findings_total: 3
+    capabilities_with_mitigation_total: 0
+
+  TA0006:
+    name: "Credential Access"
+    techniques_referenced: [T1040, T1078, T1110, T1212, T1528, T1552, T1556, T1557, T1606, T1621]
+    findings_total: 25
+    capabilities_with_mitigation_total: 5
+    net_exposure: 20
+    notes: "By far the heaviest-cluster tactic — expected for an IdP review. Token-forgery (T1606), MFA-bypass (T1621/T1556), credential-store-compromise (T1552) dominate."
+
+  TA0008:
+    name: "Lateral Movement"
+    techniques_referenced: [T1550]
+    findings_total: 1
+    capabilities_with_mitigation_total: 0
+
+  TA0009:
+    name: "Collection"
+    techniques_referenced: [T1530]
+    findings_total: 1
+    capabilities_with_mitigation_total: 0
+
+  TA0040:
+    name: "Impact"
+    techniques_referenced: [T1485, T1490, T1499, T1565]
+    findings_total: 6
+    capabilities_with_mitigation_total: 1
+    notes: "Audit-tampering + backup-destruction + endpoint-DoS exposure cluster."
+
+summary:
+  total_unique_techniques_with_findings: 24
+  total_findings_with_attack_mappings: 38
+  total_capabilities_with_mitigation_mappings: 11
+  highest_net_exposure_techniques:
+    - T1606.001: "4 findings (JWT forgery — HMAC fallback, master-key, rotation, history)"
+    - T1485: "3 findings (Data Destruction — PG SPOF, backup mutability, multi-region)"
+    - T1070: "3 findings (Indicator Removal — audit pipeline + helper non-emission + mutability)"
+    - T1078: "2 findings + 3 mitigations (Valid Accounts — admin MFA + Source injection + SCIM token + RP onboarding)"
+    - T1499: "2 findings (Endpoint DoS — substrate concentration + circuit breakers)"
+
+notes: |
+  Credential Access (TA0006) dominates the attack surface, with 25
+  finding-mappings and only 5 capability-mitigations — net exposure 20.
+  This is expected for an IdP: the platform's purpose is to issue,
+  validate, and protect credentials, so credential-touching ATT&CK
+  techniques inherently form the bulk of the threat surface. The
+  remediation pattern across this tactic clusters around three themes:
+
+  1. Token-forgery (T1606) blast-radius bounding — HMAC-fallback removal,
+     master-key external-KMS, per-Provider rotation cadence, JWKS
+     rotation history retention
+  2. MFA-bypass (T1556, T1621) — default admin MFA binding, structural
+     SMS-fallback policy, WebAuthn default for high-AAL flows
+  3. Credential exposure (T1552, T1040) — TLS by default on PG / WS,
+     reverse-proxy API blocklist by default, external KMS for master-key
+
+  Impact (TA0040) is the second-largest exposure cluster, dominated by
+  the substrate concentration findings (Postgres SPOF + backup mutability
+  + multi-region absence). The pattern: a single substrate compromise
+  yields catastrophic data loss; the remediation is multi-substrate
+  isolation + object-lock + multi-region.

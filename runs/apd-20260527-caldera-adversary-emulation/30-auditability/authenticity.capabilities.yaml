@@ -1,0 +1,64 @@
+schema_version: 1
+agent: authenticity
+capability:
+  - schema_version: 1
+    id: auth-cap-17c17dd2
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "Pluggable LoginHandlerInterface enables alternative authentication pipelines"
+    description: |
+      AuthService loads auth.login.handler.module from conf/<env>.yml
+      (default 'default'); a plugin may implement
+      LoginHandlerInterface and replace the default. The shipped
+      saml and access plugins demonstrate alternative auth pipelines.
+      Enables an operator-installed MFA flow or SSO integration to
+      replace the basic password path.
+    maturity: designed
+    scope: |
+      Confirmed as a documented extension point. Not addressed: no
+      shipped MFA implementation in core (see auth-1c9a7b78); the
+      saml plugin is externally maintained and out of the default
+      distribution; operator-supplied plugins inherit the no-sandbox
+      and no-signature trust assumption.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "Login handlers are pluggable. auth.login.handler.module defaults to default"
+    control_mappings:
+      nist_800_53r5: [IA-8, "IA-8(1)"]
+    caveats:
+      - "No shipped MFA in core."
+      - "Plugin trust model (no signature, no sandbox) applies."
+    related_concerns: [ephemeral, confidentiality]
+
+  - schema_version: 1
+    id: auth-cap-c186207a
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "@check_authorization decorator enforces group permissions on REST handlers"
+    description: |
+      AuthService.check_permissions(app, request) is the canonical
+      authorization gate; the @check_authorization decorator applies
+      it per-handler. Enforces 'red' or 'blue' group membership on
+      every handler that uses the decorator.
+    maturity: implemented
+    scope: |
+      Confirmed for handlers that explicitly use the decorator.
+      Not addressed: per-resource authorization (see conf-88726ba8);
+      coverage on plugin-contributed routes (see auth-5911ace7);
+      separation of red and blue beyond coarse group.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "The permissions decorator (check_authorization in auth_svc.py) only checks that the caller belongs to the required group"
+      - artifact: architecture-index.md
+        locator: "AuthService section"
+        excerpt: "check_permissions"
+    control_mappings:
+      nist_800_53r5: [AC-3, AC-6, IA-2]
+    caveats:
+      - "Group-level only — no per-resource ACL."
+      - "Plugin-contributed routes must remember to apply it."
+    related_concerns: [confidentiality, non_repudiation]

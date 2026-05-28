@@ -1,0 +1,12 @@
+schema_version: 1
+generated_by: attack_path_analyzer
+enumeration_parameters:
+  max_hop: 8
+  max_paths_per_pair: 50
+  bottleneck_threshold: 5
+paths: []
+summary:
+  pairs_enumerated: 0
+  total_paths: 0
+  truncated_pairs: 0
+  bottleneck_edge_count: 0

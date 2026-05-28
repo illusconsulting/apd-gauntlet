@@ -1,0 +1,632 @@
+finding:
+  - schema_version: 1
+    id: avail-3a9189a2
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No per-endpoint rate-limit shipped by default; Reputation policy provides primitives but operator must bind it deliberately"
+    summary: "Per threat-model D-1, D-2, D-4, D-6, S-8 and `runbook.md` §10, the platform provides Reputation/GeoIP/Password policies but does not ship out-of-box rate-limit bindings on /authorize, /token, /authenticate, recovery, or MFA-challenge endpoints."
+    detail: |
+      The threat model documents a series of related rate-limit gaps:
+      D-1 (TOTP brute-force — IncludeSec H2 added rate-limit "to test
+      infrastructure" but on-by-default-in-platform is unclear),
+      D-2 (login-flow race-condition reputation bypass — fixed in
+      2025.12 by replacing session counters with reputation-driven),
+      D-4 (session-store fill via mass-anonymous Flow execution —
+      "Reputation policy can throttle; WAF recommended"),
+      D-6 (email-stage flood — "Reputation policy; rate-limiting at the
+      reverse proxy"), and S-8 (password recovery brute-force —
+      "Reputation policy and Password Expiry policy can be bound").
+
+      `runbook.md` §10 hardening checklist reinforces: the operator
+      MUST "configure the GeoIP policy if location-based gating is
+      relevant" and "configure MFA enforcement on the
+      default-authentication-flow for admin Groups" — these are
+      operator-action-required items. `agents.md` confirms: "authentik
+      provides the primitives (Reputation policy, GeoIP policy,
+      Notification Rules, per-Brand flow defaults, Account Lockdown
+      stage) but does not ship every recommended binding out of the
+      box."
+
+      Severity is high per the identity-security severity rubric:
+      this matches the High clause "Brute force / password spray without
+      rate-limit + lockout — credential-stuffing surface open." The
+      consequential surface is every credential-touching endpoint (per
+      the identity-security consequential-actions catalog: /authorize,
+      /token, password-grant, MFA-challenge, MFA-enrollment,
+      recovery endpoints). The compensating control is operator-applied,
+      and `agents.md` makes clear that an unhardened-but-deployed
+      community install is the realistic baseline.
+    evidence:
+      - artifact: threat-model.md
+        locator: "§D-1 'TOTP brute-force via parallelism', Residual question line"
+        excerpt: "Is the in-platform rate-limit on-by-default or operator-opt-in?"
+      - artifact: threat-model.md
+        locator: "§S-8 'Password recovery brute-force / spray', Residual question line"
+        excerpt: "Is there an out-of-the-box recovery-flow rate-limit? The Reputation policy must be explicitly bound."
+      - artifact: runbook.md
+        locator: "§10 'Production hardening checklist', GeoIP and MFA enforcement bullets"
+        excerpt: "Configure the GeoIP policy if location-based gating is relevant. Configure MFA enforcement on the default-authentication-flow for admin Groups"
+      - artifact: agents.md
+        locator: "§'Implication for the APD review', bullet 2"
+        excerpt: "authentik provides the primitives (Reputation policy, GeoIP policy, Notification Rules, per-Brand flow defaults, Account Lockdown stage) but does not ship every recommended binding out of"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-5"
+        - "SC-5(1)"
+        - "SC-5(2)"
+        - "AC-7"
+        - "IA-5(13)"
+      mitre_attack:
+        - technique: "T1110"
+          sub_technique: "T1110.003"
+          tactic: "TA0006"
+          rationale: "Default-no-rate-limit on /authorize and /token opens the credential-stuffing and password-spray surface against the IdP's authentication endpoints."
+        - technique: "T1621"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "No default rate-limit on MFA-challenge enables MFA fatigue / push-bombing attacks against users."
+      cwe:
+        - "CWE-307"
+        - "CWE-799"
+      owasp_top10:
+        - "A07:2021"
+      owasp_api_top10:
+        - "API4:2023"
+    recommendation:
+      posture: required
+      summary: "Ship a default Reputation-policy binding (and Password-policy binding) on the platform-supplied default-authentication-flow, default-recovery-flow, and default-MFA-validation paths; require operator opt-out rather than opt-in."
+      detail: |
+        Change the platform-shipped default flows so that the Reputation
+        policy is bound to the Identification and authenticator_validate
+        stages with sensible thresholds (e.g., reputation < -3 denies;
+        the IncludeSec 2025.12 fix replaced session counters with
+        reputation scores precisely so this would work). Bind a
+        Password policy to recovery and password-change flows with
+        HIBP-check enabled. Document the per-tenant tunables. Operators
+        who explicitly want no rate-limiting (laboratory / development)
+        deliberately remove the binding.
+
+        This converts the rate-limit posture from "available primitives
+        the operator must bind" to "shipped defaults the operator can
+        relax." The platform's expressiveness is preserved; the
+        out-of-the-box default-deny tilts from operator-action-required
+        to operator-action-required-only-if-loosening.
+      references:
+        - "internal: customize/policies/types/index.mdx (the Reputation/Password/GeoIP policy reference)"
+        - "internal: runbook.md §10 (the hardening checklist that would become unnecessary if defaults shift)"
+    related_concerns: [authenticity, resilient]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-1160b595
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: high
+    confidence: medium
+    title: "Per-endpoint SLO and burn-rate alerting for /authorize, /token, /userinfo, /application/saml are not enumerated"
+    summary: "Per the identity-security common-patterns guidance, IdPs commonly publish per-endpoint SLOs with separate burn-rate alerting; the inputs do not enumerate these."
+    detail: |
+      The identity-security common-patterns guidance (availability) calls
+      out "SLO and error-budget framework with separate SLOs for
+      /authorize, /token, /userinfo, and SAML SSO endpoints; burn-rate
+      alerting wired to oncall" as a maturity-ladder capability. The
+      authentik inputs document health endpoints (`runbook.md` §3:
+      `/-/health/live/`, `/-/health/ready/`, `/-/metrics/`) and per-
+      outpost Prometheus metrics, but do not enumerate per-protocol-
+      endpoint SLOs, error-budget targets, or burn-rate alert
+      definitions.
+
+      Disposition is `blocked` because the inputs are silent on whether
+      the upstream project ships any SLO recommendations or whether each
+      operator defines them entirely independently. Severity is high
+      per the identity-security rubric: this matches the High clause
+      "Single-region IdP deployment with a 99.9%+ availability target
+      asserted to downstream RPs ... target undeliverable from a single
+      region under typical cloud-provider zone SLA" — but the
+      severity here is operational-visibility rather than topology, so
+      it is bounded by the absence of evidence.
+    evidence:
+      - artifact: runbook.md
+        locator: "§3 'Health checks', table"
+        excerpt: "Server | curl -sf http://<host>:9000/-/health/ready/"
+      - artifact: agents.md
+        locator: "§'Operator characteristics', 'On-call discipline' bullet"
+        excerpt: "Authentication outages cascade — every downstream Application that uses authentik for SSO breaks at the same moment. Production operators have a paging policy with the"
+    prerequisite_evidence:
+      - "Per-protocol-endpoint SLO targets (latency p99, error rate) for /authorize, /token, /userinfo, /application/saml/<slug>/"
+      - "Error-budget configuration and burn-rate alert definitions"
+      - "Operator-side SLO ownership documentation (does the project ship recommendations? does each operator define them?)"
+    control_mappings:
+      nist_800_53r5:
+        - "CP-2"
+        - "CP-7"
+        - "SI-13"
+        - "SC-5"
+    recommendation:
+      posture: recommended
+      summary: "Ship reference SLO targets and Prometheus alert rules per protocol endpoint as a sample-config artifact in `sys-mgmt/`, with documentation on how to tune them per-deployment."
+      detail: |
+        Author a `sys-mgmt/observability/slo-targets.md` document and a
+        companion `examples/prometheus-alerts.yaml` that defines:
+
+        - p99 latency targets per endpoint (e.g., /authorize p99 < 500ms,
+          /token p99 < 200ms, /userinfo p99 < 100ms,
+          /application/saml/<slug>/ p99 < 800ms)
+        - error-rate budgets (e.g., 99.9% success on /token over a
+          28-day window)
+        - burn-rate alert rules (multi-window multi-burn-rate per SRE
+          workbook chapter 5)
+        - a `Dashboards > System Tasks` overlay showing SLO health
+          alongside the existing system-task health view
+
+        Operators tune to their specific deployment; the reference
+        gives an opinionated starting point that converts the SLO
+        discipline from operator-improvised to platform-recommended.
+      references:
+        - "external: Google SRE Workbook chapter 5 (Alerting on SLOs)"
+    related_concerns: [resilient, distributed]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-cfd2b6e8
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: risk
+    severity: high
+    confidence: high
+    title: "PostgreSQL is the universal SPOF for identity / session / audit / secret material — loss = total platform unavailability"
+    summary: "Per ADR-0002 §Negative item 2: 'Loss of the database means loss of all identity, audit, session, and secret-encrypted material.'"
+    detail: |
+      ADR-0002 makes the trade-off explicit: "Postgres becomes the
+      single point of failure. Loss of the database means loss of all
+      identity, audit, session, and secret-encrypted material. Per the
+      backup-restore doc: 'Without it, authentik cannot be restored to
+      a usable state.'" `sys-mgmt/ops/backup-restore.md` echoes:
+      "The PostgreSQL database is the most important part of an
+      authentik backup. Without it, authentik cannot be restored to a
+      usable state." Tech plan §9 confirms all persistent state lives
+      in PostgreSQL.
+
+      Severity is high per the identity-security severity rubric: this
+      matches the High clause "Single-region IdP deployment with a
+      99.9%+ availability target asserted to downstream RPs" — and
+      escalates because the same Postgres instance also carries the
+      session store, the audit log, and the encrypted secret material.
+      A Postgres outage simultaneously denies new authentication, drops
+      in-flight sessions (depending on session backend choice), and
+      prevents audit-log writes — the latter cross-references the
+      Non-Repudiation lens (audit pipeline depending on the same
+      substrate as the auth flow it audits is a known anti-pattern).
+
+      Note: this is a topology/SPOF finding; the Distributed specialist
+      will own the failure-domain framing; the Availability lens here
+      is the contractual SLO question (can the IdP deliver its asserted
+      uptime with this topology?).
+    evidence:
+      - artifact: adrs/0002-django-celery-redis-postgresql-stack.md
+        locator: "§Consequences > Negative / trade-offs, item 2"
+        excerpt: "Postgres becomes the single point of failure. Loss of the database means loss of all identity, audit, session, and secret-encrypted material."
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence and storage', PostgreSQL bullet"
+        excerpt: "PostgreSQL — primary store. ... Without it, authentik cannot be restored to a usable state."
+    control_mappings:
+      nist_800_53r5:
+        - "CP-2"
+        - "CP-7"
+        - "CP-7(1)"
+        - "CP-9"
+        - "SC-36"
+        - "SC-6"
+      mitre_attack:
+        - technique: "T1485"
+          sub_technique: null
+          tactic: "TA0040"
+          rationale: "PostgreSQL destruction (deliberate or accidental) destroys the IdP's identity, session, audit, and secret-bearing state in a single substrate, denying authentication to every dependent application."
+    recommendation:
+      posture: required
+      summary: "Document a reference high-availability Postgres topology (managed RDS / Cloud SQL with multi-AZ failover, or Patroni-on-Kubernetes with two replicas + arbiter) as the production-recommended deployment posture; promote it from operator-improvised to platform-recommended."
+      detail: |
+        Author a `sys-mgmt/ops/high-availability.md` doc that prescribes:
+
+        - Managed Postgres options per cloud (RDS Multi-AZ, Cloud SQL HA,
+          Azure Database for PostgreSQL HA) — with the trade-offs (RTO,
+          RPO, failover latency) per option
+        - Self-hosted Patroni topology on Kubernetes with three-node
+          quorum, automated failover, and synchronous-replication
+          options
+        - Continuous archiving for PITR with off-site WAL shipping
+        - Cross-region disaster-recovery story with an explicit RPO
+          target
+        - Failover drill cadence
+
+        For the application tier: document the multi-replica
+        Server/Worker posture with sticky-session-NOT-required (per
+        the identity-security common-patterns warning against sticky
+        sessions); document how the active-active topology coordinates
+        across replicas (sessions in Postgres or Redis, both
+        externalised from process memory).
+      references:
+        - "external: NIST SP 800-34 Rev. 1 §3.3 (Contingency planning for HA)"
+        - "internal: install-config/install/kubernetes.md (the existing Helm install reference)"
+    related_concerns: [distributed, resilient]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-8ad0769e
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Per-Flow execution timeout and Worker per-task timeout are not enumerated; pathological Expression chains can exhaust resources"
+    summary: "Per threat-model D-5 and ADR-0001, `ak_call_policy` enables policy-chain recursion; per-Flow / per-task timeouts are not described in inputs."
+    detail: |
+      Threat-model D-5: "An attacker triggers a Flow that contains
+      Expression policies that themselves trigger more Expression
+      policies via `ak_call_policy` (per the function reference). A
+      pathological chain — accidental or malicious — exhausts the
+      Worker pool ... Existing mitigation: Worker pool concurrency is
+      configurable. Residual question: Is there a per-Flow execution
+      timeout?" ADR-0001 §Negative item 3: "The Policy-expression
+      engine's `ak_call_policy` allows recursion and chained
+      dispatch ... A pathological policy chain — accidental or
+      malicious — exhausts the Worker pool." Threat-model D-7 echoes
+      the same for SCIM: "What is the default SCIM-call timeout?"
+
+      Severity is medium per the identity-security severity rubric:
+      this matches the Medium-to-high "Queue depth unbounded on the
+      authentication-flow pipeline" clause; the unboundedness is
+      bounded by Worker pool concurrency but not by per-task timeout,
+      so a single Flow execution can pin one Worker indefinitely under
+      a recursive chain.
+    evidence:
+      - artifact: threat-model.md
+        locator: "§D-5 'Worker queue depth via expensive policies', Residual question line"
+        excerpt: "Is there a per-Flow execution timeout? Unclear from inputs."
+      - artifact: adrs/0001-flows-stages-policies-pipeline.md
+        locator: "§Consequences > Negative / trade-offs, item 3"
+        excerpt: "The Policy-expression engine's ak_call_policy allows recursion and chained dispatch."
+    prerequisite_evidence:
+      - "Per-Flow execution-timeout configuration (does the platform impose a wall-clock or step-count limit on a Flow execution?)"
+      - "Per-Worker-task timeout for the dramatiq-postgres queue"
+      - "Per-Expression-policy execution-time budget (CPU-time or wall-clock)"
+      - "SCIM outbound call timeout default"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-5"
+        - "SC-6"
+        - "SI-13"
+        - "SI-13(1)"
+    recommendation:
+      posture: required
+      summary: "Document and enforce a per-Flow wall-clock execution timeout (e.g., 30 seconds) and per-Expression-policy CPU-time budget (e.g., 5 seconds), with explicit operator override per-Flow for legitimately long-running flows."
+      detail: |
+        Add a Flow-level `max_execution_time_seconds` setting defaulting
+        to 30 seconds; Expression policies execute under a
+        `signal.SIGALRM`-or-equivalent timeout defaulting to 5 seconds.
+        On timeout: the Flow returns a deterministic-shape error to the
+        user, the Worker is freed, an Event captures the timeout with
+        the Flow and policy that triggered it. Operators authoring
+        legitimately long flows (e.g., a Source-sync provisioning
+        flow that calls an upstream IdP) raise the per-Flow timeout
+        explicitly.
+
+        For the SCIM call-out path, document the default outbound timeout
+        and recommend operator tuning per-target based on the SCIM
+        target's known latency profile.
+      references:
+        - "external: Google SRE Book chapter 22 (Addressing Cascading Failures)"
+    related_concerns: [resilient]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-57898caa
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Health probes at `/-/health/live/` and `/-/health/ready/` are shallow; do not exercise sign-token / verify-password / reach-Source paths"
+    summary: "Per `runbook.md` §3, the platform exposes liveness and readiness probes; the readiness probe 'checks DB connectivity'; deeper health (signing-token round-trip, password-verify, Source reachability) is not enumerated."
+    detail: |
+      Runbook §3: "GET /-/health/ready/ — readiness probe (checks DB
+      connectivity)." This is the documented depth. The
+      identity-security common-patterns guidance flags this as a
+      common pattern to scrutinize: "Health checks on the IdP are
+      shallow — TCP-port check or basic HTTP 200, not 'can sign a
+      test token' / 'can verify a test password' / 'can reach LDAP
+      backend.' Severity: medium (shallow health checks mask backend
+      degradation; load balancer continues routing to instances that
+      cannot complete auth)."
+
+      Disposition is uncertainty because the inputs are silent on
+      whether the readiness probe exercises only DB-connect or also
+      runs deeper sub-checks (signing-key access, Worker reachability,
+      outpost WS reachability, Source-backend reachability for
+      federation flows). Severity is medium per the same rubric clause
+      — shallow probes lead the load balancer to route to instances
+      that cannot actually serve auth, which produces user-visible
+      failures the platform's health view does not surface.
+    evidence:
+      - artifact: runbook.md
+        locator: "§3 'Health checks', readiness bullet"
+        excerpt: "GET /-/health/ready/ — readiness probe (checks DB connectivity)."
+    prerequisite_evidence:
+      - "Sub-checks invoked by `/-/health/ready/` beyond DB connectivity"
+      - "Whether a degraded-but-serving state is distinguished from healthy-and-serving"
+      - "Whether outpost-WS reachability is on the health-check path (a Server with no outpost connectivity is in a partially-degraded state)"
+    control_mappings:
+      nist_800_53r5:
+        - "SI-13"
+        - "CP-10"
+        - "CP-12"
+    recommendation:
+      posture: recommended
+      summary: "Add a `/-/health/deep/` endpoint that exercises sign-token (with a synthetic test Provider), verify-password (against a known no-op user), Source backend reachability for configured Sources, and outpost-WS keepalive — for operator-driven deeper liveness checks."
+      detail: |
+        Keep the existing `/-/health/live/` and `/-/health/ready/`
+        endpoints (they are cheap and correctly placed for k8s probes).
+        Add `/-/health/deep/` as a longer-running probe (multi-second
+        latency expected) that operators run on a separate cadence from
+        the cheap probes. The deep probe reports per-subsystem health:
+        signing-key access (KMS/HSM round-trip when external KMS is
+        bound), Source reachability, outpost-WS heartbeat status, audit
+        write latency.
+
+        Wire this into the SLO recommendations from finding
+        avail-1160b595 so the same recommendation set converts
+        operator-improvised health checking into platform-recommended
+        observability.
+      references:
+        - "external: Microsoft Azure Architecture Center, Health Endpoint Monitoring pattern"
+    related_concerns: [resilient]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-311725ea
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: risk
+    severity: medium
+    confidence: high
+    title: "SCIM outbound provisioning runs in the same Worker pool as notification dispatch and Source sync; slow SCIM target stalls all background work"
+    summary: "Per threat-model D-7 and `architecture-index.md` worker component, SCIM sync runs in the Worker; a slow SCIM target ties up workers from each batch."
+    detail: |
+      Threat-model D-7: "A SCIM target endpoint slows or hangs; Worker
+      tasks queue. Per the SCIM provider doc: 'the workload can be
+      distributed across multiple workers' by batching, but a single
+      slow target ties up workers from each batch ... Worker pool
+      starvation; impacts other SCIM targets and unrelated background
+      tasks." Per the architecture index: "Worker — Executes background
+      tasks: email send, event-notification dispatch, SCIM sync, Source
+      sync ..."
+
+      Severity is medium per the identity-security severity rubric:
+      this matches the Medium-to-high "Queue depth unbounded on the
+      authentication-flow pipeline" — the Worker pool starvation cascades
+      to delayed notifications, delayed Source sync (which has security
+      consequences if a corp directory disable does not propagate),
+      delayed SCIM sync (lateral consequence at the target — a
+      deprovision that doesn't propagate leaves the user active in the
+      SCIM target after authentik considers them removed).
+    evidence:
+      - artifact: threat-model.md
+        locator: "§D-7 'SCIM cycle stalls on slow target', Existing mitigation paragraph"
+        excerpt: "Per-batch task distribution is the documented scale strategy. Per-task timeouts are not enumerated."
+      - artifact: architecture-index.md
+        locator: "`worker` component, Role paragraph"
+        excerpt: "Executes background tasks: email send, event-notification dispatch, SCIM sync, Source sync"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-5"
+        - "SC-6"
+        - "SI-13"
+        - "SI-13(4)"
+    recommendation:
+      posture: recommended
+      summary: "Add per-task-type queue isolation (bulkhead pattern) in the dramatiq-postgres queue so SCIM, Source sync, notification dispatch, and email send run in separate worker pools; default per-target SCIM timeouts to bounded values."
+      detail: |
+        Define separate dramatiq queues (e.g., `scim`, `source_sync`,
+        `notification`, `email`, `outpost_lifecycle`) each with its own
+        worker pool. A slow SCIM target stalls only the `scim` pool;
+        notifications and Source sync continue. Document the per-pool
+        sizing recommendations and per-task default timeouts (SCIM
+        outbound: 30s default; notification: 10s; email: 60s for SMTP
+        timeout).
+
+        Cross-references finding avail-8ad0769e (per-task timeout) and
+        finding resil-* (bulkhead pattern from Resilient lens).
+      references:
+        - "external: Michael Nygard, Release It!, Bulkhead pattern"
+    related_concerns: [resilient, distributed]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-66ccddd3
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Slowloris-style HTTP server timeouts: closed in 2025.12 per IncludeSec L4; default value not enumerated for current 2026.x branch"
+    summary: "Per `prior-audit.md` L4 (IncludeSec 2025-09), default HTTP server timeouts were added in PR #17858; whether those defaults remain in the 2026.x branch and what values they hold is not enumerated."
+    detail: |
+      Prior-audit L4: "Slowloris DoS via missing server timeouts | Closed;
+      default HTTP server timeouts added (PR #17858); reverse-proxy
+      recommended in production." The fix shipped in late 2025. For the
+      version under review (2026.8.0-rc1), the inputs do not enumerate
+      the specific timeout values (read timeout, write timeout, idle
+      timeout) in the Go router or the gunicorn / uvicorn workers, so
+      reviewers cannot confirm the fix carried forward to current
+      defaults.
+
+      Severity is medium per the identity-security severity rubric (this
+      sits in the Low-to-medium hygiene band); the disposition is blocked
+      because the inputs document a fix but not the current values.
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§IncludeSec 2025-09, L4 row"
+        excerpt: "Slowloris DoS via missing server timeouts | Closed; default HTTP server timeouts added (PR #17858); reverse-proxy recommended in production."
+    prerequisite_evidence:
+      - "Current default timeout values for the Go router (read/write/idle) in the 2026.x branch"
+      - "Current default timeout values for gunicorn/uvicorn workers"
+      - "Per-endpoint timeout override capability"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-5"
+        - "SC-5(1)"
+        - "SC-5(2)"
+    recommendation:
+      posture: consider
+      summary: "Document the current default HTTP server timeouts in the install guide alongside the existing reverse-proxy recommendation; verify the IncludeSec L4 fix is retained in the 2026.x branch."
+      detail: |
+        Add a section to `install-config/` enumerating the current
+        in-platform HTTP timeout defaults (read, write, idle, request
+        header) with notes on when an operator would tune them. Verify
+        in CI that the IncludeSec L4 fix's behavior continues to apply
+        in the current branch — a slow-headers regression test would
+        catch a future regression.
+      references:
+        - "external: OWASP SlowHTTPTest tool (the canonical regression-test tool for this class)"
+    related_concerns: [resilient]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-b46582cb
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Source-IdP outage during federated login: behavior is not specified — does the IdP fail-closed or fall back to cached identity?"
+    summary: "Per `agents.md` and the identity-security common-patterns guidance, IdP-to-Source-IdP failure modes commonly produce opaque errors without fallback; the inputs do not describe authentik's specific behavior on Source-IdP unreachability."
+    detail: |
+      The identity-security availability common-patterns calls out:
+      "No degraded-mode authentication specified — if the
+      credential-verification path (LDAP, database, upstream IdP) is
+      unavailable, the IdP returns 500 to every request. Severity: high
+      (cascading total outage; IdP is the topmost availability
+      dependency for every RP — no graceful fallback path defined)."
+      The authentik inputs document the Source pattern (`tech_plan.md`
+      §7, `happy-path.md` §8) but do not describe degraded-mode behavior
+      when the Source is unreachable mid-flow.
+
+      Disposition is uncertainty because the inputs are silent on this;
+      severity is medium because the failure mode is real but its
+      blast radius depends on whether a Source is required-for-login or
+      optional-as-an-additional-login-option (the Identification stage
+      can present multiple sources). For deployments where the
+      corporate IdP Source is the only login path, a Source outage =
+      total auth outage.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Federation (Source)', last paragraph"
+        excerpt: "Source attribute mapping is via Python expression property mappings; the same expression engine that powers Policies."
+      - artifact: happy-path.md
+        locator: "§8 'Source-driven first login', What happens steps 2-3"
+        excerpt: "The Source stage hands the user off to the upstream IdP. The upstream IdP authenticates the user and returns the assertion / token to authentik."
+    prerequisite_evidence:
+      - "Specified behavior when a configured Source is unreachable during a Source-stage execution"
+      - "Whether cached credentials / cached sessions can sustain login during a Source outage"
+      - "Whether degraded-mode user notification surfaces in the Flow executor UI"
+    control_mappings:
+      nist_800_53r5:
+        - "CP-12"
+        - "CP-13"
+        - "SI-13"
+        - "IA-2"
+    recommendation:
+      posture: recommended
+      summary: "Document the Source-IdP outage behavior; specify a degraded-mode pattern that lets users with prior local sessions continue while the Source is unreachable."
+      detail: |
+        Author a `customize/policies/source-failure-handling.md` doc
+        that describes:
+
+        - What happens to in-flight Source-stage executions when the
+          Source is unreachable (timeout, retry, fail-closed, fall-back-
+          to-alternate-source)
+        - Whether previously-authenticated users with valid local
+          sessions continue to access RPs while the Source is down
+        - The recommended pattern for operators with corp-IdP-only
+          login flows: secondary local-credentials fallback Flow on a
+          per-Brand basis
+
+        Cross-references the Resilient specialist for the
+        circuit-breaker discipline on outbound Source calls.
+      references:
+        - "external: Google SRE Book chapter 22 (Cascading failures and degraded-mode behavior)"
+    related_concerns: [resilient, authenticity]
+    cross_references: []
+
+  - schema_version: 1
+    id: avail-d903948f
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: risk
+    severity: medium
+    confidence: high
+    title: "Signing-key availability vs. latency: per-Provider signing happens in the Server process; HSM/KMS round-trip latency not characterized"
+    summary: "Per ADR-0004 the per-Provider signing private keys are stored in PostgreSQL encrypted under AUTHENTIK_SECRET_KEY; signing is in-process; if operators bind external KMS the round-trip latency is not characterized."
+    detail: |
+      ADR-0004 establishes that signing private keys are in PostgreSQL,
+      encrypted under the secret_key, and (implicitly) signing happens
+      in the Server process after decrypting the key. For deployments
+      where operators have wrapped the secret_key delivery with an
+      external KMS at the infrastructure layer (e.g., Kubernetes
+      Secret + KMS encryption-at-rest on etcd), the per-token signing
+      itself remains in-process because the secret_key is loaded into
+      process env at startup. For deployments that might want
+      per-token KMS calls (a stronger HSM-backed posture), the
+      identity-security common-patterns availability guidance applies:
+      "Signing-key availability vs. latency tradeoff unaddressed — HSM
+      in one region, IdP serves traffic from three; signing-operation
+      latency drives p99 token-issuance latency through the floor."
+
+      Severity is medium per the identity-security severity rubric:
+      this is the same Medium-to-high "Signing-key availability vs.
+      latency tradeoff" clause — medium because the current
+      architecture avoids the per-token HSM round-trip by holding the
+      key in-process, but that has the consequence noted in finding
+      conf-477ff8a1 (any Expression policy can read it). The tradeoff
+      is currently weighted toward latency at the cost of confidentiality.
+    evidence:
+      - artifact: adrs/0004-encrypted-secrets-via-certificatekeypair.md
+        locator: "§Decision, paragraph 2"
+        excerpt: "The key lives in the .env file (operator-managed) and is loaded into the Server and Worker process environments at startup."
+    control_mappings:
+      nist_800_53r5:
+        - "SC-12"
+        - "SC-12(3)"
+        - "CP-7"
+        - "SI-13"
+    recommendation:
+      posture: consider
+      summary: "Document the signing-latency-vs-confidentiality trade-off in ADR-0004 §Notes; when external-KMS-binding is added per finding conf-477ff8a1, characterize the per-token signing latency profile and recommend regional KMS topology."
+      detail: |
+        When (per finding conf-477ff8a1) the platform offers an
+        external-KMS binding for signing keys, add to that documentation
+        a per-token latency profile (RSA-2048 sign with AWS KMS:
+        ~10-30ms; ECDSA-P256 sign with AWS KMS: ~10-20ms; HashiCorp
+        Vault Transit RSA-2048 sign: variable per Vault scale) and
+        recommend a regional Vault/KMS deployment pattern that keeps
+        signing-key callouts within-region.
+
+        Cross-references finding conf-477ff8a1 (the external-KMS-binding
+        recommendation) — these should ship together.
+      references:
+        - "external: AWS KMS latency characterization (per AWS KMS docs)"
+    related_concerns: [confidentiality, distributed]
+    cross_references: []

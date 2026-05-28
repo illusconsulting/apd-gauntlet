@@ -1,0 +1,37 @@
+run_id: apd-20260527-authentik-identity-provider
+subject: "authentik 2026.8.0-rc1 (open-source IdP / SSO, MIT) — Django + Go outposts + TypeScript UI"
+domain: identity-security
+framework_version: 1.5.0
+code_recon: disabled
+taxonomies:
+  - cwe
+  - mitre_attack
+  - d3fend
+  - owasp_api_top10
+  - owasp_top10
+threat_model: threat-model.md
+methodology_hint: stride
+
+# Mirrored from domains/identity-security/domain.yaml
+crown_jewels:
+  - signing_key_material
+  - password_hash_store
+  - mfa_secret_store
+  - oauth_client_secret_registry
+  - session_token_store
+  - federated_identity_mapping
+  - consent_record_store
+  - audit_log_store
+  - service_account_credential_store
+
+attacker_positions:
+  - unauthenticated_attacker_at_login_endpoint
+  - authenticated_user_seeking_horizontal_escalation
+  - authenticated_user_seeking_vertical_escalation
+  - compromised_user_credential
+  - compromised_user_session_token
+  - compromised_oauth_client_credentials
+  - compromised_third_party_relying_party
+  - compromised_admin_account
+  - malicious_relying_party
+  - internal_lateral_attacker_in_idp_tier

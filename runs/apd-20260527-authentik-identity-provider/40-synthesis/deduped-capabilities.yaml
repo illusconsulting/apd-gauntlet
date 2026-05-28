@@ -1,0 +1,151 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+  domain_pack: identity-security
+  synthesis_pass: 1
+  total_input_capabilities: 25
+  merged_count: 2
+  retained_count: 23
+
+merge_decisions:
+  - merge_group: per-provider-signing-key-isolation
+    merged_into: conf-cap-6db56a6d
+    merged_from: [auth-cap-8caf955f]
+    notes: |
+      Per-Provider signing-key isolation is the same capability surfaced
+      in Confidentiality (key separation prevents cascade) and Authenticity
+      (signature-binding-layer isolation). Both reference INV-AUTH-002.
+
+  - merge_group: per-provider-signing-key-rotation
+    merged_into: ephem-cap-efe92498
+    merged_from: [immut-cap-d25dafcc]
+    notes: |
+      Per-Provider signing-key rotation mechanism surfaced in Ephemeral
+      (lifecycle posture) and Immutability (declarative + audit posture).
+      Both cite ADR-0004 §Positive paragraph 4.
+
+capability:
+  - id: conf-cap-1150e561
+    apd_goal: confidentiality
+    maturity: designed
+    title: "Field-level symmetric encryption-at-rest for every secret-bearing model field via CertificateKeyPair + AUTHENTIK_SECRET_KEY"
+
+  - id: conf-cap-6db56a6d
+    apd_goal: confidentiality
+    maturity: designed
+    title: "Per-Provider OAuth/SAML signing key isolation — compromise of one Provider's key does not affect another's without master-key compromise"
+    lens_perspectives:
+      confidentiality:
+        summary: "Key separation prevents cascade across Providers absent master-key compromise."
+      authenticity:
+        summary: "Per-Provider signature binding isolated; INV-AUTH-002."
+
+  - id: conf-cap-253fdeb0
+    apd_goal: confidentiality
+    maturity: designed
+    title: "argon2-cffi-backed password hashing for User credentials with Django default hasher chain"
+
+  - id: intg-cap-f8801874
+    apd_goal: integrity
+    maturity: designed
+    title: "defusedxml + xmlsec XML-processing stack for SAML signature verification"
+
+  - id: intg-cap-20ca5f2c
+    apd_goal: integrity
+    maturity: designed
+    title: "Per-Provider OAuth scope and SAML attribute-release filtering via Property Mappings (Python expression)"
+
+  - id: intg-cap-8613272f
+    apd_goal: integrity
+    maturity: designed
+    title: "JWE encryption support for sensitive ID-token claims (RSA-OAEP-256 + A256CBC-HS512) when Encryption Key configured per Provider"
+
+  - id: intg-cap-13411b16
+    apd_goal: integrity
+    maturity: designed
+    title: "Object-level RBAC via Django-Guardian; Roles bundle permissions for least-privilege scoping"
+
+  - id: avail-cap-594bb90c
+    apd_goal: availability
+    maturity: designed
+    title: "Liveness and readiness probes exposed at `/-/health/live/` and `/-/health/ready/`; Prometheus metrics at `/-/metrics/` and per-outpost `:9300/metrics`"
+
+  - id: avail-cap-2e726aa6
+    apd_goal: availability
+    maturity: designed
+    title: "Per-Brand and per-Application policy binding for operator-driven rate-limit, GeoIP, and Reputation gating"
+
+  - id: avail-cap-119c6e20
+    apd_goal: availability
+    maturity: designed
+    title: "Multiple Server / Worker replicas behind load balancer; PostgreSQL replication or managed-Postgres for HA topology"
+
+  - id: dist-cap-8cbb523a
+    apd_goal: distributed
+    maturity: designed
+    title: "Outposts deployable as separate failure domains per protocol family; standalone Proxy / LDAP / RADIUS / RAC outpost binaries"
+
+  - id: dist-cap-1e67e7bc
+    apd_goal: distributed
+    maturity: designed
+    title: "Externalised primary state in PostgreSQL with `django-tenants` schema-per-tenant for the Enterprise multi-tenancy feature"
+
+  - id: resil-cap-c79efff1
+    apd_goal: resilient
+    maturity: implemented
+    title: "Reputation-driven anti-brute-force counters (post-IncludeSec 2025.12 fix replacing session-based retries)"
+
+  - id: resil-cap-0eaa47dd
+    apd_goal: resilient
+    maturity: designed
+    title: "Outpost failure isolation: standalone outposts crash without taking down Server"
+
+  - id: resil-cap-867eac4f
+    apd_goal: resilient
+    maturity: designed
+    title: "Account Lockdown stage (Enterprise) provides atomic compromise-response with single audit Event"
+
+  - id: ephem-cap-efe92498
+    apd_goal: ephemeral
+    maturity: designed
+    title: "Per-Provider signing-key rotation supported via Admin UI and blueprint-driven configuration"
+    lens_perspectives:
+      ephemeral:
+        summary: "Rotation supported manually and via blueprint; no enforced cadence."
+      immutability:
+        summary: "CertificateKeyPair rotation is declarative-capable via blueprint, supporting GitOps audit trail."
+
+  - id: ephem-cap-9095fc38
+    apd_goal: ephemeral
+    maturity: designed
+    title: "Per-Flow session lifetime, idle timeout, and absolute timeout configurable via User Login stage settings"
+
+  - id: auth-cap-3a143747
+    apd_goal: authenticity
+    maturity: designed
+    title: "WebAuthn / FIDO2 phishing-resistant authenticator support via `fido2==2.2.0` and `webauthn==2.7.1`"
+
+  - id: auth-cap-56233f34
+    apd_goal: authenticity
+    maturity: designed
+    title: "AuthnContextClassRef / OIDC `acr` claim populated from actual authenticators used"
+
+  - id: nonrep-cap-9d3d9d4c
+    apd_goal: non_repudiation
+    maturity: designed
+    title: "Every Flow execution emits at least one audit Event (INV-AUTH-001) via the Flow executor's event emitter"
+
+  - id: nonrep-cap-f303cd8d
+    apd_goal: non_repudiation
+    maturity: designed
+    title: "Notification Rules bound to Event Matcher policies enable per-Event-class alerting and Account Lockdown stream forwarding"
+
+  - id: nonrep-cap-d9e5c53d
+    apd_goal: non_repudiation
+    maturity: designed
+    title: "Event audit retention default 365 days; configurable in System > Settings"
+
+  - id: immut-cap-14525881
+    apd_goal: immutability
+    maturity: designed
+    title: "Blueprint-driven declarative configuration apply with filesystem `/blueprints/` and `/api/v3/managed/blueprints*` endpoints"

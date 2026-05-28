@@ -1,0 +1,398 @@
+schema_version: 1
+agent: confidentiality
+finding:
+  - schema_version: 1
+    id: conf-e223c03d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default cookie-encryption key and salt enable session takeover when --insecure is used"
+    summary: "conf/default.yml ships encryption_key=ADMIN123 and crypt_salt=REPLACE_WITH_RANDOM_VALUE; --insecure deploys derive a Fernet key any attacker can reproduce."
+    detail: |
+      The aiohttp_session.EncryptedCookieStorage uses a Fernet key
+      derived via PBKDF2-HMAC-SHA256 over (encryption_key + crypt_salt).
+      conf/default.yml ships both as public-known strings. Any
+      attacker who knows --insecure was used (a common pattern per the
+      runbook §1) can decrypt or forge session cookies offline,
+      bypassing the login form entirely. The same Fernet key is also
+      the at-rest key for data/cookie_storage and for encrypt_files
+      result-data encryption per FileSvc.
+
+      This is critical severity because it falls under the
+      security-tooling rubric clause "Operator authentication bypass to
+      admin or operator console" — a known-key cookie is functionally
+      equivalent to default credentials. It also engages the
+      weapons-platform-misuse axis: a forged operator session yields
+      full command-issuance capability against every fielded implant.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "ships encryption_key: ADMIN123 and crypt_salt: REPLACE_WITH_RANDOM_VALUE"
+      - artifact: prior-audit.md
+        locator: "'Carried — Default-credential posture'"
+        excerpt: "encryption_key = ADMIN123 ; crypt_salt = REPLACE_WITH_RANDOM_VALUE"
+    control_mappings:
+      nist_800_53r5: [SC-12, "SC-12(1)", "SC-12(2)", SC-13, "SC-28(1)", IA-5, "IA-5(1)"]
+      mitre_attack:
+        - technique: T1552
+          sub_technique: "T1552.001"
+          tactic: TA0006
+          rationale: "Default-shipped Fernet key in conf/default.yml is a credential-in-file an attacker reads to forge cookies."
+      cwe: [CWE-798, CWE-321]
+      owasp_top10: ["A07:2021"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Refuse to start when encryption_key or crypt_salt match the shipped placeholder/default values."
+      detail: |
+        Add a start-time check in server.py (or in
+        ensure_local_config()) that rejects boot when encryption_key
+        equals 'ADMIN123' or crypt_salt equals
+        'REPLACE_WITH_RANDOM_VALUE'. The same check should run when
+        --insecure is set so the operator must explicitly override.
+        Provide a one-shot rotate command that re-derives both values
+        and invalidates the data/cookie_storage tree on rotation.
+      references:
+        - "NIST SP 800-57 Part 1 Rev. 5 §5.3"
+        - "OWASP ASVS V2.1.1"
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: conf-01d02036
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default operator API keys ship in conf/default.yml"
+    summary: "api_key_red=ADMIN123 and api_key_blue=BLUEADMIN123 are public-known; a request bearing the KEY header bypasses login entirely."
+    detail: |
+      The KEY-header API path in AuthService compares the inbound
+      header against api_key_red or api_key_blue from conf/<env>.yml.
+      conf/default.yml ships both as static known strings. Any
+      --insecure deploy that retains the defaults is one HTTP request
+      away from full operator privilege without going through the
+      login pipeline. CVE-2025-27364 (Feb 2025) was a pre-auth RCE in
+      this footprint; the documented operator-side defense is "do not
+      expose to the internet."
+
+      This is critical per the security-tooling rubric clause "Operator
+      authentication bypass to admin or operator console" — and on the
+      weapons-platform-misuse axis: a single header presents the
+      attacker as a fully-privileged operator with command-issuance
+      capability against every fielded implant.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "api_key_red and api_key_blue defaults ADMIN123 / BLUEADMIN123 ... API-key callers bypass the cookie / login handshake"
+      - artifact: prior-audit.md
+        locator: "'Carried — Default-credential posture'"
+        excerpt: "api_key_red = ADMIN123 ; api_key_blue = BLUEADMIN123"
+    control_mappings:
+      nist_800_53r5: [IA-5, "IA-5(1)", "IA-5(7)", AC-3, IA-2, "IA-2(1)"]
+      mitre_attack:
+        - technique: T1078
+          sub_technique: null
+          tactic: TA0001
+          rationale: "Static shipped API keys are valid accounts an attacker uses for initial access."
+      cwe: [CWE-798]
+      owasp_top10: ["A07:2021"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Fail-closed startup when api_key_* matches the shipped default; require a rotation command before --insecure boots."
+      detail: |
+        Augment AuthService bootstrap with a refusal when api_key_red,
+        api_key_blue, or any future group-key equals the shipped
+        placeholder. Provide an explicit 'caldera rotate-keys'
+        admin command that writes new keys to conf/local.yml and
+        emits a structured event (which cross-references the
+        non_repudiation finding on absent audit).
+      references:
+        - "NIST SP 800-63B §5"
+        - "OWASP API Security Top 10 — API2:2023"
+    related_concerns: [authenticity, ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: conf-aabbd48f
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Harvested credentials accumulate across engagements with a single platform-wide Fernet key"
+    summary: "data/results/ Fernet encryption uses a single encryption_key shared across every engagement; one key compromise yields every customer's harvested credentials."
+    detail: |
+      FileSvc encrypts data/results/ using cryptography.Fernet with the
+      key derived from encryption_key + crypt_salt. There is no
+      per-engagement, per-customer, or per-operator key derivation.
+      The long-lived team-server pattern (agents.md §3) accumulates
+      harvested credentials, screenshots, and files across every
+      engagement; one compromise of the encryption_key yields the
+      union of every customer environment the team has touched.
+
+      Severity is high per the security-tooling rubric clause "Mass
+      result-data exfiltration" — which escalates to critical when
+      combined with the cross-operator data access gap (see related
+      conf finding) because the platform-wide key has no internal
+      partition. The captured data inherits the highest sensitivity
+      of any field it captures (a screenshot of a HIPAA EHR places
+      the screenshot in PHI scope per the security-tooling data
+      taxonomy).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "FileSvc can also encrypt arbitrary files (payload at-rest) with Fernet (encrypt_files: true)"
+      - artifact: agents.md
+        locator: "§3 'Deployment patterns'"
+        excerpt: "Long-lived team server ... Accumulates harvested data across every engagement"
+      - artifact: threat-model.md
+        locator: "I-1"
+        excerpt: "harvested credentials accumulate across engagements"
+    control_mappings:
+      nist_800_53r5: [SC-28, "SC-28(1)", SC-12, "SC-12(2)", "AC-6(5)", MP-4]
+      mitre_attack:
+        - technique: T1552
+          sub_technique: "T1552.001"
+          tactic: TA0006
+          rationale: "Single-key Fernet store of harvested credentials makes any disk-read or key-leak a full-platform credential exposure."
+      cwe: [CWE-311, CWE-321]
+    recommendation:
+      posture: required
+      summary: "Derive a per-engagement DEK from a KMS-held KEK; destroy the DEK on engagement closure."
+      detail: |
+        Introduce a first-class Engagement object (also addresses the
+        WP-1 / WP-2 weapons-platform-misuse gaps) and bind result
+        encryption to a per-engagement DEK. The KEK should live in
+        an operator-supplied KMS (HSM, cloud KMS, hardware token).
+        FileSvc encrypts per-link results with the DEK; on engagement
+        closure the DEK is destroyed (the data is rendered
+        unreadable without re-decrypting and re-encrypting on
+        export). For per-record granularity, layer a content-addressed
+        digest into the per-link envelope.
+      references:
+        - "NIST SP 800-57 Part 1 Rev. 5 §6.2 — key separation"
+    related_concerns: [ephemeral, immutability, distributed]
+
+  - schema_version: 1
+    id: conf-88726ba8
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Cross-operator data access within a group — no per-engagement ACL"
+    summary: "Operator B in red group can read every operation, agent, fact, and harvested-credential record operator A created; only coarse red/blue check exists."
+    detail: |
+      The @check_authorization decorator in AuthService validates only
+      that the caller belongs to the required group ('red' or 'blue').
+      DataService has no per-resource ACL. INV-AUTHZ-002 confirms the
+      gap: "Operator B in group red can read every operation, agent,
+      fact, and harvested-credential record that operator A in the
+      same group created."
+
+      This is high per the security-tooling rubric clause "Result
+      data accessible across engagements" — within a single tenant
+      this is a horizontal-privilege violation; the rubric notes
+      that within multi-tenant SaaS it escalates to critical. For
+      Caldera's typical team-server pattern it produces an
+      insider-threat exposure where one compromised operator account
+      yields every other operator's harvested-credential corpus.
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTHZ-002"
+        excerpt: "Operator B in group red can read every operation, agent, fact, and harvested-credential record"
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "Two coarse roles exist in core: red and blue ... there is no per-resource ACL"
+    control_mappings:
+      nist_800_53r5: [AC-3, "AC-3(7)", "AC-6(1)", "AC-6(5)", AC-4]
+      mitre_attack:
+        - technique: T1078
+          sub_technique: null
+          tactic: TA0004
+          rationale: "Coarse group-only authorization makes any compromised red-group account equivalent to every red-group operator's privilege."
+      cwe: [CWE-639, CWE-285]
+      owasp_api_top10: ["API1:2023", "API3:2023"]
+    recommendation:
+      posture: required
+      summary: "Introduce per-engagement ACL on Operation, Agent, Fact, and Link reads/writes; enforce at the DataService layer, not the REST handler."
+      detail: |
+        Add an engagement_id field to Operation, Agent, Fact, Link,
+        and Source; populate it from the operator's active
+        engagement context at create time. Add an
+        @engagement_scoped decorator that wraps @check_authorization
+        and refuses reads/writes where the caller's engagement
+        context does not include the resource's engagement_id.
+        Enforce at the DataService layer (not the handler) so plugin-
+        contributed routes inherit the check automatically.
+      references:
+        - "OWASP API Security Top 10 — API1:2023 BOLA"
+    related_concerns: [authenticity, non_repudiation]
+
+  - schema_version: 1
+    id: conf-056edb0c
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Default HTTP transport on operator console and agent listener leaks credentials and beacons"
+    summary: "Default deploy is HTTP on :8888 for both operator console and HTTP /beacon contact; TLS only via optional ssl plugin."
+    detail: |
+      The aiohttp web.Application binds HTTP on :8888 by default. The
+      ssl plugin is optional and operator-enabled. The operator
+      console (including login form) and the HTTP /beacon contact
+      share the same port and the same transport. A passive
+      on-network attacker captures: session cookies, KEY header API
+      keys, every beacon payload (base64-decoded JSON — easy to
+      recover plaintext), every command queued to implants in
+      response, and every result returned (cleartext if not separately
+      encrypted at the obfuscator layer).
+
+      Severity is high per the security-tooling rubric clause "MITM
+      on implant callback channel without certificate pinning" — and
+      the rubric clause escalates to critical when the payload
+      contains harvested credentials, which the result responses
+      routinely do.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 'Trust boundaries' #1"
+        excerpt: "Default deploy is HTTP on :8888 unless the ssl plugin is enabled"
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "POST /beacon over the same :8888 aiohttp server. Beacon body is base64-encoded JSON by default"
+      - artifact: adrs/0003-agent-callback-encryption-by-protocol.md
+        locator: "ADR-0003 body"
+        excerpt: "agent callback encryption is per-protocol"
+    control_mappings:
+      nist_800_53r5: [SC-8, "SC-8(1)", SC-13, "SC-23(3)"]
+      mitre_attack:
+        - technique: T1557
+          sub_technique: null
+          tactic: TA0006
+          rationale: "Default HTTP transport on operator login and beacon path allows on-path interception of session cookies, API keys, and beacon payloads."
+      cwe: [CWE-319, CWE-311]
+      owasp_top10: ["A02:2021"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Fail-closed: refuse to bind a non-loopback address without TLS configured; make the ssl plugin equivalent in core."
+      detail: |
+        Move TLS-termination into core (drop the plugin-optional
+        framing). Add a start-time check that refuses to bind any
+        non-127.0.0.1 address when TLS is not configured. The
+        operator must explicitly --bind-insecure to override. For
+        agent listeners, document the per-contact TLS expectation
+        and refuse to register an HTTP-only contact when a non-
+        loopback bind address is in use.
+      references:
+        - "NIST SP 800-52 Rev. 2"
+        - "RFC 7568"
+    related_concerns: [authenticity, integrity, ephemeral]
+
+  - schema_version: 1
+    id: conf-6414f95a
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Backup snapshot encryption posture undocumented for data/backup/"
+    summary: "data/backup/ holds periodic state dumps; tech plan does not document whether backup is encrypted, whether keys differ from runtime, or whether backups are off-host."
+    detail: |
+      DataService.save_state writes periodic dumps under data/backup/.
+      The tech plan §9 confirms the path but does not state encryption
+      posture, key separation, or off-host replication. Backup
+      snapshots inherit the full sensitivity of the runtime store —
+      harvested credentials, operator session material — and are
+      typically the most attractive target for a long-window attacker.
+
+      Medium severity (blocked) per the security-tooling rubric clause
+      "Result data retained beyond engagement-completion + customer-
+      policy window" — pending evidence that backups are subject to
+      a defined retention enforcement and a separate-key encryption
+      story. Escalates to high if backups carry the runtime Fernet
+      key (single-key-compromise broadens the blast radius).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "data/backup/ # periodic state dumps"
+      - artifact: runbook.md
+        locator: "§6 (GAP marker)"
+        excerpt: "GAP: backup key rotation not documented"
+    prerequisite_evidence:
+      - "Backup encryption policy — key scope, key custody, rotation cadence"
+      - "Backup retention policy and enforcement mechanism"
+      - "Off-host replication or air-gap posture for backup tree"
+    control_mappings:
+      nist_800_53r5: [CP-9, "CP-9(1)", "CP-9(8)", SC-28, MP-4]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Document backup encryption posture and adopt object-lock for off-host backup."
+      detail: |
+        Specify in the runbook (a) which key encrypts data/backup,
+        (b) the off-host destination (S3 with object lock, write-once
+        media, separate cloud account), and (c) the retention floor
+        and ceiling. If the backup carries the runtime Fernet key,
+        adopt envelope encryption with a KMS-held KEK so a stolen
+        backup tree does not yield a decryption key.
+    related_concerns: [immutability, ephemeral, availability]
+
+  - schema_version: 1
+    id: conf-bcbd4cb9
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: risk
+    severity: medium
+    confidence: high
+    title: "Builder plugin compiles payloads with operator-supplied ldflags — embeds may leak"
+    summary: "builder plugin runs go build with ldflags substitution; URL_SANITIZATION_REGEX and ALLOWED_LDFLAG_REGEXES constrain inputs but completeness is not audited."
+    detail: |
+      The builder plugin invokes go build against operator-supplied
+      configuration; FileSvc applies URL_SANITIZATION_REGEX and
+      ALLOWED_LDFLAG_REGEXES to filter what can be substituted into
+      the implant binary. The risk is dual: (1) sensitive material an
+      operator embeds (signing keys, internal URLs, credentials) ends
+      up in a payload served from /file/download to anyone with
+      operator privilege; (2) regex completeness against evasions is
+      not audited in the artifacts.
+
+      Medium per the security-tooling rubric clause "Listener
+      fingerprinting trivial via banner/default/etc." — escalates to
+      high if the regexes are bypassable (would require code review
+      to confirm). The operator can plausibly leak material they
+      did not intend to embed.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 'Shipped plugins'"
+        excerpt: "URL_SANITIZATION_REGEX and ALLOWED_LDFLAG_REGEXES in file_svc.py constrain what can be injected"
+      - artifact: threat-model.md
+        locator: "I-4"
+        excerpt: "operator supplies ldflags that embed sensitive data"
+    control_mappings:
+      nist_800_53r5: [SI-10, SI-15, SC-16, "AC-4(8)"]
+      mitre_attack: []
+      cwe: [CWE-20]
+    recommendation:
+      posture: recommended
+      summary: "Treat ldflags as a tainted input — content-allowlist with positive validation, not regex deny."
+      detail: |
+        Replace the regex deny model with a positive allowlist:
+        permit a fixed set of ldflag variables, each with a typed
+        validator (URL, integer, base64-of-bounded-length), and
+        reject any other variable name. Add a fuzz-test pass against
+        the validators. Surface the resulting per-build ldflags in
+        the structured audit log proposed by the non_repudiation
+        finding so operators see what was embedded.
+    related_concerns: [integrity, authenticity, non_repudiation]

@@ -1,0 +1,455 @@
+finding:
+  - schema_version: 1
+    id: resil-0e6a988b
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OAuth refresh-token reuse detection (rotation + family-revocation per OAuth 2.1 §6.1) is not asserted in inputs"
+    summary: "The OAuth 2.1 BCP requires refresh-token rotation with reuse detection (family revocation) for public clients; the inputs do not enumerate this behavior."
+    detail: |
+      The OAuth provider documentation enumerates refresh-token issuance
+      via the `offline_access` scope (`tech_plan.md` §6, `happy-path.md`
+      §4), but the inputs do not assert refresh-token rotation policy,
+      reuse-detection behavior, or family-level revocation on detected
+      reuse. The identity-security common-patterns Resilient guidance
+      flags this directly: "No detection of refresh-token reuse —
+      replay of an already-rotated refresh token produces a new access
+      token instead of revoking the entire token family. Severity:
+      high (refresh-token theft is the dominant token-loss vector in
+      mobile and SPA contexts)."
+
+      Severity is high per the identity-security severity rubric: this
+      matches the High clause "Refresh token replay without
+      proof-of-possession or rotation — refresh tokens long-lived,
+      bearer-only, no rotation-with-reuse-detection, no DPoP/mTLS
+      binding. A stolen refresh token grants the attacker the lifetime
+      of the token plus all subsequent rotations." Cross-references
+      Ephemeral specialist for the rotation cadence and Authenticity
+      specialist for DPoP / mTLS binding options.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 OAuth 2.0 / OIDC, Grant types bullet"
+        excerpt: "Grant types: authorization-code, implicit (with the note that the OAuth Security BCP recommends against it), hybrid, client-credentials, device-code, refresh-token."
+      - artifact: happy-path.md
+        locator: "§4 'Application access (OAuth/OIDC happy path)', step 4"
+        excerpt: "authentik validates and returns an access token, an ID token (if openid scope), and optionally a refresh token (if the offline_access scope was requested and"
+    control_mappings:
+      nist_800_53r5:
+        - "IA-5"
+        - "IA-5(13)"
+        - "SI-4"
+        - "AC-12"
+      mitre_attack:
+        - technique: "T1550"
+          sub_technique: "T1550.001"
+          tactic: "TA0008"
+          rationale: "Stolen refresh-token without reuse detection lets attacker indefinitely refresh access tokens; OAuth 2.1 §6.1 rotation-with-reuse-detection converts the stolen token into a single-use artifact and a detection signal."
+        - technique: "T1528"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "Refresh-token theft (T1528) is the dominant token-loss vector for mobile/SPA clients; without reuse detection the stolen artifact has indefinite value."
+      cwe:
+        - "CWE-294"
+        - "CWE-613"
+      owasp_top10:
+        - "A07:2021"
+      owasp_api_top10:
+        - "API2:2023"
+    recommendation:
+      posture: required
+      summary: "Implement OAuth 2.1 §6.1 refresh-token rotation with reuse detection: rotate refresh tokens on every use, detect replay of a previously-rotated token, revoke the entire token family on detection, emit a high-severity Event."
+      detail: |
+        Default refresh-token policy for new Providers:
+
+        - Rotation: every refresh-token use issues a new refresh token
+          and invalidates the old one (single-use rotation)
+        - Reuse detection: a request that presents an already-rotated
+          refresh token triggers family revocation
+        - Family revocation: every refresh-and-access token derived
+          from the family is invalidated; user must re-authenticate
+        - Audit: family revocation emits an Event of severity high
+          with the token-family identifier and the request metadata
+          for the detection event
+        - Per-Provider toggle for token-family lifetime budget (default:
+          forever; operators may bound it)
+
+        For existing Providers, surface a dashboard warning until
+        refresh-token rotation is enabled. Cross-references Ephemeral
+        finding ephem-* (rotation cadence) and Authenticity finding
+        auth-* (DPoP/mTLS-binding alternative).
+      references:
+        - "external: OAuth 2.1 §6.1 (refresh-token rotation and reuse detection)"
+        - "external: RFC 9700 §4.13 (refresh-token security)"
+    related_concerns: [ephemeral, authenticity, non_repudiation]
+    cross_references: []
+
+  - schema_version: 1
+    id: resil-4d9c7873
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Circuit breakers on outbound calls to upstream Source IdPs, SCIM targets, and webhook subscribers are not enumerated"
+    summary: "The platform makes substantial outbound calls (Source sync, SCIM provisioning, email, webhooks) but the inputs do not document circuit-breaker, retry-budget, or backoff discipline."
+    detail: |
+      Per `tech_plan.md` §3 boundary 5 and the architecture index, the
+      Server and Worker make outbound calls to: upstream Source IdPs
+      (OAuth, SAML, LDAP, OIDC, SCIM, Plex, Kerberos, social-logins),
+      SCIM target endpoints, email providers (SMTP), HIBP API (when
+      Password policy enabled), arbitrary HTTP for blueprint URL
+      fetching. None of these are documented with circuit-breaker
+      thresholds, retry budgets, or jitter discipline. Threat-model
+      D-7 confirms this for SCIM: "What is the default SCIM-call
+      timeout?" — unenumerated.
+
+      The identity-security common-patterns Resilient guidance is
+      explicit: "No circuit breaker on the IdP-to-user-store path
+      (LDAP, AD, upstream IdP for federation chains, user database).
+      Severity: high (user-store degradation cascades to user-facing
+      latency and request-handler exhaustion; without circuit-breaker,
+      a slow LDAP backend takes down every IdP worker by tying up its
+      connection pool)." Same pattern applies to SCIM-out, webhook-out.
+
+      Severity is high per the identity-security severity rubric: the
+      Resilient common-pattern High clause directly anchors this.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary 5, SECURITY.md quote"
+        excerpt: "Outgoing network requests are not filtered ... these requests should be restricted at the network level using appropriate firewall or network policies."
+      - artifact: architecture-index.md
+        locator: "`worker` component, Outbound paragraph"
+        excerpt: "SMTP; Source IdPs (during sync); SCIM target endpoints; Docker socket (Docker integration); Kubernetes API (K8s integration); external HTTP for blueprint URL fetching; HIBP API"
+    control_mappings:
+      nist_800_53r5:
+        - "SI-13"
+        - "SI-13(4)"
+        - "SC-5"
+        - "SC-5(1)"
+      mitre_attack:
+        - technique: "T1499"
+          sub_technique: "T1499.001"
+          tactic: "TA0040"
+          rationale: "A slow upstream Source IdP without a circuit breaker exhausts the IdP's outbound connection pool and produces a self-DoS via OS resource exhaustion."
+      cwe:
+        - "CWE-400"
+    recommendation:
+      posture: required
+      summary: "Implement circuit breakers with documented thresholds on every outbound call path: Source IdPs, SCIM targets, email, webhooks, HIBP. Default per-call timeout of 30s; circuit opens after N consecutive failures or M-percentile-latency breach; half-open recovery."
+      detail: |
+        For each outbound integration:
+
+        - Source sync (per Source): per-call timeout 30s; circuit opens
+          after 5 consecutive failures; half-open after 60s
+        - SCIM provisioning (per target): per-call timeout 30s; circuit
+          opens after 5 consecutive failures; half-open after 60s;
+          queue draining policy when circuit is open (per-target queue
+          rather than blocking other targets)
+        - Email (per provider): per-call timeout 60s; circuit opens after
+          10 consecutive SMTP errors; half-open after 5min
+        - Webhook subscribers (per subscriber): per-call timeout 10s;
+          circuit opens after 3 consecutive failures; subscribers with
+          repeated open-circuit failures are notified to subscriber-side
+          oncall (an out-of-band signal)
+
+        Document the circuit-breaker observability (Prometheus metrics
+        per dependency, alerting rule on extended circuit-open state).
+        Cross-references Availability finding avail-311725ea (per-task
+        queue isolation) — the bulkhead and circuit-breaker patterns
+        ship together.
+      references:
+        - "external: Michael Nygard, Release It!, Circuit Breaker pattern"
+        - "external: Google SRE Workbook chapter 22 (Cascading Failures)"
+    related_concerns: [availability, distributed]
+    cross_references: [avail-311725ea]
+
+  - schema_version: 1
+    id: resil-8ebcae62
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Bulkheading absent between user-facing auth paths and admin / background-task paths"
+    summary: "Per ADR-0002 and threat-model D-5, the Server / Worker share resource pools across user-facing auth, admin operations, SCIM sync, Source sync, and notification dispatch; an expensive admin operation can starve user-facing auth."
+    detail: |
+      The identity-security common-patterns Resilient guidance is
+      explicit: "Bulkhead absent between user-facing auth paths and
+      administrative paths — admin bulk-export, audit-log query, or
+      federation-config edit can starve the customer-facing thread
+      pool. Severity: high (admin operations should not be able to
+      take down user-facing auth; bulkhead-less topology means an
+      admin running a wide audit query during peak login can degrade
+      /authorize latency)."
+
+      For authentik specifically: per ADR-0002, the Postgres-backed
+      task queue and channels-layer concentrate failure domains
+      (dist-9b598237); the Worker pool serves email, notification,
+      SCIM sync, Source sync, blueprint apply, certificate generation
+      without explicit per-task-type isolation (avail-311725ea);
+      Expression policy chains can monopolize Worker capacity
+      (avail-8ad0769e). The bulkhead pattern would isolate these
+      workloads.
+
+      Severity is high per the identity-security severity rubric: this
+      is the Resilient common-pattern High clause directly. Cascading
+      cross-impact: an admin running a large blueprint apply during
+      peak login degrades /authorize latency, which violates SLO.
+    evidence:
+      - artifact: adrs/0002-django-celery-redis-postgresql-stack.md
+        locator: "§Consequences > Negative / trade-offs, item 3"
+        excerpt: "PostgreSQL-backed task queue load. Heavy SCIM sync / notification dispatch / Source sync all write to the same database that serves user-facing auth flows."
+      - artifact: threat-model.md
+        locator: "§D-5 'Worker queue depth via expensive policies', Existing mitigation paragraph"
+        excerpt: "Worker pool concurrency is configurable."
+    control_mappings:
+      nist_800_53r5:
+        - "SC-5"
+        - "SC-6"
+        - "SI-13"
+    recommendation:
+      posture: required
+      summary: "Bulkhead the Worker pool by task type (auth-flow side effects, admin-tier tasks, SCIM, Source sync, notification, email) into separate dramatiq queues with separate worker processes; bulkhead Server thread pools by URL prefix (/api/v3/ admin endpoints separate from /application/o/ and /if/flow/)."
+      detail: |
+        Worker-side: define separate dramatiq queues
+        (`auth_side_effects`, `admin_bulk`, `scim`, `source_sync`,
+        `notification`, `email`, `outpost_lifecycle`,
+        `blueprint_apply`) with independent worker processes sized per
+        workload. Document the default worker counts per queue and
+        the operator tuning guidance.
+
+        Server-side: optionally deploy separate Server replicas behind
+        a routing rule so /api/v3/ admin traffic is served by one
+        replica pool and /application/o/, /application/saml/, /if/flow/
+        user traffic is served by another. The operator-controlled
+        reverse proxy already in the recommended posture (per
+        install-config/reverse-proxy.md) is the natural place to
+        implement the URL-prefix routing.
+
+        Cross-references avail-311725ea (per-task queue isolation) and
+        resil-4d9c7873 (circuit breakers) — these three findings ship
+        together as a Resilient hardening pass.
+      references:
+        - "external: Michael Nygard, Release It!, Bulkhead pattern"
+    related_concerns: [availability, distributed]
+    cross_references: [avail-311725ea]
+
+  - schema_version: 1
+    id: resil-a572e09b
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Chaos-engineering / game-day evidence for federation flows, signing-key rotation, JWKS-endpoint failure, SCIM-target outage is not enumerated"
+    summary: "The identity-security common-patterns guidance calls out chaos-engineering exercises as a Resilient maturity indicator; the inputs do not enumerate any such cadence."
+    detail: |
+      The identity-security common-patterns Resilient guidance: "Chaos-
+      engineering or game-day evidence on federation flows absent — no
+      documented test of 'what happens when SAML metadata refresh
+      fails,' 'what happens when JWKS endpoint returns stale keys,'
+      'what happens when SCIM provisioning lags by 1 hour.' Severity:
+      medium." The authentik inputs document audit findings, CVE
+      response cadence, and an external pentest cadence (Cure53,
+      Cobalt, IncludeSec) but do not document chaos exercises against
+      the identified failure modes.
+
+      Disposition is uncertainty: the absence of documentation does
+      not mean absence of practice (the upstream project may run
+      chaos exercises internally and not document them externally),
+      but for an APD review the documented evidence is what supports
+      claims. Severity is medium per the rubric.
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Source, Audits bullet"
+        excerpt: "Audits: Cure53 (2023-06), Cobalt (2024-11), IncludeSec (2025-09)."
+      - artifact: runbook.md
+        locator: "§13 'CVE response and patch cadence', step 5"
+        excerpt: "Verify post-upgrade per the Events log and per the per-component health endpoints in §3."
+    prerequisite_evidence:
+      - "Chaos / game-day exercises documented on a cadence (frequency, scenarios, post-exercise reports)"
+      - "Specific scenarios: signing-key rotation, JWKS endpoint failure, upstream-IdP outage, SCIM-target outage, Postgres failover, outpost-WS disconnect"
+    control_mappings:
+      nist_800_53r5:
+        - "CP-4"
+        - "CP-4(1)"
+        - "IR-3"
+        - "IR-3(1)"
+    recommendation:
+      posture: recommended
+      summary: "Document an opinionated chaos / game-day exercise calendar in `sys-mgmt/ops/` with scenario library and post-exercise report template."
+      detail: |
+        Author `sys-mgmt/ops/chaos-engineering.md` with:
+
+        - Scenario library covering federation-flow disruption (SAML
+          metadata refresh fail, JWKS endpoint 500, upstream IdP
+          timeout, SCIM target 503 / 429 / slow-loris), Postgres
+          failover, outpost-WS disconnect, signing-key rotation
+          mid-flight
+        - Recommended cadence per scenario (quarterly for high-impact,
+          annually for lower-impact)
+        - Post-exercise report template capturing observed behavior,
+          deviation from expected, remediation actions
+        - Integration with the SLO framework (chaos exercise burn-rate
+          consumption is part of the error budget)
+
+        This converts chaos-engineering from an undocumented practice to
+        a platform-recommended operational discipline; operators with
+        production SOC 2 / ISO 27001 commitments will need it for
+        BCP/DR control attestation anyway.
+      references:
+        - "external: Netflix Chaos Engineering principles"
+        - "external: SRE Workbook chapter 18 (Production Resilience)"
+    related_concerns: [availability, distributed]
+    cross_references: []
+
+  - schema_version: 1
+    id: resil-32c37d49
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: risk
+    severity: high
+    confidence: high
+    title: "Cached LDAP outpost bind mode violates session-revocation invariant for cache lifetime; no graceful fail-closed mechanism for credential change"
+    summary: "Per ADR-0003 and `invariants.md` INV-OUTPOST-003, cached LDAP bind explicitly does not honor session revocation or credential changes during the cache lifetime — a documented trade-off."
+    detail: |
+      ADR-0003 §Negative item 3: "Cached modes (LDAP-cached-bind,
+      LDAP-cached-search) break the session-revocation invariant. Per
+      the LDAP provider doc: 'Sessions are saved independently, meaning
+      that revoking sessions does *not* remove them from the outpost,
+      and neither will changing a users credentials.' Operators who
+      choose cached mode for performance trade away session revocation
+      for the cache duration." INV-OUTPOST-003: "Holds. The doc is
+      candid: 'revoking sessions does not remove them from the outpost,
+      and neither will changing a users credentials.'"
+
+      Severity is high per the identity-security severity rubric: this
+      matches the High clause "Refresh token replay without
+      proof-of-possession or rotation" by analogy — the cached-bind
+      credential is the equivalent of a long-lived bearer credential
+      that survives revocation. The trade-off is documented and the
+      operator opts in deliberately, but the absence of any
+      "fail-closed-on-credential-change" mechanism means cache-duration
+      is the effective revocation latency for any LDAP-protected
+      application.
+
+      The Resilient lens here is the failure-mode catalog: the cached
+      mode is a documented degraded-trust mode but without an
+      operational signal to operators that cache state is preventing
+      a security-critical state transition (password change, account
+      lockout). Cross-references Authenticity (the credential-validity
+      framing) and Ephemeral (the cache TTL question — threat-model
+      T-6 residual: "What is the cache TTL? 'Session duration' is
+      mentioned but the default value is not enumerated").
+    evidence:
+      - artifact: adrs/0003-outpost-architecture-for-protocol-handlers.md
+        locator: "§Consequences > Negative / trade-offs, item 3"
+        excerpt: "Cached modes (LDAP-cached-bind, LDAP-cached-search) break the session-revocation invariant. Per the LDAP provider doc: 'Sessions are saved independently, meaning that revoking sessions does not remove them"
+      - artifact: threat-model.md
+        locator: "§T-6 'Cached LDAP outpost stale-credential acceptance', Residual question line"
+        excerpt: "What is the cache TTL? 'Session duration' is mentioned but the default value is not enumerated in the inputs."
+    control_mappings:
+      nist_800_53r5:
+        - "AC-12"
+        - "AC-12(1)"
+        - "IA-5"
+        - "SI-13"
+      cwe:
+        - "CWE-613"
+      owasp_top10:
+        - "A07:2021"
+    recommendation:
+      posture: recommended
+      summary: "Document the cache TTL default; ship a credential-change-event invalidation channel that pushes a 'flush cache for user X' message to LDAP outposts via the existing WebSocket transport; mark cached-bind mode as a defense-trade-off in the outpost provider doc."
+      detail: |
+        Two changes:
+
+        1. Cache invalidation push: when a user's password changes, an
+           account is lockout-ed, or a session is revoked, the Server
+           pushes an invalidation message ("flush user X from your bind
+           cache") to every LDAP outpost via the existing /ws/outpost/
+           channel. Outposts honor the message by evicting cached state
+           for that user. This converts the cached-bind trade-off from
+           "no revocation for cache duration" to "near-real-time
+           revocation with cache as a perf optimization."
+        2. Documentation tightening: document the default cache TTL
+           (resolves T-6 residual); explicitly mark cached-bind in the
+           UI as "Reduced revocation latency — see outpost doc for
+           trade-offs"; cross-link from the Account Lockdown
+           documentation to note that lockdown propagation to cached
+           LDAP outposts requires the WebSocket invalidation channel.
+      references:
+        - "internal: invariants.md §INV-OUTPOST-003 (the asserted-but-trade-off invariant this addresses)"
+        - "internal: security/account-lockdown.md (the lockdown discipline this aligns with)"
+    related_concerns: [ephemeral, authenticity, non_repudiation]
+    cross_references: []
+
+  - schema_version: 1
+    id: resil-0af10c5c
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: uncertainty
+    severity: medium
+    confidence: medium
+    title: "Retry-with-jitter discipline on Source / SCIM / webhook outbound calls is not asserted"
+    summary: "Per `architecture-index.md` worker component and the SCIM provider doc, outbound retries are referenced but jitter, retry-budget, and idempotency-key interaction are not enumerated."
+    detail: |
+      The identity-security common-patterns Resilient guidance: "Retry
+      policy on outbound calls (to upstream IdPs, to SCIM targets, to
+      webhook subscribers) without jitter or budget. Severity: medium
+      (thundering-herd risk on partial failure; webhook-retry storm
+      during subscriber-side incident)." The authentik inputs document
+      SCIM batching (`tech_plan.md` §6 SCIM provisioning: "Sync
+      triggers on user/group write events and on a one-hour full
+      reconcile cycle") but do not enumerate per-retry backoff curve,
+      jitter, or idempotency-key handling.
+
+      Disposition is uncertainty: the absence of documentation is the
+      signal; the actual platform behavior may include the retry
+      discipline at the dramatiq layer (which has its own retry
+      semantics). Severity is medium per the rubric.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 SCIM provisioning, paragraph"
+        excerpt: "Sync triggers on user/group write events and on a one-hour full reconcile cycle."
+      - artifact: architecture-index.md
+        locator: "`worker` component, Notable surface line"
+        excerpt: "Per the SCIM provider doc, SCIM sync is per-100-objects batched to scale across multiple worker replicas."
+    prerequisite_evidence:
+      - "Per-outbound-target retry policy: backoff curve, jitter strategy, total budget per dependency, idempotency-key interaction, behavior on budget exhaustion"
+      - "Whether retries are dramatiq-layer or application-layer (affects observability and tuning surface)"
+    control_mappings:
+      nist_800_53r5:
+        - "SI-13(4)"
+        - "SC-5(1)"
+    recommendation:
+      posture: recommended
+      summary: "Document the per-outbound-target retry policy in `add-secure-apps/providers/scim/`, `users-sources/sources/`, and the Notification Transport docs."
+      detail: |
+        For each outbound-call class, document:
+
+        - Backoff curve (exponential, max 5 minutes)
+        - Jitter strategy (e.g., full jitter per AWS Architecture
+          Blog "Exponential Backoff and Jitter")
+        - Total budget per dependency (e.g., 6 retries over 10 minutes
+          for SCIM)
+        - Idempotency-key interaction (does SCIM include idempotency
+          keys to prevent duplicate provisioning?)
+        - Behavior on budget exhaustion (fail-fast vs. queue for
+          manual review vs. dead-letter)
+
+        Pair with circuit breakers from resil-4d9c7873 — the retry
+        policy is the inner loop; the circuit breaker is the outer
+        guard. Document them together.
+      references:
+        - "external: AWS Architecture Blog, Exponential Backoff and Jitter"
+    related_concerns: [availability, integrity]
+    cross_references: [resil-4d9c7873]

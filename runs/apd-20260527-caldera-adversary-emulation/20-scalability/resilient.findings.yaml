@@ -1,0 +1,195 @@
+schema_version: 1
+agent: resilient
+finding:
+  - schema_version: 1
+    id: resil-ca256373
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No circuit breaker, no bulkhead between operator-console traffic and beacon-handling traffic"
+    summary: "All traffic shares one event loop; no in-process bulkhead; a beacon flood degrades operator UI and a UI-heavy operation slows beacon handling."
+    detail: |
+      With every request going through the single aiohttp app on one
+      event loop, there is no bulkhead between the operator-UI render
+      path and the beacon-handling path. ADR-0001 documents the
+      single-process choice. The resilient consequence is that any
+      load on one path degrades every other path: a chatty beacon
+      flood (legitimate or D-1 attack scenario) stretches operator UI
+      response time; a heavy listAgents query from the operator UI
+      slows beacon handling.
+
+      High per the security-tooling rubric: resilience asymmetry —
+      the platform should fail SAFE for offensive surfaces (refuse
+      commands without authorization gates) and OPEN for audit
+      surfaces. Caldera's single-loop model fails-fragile in both
+      directions: a degraded auth path produces ambiguous behavior
+      (some requests time out, some succeed) and there is no audit
+      to record which requests received which treatment.
+    cross_references:
+      - avail-623b8e59
+      - dist-dbaf5c57
+    evidence:
+      - artifact: adrs/0001-asyncio-single-process-server.md
+        locator: "ADR-0001"
+        excerpt: "asyncio single-process server"
+      - artifact: tech_plan.md
+        locator: "§2.3 'Process model'"
+        excerpt: "Every incoming request ... is dispatched into the same loop"
+    control_mappings:
+      nist_800_53r5: [SI-13, "SI-13(1)", "SI-13(4)", SC-5, CP-13]
+      mitre_attack:
+        - technique: T1499
+          sub_technique: "T1499.003"
+          tactic: TA0040
+          rationale: "Application-exhaustion DoS amplified because there is no bulkhead between operator-facing and agent-facing request paths."
+      cwe: [CWE-410]
+    recommendation:
+      posture: recommended
+      summary: "Bulkhead beacon handling from operator UI via process split (per dist-dbaf5c57) and add per-path circuit breakers."
+      detail: |
+        Adopt the 2-process model proposed by avail-623b8e59 and
+        dist-dbaf5c57. Within each process, add per-downstream
+        circuit breakers (data store, planning service, contact
+        decoder) with explicit half-open / fail-fast behavior. Refuse
+        new beacon registrations during degraded data-store states
+        (fail-SAFE) rather than queuing in memory.
+    related_concerns: [distributed, availability]
+
+  - schema_version: 1
+    id: resil-83950e96
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Beacon retry strategy is per-implant — no platform-side aggregate cap on target-network callback storms"
+    summary: "Each shipped contact protocol implements its own retry; no platform-side aggregate cap across implants targeting the same network."
+    detail: |
+      ADR-0003 documents per-protocol callback encryption; per-protocol
+      backoff is similarly per-implant. The tech plan does not
+      describe a platform-side aggregate cap on callback volume
+      against any target network. The security-tooling-specific
+      concern is target-network DoS pressure: an implant set in a
+      single target network all retrying simultaneously after a
+      listener outage produces a synchronized storm. The common-patterns
+      file flags this as the load-bearing security-tooling pattern.
+
+      Medium per the security-tooling rubric clause "Implant retry
+      backoff absent or aggressive" — escalates to high when the
+      retry storm produces target-side detection that ends the
+      engagement and any customer notices the operational impact.
+    evidence:
+      - artifact: adrs/0003-agent-callback-encryption-by-protocol.md
+        locator: "ADR-0003 body"
+        excerpt: "encryption-by-protocol"
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "Server's contact_svc.handle_heartbeat upserts"
+    control_mappings:
+      nist_800_53r5: [SC-5, SI-13, CP-13]
+      mitre_attack: []
+      cwe: [CWE-770]
+    recommendation:
+      posture: recommended
+      summary: "Document operator guidance for jittered exponential backoff per implant, AND server-side detection of synchronized retry storms."
+      detail: |
+        Document an expectation that shipped contacts use jittered
+        exponential backoff with capped retry budget. At the server,
+        emit an alert when beacon arrival rate from a single subnet
+        exceeds a configurable threshold (default 100/sec/subnet).
+        Cross-reference to the avail-e4b13596 rate-limit finding.
+    related_concerns: [availability, distributed]
+
+  - schema_version: 1
+    id: resil-f57932c6
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Plugin enable() failures aggregated into errors[] but no graceful-degradation policy"
+    summary: "AppService aggregates plugin enable() exceptions into AppService.errors; server keeps running but the failed plugin's surface is partially loaded with no documented recovery."
+    detail: |
+      Runbook §2 describes "Plugin load errors: server stdout at INFO
+      level shows any plugin whose enable() raised; aggregated under
+      AppService.errors". The runbook does not describe what happens
+      next: does the plugin's partial state get cleaned up, do
+      operator console pages handle the missing plugin gracefully,
+      does the platform retry the load? The platform fails-fragile
+      in this path: a half-loaded plugin can be worse than no plugin.
+
+      Medium per the security-tooling rubric clause "No circuit
+      breaker on result-data store" applied to the plugin-load
+      analog — degradation of a single plugin has unbounded
+      consequences on dependent surfaces.
+    evidence:
+      - artifact: runbook.md
+        locator: "§2 'Health checks'"
+        excerpt: "Plugin load errors: server stdout at INFO level shows any plugin whose enable() raised; aggregated under AppService.errors"
+    control_mappings:
+      nist_800_53r5: [SI-13, "SI-13(1)", SC-24]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Define plugin-load lifecycle: rollback partial state on enable() failure, disable plugin in conf, emit structured event."
+      detail: |
+        On plugin enable() exception: unregister any routes the
+        plugin partially registered, remove any
+        services/objects/abilities the plugin partially mutated.
+        Surface the failure to /api/v2/health with explicit
+        "plugin <name> disabled because <reason>". Disable in
+        in-memory plugin list until operator action. Emit structured
+        event (per non_repudiation finding) for incident-reconstruction
+        purposes.
+    related_concerns: [non_repudiation, availability]
+
+  - schema_version: 1
+    id: resil-ca36d2ac
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Timeout posture on contact decoders unspecified — slow-decode attacks may stall the event loop"
+    summary: "Each contact decoder runs in the shared event loop; tech plan does not document per-decoder timeout or async-yield guarantees."
+    detail: |
+      ContactService.handle_heartbeat invokes the per-contact decoder
+      synchronously within the asyncio task that handles the beacon.
+      The tech plan does not document whether contact decoders are
+      time-bounded, whether they yield to the event loop during
+      multi-step decode, or whether the platform enforces a max
+      decode time. A slow-decode attack (large base64 input,
+      adversarial DNS record encoding for the DNS contact) could
+      stall the event loop and degrade every other surface (the
+      avail single-process SPOF amplifies this).
+
+      Medium (blocked) per the security-tooling rubric clause "Health
+      checks ... do not verify the listener can accept and
+      authenticate" — the rubric's emphasis on synthetic end-to-end
+      health applies here as the symptom-detection mechanism.
+      Pending evidence of per-decoder time-bound contracts.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "Each contact module decides its own on-wire format"
+    prerequisite_evidence:
+      - "Per-contact decoder timeout and async-yield contract"
+      - "Slow-decode test coverage for shipped contact decoders"
+    control_mappings:
+      nist_800_53r5: [SI-13, SC-5, SC-6]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Specify a 200ms decode budget per contact and run decoders in a bounded thread pool; fail-fast on overrun."
+      detail: |
+        Move contact decoding into a bounded ThreadPoolExecutor with
+        an explicit per-decode timeout (default 200ms). On timeout,
+        drop the beacon and emit a structured event tagging the
+        contact module and the source IP for follow-up.
+    related_concerns: [availability, integrity]

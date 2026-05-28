@@ -1,0 +1,83 @@
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "This APD gauntlet run reviews authentik v2026.8.0-rc1, an open-source Identity Provider and SSO platform (MIT-licensed core). The identity-security domain pack applies. The 13-artifact intake covers the tech plan, architecture index, threat model, happy path, runbook, prior IncludeSec audit (2025.12), and four ADRs. The platform's architecture is grounded in four key decisions: a Django/Celery/Redis/PostgreSQL stack, a Flows-Stages-Policies pipeline with arbitrary-Python expression support, an outpost architecture for protocol handlers, and symmetric field-level encryption anchored by a single master key (AUTHENTIK_SECRET_KEY)."
+    - "Across 9 specialists, 66 deduped findings emerged (down from 71 inputs after 5 cross-lens merges). 2 critical, 42 high, 22 medium; 9 blocked on prerequisite evidence; 0 contradictions; 0 severity disagreements. The two critical findings share a root cause: the AUTHENTIK_SECRET_KEY is the single master encryption key for all stored secrets and is process-env-resident; any Expression policy (arbitrary Python without sandbox per ADR-0001) can read it via os.environ. The second critical finding is that OAuth Providers with no Signing Key silently fall back to HMAC-signing JWTs with the client_secret, making any RP-side credential leak a forge-any-JWT capability."
+    - "The highest-leverage hardening cluster is master-key risk surface reduction: shipping the reverse-proxy API blocklist for Expression/PropertyMapping/Blueprint write endpoints as a deployment-time default (rather than operator opt-in per security-hardening.md), and documenting an external-KMS binding for per-field secret encryption. These two changes would reduce the blast radius of a compromised admin from cluster-wide-secret-unmasking to per-Provider scope. A companion gap is the absence of a AUTHENTIK_SECRET_KEY rotation procedure in the runbook — runbook §5 explicitly flags this as a GAP."
+    - "The auditability tier surfaces a structurally weak audit pipeline: Event rows are mutable PostgreSQL records with no hash chain; log forwarding to a SIEM is operator-driven rather than default. Without forwarding, an attacker with DB write access or Expression RCE can erase the audit trail. The Non-Repudiation and Immutability specialists identify seven related findings including missing per-token audit anchors, missing per-assertion attribute audit, and absent GitOps drift detection on federation-trust configuration."
+    - "The scalability tier reflects the architectural concentration risk of PostgreSQL as the universal SPOF: identity, session, audit, and secret material all live in a single database whose loss equals total platform unavailability. The Distributed and Resilient specialists find no documented multi-region topology, no circuit breakers on outbound calls to Sources and SCIM targets, and no per-task queue isolation between user-facing and background work. The Ephemeral specialist notes absent rotation procedures for AUTHENTIK_SECRET_KEY, per-Provider signing keys, and SCIM target static tokens."
+    - "The prior IncludeSec audit (2025.12) addressed H1 (Blueprint RCE — compensating control documented), H2 (TOTP rate limiting added), H3 (Expression RCE risk-accepted), and L2 (timing variance on recovery flow). The four ADRs candidly document the architectural trade-offs, including the no-sandbox Expression engine and the master-key architecture. The gauntlet's role is to frame the second-order operational consequences of these documented choices and identify the remaining hardening surface."
+
+headline_findings:
+  - {id: "conf-477ff8a1", rank: 1}
+  - {id: "intg-96d4de40", rank: 2}
+  - {id: "conf-e08662e7", rank: 3}
+  - {id: "conf-3d461eb8", rank: 4}
+  - {id: "intg-0a313721", rank: 5}
+  - {id: "immut-d98cdc96", rank: 6}
+  - {id: "nonrep-6ff98de3", rank: 7}
+  - {id: "auth-4793933a", rank: 8}
+  - {id: "avail-cfd2b6e8", rank: 9}
+  - {id: "conf-68ab158e", rank: 10}
+
+strengths:
+  - id: "conf-cap-1150e561"
+    caveats:
+      - "AUTHENTIK_SECRET_KEY is process-env-resident and reachable by any Expression policy (conf-477ff8a1)"
+      - "Backup encryption is operator-driven per runbook §8 GAP (conf-68ab158e)"
+      - "Key rotation procedure is not documented in runbook §5 GAP (conf-3d461eb8)"
+  - id: "auth-cap-3a143747"
+    caveats:
+      - "Admin-MFA default binding is operator-action-required (auth-4793933a)"
+      - "SMS/email-OTP fallback discipline is operator-tuned per-Flow (auth-190b06f7)"
+      - "WebAuthn lost-factor recovery is operator-mediated with no automated self-service flow"
+  - id: "intg-cap-f8801874"
+    caveats:
+      - "XSW resistance beyond dependency posture is not confirmed in inputs (intg-e1d79aee)"
+      - "SAML SHA-1 digest remains a configurable option per Provider (intg-7111d094)"
+  - id: "conf-cap-6db56a6d"
+    caveats:
+      - "Master key compromise (conf-477ff8a1) breaches per-Provider isolation simultaneously"
+      - "Rotation cadence is operator-driven without enforced schedule (ephem-0fb143ce)"
+  - id: "resil-cap-c79efff1"
+    caveats:
+      - "Refresh-token reuse detection depends on rotation being enabled per Provider"
+      - "Family-revocation on token theft is documented but operator-configurable"
+
+next_steps:
+  - rank: 1
+    text: "Ship the reverse-proxy API blocklist for Expression/PropertyMapping/Blueprint write endpoints as a deployment-time default in the Helm chart and compose reference; document external-KMS binding for per-field encryption"
+    refs: ["conf-477ff8a1", "conf-3d461eb8", "intg-0a313721"]
+  - rank: 2
+    text: "Document and automate AUTHENTIK_SECRET_KEY rotation procedure in the runbook; provide a per-Provider signing-key rotation cadence recommendation"
+    refs: ["conf-3d461eb8", "ephem-0fb143ce", "immut-1dc13874"]
+  - rank: 3
+    text: "Make HMAC-fallback (no Signing Key configured) visible in the admin UI as a warning; recommend requiring an asymmetric Signing Key per Provider as a deployment checklist item"
+    refs: ["intg-96d4de40"]
+  - rank: 4
+    text: "Enable default log forwarding to a SIEM-compatible target (syslog/webhook) out-of-box; add a write-immutable audit tier (hash chain or object-lock export) to the runbook"
+    refs: ["immut-d98cdc96", "nonrep-6ff98de3", "nonrep-c3d8f98d"]
+  - rank: 5
+    text: "Require MFA binding for admin-group members in the default-authentication-flow; emit a setup-time warning when admin accounts have no MFA enrolled"
+    refs: ["auth-4793933a"]
+  - rank: 6
+    text: "Document PostgreSQL HA topology (read-replica + streaming replication) in the deployment guide; track per-endpoint SLO targets for /authorize, /token, /userinfo"
+    refs: ["avail-cfd2b6e8", "avail-1160b595"]
+  - rank: 7
+    text: "Add per-task Worker queue isolation between user-facing flows and background SCIM/Source sync; add circuit breakers on all outbound HTTP calls (Sources, SCIM targets)"
+    refs: ["resil-4d9c7873", "avail-311725ea"]
+  - rank: 8
+    text: "Enforce TLS on the outpost-to-Server WebSocket channel; consider mTLS workload identity for outpost service accounts"
+    refs: ["conf-e08662e7"]
+  - rank: 9
+    text: "Implement platform-enforced deny on is_superuser / is_active writes from Source property mappings; add a privileged-field deny list to the invariant checklist"
+    refs: ["intg-0a313721"]
+  - rank: 10
+    text: "Add per-token audit anchors recording every token issuance, use, and revocation event; add per-SAML-assertion attribute release audit for downstream traceability"
+    refs: ["nonrep-c772c9f2", "nonrep-fd5e012c"]
+
+posture_summary:
+  trustworthiness: "High-severity deficiencies in confidentiality (master-key architecture, PostgreSQL TLS default-off, key rotation gap) and integrity (HMAC fallback, Source attribute injection, forward-auth header trust) dominate. The platform ships strong primitives — argon2id password hashing, per-Provider signing-key isolation, defusedxml/xmlsec SAML stack — but their effectiveness is contingent on operator configuration choices that are not enforced by default. The two critical findings share a single architectural root cause (master-key in process env plus no-sandbox Expression engine) that is explicitly documented as intentional; the hardening path is shipping the compensating control (API blocklist) as a default rather than optional."
+  scalability: "PostgreSQL concentration risk is the structural SPOF across availability, distributed topology, and secret storage. No multi-region topology is documented. Resilience primitives (refresh-token rotation, reputation policies) exist but circuit breakers on outbound calls, per-task queue isolation, and bulkheading between user-facing and background work are absent from the input set. Ephemeral posture is weakest on key rotation: AUTHENTIK_SECRET_KEY has no documented rotation cadence or procedure, and per-Provider signing-key rotation is operator-discretion only."
+  auditability: "The audit substrate (mutable PostgreSQL Event rows, operator-driven log forwarding, no hash chain) provides a foundation but does not meet the immutability requirements for a security-critical identity platform. Non-Repudiation gaps (Expression helper functions without automatic Event emission, cached LDAP per-bind audit only on cache-miss, absent per-token audit anchor) reduce forensic reconstruction fidelity post-incident. Authenticity posture for admin actions is weak without default MFA enforcement. The IncludeSec 2025.12 fixes (TOTP rate limiting, reputation-based brute-force resistance) are targeted improvements; the structural audit posture requires a coordinated investment in forwarding, immutability, and per-class retention policies."

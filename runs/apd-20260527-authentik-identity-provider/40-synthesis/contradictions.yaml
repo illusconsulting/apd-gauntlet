@@ -1,0 +1,34 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+  synthesis_pass: 1
+
+contradictions: []
+
+notes: |
+  No specialist-vs-specialist contradictions detected on this run.
+
+  Apparent tensions between specialists that are NOT contradictions:
+
+  - Confidentiality conf-477ff8a1 (master-key in-process reachability)
+    and Authenticity auth-cap-8caf955f (per-Provider key isolation) both
+    cite INV-AUTH-002 from different lenses; both are correct
+    (per-Provider isolation holds absent master-key compromise; master-key
+    compromise breaches the isolation simultaneously). Documented in
+    capability caveats.
+
+  - Resilient resil-cap-867eac4f (Account Lockdown atomic for Enterprise)
+    and Integrity intg-568208e5 (Community-tier multi-step racy procedure)
+    are not contradictions: the capability is Enterprise-only; the
+    finding documents the Community-tier gap. Both correct as scoped.
+
+  - Authenticity auth-22bd304a (outpost-WS TLS GAP) and Distributed
+    dist-cap-8cbb523a (outposts deployable as separate failure domains)
+    are complementary, not contradictory: the topology is sound; the
+    in-transit confidentiality / authenticity on the inter-component
+    link is the gap.
+
+  - Threat-model documents Expression engine RCE (T-1) as "documented
+    intentional" (IncludeSec H3 risk-accepted). Multiple specialists
+    treat it as an architectural fact with second-order consequences
+    rather than as a defect — consistent with the run-config preamble.
