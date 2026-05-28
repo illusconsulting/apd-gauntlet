@@ -27,7 +27,16 @@ function AttackPaths({ data }) {
     // dompurify pass before producing SVG. The asset-graph YAML is
     // adopter-controlled, so the SVG mermaid produces can in principle
     // include adversarial markup if we render it raw — 'strict' closes that.
-    window.mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "strict" });
+    // Mermaid 10+ defaults to HTML labels inside <foreignObject>, but under
+    // securityLevel:'strict' it strips the foreignObject children to empty
+    // (invisible labels). flowchart.htmlLabels:false forces SVG <text> nodes
+    // instead — which our CSS targets and which can't host arbitrary HTML.
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: "neutral",
+      securityLevel: "strict",
+      flowchart: { htmlLabels: false },
+    });
     window.mermaid
       .render("apd-asset-graph", ap.mermaid)
       .then(({ svg }) => {

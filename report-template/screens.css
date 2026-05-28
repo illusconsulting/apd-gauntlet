@@ -967,7 +967,6 @@
 .attack-paths__mermaid--focused {
   /* Cap the focused-subgraph container so the SVG doesn't stretch the whole page */
   max-width: 720px;
-  overflow-x: visible;
 }
 .attack-paths__mermaid--focused svg {
   /* Defeat the parent's !important min-width for the focused subgraph */
