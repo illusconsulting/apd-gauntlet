@@ -30,6 +30,35 @@ report falls back to algorithmic equivalents:
 The Findings tab, Capabilities tab, Coverage tabs, Attack paths tab, and
 Annexes tab all render fully from existing YAMLs in either case.
 
+## Empty-state interpretation
+
+Some report tabs show zero counts without further explanation in earlier versions.
+The following empty states are **accurate run outcomes**, not rendering bugs:
+
+**Attack Paths — "0 pairs / 0 paths / 0 bottleneck edges"**
+This occurs when the asset graph exists (nodes and edges are present and rendered
+via Mermaid) but those edges do not form a traversable chain from any declared
+attacker position to any declared crown jewel. The most common cause: specialists
+reference prose documents (e.g., `tech_plan.md`) as evidence rather than specific
+`asset_id` values, so the analyzer cannot synthesize graph edges from prose. The
+"Enumerated paths" panel displays an informative explanation block (blue-bordered)
+rather than a blank section. To enable path enumeration, enrich
+`00-context/asset-inventory.yaml` with explicit trust-boundary edges connecting
+attacker positions to crown jewels, or have specialists tag finding evidence with
+the `asset_id` of the affected component.
+
+**Annexes — "0 surfaced" / "0 clusters"**
+Contradictions and severity disagreements are only recorded when specialists
+genuinely disagree. A run where all specialists operated from a shared baseline
+(same rubric, same scope) will legitimately produce zero entries in both annexes.
+When the synthesizer includes a `notes:` field in `contradictions.yaml` or
+`severity-disagreements.yaml` explaining the absence, those notes are surfaced
+directly in the Annexes tab beneath the count pill.
+
+If either of these tabs is blank with no explanation, that is a template
+rendering bug — check that `build-report` was run against the current
+`report-template/` bundle.
+
 ## Contributing template changes
 
 The JSX source lives in `report-template/`. After editing any JSX or CSS,

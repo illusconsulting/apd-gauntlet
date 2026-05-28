@@ -3653,7 +3653,9 @@ window.APD_DATA = {
     }
   ],
   "contradictions": [],
+  "contradictions_notes": "No specialist-to-specialist contradictions surfaced in this run. The\nintake brief established a shared baseline (no PHI scope; demo intent;\n18+ documented intentional vulnerabilities) that all 9 specialists\noperated against; merge candidates were folded into lens_perspectives\nrather than recorded as contradictions.\n\nThe closest candidate for a contradiction is the framing of the\nsingle-host topology: Distributed treats it as the canonical SPOF\n(high), while Availability writes the SLO-absent finding as blocked\n(medium). These are not contradictions because they cover different\nfacets of the same architectural decision and explicitly cite their\nrubric clauses; the synthesizer treats them as adjacent-lens findings\non a shared concern.\n\nCross-tier cross_references are resolved in deduped-findings.yaml\nwithout flagged dangling IDs.\n",
   "severity_disagreements": [],
+  "severity_disagreements_notes": "No severity disagreements between specialists. Where two or more\nspecialists wrote findings on the same architectural concern, severity\nwas either consistent or the synthesizer escalated to the highest\ncited tier during merging (per rubric guidance, do not average across\nmultiple impacts). Examples:\n\n- merged-c829ffc8: conf-c66f08cf (critical), intg-15c04a1c\n  (critical), auth-09ae00ed (critical) — all critical, merged at\n  critical.\n- merged-d2e871f5: intg-078ee9f6 (high), auth-55e76c4d\n  (high), nonrep-fc423071 (high), ephem-b95a7d11 (high) — all\n  high, merged at high.\n- merged-514507e6: conf-cf457739 (high),\n  intg-5c659bdb (high), avail-6af5aff7 (high) — all high.\n- merged-44bdb663: conf-3e324699 (high),\n  dist-c047a7c0 (high) — both high.\n\nThe synthesizer notes the absence of disagreement is itself\nsignal: the inputs were sufficiently candid (especially\nprior-audit.md's carry-forward and threat-model.md's STRIDE\ncatalog) that severity calibration was anchored on the same\nrubric clauses across all 9 lenses.\n",
   "nist_rollup": [
     {
       "family": "AU",
@@ -4025,7 +4027,12 @@ window.APD_DATA = {
       "total_paths": 0,
       "total_pairs": 0,
       "bottleneck_count": 0
-    }
+    },
+    "asset_graph_summary": {
+      "node_count": 30,
+      "edge_count": 19
+    },
+    "pairs_empty_explanation": "No (attacker, crown-jewel) paths were enumerated for this run. The asset graph has 30 nodes / 19 edges but those edges don't form a chain from any declared attacker position to any declared crown jewel. This is common for runs where finding evidence references documents (e.g., tech_plan.md) rather than specific asset names — the analyzer can't synthesize edges from prose. To enable path enumeration, enrich 00-context/asset-inventory.yaml with explicit trust boundaries connecting attacker positions to crown jewels, OR have specialists tag finding evidence with the asset_id of the affected component."
   },
   "next_steps": [
     {

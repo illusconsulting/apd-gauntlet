@@ -46,7 +46,9 @@ class RunArtifacts:
     deduped_findings: list[dict[str, Any]]
     deduped_capabilities: list[dict[str, Any]]
     contradictions: list[dict[str, Any]]
+    contradictions_notes: str | None
     severity_disagreements: list[dict[str, Any]]
+    severity_disagreements_notes: str | None
     nist_coverage: dict[str, Any]
     attack_exposure: dict[str, Any]
     apd_coverage_matrix: dict[str, Any]
@@ -205,10 +207,20 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
 
     # Optional artifacts.
     synth = run_dir / "40-synthesis"
-    contradictions = _records(synth / "contradictions.yaml", "contradiction") \
-        if (synth / "contradictions.yaml").exists() else []
-    sev_dis = _records(synth / "severity-disagreements.yaml", "severity_disagreement") \
-        if (synth / "severity-disagreements.yaml").exists() else []
+    contradictions_notes: str | None = None
+    if (synth / "contradictions.yaml").exists():
+        _contra_doc = _yaml(synth / "contradictions.yaml")
+        contradictions = _records(synth / "contradictions.yaml", "contradiction")
+        contradictions_notes = _contra_doc.get("notes") or None
+    else:
+        contradictions = []
+    sev_dis_notes: str | None = None
+    if (synth / "severity-disagreements.yaml").exists():
+        _sevdis_doc = _yaml(synth / "severity-disagreements.yaml")
+        sev_dis = _records(synth / "severity-disagreements.yaml", "severity_disagreement")
+        sev_dis_notes = _sevdis_doc.get("notes") or None
+    else:
+        sev_dis = []
     attack_paths = _yaml(synth / "attack-paths.yaml") \
         if (synth / "attack-paths.yaml").exists() else None
     asset_graph = _yaml(synth / "asset-graph.yaml") \
@@ -252,7 +264,9 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         deduped_findings=_records(deduped_findings_path, "finding"),
         deduped_capabilities=_records(deduped_caps_path, "capability"),
         contradictions=contradictions,
+        contradictions_notes=contradictions_notes,
         severity_disagreements=sev_dis,
+        severity_disagreements_notes=sev_dis_notes,
         nist_coverage=_yaml(nist_path),
         attack_exposure=_yaml(attack_exposure_path),
         apd_coverage_matrix=_yaml(apd_matrix_path),

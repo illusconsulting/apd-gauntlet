@@ -50,6 +50,13 @@ function AttackPaths({ data }) {
 
       <section className="attack-paths__pairs">
         <h3 className="attack-paths__section-h">Enumerated paths</h3>
+        {ap.pairs.length === 0 && (
+          <p className="empty-state empty-state--info">
+            {ap.pairs_empty_explanation
+              ? ap.pairs_empty_explanation
+              : "No attacker → crown-jewel paths were enumerated for this run."}
+          </p>
+        )}
         {ap.pairs.map((pair, idx) => (
           <details key={idx} className="attack-pair">
             <summary>

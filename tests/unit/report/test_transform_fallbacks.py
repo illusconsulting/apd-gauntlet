@@ -58,8 +58,30 @@ def test_build_apd_data_assembles_full_window_object(example_run: pathlib.Path) 
     # Spot-check the top-level keys the React template expects.
     for key in (
         "meta", "summary", "capabilities", "strengths", "findings",
-        "contradictions", "severity_disagreements",
+        "contradictions", "contradictions_notes",
+        "severity_disagreements", "severity_disagreements_notes",
         "nist_rollup", "attack_exposure", "apd_matrix",
         "attack_paths", "next_steps", "taxonomy",
     ):
         assert key in data, f"missing key {key}"
+
+
+def test_contradictions_notes_pulled_from_yaml(example_run: pathlib.Path) -> None:
+    """crAPI fixture has notes in contradictions.yaml; they must surface in build_apd_data."""
+    artifacts = load_run(example_run)
+    data = build_apd_data(artifacts, run_dir=example_run)
+    # crAPI has zero contradictions but non-empty notes.
+    assert data["contradictions"] == []
+    assert data["contradictions_notes"] is not None
+    assert isinstance(data["contradictions_notes"], str)
+    assert len(data["contradictions_notes"]) > 20
+
+
+def test_severity_disagreements_notes_pulled_from_yaml(example_run: pathlib.Path) -> None:
+    """crAPI fixture has notes in severity-disagreements.yaml; they must surface."""
+    artifacts = load_run(example_run)
+    data = build_apd_data(artifacts, run_dir=example_run)
+    assert data["severity_disagreements"] == []
+    assert data["severity_disagreements_notes"] is not None
+    assert isinstance(data["severity_disagreements_notes"], str)
+    assert len(data["severity_disagreements_notes"]) > 20
