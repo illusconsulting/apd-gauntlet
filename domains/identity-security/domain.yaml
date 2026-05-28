@@ -1,0 +1,84 @@
+name: identity-security
+display_name: "Identity Security (IdP / SSO / OAuth-OIDC-SAML)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Identity-provider-specialized severity rubric and pattern library for SSO/IdP platforms, OAuth 2.0 / OIDC authorization servers, SAML 2.0 identity providers, LDAP/AD-backed directories, federation hubs, and credential-management services (authentik, Keycloak, Authelia, Ory Hydra, ZITADEL, Dex, Casdoor, Auth0/Okta-equivalent self-hosted deployments). Anchored to NIST SP 800-63B (Authenticator and Lifecycle Management), NIST SP 800-63C (Federation and Assertions), the OAuth 2.0 Security Best Current Practice (RFC 9700), the OAuth 2.1 draft, OIDC Core 1.0 Security Considerations, the SAML 2.0 Security Considerations profile, FIDO2 / WebAuthn Level 2, SOC 2, GDPR, and FedRAMP Moderate."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - "NIST SP 800-63B"
+  - "NIST SP 800-63C"
+  - "OAuth 2.0 Security BCP (RFC 9700)"
+  - "OIDC Core 1.0 + Security Considerations"
+  - "SAML 2.0 Security Considerations"
+  - "FIDO2 / WebAuthn Level 2"
+  - "SOC 2"
+  - GDPR
+  - "FedRAMP Moderate"
+crown_jewels:
+  - pattern: signing_key_material
+    description: "Token signing keys — JWT RS256/ES256/EdDSA private keys, SAML 2.0 signing X.509 keys, OIDC ID-token signers, JWE content-encryption keys, and the JWKS rotation history that establishes the trust chain. Compromise yields universal token forgery: the attacker can mint arbitrary access tokens, refresh tokens, ID tokens, and SAML assertions for any subject in any audience, producing a global authentication bypass across every relying party that trusts the issuer."
+  - pattern: password_hash_store
+    description: "User credential hashes (argon2id, bcrypt, scrypt; legacy PBKDF2/SHA-512crypt where present) and the per-user salt set. Dumps enable offline password recovery proportional to the hash strength; reused passwords amplify the blast radius to every external service the population shares credentials with. Triggers GDPR Article 33 notification and is the highest-frequency real-world IdP incident class."
+  - pattern: mfa_secret_store
+    description: "TOTP shared secrets, HOTP counters, WebAuthn credential records (credential ID + public key + signature counter), FIDO2 attestation material, push-MFA enrollment tokens, backup/recovery codes, and stored security-question answers. Compromise of TOTP seeds or recovery codes effectively eliminates the second factor; WebAuthn credential records compromise enables impersonation in flows that do not enforce attestation freshness."
+  - pattern: oauth_client_secret_registry
+    description: "Confidential-client credentials — OAuth/OIDC client_secret values, private_key_jwt signing keys, mTLS client certificates registered for client authentication, and the registered redirect_uri allowlist that gates token issuance. Includes PKCE code_verifier values in flight. Leakage permits impersonation of an entire relying-party application and bypass of consent for grants that target the impersonated client."
+  - pattern: session_token_store
+    description: "Active session records (interactive browser sessions, SAML SLO state, OIDC front-channel logout state), refresh tokens (typically stored as hashes with rotation chains), OAuth authorization codes in their short-lived pre-exchange window, device-code/user-code pairs for the device-authorization grant, and CIBA auth_req_id state. Loss enables session hijack at scale; mutation enables silent privilege transfer between subjects."
+  - pattern: federated_identity_mapping
+    description: "IdP-to-IdP attribute mappings, upstream-claim transformations, group/role assignment rules, JIT-provisioning policies, SCIM target bindings, and the SAML attribute-release statements per service provider. Corruption produces silent privilege escalation invisible to per-request authentication: the assertion is valid, the mapped attributes are wrong, and the relying party authorizes against the wrong identity."
+  - pattern: consent_record_store
+    description: "OAuth user-consent grants with scope set and relying-party identity (GDPR Article 6(1)(a) lawful basis evidence), SAML attribute-release acknowledgements, OIDC offline_access grant records, and the per-grant lifetime/revocation history. Destruction or mutation defeats the proof-of-lawful-basis defense for any processing that occurred during the consent window; regulators treat absence as unlawful processing."
+  - pattern: audit_log_store
+    description: "Authentication event log (success/failure/MFA challenge/lockout), authorization decision log, token-issuance and revocation log, OAuth consent-grant log, SAML assertion log, administrative-action log, and key-rotation event log. The forensic fact base for credential-compromise reconstruction, GDPR Article 33 breach scoping, and SOC 2 CC7.2 anomaly evidence. Tampering destroys the breach-detection substrate."
+  - pattern: service_account_credential_store
+    description: "Non-human identity credentials — internal service tokens used by the IdP itself, outbound SCIM provisioning credentials, LDAP/AD bind credentials, database credentials, SMTP credentials for the recovery channel, and any vendor API keys used by enrichment or risk-scoring integrations. Compromise pivots from the IdP outward to every system the IdP provisions or queries."
+attacker_positions:
+  - position: unauthenticated_attacker_at_login_endpoint
+    description: "Untrusted external client at the primary login surface: the OAuth /authorize endpoint, the SAML SSO endpoint, the OIDC userinfo endpoint, the password-grant endpoint where supported, and the credential-recovery endpoints. Models credential stuffing, password spraying, account enumeration via timing or error-message differential, and unauthenticated SAML/OIDC discovery abuse."
+  - position: authenticated_user_seeking_horizontal_escalation
+    description: "Valid user holding a verified credential and an active session, attempting cross-tenant, cross-organization, or cross-realm reads/writes via group-mapping bugs, scope confusion in OAuth grants, SAML NameID collision, or SCIM-target overlap. The dominant authenticated-attack vector against multi-tenant IdPs."
+  - position: authenticated_user_seeking_vertical_escalation
+    description: "Valid user attempting privilege elevation within their own tenant — admin-role assignment via group-mapping injection, RBAC-policy injection through self-service profile fields, abuse of approval workflows, or OIDC scope upgrade through token exchange (RFC 8693) without authorization-server-side scope reduction."
+  - position: compromised_user_credential
+    description: "Attacker holding a valid password (phishing, breach reuse, infostealer) but no possession factor. Models MFA bypass attempts, MFA fatigue / push-bombing (T1621), SMS-fallback SIM-swap downgrade, recovery-flow abuse to register attacker-controlled factors, and WebAuthn-enrollment bypass via unprotected enrollment endpoints."
+  - position: compromised_user_session_token
+    description: "Attacker holding a stolen JWT, session cookie, refresh token, or OAuth bearer token — via XSS on a relying party, malware exfil from the user's device, MitM where TLS validation is weak, or token leak via referer/log/analytics. Models the consequences of session-lifetime, token-binding, sender-constrained tokens (DPoP, mTLS), and revocation latency."
+  - position: compromised_oauth_client_credentials
+    description: "Attacker holding a valid OAuth client_id + client_secret (or private_key_jwt key, or mTLS client cert) via repository exposure, CI log leak, mobile-app extraction, or vendor compromise. Permits impersonation of the relying party against the IdP, including silent token issuance for any grant the client is authorized for and consent bypass for previously-granted scopes."
+  - position: compromised_third_party_relying_party
+    description: "A downstream application that consumes our tokens has been compromised. The attacker can now harvest every access token, refresh token, and ID token presented to that RP, exercise any granted scope on the user's behalf, and inject malicious behavior into the consent flow for users who arrive at the compromised RP. Models OAuth 'compromised relying party' threat (RFC 9700 §4.2)."
+  - position: compromised_admin_account
+    description: "Attacker holding IdP administrator or superuser credentials — total-compromise scenario. Models the resulting authorization-policy mutation, signing-key exfiltration, MFA-disable for arbitrary users, federation-trust injection, and audit-tampering attempts. The boundary case where Authenticity, Non-Repudiation, and Immutability findings converge into a single critical-merged record."
+  - position: malicious_relying_party
+    description: "Attacker-registered or attacker-controlled OAuth/OIDC client targeting end-user redirect/consent flows — open-registration abuse, lookalike client_name spoofing, redirect_uri manipulation via path/fragment variants, scope-upgrade requests against weak consent UX, and the OAuth covert-redirect / mix-up attacks (RFC 9700 §4.4). The threat model assumes registration is reachable; severity depends on the registration-gate strength."
+  - position: internal_lateral_attacker_in_idp_tier
+    description: "Post-breach attacker pivoting inside the IdP's trust zone — has shell on a worker pod, a database read replica credential, a Redis session-store credential, or a Kubernetes ServiceAccount in the IdP namespace. Models east-west exposure of credential hashes, signing keys, session state, and the audit pipeline; the 'assume compromise' position for the IdP's own infrastructure."
+default_trust_boundaries:
+  - boundary: public_internet_to_login_endpoint
+    description: "First crossing from untrusted client to the IdP's external surface — /authorize, /token, /userinfo, /jwks.json, /.well-known/openid-configuration, the SAML SSO/SLO endpoints, the WebAuthn enrollment/assertion endpoints, the credential-recovery surface. TLS termination, edge rate-limit, bot management, and IP-reputation enforcement happen here; downstream tiers must not re-trust client-supplied identity."
+  - boundary: login_endpoint_to_credential_store
+    description: "Authentication front-end to the credential backend — password hash store, MFA secret store, WebAuthn credential store, recovery-code store. Carries plaintext credentials in the request window; hashing and comparison must happen on the backend side of this boundary, never on the edge. Compromise scope: every credential that crosses during the compromise window."
+  - boundary: oauth_authorization_endpoint_to_token_endpoint
+    description: "Internal crossing between the user-interactive /authorize surface (browser-driven, consent UX, redirect flow) and the machine-to-machine /token surface (back-channel, client-authenticated, returns tokens). Authorization codes, PKCE verifiers, request_uri references, and DPoP proofs cross this boundary; mix-up between the two surfaces is RFC 9700 §4.4 territory."
+  - boundary: idp_to_relying_party
+    description: "Federation hop — the IdP issues a SAML assertion, an OIDC ID token, or an OAuth access token to a downstream relying party. Trust expressed via signature on the artifact and audience binding; weak signature validation, missing audience check, or assertion-injection across the boundary collapses the federation trust model."
+  - boundary: idp_to_directory_backend
+    description: "IdP to LDAP/Active Directory, IdP to user-database backend, IdP to upstream IdP for federation chains. Carries directory bind credentials, user-attribute reads, group-membership lookups, and SCIM writes. Often the legacy-protocol edge where TLS posture and bind-credential rotation lag the rest of the platform."
+  - boundary: idp_to_session_store
+    description: "IdP application tier to the session-state datastore — Redis, PostgreSQL session table, distributed cache. Carries session identifiers, refresh-token records, OAuth grant codes pre-exchange, and CIBA auth_req_id state. The 'in-cluster trust' assumption commonly hides here; session-store compromise yields impersonation of every active session."
+  - boundary: admin_console_to_idp_backend
+    description: "Administrator-only surface for tenant configuration, RBAC policy edits, federation-trust registration, signing-key rotation, and audit-config changes. Highest-blast-radius boundary in the IdP; mandates phishing-resistant MFA, separate network path where possible, per-action audit, and ideally an out-of-band approval gate for irreversible actions (key rotation, trust deletion, audit-config change)."
