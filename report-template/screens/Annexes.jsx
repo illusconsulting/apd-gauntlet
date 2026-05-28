@@ -79,23 +79,22 @@ function Annexes({ data, onOpenFinding }) {
       </section>
 
       {/* Domain-pack calibration caveat */}
-      <section className="annex">
-        <header className="annex__head">
-          <div>
-            <div className="section-eyebrow" style={{ margin: 0 }}>Domain-pack calibration caveat</div>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>PBM quick-path</h3>
-          </div>
-          <span className="pill" style={{ borderColor: "var(--sev-medium)", color: "var(--sev-medium)" }}>
-            quick-path tradeoff
-          </span>
-        </header>
-        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }}>
-          LegacyExample is a <strong>render-path mediator</strong>, not a PBM-domain claim adjudication, formulary, or member benefits system. The PBM domain pack supplied severity rubric anchors that apply naturally to LegacyExample's HIPAA-eligible PHI surface (HIPAA §164.502(b) minimum-necessary; §164.402 breach-notification; §164.308(a)(7) contingency-plan; §164.312(b) audit controls), and PCI-DSS / GDPR analogues where the sensitive value class matches.
-        </p>
-        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65, marginTop: "var(--space-3)" }}>
-          <strong>CMS Part D and URAC anchors from the pack do NOT apply</strong> and were correctly flagged as inapplicable in-finding by every specialist that encountered them. The synthesizer applied the same discipline — every high-severity finding in this report cites a HIPAA or PCI-DSS / GDPR clause for its anchor, not a Part D / URAC one.
-        </p>
-      </section>
+      {data.domain_pack_caveat && (
+        <section className="annex">
+          <header className="annex__head">
+            <div>
+              <div className="section-eyebrow" style={{ margin: 0 }}>Domain-pack calibration caveat</div>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>{data.domain_pack_caveat.title || "Domain-pack scope"}</h3>
+            </div>
+            <span className="pill" style={{ borderColor: "var(--sev-medium)", color: "var(--sev-medium)" }}>
+              quick-path tradeoff
+            </span>
+          </header>
+          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }}>
+            {data.domain_pack_caveat.body}
+          </p>
+        </section>
+      )}
     </div>
   );
 }
