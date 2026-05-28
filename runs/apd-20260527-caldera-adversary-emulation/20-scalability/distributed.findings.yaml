@@ -1,0 +1,239 @@
+schema_version: 1
+agent: distributed
+finding:
+  - schema_version: 1
+    id: dist-85515eec
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No multi-host / multi-region topology — single-host deployment is the documented model"
+    summary: "Tech plan and runbook describe single-host deployment; no replication topology, no multi-region story, no per-region listener placement."
+    detail: |
+      Tech plan §2.2 documents three deployment topologies (from-source,
+      Docker, pre-built image) — all single-host. There is no
+      documented multi-instance pattern, no replication topology, no
+      load balancer story, no per-region listener placement.
+      Architecture index confirms one process per deployment. The
+      runbook §6 (GAP marker) does not describe a multi-region story.
+
+      High per the security-tooling rubric clause "Single-region
+      deployment for SaaS-delivered tooling" applied to the
+      single-tenant case — the rubric notes that data residency for
+      harvested data is constrained by target jurisdiction, not just
+      operator jurisdiction. A single-host Caldera handling
+      engagements in multiple jurisdictions stores all harvested
+      data wherever the single host lives.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2.2 'Deployment topologies'"
+        excerpt: "From-source. python3 server.py --insecure --build ... Docker ... Pre-built image"
+      - artifact: runbook.md
+        locator: "§6 (GAP marker)"
+        excerpt: "GAP: multi-host topology not documented"
+    cross_references:
+      - avail-623b8e59
+      - avail-5399f916
+    control_mappings:
+      nist_800_53r5: [SC-36, SC-7, "SC-7(5)", CP-7, CM-2]
+      mitre_attack: []
+      cwe: [CWE-1188]
+    recommendation:
+      posture: recommended
+      summary: "Document at least one multi-host pattern (active-passive listener + shared object store) with explicit data-residency handling."
+      detail: |
+        Describe a 2-host topology: a primary running the operator
+        console + planner; a secondary running an active listener
+        replica with shared (or replicated) data/ tree. Document the
+        residency story per-engagement: which host services which
+        engagement's listener traffic, what happens to result data
+        on cross-region failover. The recommendation lets operators
+        adopt the pattern; the platform does not need to enforce
+        multi-region.
+    related_concerns: [resilient, availability, confidentiality]
+
+  - schema_version: 1
+    id: dist-dbaf5c57
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Plugin runtime shares process with every other in-process service — no isolation boundary at all"
+    summary: "Plugin code, operator REST handlers, agent listeners, fact store, planner, and FileSvc all share one Python process; no namespace, no subprocess, no container per plugin."
+    detail: |
+      Tech plan §3 (Trust boundaries #2) explicitly states: "Caldera
+      server ↔ in-process plugins. NO BOUNDARY. Plugins are Python
+      modules in plugins/<name>/ loaded by import_module; the
+      plugin's enable() method runs with full server privilege".
+      INV-AUTHZ-003 reviewer-notes the gap.
+
+      High per the security-tooling rubric clause "Multi-tenant SaaS
+      platform with shared orchestrator process per tenant" applied
+      to the single-process single-tenant case — every plugin shares
+      every other plugin's blast radius, and a sandbox-escape from
+      any plugin yields the platform.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 'Trust boundaries' #2"
+        excerpt: "Caldera server ↔ in-process plugins. NO BOUNDARY"
+      - artifact: invariants.md
+        locator: "INV-AUTHZ-003"
+        excerpt: "Plugins run in-process with full server privilege"
+    cross_references:
+      - intg-81c06dfa
+    control_mappings:
+      nist_800_53r5: [SC-7, "SC-7(13)", "SC-7(21)", SC-39, "AC-6(5)"]
+      mitre_attack:
+        - technique: T1611
+          sub_technique: null
+          tactic: TA0004
+          rationale: "Absent process boundary, any plugin's compromise is equivalent to full-server compromise."
+      cwe: [CWE-668]
+    recommendation:
+      posture: recommended
+      summary: "Run plugin code in a subprocess per plugin; communicate via local IPC; drop privilege for plugin processes."
+      detail: |
+        Adopt a subprocess-per-plugin model. The plugin process runs
+        as a non-privileged user; communicates with the orchestrator
+        via a UNIX socket carrying a typed RPC schema. Drop file-
+        system access to a plugin-scoped namespace. Cross-references
+        the integrity finding on plugin signature verification — the
+        sandbox limits blast radius even when signature is bypassed.
+    related_concerns: [authenticity, integrity, resilient]
+
+  - schema_version: 1
+    id: dist-68e9d200
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No data-residency binding for harvested data — operator chooses host, harvested data follows"
+    summary: "data/results/ lives on the operator's chosen host filesystem; no per-engagement, per-customer, or per-jurisdiction binding."
+    detail: |
+      Tech plan §9 confirms file-system primary persistence. agents.md
+      §3 notes typical engagements may target customer environments
+      under varied jurisdictions. There is no declaration of which
+      jurisdiction's data-residency rules apply to harvested data,
+      no per-customer storage binding, no extra-jurisdictional flow
+      attestation.
+
+      Medium per the security-tooling rubric clause "Cross-region
+      replication for result-data store unspecified" — Caldera is
+      single-host so the strict clause does not apply, but the
+      single-host model still puts target-jurisdiction data on
+      operator-jurisdiction storage. Becomes a regulatory finding
+      under GDPR / sectoral rules if customer environments span EU /
+      non-EU.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 'Persistence'"
+        excerpt: "data/results/ # per-link captured output"
+      - artifact: agents.md
+        locator: "§2 'Engagement profile'"
+        excerpt: "engagements often contain customer-environment harvested credentials"
+    control_mappings:
+      nist_800_53r5: [SC-7, AC-4, SC-28]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Document per-engagement residency expectations; default to operator-jurisdiction storage with a per-engagement override."
+      detail: |
+        Add per-Engagement (once the Engagement object exists)
+        residency fields: data_residency_region,
+        cross_border_flow_attestation. Default residency =
+        operator-host region. Cross-references the confidentiality
+        finding on per-engagement key derivation.
+    related_concerns: [confidentiality, immutability]
+
+  - schema_version: 1
+    id: dist-a464c95f
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Listener topology is single-point-of-presence per protocol — defender blocking and operator failover are both trivial"
+    summary: "Each contact (HTTP, DNS, FTP, GIST, HTML, Slack, TCP, UDP, websocket, SSH) is a single bound endpoint; no per-engagement listener, no callback-domain pool."
+    detail: |
+      Tech plan §7 describes one bound port per contact protocol. No
+      callback-domain pool, no per-engagement listener allocation,
+      no per-region listener variant. The target-side defender (a
+      legitimate concern under detection-validation use; an
+      adversarial concern under unauthorized-engagement-initiator
+      threat) can block a single IP/domain and disable Caldera's
+      reach into the target environment.
+
+      Medium per the security-tooling rubric clause "Listener
+      topology is single-point-of-presence per region" applied to
+      the per-protocol case — and an operational concern for
+      defender-observability of the platform's deployment pattern.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "A single Caldera deployment can run all of the following listeners simultaneously"
+      - artifact: threat-model.md
+        locator: "D-3 surface"
+        excerpt: "single-process single-eventloop"
+    control_mappings:
+      nist_800_53r5: [SC-22, SC-36, CP-7]
+      mitre_attack: []
+    recommendation:
+      posture: consider
+      summary: "Allow per-engagement listener allocation; document the operator pattern for callback-domain pools."
+      detail: |
+        Document operator patterns for callback-domain pools
+        (multiple A records, fast-flux-style for engagements where
+        defender-evasion is in scope). Allow per-engagement listener
+        bind that can be quickly rotated.
+    related_concerns: [authenticity, availability]
+
+  - schema_version: 1
+    id: dist-018ec97e
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Containerized deployment isolation posture undocumented"
+    summary: "Docker / docker-compose deployment described but container-runtime isolation (no-new-privileges, capability drops, read-only fs, user namespace) not enumerated."
+    detail: |
+      Tech plan §2.2 describes Docker and docker-compose deployments.
+      The runbook §1 lists the docker build command. Neither states
+      whether the container runs with dropped capabilities, a
+      read-only root filesystem, user-namespace remap, seccomp
+      profile, or no-new-privileges. The bind-mount of source-tree in
+      docker-compose.yml suggests writable container filesystem.
+
+      Medium (blocked) per the security-tooling rubric clause
+      "Containerized deployment isolation posture undocumented" —
+      pending evidence of which container hardening flags are applied
+      in the shipped Dockerfile and docker-compose.yml.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2.2 'Deployment topologies'"
+        excerpt: "docker-compose.yml bind-mounts the source tree"
+    prerequisite_evidence:
+      - "Dockerfile USER directive and capability dropfile"
+      - "docker-compose.yml security_opt and cap_drop configuration"
+      - "Seccomp / AppArmor profile if any"
+    control_mappings:
+      nist_800_53r5: [CM-7, SC-39, "AC-6(5)"]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Adopt and document container hardening: no-new-privileges, drop ALL caps then re-add as needed, read-only root fs, named non-root user."
+      detail: |
+        Add explicit USER (non-root) to the shipped Dockerfile.
+        docker-compose.yml: security_opt: [no-new-privileges:true],
+        cap_drop: [ALL], read_only: true with explicit volume mounts
+        for writable paths. Document the runtime expectations in
+        the runbook.
+    related_concerns: [confidentiality, integrity]

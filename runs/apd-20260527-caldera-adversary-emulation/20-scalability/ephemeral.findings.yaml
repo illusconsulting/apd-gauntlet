@@ -1,0 +1,268 @@
+schema_version: 1
+agent: ephemeral
+finding:
+  - schema_version: 1
+    id: ephem-608839d8
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "API keys, encryption_key, crypt_salt are long-lived; rotation requires manual restart"
+    summary: "INV-AUTH-005 reviewer-notes that API keys are not rotatable without operator downtime; encryption_key and crypt_salt rotation are similarly undocumented."
+    detail: |
+      AuthService loads conf/<env>.yml once at startup; api_key_red
+      and api_key_blue are static for the lifetime of the process.
+      Rotation requires editing the conf and restarting the server.
+      INV-AUTH-005 reviewer-notes the gap. Similarly the
+      encryption_key and crypt_salt are loaded once; rotation
+      requires (at minimum) reissuing every session cookie and
+      re-encrypting data/cookie_storage and data/results/.
+
+      High per the security-tooling rubric clause "Credential leak in
+      operator API tokens" applied to the lifecycle analog — the
+      rubric notes long-lived tokens are scored on the misuse axis
+      because token theft yields engagement-initiation. For a
+      platform whose API key grants weapons-platform-misuse capability,
+      the absence of zero-downtime rotation is the gap.
+    cross_references:
+      - conf-e223c03d
+      - conf-01d02036
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTH-005"
+        excerpt: "Not enforced. conf/<env>.yml holds exactly one key per group; rotation requires restart"
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "A request bearing the KEY header is matched against api_key_red or api_key_blue"
+    control_mappings:
+      nist_800_53r5: [IA-5, "IA-5(1)", "IA-5(7)", "IA-5(13)", AC-2, "AC-2(3)"]
+      mitre_attack:
+        - technique: T1098
+          sub_technique: null
+          tactic: TA0003
+          rationale: "Static, non-rotatable API keys grant indefinite persistence to any attacker who obtains them."
+      cwe: [CWE-798, CWE-262]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Implement online API-key rotation; deprecate single-key-per-group in favor of per-operator tokens with TTL."
+      detail: |
+        Add an admin REST endpoint to issue / rotate / revoke API
+        keys without restart. Migrate to per-operator tokens (each
+        token has an operator_id, TTL, scope). Honor a deny-list of
+        revoked tokens. Default token TTL = 24 hours; admin tokens
+        require step-up auth. encryption_key / crypt_salt: provide a
+        rotate-keys command that re-derives Fernet keys and
+        re-encrypts data/cookie_storage and data/results/ in a single
+        transaction with rollback on failure.
+      references:
+        - "OAuth 2.0 refresh-token rotation (RFC 6749 §10.4)"
+        - "NIST SP 800-63B §5"
+    related_concerns: [authenticity, confidentiality, non_repudiation]
+
+  - schema_version: 1
+    id: ephem-cc497fed
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Operator session cookies remain valid after password change — no session invalidation"
+    summary: "INV-AUTH-003 reviewer-notes that EncryptedCookieStorage cookies remain valid until session_expiration_days (default 7) regardless of credential change."
+    detail: |
+      INV-AUTH-003: "Not enforced. EncryptedCookieStorage cookies
+      remain valid until their TTL (session_expiration_days, default
+      7) regardless of credential changes. No JTI / session-deny list
+      in core." For a weapons platform, the absence of immediate
+      session invalidation means a compromised credential remains
+      operationally useful for up to 7 days even after the operator
+      rotates the credential.
+
+      High per the security-tooling rubric clause "Operator session
+      lifetime exceeds policy" — escalates to critical (per the
+      rubric's "Operator authentication bypass") when paired with a
+      known-default credential incident: the legitimate operator
+      rotates the password but the attacker's session remains live.
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTH-003"
+        excerpt: "Not enforced. EncryptedCookieStorage cookies remain valid until their TTL ... No JTI / session-deny list in core"
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "Default session_expiration_days: 7"
+    cross_references:
+      - conf-e223c03d
+    control_mappings:
+      nist_800_53r5: [AC-12, "AC-12(1)", IA-5, SC-10]
+      mitre_attack:
+        - technique: T1550
+          sub_technique: "T1550.004"
+          tactic: TA0008
+          rationale: "Long-lived encrypted cookies enable session-token replay after credential change."
+      cwe: [CWE-613, CWE-384]
+      owasp_top10: ["A07:2021"]
+    recommendation:
+      posture: required
+      summary: "Introduce a session-deny list keyed by JTI; invalidate all sessions for a user on credential change; lower default session TTL."
+      detail: |
+        Add a JTI claim to the cookie payload. Maintain a denied-JTI
+        set in DataService persisted to disk. On credential change,
+        emit all current JTI for that user into the deny-list. On
+        every cookie validation, check JTI against deny-list. Lower
+        default session_expiration_days from 7 to 1 (or 8 hours for
+        an active engagement). Provide an admin endpoint to revoke
+        a session by user.
+      references:
+        - "OAuth 2.0 Security BCP §4.13 token revocation"
+    related_concerns: [authenticity, confidentiality]
+
+  - schema_version: 1
+    id: ephem-d6c8d458
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Long-lived team-server pattern accumulates harvested credentials indefinitely"
+    summary: "agents.md notes the long-lived team-server pattern is common; data/results/ accumulates across every engagement; no platform-side retention enforcement."
+    detail: |
+      agents.md §3 documents the long-lived team-server deployment
+      pattern as common in internal red-teams. The platform has no
+      retention enforcement on data/results/; harvested credentials
+      from every engagement the team has ever run accumulate until
+      the operator manually deletes them. Threat-model WP-4
+      explicitly identifies this as the critical
+      weapons-platform-misuse vector.
+
+      Medium on the ephemeral lens specifically (the retention
+      consequences are scored by confidentiality and immutability);
+      the ephemeral concern is the absence of a credential-lifetime
+      policy applied to derived secrets in the result store. The
+      rubric clause "Result data retained beyond engagement-completion
+      + customer-policy window" applies; severity is bounded medium
+      on this lens because the confidentiality lens carries the
+      cross-tenant blast-radius score.
+    cross_references:
+      - conf-aabbd48f
+    evidence:
+      - artifact: agents.md
+        locator: "§3 'Deployment patterns'"
+        excerpt: "Long-lived team server — common in internal red-teams"
+      - artifact: threat-model.md
+        locator: "WP-4"
+        excerpt: "team-server pattern accumulates harvested credentials"
+    control_mappings:
+      nist_800_53r5: [SI-12, AU-11, "AC-2(2)"]
+      mitre_attack: []
+      cwe: [CWE-359]
+    recommendation:
+      posture: recommended
+      summary: "Bind result-data retention to engagement closure; enforce a max-age cap with operator-tunable per-customer policy."
+      detail: |
+        Add per-engagement retention metadata
+        (retention_window_days, retention_anchor = closure_date).
+        At closure, schedule retention expiry. On expiry, destroy
+        the per-engagement DEK (per conf-aabbd48f) and surface
+        retention events to the audit emitter (per non_repudiation
+        findings).
+    related_concerns: [confidentiality, immutability]
+
+  - schema_version: 1
+    id: ephem-1065948c
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Plugin update cadence unspecified — plugin code is mutable in-place without version pinning"
+    summary: "plugins/<name>/ directory is read at startup; subsequent restarts pick up any in-place change; no version pinning, no update cadence, no lifecycle event."
+    detail: |
+      Tech plan §5 confirms plugins are loaded by import_module from
+      plugins/<name>/ at start. ADR-0002 documents the trust
+      assumption. There is no plugin manifest with version pinning,
+      no documented update cadence, no platform-side rollback. The
+      ephemeral lens concern is the implicit credential-lifetime gap:
+      a plugin holding a long-lived secret (an integration credential
+      for the slack contact, the gist contact's GitHub PAT) remains
+      live indefinitely.
+
+      Medium per the security-tooling rubric clause "Plugin update
+      mechanism unsigned" — the rubric's update-mechanism focus
+      lands on the ephemeral concern because absent a defined
+      update cycle, every plugin's embedded credentials are
+      effectively immortal until the operator notices.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5 'Plugin model'"
+        excerpt: "imported by AppService.load_plugins at server start"
+      - artifact: tech_plan.md
+        locator: "§7 'Agent communication'"
+        excerpt: "gist ... operator supplies a GitHub PAT"
+    cross_references:
+      - intg-81c06dfa
+    control_mappings:
+      nist_800_53r5: [SA-15, "SA-15(7)", "CM-7(5)", IA-5]
+      mitre_attack: []
+    recommendation:
+      posture: recommended
+      summary: "Define plugin update cadence; require signed manifests with version pinning; rotate plugin-held integration credentials on a schedule."
+      detail: |
+        Adopt plugin manifest format (cross-ref intg-81c06dfa) with
+        version + digest. Require operator to declare an update
+        cadence per plugin (default 30 days). For plugin-held
+        integration credentials (PATs, bot tokens), tie credential
+        rotation to the plugin update cadence and emit a structured
+        rotation event.
+    related_concerns: [authenticity, integrity, non_repudiation]
+
+  - schema_version: 1
+    id: ephem-06509c27
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Operator session cannot be bound to engagement authorization window"
+    summary: "session_expiration_days is a flat 7-day TTL; no per-engagement session that expires at the engagement's authorization_window_end."
+    detail: |
+      Threat-model WP-2 identifies the ROE violation surface:
+      operator's authorization window for an engagement expires
+      (e.g., a customer says "stop testing at 5pm Friday") but the
+      session cookie remains valid for the configured TTL. The
+      operator can — accidentally or intentionally — issue commands
+      after authorization has expired.
+
+      Medium per the security-tooling rubric clause "Operator session
+      lifetime exceeds policy" — escalates to high (per the rubric's
+      "Engagement scope bypass") because the security-tooling-specific
+      concern is the CFAA/ROE consequence of out-of-window commands.
+    cross_references:
+      - intg-899da63b
+      - ephem-cc497fed
+    evidence:
+      - artifact: threat-model.md
+        locator: "WP-2"
+        excerpt: "operator's authorization window for an engagement expires; session cookie remains valid"
+      - artifact: tech_plan.md
+        locator: "§4 'Authentication & sessions'"
+        excerpt: "Default session_expiration_days: 7"
+    control_mappings:
+      nist_800_53r5: [AC-12, AC-2, IA-5, AC-3]
+      mitre_attack: []
+    recommendation:
+      posture: required
+      summary: "Allow per-engagement sessions bound to authorization_window_end; deny-list on engagement closure."
+      detail: |
+        When an Engagement object (cross-ref intg-899da63b) exists,
+        allow the operator to elect a session_expires_at =
+        min(default_TTL, engagement.authorization_window_end). On
+        engagement closure, deny-list every active session bound to
+        that engagement. Surface session bind/unbind to the audit
+        emitter.
+    related_concerns: [authenticity, integrity, non_repudiation]

@@ -26,12 +26,16 @@ venv/
 env/
 
 # Run outputs (gauntlet runs)
-# Exclude direct contents of runs/, then re-include the canonical example run
-# (used as fixture by Phase D tests and the operator quickstart). The
-# regenerable HTML report build output under it stays excluded.
+# Exclude direct contents of runs/, then re-include canonical example runs
+# (used as fixtures by Phase D tests and the operator quickstart). Each run's
+# regenerable HTML report build output stays excluded.
 runs/*
 !runs/apd-20260527-crapi-owasp-api-top10
+!runs/apd-20260527-caldera-adversary-emulation
+!runs/apd-20260527-authentik-identity-provider
 runs/apd-20260527-crapi-owasp-api-top10/40-synthesis/report-html/
+runs/apd-20260527-caldera-adversary-emulation/40-synthesis/report-html/
+runs/apd-20260527-authentik-identity-provider/40-synthesis/report-html/
 # Allow test fixture runs
 !tests/fixtures/runs/
 !tests/fixtures/runs/**

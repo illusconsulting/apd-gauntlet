@@ -1,0 +1,89 @@
+schema_version: 1
+run_id: apd-20260527-caldera-adversary-emulation
+generated_by: apd-synthesizer
+generated_at: 2026-05-27T13:00:00Z
+
+stats:
+  total_input_capabilities: 12
+  unique_capabilities_after_dedup: 12
+  by_maturity:
+    designed: 7
+    implemented: 5
+    tested: 0
+    operationalized: 0
+
+capability:
+  - id: conf-cap-ce39d07c
+    agent: confidentiality
+    title: "Optional Fernet at-rest encryption for data/results/ via FileSvc"
+    maturity: designed
+  - id: conf-cap-9f572979
+    agent: confidentiality
+    title: "Encrypted session cookie storage via aiohttp_session"
+    maturity: designed
+  - id: conf-cap-0d91e0de
+    agent: confidentiality
+    title: "Optional TLS termination via ssl plugin"
+    maturity: designed
+  - id: intg-cap-27c5021a
+    agent: integrity
+    title: "aiohttp_apispec request validation middleware on /api/v2 handlers"
+    maturity: designed
+  - id: intg-cap-61ba338f
+    agent: integrity
+    title: "URL and ldflags sanitization in FileSvc for sandcat builder"
+    maturity: designed
+  - id: intg-cap-c933c8e0
+    agent: integrity
+    title: "Untrusted-agent sniffer demotes silent agents in agent registry"
+    maturity: implemented
+  - id: avail-cap-b6a750af
+    agent: availability
+    title: "Health endpoint at /api/v2/health (unauthenticated)"
+    maturity: implemented
+  - id: avail-cap-1e1a88ee
+    agent: availability
+    title: "Bounded request body size via aiohttp client_max_size"
+    maturity: designed
+  - id: dist-cap-5006e4c2
+    agent: distributed
+    title: "Per-engagement-instance deployment pattern documented as preferred"
+    maturity: designed
+  - id: resil-cap-d1dd2fd1
+    agent: resilient
+    title: "Operation resumer rehydrates active operations from data/ on restart"
+    maturity: implemented
+  - id: ephem-cap-c2af080d
+    agent: ephemeral
+    title: "Per-deploy credential bootstrap via ensure_local_config()"
+    maturity: implemented
+  - id: ephem-cap-053c3f98
+    agent: ephemeral
+    title: "untrusted_timer demotes silent agents in the registry"
+    maturity: implemented
+  - id: auth-cap-17c17dd2
+    agent: authenticity
+    title: "Pluggable LoginHandlerInterface enables alternative authentication pipelines"
+    maturity: designed
+  - id: auth-cap-c186207a
+    agent: authenticity
+    title: "@check_authorization decorator enforces group permissions on REST handlers"
+    maturity: implemented
+  - id: nonrep-cap-f135a692
+    agent: non_repudiation
+    title: "Link record carries operator-creator attribution by Operation reference"
+    maturity: implemented
+  - id: immut-cap-dfe5518d
+    agent: immutability
+    title: "DataService periodic save_state writes object graph to data/backup/"
+    maturity: implemented
+
+note: |
+  Capability coverage is sparse relative to findings — typical of a
+  research-grade platform whose upstream posture explicitly accepts
+  weak defaults. Most confirmed capabilities are 'designed' tier
+  (intent in tech plan); a few are 'implemented' (shipped behavior).
+  No capabilities reach 'tested' or 'operationalized' maturity in
+  this artifact set; consistent with the absence of tests, CI gates,
+  and operational runbooks in the inputs (only a draft runbook
+  with explicit GAP markers).

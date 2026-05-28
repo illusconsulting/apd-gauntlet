@@ -1,0 +1,138 @@
+capability:
+  - schema_version: 1
+    id: auth-cap-3a143747
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "WebAuthn / FIDO2 phishing-resistant authenticator support via `fido2==2.2.0` and `webauthn==2.7.1`"
+    description: |
+      Per `pyproject.toml` and `tech_plan.md` §4 and §11, the platform
+      supports WebAuthn / FIDO2 enrollment and validation via the
+      `webauthn==2.7.1` and `fido2==2.2.0` libraries. WebAuthn provides
+      the platform's AAL3-capable phishing-resistant authenticator
+      option; the `authenticator_webauthn` enrollment stage and the
+      `authenticator_validate` stage handle the WebAuthn ceremony.
+      This is the proportional anti-phishing posture for an IdP that
+      faces sophisticated credential-stuffing and AitM attacks.
+    maturity: designed
+    scope: |
+      Confirmed at the dependency level (pinned in pyproject.toml).
+      Not addressed: SMS/email-OTP fallback discipline (Authenticity
+      finding auth-190b06f7 — no platform-enforced
+      no-SMS-on-AAL3-flows policy); admin-MFA default binding
+      (auth-4793933a — operator-action-required); WebAuthn
+      enrollment-recovery workflow when last factor is lost
+      (INV-AUTH-004 GAP, runbook §11).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 stage taxonomy, authenticator_webauthn bullet"
+        excerpt: "authenticator_webauthn — FIDO2 / passkey enrollment."
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture', WebAuthn bullet"
+        excerpt: "WebAuthn / FIDO2 supported as MFA via webauthn==2.7.1."
+    control_mappings:
+      nist_800_53r5:
+        - "IA-2"
+        - "IA-2(1)"
+        - "IA-2(2)"
+        - "IA-2(6)"
+        - "IA-2(8)"
+      mitre_attack_mitigations:
+        - id: "M1032"
+          rationale: "Multi-factor Authentication — WebAuthn provides phishing-resistant possession-plus-user-verification factor countering T1078 (Valid Accounts), T1621 (MFA Request Generation), and T1556 (Modify Authentication Process)."
+      mitre_attack:
+        - technique: "T1078"
+          sub_technique: null
+          tactic: "TA0001"
+          rationale: "Valid Accounts — WebAuthn phishing-resistant MFA prevents credential-replay attacks from producing valid authenticated sessions."
+        - technique: "T1110"
+          sub_technique: "T1110.003"
+          tactic: "TA0006"
+          rationale: "Password Spraying — FIDO2 possession factor makes sprayed credentials non-sufficient for authentication at the IdP."
+        - technique: "T1556"
+          sub_technique: null
+          tactic: "TA0006"
+          rationale: "Modify Authentication Process — WebAuthn enrollment binds a specific authenticator; modifying the auth process requires also compromising the physical key."
+      d3fend:
+        - technique: "D3-MFA"
+          rationale: "Multi-factor Authentication — WebAuthn/FIDO2 raises factor strength against credential-replay attacks."
+          counters_attack: ["T1078", "T1110.003", "T1556"]
+    caveats:
+      - "Admin-MFA default binding is operator-action-required (auth-4793933a)."
+      - "SMS/email-OTP fallback discipline is operator-tuned per-Flow (auth-190b06f7)."
+      - "WebAuthn lost-factor recovery workflow is operator-mediated; no automated self-service flow (runbook §11 GAP)."
+    related_concerns: [ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: auth-cap-8caf955f
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "Per-Provider OAuth signing key + per-Provider SAML signing certificate isolation via CertificateKeyPair model"
+    description: |
+      Per ADR-0004 and INV-AUTH-002 (already documented as a
+      capability in conf-cap-6db56a6d from the Confidentiality lens),
+      the per-Provider signing-key isolation also provides the
+      Authenticity-lens property: each Provider's tokens / assertions
+      carry the signature of a distinct key, so a compromise event is
+      Provider-scoped at the signature-binding layer. The platform's
+      `INV-AUTH-002` ("Per-Provider signing keys are isolated") is
+      the operative invariant.
+    maturity: designed
+    scope: |
+      Confirmed at the model level. Not addressed: see
+      Confidentiality conf-cap-6db56a6d for the same scope statement;
+      master-key compromise (conf-477ff8a1) breaches per-Provider
+      isolation; rotation cadence is operator-driven (ephem-0fb143ce).
+    evidence:
+      - artifact: invariants.md
+        locator: "§INV-AUTH-002"
+        excerpt: "Per-Provider signing keys are isolated."
+    control_mappings:
+      nist_800_53r5:
+        - "IA-2"
+        - "IA-5"
+        - "SC-12"
+        - "SC-17"
+    caveats:
+      - "Master AUTHENTIK_SECRET_KEY compromise breaches per-Provider isolation simultaneously."
+      - "Per-Provider rotation cadence not enforced (ephem-0fb143ce)."
+    related_concerns: [confidentiality, ephemeral]
+
+  - schema_version: 1
+    id: auth-cap-56233f34
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "AuthnContextClassRef / OIDC `acr` claim populated from actual authenticators used"
+    description: |
+      Per `invariants.md` INV-AUTH-006 and `tech_plan.md` §4 MFA
+      assurance: "MFA assurance is composed from authenticator types
+      used ... the AuthnContextClassRef SAML claim and the OIDC `acr`
+      claim are populated based on which authenticators the user
+      actually used, unless an explicit property mapping overrides."
+      This is the platform's mechanism for communicating the AAL claim
+      to downstream RPs: RPs can require a specific `acr` value to
+      gate sensitive operations.
+    maturity: designed
+    scope: |
+      Confirmed at the platform-mechanism level. Not addressed: the
+      platform does not enforce that a Flow whose `acr` would assert
+      AAL3 actually requires AAL3-capable authenticators (auth-190b06f7
+      — SMS fallback on AAL3 flow would silently produce an AAL2 `acr`
+      claim that the operator may not have intended).
+    evidence:
+      - artifact: invariants.md
+        locator: "§INV-AUTH-006"
+        excerpt: "Holds for downstream-claim-aware RPs. The platform does not expose a single AAL knob; the Flow author composes assurance from the available stages and the AuthnContextClassRef"
+    control_mappings:
+      nist_800_53r5:
+        - "IA-2"
+        - "IA-2(1)"
+        - "IA-2(2)"
+        - "AC-21"
+        - "AU-3"
+    caveats:
+      - "No platform-enforced match between asserted AAL claim and required authenticator class (auth-190b06f7)."
+      - "Property mapping can override the `acr` claim; honesty of the claim relies on operator discipline."
+    related_concerns: [integrity, non_repudiation]

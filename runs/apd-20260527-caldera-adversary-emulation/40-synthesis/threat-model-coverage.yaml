@@ -1,0 +1,94 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+
+# Detailed coverage map (human reference only, not schema-validated):
+# see threat-model-coverage-report.md for per-threat finding cross-walk,
+# severity alignment notes, and cross-cutting residual questions.
+
+surface_coverage:
+  # ---- Spoofing surfaces ----
+  - surface: operator_console
+    categories_present: [spoofing, repudiation, information_disclosure, weapons_platform_misuse]
+    categories_absent: []
+    tm_entry_count: 3
+    tm_entry_ids: [tm-a1b2c3d4, tm-a7b8c9d0, tm-b8c9d0e1]
+
+  - surface: agent_listener
+    categories_present: [spoofing, tampering, denial_of_service, weapons_platform_misuse]
+    categories_absent: []
+    tm_entry_count: 4
+    tm_entry_ids: [tm-b2c3d4e5, tm-d4e5f6a7, tm-b4c5d6e7, tm-d2e3f4a5]
+
+  - surface: plugin_loader
+    categories_present: [spoofing, repudiation, elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 3
+    tm_entry_ids: [tm-c3d4e5f6, tm-c9d0e1f2, tm-e7f8a9b0]
+
+  # ---- Tampering surfaces ----
+  - surface: result_store
+    categories_present: [tampering, information_disclosure]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-e5f6a7b8, tm-d0e1f2a3]
+
+  - surface: ability_files
+    categories_present: [tampering]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-f6a7b8c9]
+
+  # ---- Repudiation surfaces ----
+  - surface: api_key_path
+    categories_present: [repudiation]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-b8c9d0e1]
+
+  # ---- Information Disclosure surfaces ----
+  - surface: cookie_storage
+    categories_present: [information_disclosure]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-e1f2a3b4]
+
+  - surface: rest_api
+    categories_present: [information_disclosure, elevation_of_privilege, weapons_platform_misuse]
+    categories_absent: []
+    tm_entry_count: 3
+    tm_entry_ids: [tm-f2a3b4c5, tm-f8a9b0c1, tm-b0c1d2e3]
+
+  - surface: builder_plugin
+    categories_present: [information_disclosure, denial_of_service]
+    categories_absent: []
+    tm_entry_count: 2
+    tm_entry_ids: [tm-a3b4c5d6, tm-c5d6e7f8]
+
+  # ---- Denial of Service surfaces ----
+  - surface: asyncio_eventloop
+    categories_present: [denial_of_service]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-d6e7f8a9]
+
+  # ---- Elevation of Privilege surfaces ----
+  - surface: contact_handlers
+    categories_present: [elevation_of_privilege]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-a9b0c1d2]
+
+  # ---- Weapons Platform Misuse surfaces ----
+  - surface: operator_session
+    categories_present: [weapons_platform_misuse]
+    categories_absent: []
+    tm_entry_count: 1
+    tm_entry_ids: [tm-c1d2e3f4]
+
+summary:
+  total_entries: 21
+  contradictions_emitted: 0
+  silences_emitted: 0
+  coverage_gaps_emitted: 0
+  surfaces_examined: 12

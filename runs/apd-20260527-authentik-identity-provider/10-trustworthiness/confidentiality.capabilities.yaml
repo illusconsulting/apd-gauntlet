@@ -1,0 +1,148 @@
+capability:
+  - schema_version: 1
+    id: conf-cap-1150e561
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Field-level symmetric encryption-at-rest for every secret-bearing model field via CertificateKeyPair + AUTHENTIK_SECRET_KEY"
+    description: |
+      Per ADR-0004 and `tech_plan.md` §9 / §11, all secret-bearing model
+      fields (per-Provider OAuth/SAML signing private keys, OAuth
+      client_secret, Source credentials, SCIM target tokens, outpost
+      service-account tokens, API tokens, app passwords, recovery and
+      verification tokens, TLS material) are encrypted at rest in
+      PostgreSQL using a key derived from the per-installation
+      AUTHENTIK_SECRET_KEY. The CertificateKeyPair model is the unified
+      certificate-management surface; `cryptography==48.0.0` provides
+      Fernet-style symmetric AEAD; `jwcrypto==1.5.7` provides JWS/JWE for
+      JWT signing and encryption.
+    maturity: designed
+    scope: |
+      Confirmed for in-database storage. Not addressed by this capability:
+      backup-file encryption (operator-driven per runbook §8 GAP); off-site
+      key separation between secret_key and dump (Confidentiality finding);
+      external-KMS binding (no community-tier integration per ADR-0004
+      §Negative item 2). Per-Provider key isolation is confirmed
+      (`INV-AUTH-002`) — compromise of one Provider's signing key does
+      not affect another's without also compromising AUTHENTIK_SECRET_KEY.
+    evidence:
+      - artifact: adrs/0004-encrypted-secrets-via-certificatekeypair.md
+        locator: "§Decision, paragraph 1"
+        excerpt: "Store all secret-bearing material in PostgreSQL via the authentik.crypto.models.CertificateKeyPair model ... Encrypt the secret fields symmetrically using a per-installation key derived from AUTHENTIK_SECRET_KEY."
+      - artifact: tech_plan.md
+        locator: "§11 'Known security posture', secrets bullet"
+        excerpt: "All secrets are encrypted at rest in PostgreSQL via the CertificateKeyPair model + per-installation AUTHENTIK_SECRET_KEY."
+    control_mappings:
+      nist_800_53r5:
+        - "SC-12"
+        - "SC-13"
+        - "SC-28"
+        - "SC-28(1)"
+      mitre_attack_mitigations:
+        - id: "M1041"
+          rationale: "Field-level encryption of CertificateKeyPair and other secret-bearing fields mitigates collection of credentials from data-store compromise (T1552.001, T1530, T1606.001) absent the AUTHENTIK_SECRET_KEY."
+      mitre_attack:
+        - technique: "T1552"
+          sub_technique: "T1552.001"
+          tactic: "TA0006"
+          rationale: "Master decryption key in process env is recoverable via os.environ read in any Expression policy; field-level encryption mitigates collection of DB rows absent the key."
+        - technique: "T1530"
+          sub_technique: null
+          tactic: "TA0009"
+          rationale: "Data from Cloud Storage — field encryption at rest mitigates bulk data collection from storage compromise absent AUTHENTIK_SECRET_KEY."
+      d3fend:
+        - technique: "D3-FE"
+          rationale: "File Encryption applied to the encrypted-secret fields at the application layer; counters the credentials-in-files class (T1552.001) without the secret_key."
+          counters_attack: ["T1552.001", "T1530"]
+    caveats:
+      - "AUTHENTIK_SECRET_KEY is process-env-resident and reachable by any Expression policy (ADR-0001); see Confidentiality finding conf-477ff8a1."
+      - "Backup encryption procedure is operator-driven and not documented in inputs (runbook §8 GAP); see Confidentiality finding conf-68ab158e."
+      - "Rotation runbook for AUTHENTIK_SECRET_KEY is not shipped (runbook §5 GAP); see Confidentiality finding conf-3d461eb8 and Ephemeral counterpart."
+      - "External KMS integration (AWS KMS, GCP KMS, Vault Transit) is not first-class in Core (ADR-0004 §Negative item 2)."
+    related_concerns: [ephemeral, authenticity, immutability]
+
+  - schema_version: 1
+    id: conf-cap-6db56a6d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Per-Provider OAuth/SAML signing key isolation — compromise of one Provider's key does not affect another's without master-key compromise"
+    description: |
+      Per ADR-0004 and invariant INV-AUTH-002, each OAuth Provider and
+      each SAML Provider holds an independent `CertificateKeyPair` for
+      its signing material (and optionally separate encryption keys).
+      Compromise of one Provider's key does not directly affect another
+      Provider's signing posture. This contains blast radius from
+      Provider-level compromise: per `prior-audit.md`, CVE-2024-42490
+      (pre-2024.8) exposed `/api/v3/crypto/certificatekeypairs/<uuid>/view_private_key/`
+      unauthenticated, and that vector's blast radius was bounded to the
+      Provider whose UUID was discovered.
+    maturity: designed
+    scope: |
+      Confirmed at the model level: per-Provider FK to CertificateKeyPair
+      per `tech_plan.md` §8 data model. Not addressed: the underlying
+      AUTHENTIK_SECRET_KEY is shared across all Providers (see
+      Confidentiality finding conf-477ff8a1 — master-key compromise
+      breaches all keys simultaneously). Rotation cadence is operator-driven
+      (INV-OPS-003); see Ephemeral specialist for rotation discipline.
+    evidence:
+      - artifact: invariants.md
+        locator: "§INV-AUTH-002, Reviewer note"
+        excerpt: "Holds. Compromise of one Provider's signing key does not directly affect another's; both are individually encrypted under the master AUTHENTIK_SECRET_KEY."
+      - artifact: adrs/0004-encrypted-secrets-via-certificatekeypair.md
+        locator: "§Consequences > Positive, paragraph 3"
+        excerpt: "Operators get a per-Provider isolation story: compromise of one Provider's signing key does not affect another Provider's signing key, as each is stored separately and"
+    control_mappings:
+      nist_800_53r5:
+        - "SC-12"
+        - "SC-12(3)"
+        - "AC-6"
+        - "SC-7(21)"
+      mitre_attack_mitigations:
+        - id: "M1015"
+          rationale: "Active Directory Configuration analog — per-Provider key separation limits the privilege a single key compromise (T1606.001) yields to the Provider whose key was lost."
+    caveats:
+      - "Master key (AUTHENTIK_SECRET_KEY) is single per-installation; mass-unmasking on its compromise affects all Providers simultaneously."
+      - "Per-Provider rotation cadence is not enforced (INV-OPS-003)."
+    related_concerns: [ephemeral, authenticity]
+
+  - schema_version: 1
+    id: conf-cap-253fdeb0
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "argon2-cffi-backed password hashing for User credentials with Django default hasher chain"
+    description: |
+      Per `pyproject.toml` and `happy-path.md` §1, the User Write stage
+      materialises new credentials with the platform's password hasher
+      augmented by `argon2-cffi==25.1.0`. This provides a modern,
+      memory-hard hashing primitive suitable for the password-hash
+      crown-jewel class, consistent with the identity-security
+      data-taxonomy preference for argon2id over older PBKDF2 / SHA-crypt
+      configurations.
+    maturity: designed
+    scope: |
+      Confirmed at the dependency level: `argon2-cffi` is pinned. Not
+      addressed in this capability: the specific argon2 parameter set
+      (memory cost, time cost, parallelism) used by the platform — these
+      should be documented in the platform's password-hasher
+      configuration. Migration discipline for legacy users on
+      pre-argon2 hashes (rehash-on-login pattern) is not described in
+      the input set.
+    evidence:
+      - artifact: happy-path.md
+        locator: "§1 'End-user enrollment', expected result paragraph"
+        excerpt: "the User Write stage materialises the User record in PostgreSQL (with the password hashed via the platform's password hasher, per Django defaults augmented by argon2-cffi==25.1.0)"
+    control_mappings:
+      nist_800_53r5:
+        - "IA-5"
+        - "IA-5(1)"
+        - "IA-5(1)"
+        - "SC-13"
+      mitre_attack_mitigations:
+        - id: "M1027"
+          rationale: "Password Policies — argon2id-grade hashing raises the cost of offline brute force (T1110.002) by orders of magnitude vs. legacy SHA-crypt or PBKDF2."
+    caveats:
+      - "Per-installation argon2 parameter set is not enumerated in inputs."
+      - "Migration discipline for legacy weaker-hash records (rehash-on-login) is not asserted."
+    related_concerns: [integrity, authenticity]

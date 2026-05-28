@@ -1,0 +1,85 @@
+name: security-tooling
+display_name: "Security Tooling (Offensive + Defensive Platforms)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Security-tooling-specialized severity rubric and pattern library for platforms that wield offensive capability or operate critical defensive functions — C2 frameworks, adversary-emulation platforms, breach-and-attack-simulation systems, security-orchestration platforms, and vulnerability scanners. Anchored to NIST SP 800-115 (Penetration Testing), NIST SP 800-181 (NICE Workforce Framework), MITRE ATT&CK, MITRE D3FEND, OWASP API Top 10 (operator-console surfaces), and the legal exposure created by Rules-of-Engagement and Computer Fraud and Abuse Act considerations. The defining characteristic of this domain: the tool itself is a weapons platform — compromise yields not just data exposure but the ability to wield the tool's offensive capability against unauthorized targets."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - "NIST SP 800-115 (Technical Guide to Information Security Testing and Assessment)"
+  - "NIST SP 800-181 (NICE Cybersecurity Workforce Framework)"
+  - "NIST SP 800-53r5 (selected controls — AU, AC, IA, SC, SI, SR families)"
+  - "MITRE ATT&CK (Enterprise + Mobile + ICS matrices)"
+  - "MITRE D3FEND (defensive-technique counter-mapping)"
+  - "OWASP API Top 10 (2023) — operator console and REST API surfaces"
+  - "SOC 2 Trust Services Criteria — applicable when the platform is SaaS-delivered"
+  - "Rules of Engagement (ROE) contractual frameworks — engagement scope, authorization windows, target attestation"
+  - "Computer Fraud and Abuse Act (18 U.S.C. § 1030) — legal exposure for out-of-scope or unauthorized engagement initiation"
+  - "EU NIS2 Directive (Article 21) — applicable when the platform is operated by an essential or important entity"
+crown_jewels:
+  - pattern: c2_signing_key_material
+    description: "Cryptographic keys used to authenticate operator commands to deployed implants, agents, or adversary-emulation runners (Caldera abilities, Metasploit sessions, Sliver implants, Cobalt Strike beacons, Mythic callbacks). Compromise yields control of every executor the platform has fielded — the attacker can issue commands as the platform itself, indistinguishable from legitimate operator traffic in the implant's trust model."
+  - pattern: agent_implant_registry
+    description: "The platform's registry of deployed agents/implants/runners with their callback addresses, host identifiers, capability inventory, and authentication tokens. Disclosure inventories the platform's reach across customer environments; tampering enables substitution attacks where attacker-controlled implants are accepted as legitimate."
+  - pattern: operator_credential_store
+    description: "Authentication material for human operators — passwords or password hashes, MFA seeds (TOTP, FIDO2 credentials), API tokens, session cookies, OAuth refresh tokens. Compromise enables full impersonation of an operator and, for admin-class operators, full control of the platform including engagement initiation against arbitrary targets."
+  - pattern: target_inventory
+    description: "The list of in-scope targets, hosts, accounts, networks, and tenants under any active or historical engagement. This is BOTH operationally sensitive (reveals customer environments) AND legally sensitive (the documented basis for distinguishing authorized testing from unauthorized intrusion under CFAA and analogous laws). Loss of target inventory destroys ROE attestation."
+  - pattern: attack_artifact_store
+    description: "Payloads, exploits, custom modules, weaponized files, compiled implants, shellcode catalogs, ATT&CK-aligned TTP libraries. Compromise yields a curated malware library tuned to operator-defined evasion goals; exfiltration of this store materially advances any adversary's tradecraft and may breach export-control rules on dual-use cybersecurity items (Wassenaar Arrangement implementations)."
+  - pattern: engagement_audit_log
+    description: "Operator-action log capturing every command issued, every implant interaction, every result accessed. This is BOTH evidence for legitimate use (legal defensibility under CFAA, ROE attestation, customer-deliverable provenance) AND the highest-priority target for adversary deletion under T1070 — an attacker who controls the platform first destroys the log of their control."
+  - pattern: customer_engagement_data
+    description: "For SaaS-delivered tooling: customer engagement results, findings, pivoted credentials, captured screenshots from customer environments, harvested files, and the per-customer ROE documents. Disclosure across customers breaches the multi-tenant trust contract and frequently exposes customer-environment credentials harvested during legitimate testing."
+  - pattern: plugin_module_registry
+    description: "Third-party plugins, modules, abilities, or extensions loaded into the platform (Caldera plugins, Metasploit modules, Cobalt Strike aggressor scripts, Mythic agents, Empire modules). Plugins typically execute in the platform's privileged context with access to signing keys, implant registry, and customer data; the registry is the supply-chain attack surface."
+  - pattern: result_data_store
+    description: "Captured screenshots, file harvests, command outputs, keystroke captures, pivoted credentials, network maps, and other data exfiltrated from targets during engagements. Frequently the most PII-dense and customer-credential-rich store in the entire platform — a successful engagement against a customer's HR system places that customer's HR data inside the security tool's result store."
+attacker_positions:
+  - position: unauthorized_operator
+    description: "An individual using the platform without authorization — an insider abusing co-worker credentials, a compromised credential from outside the org, a contractor whose access was not revoked. The baseline position for every authentication and authorization finding on operator-facing surfaces."
+  - position: compromised_operator_account
+    description: "An attacker who holds a valid operator account through phishing, credential reuse, session theft, or insider compromise. Can launch attacks at the platform's existing targets within the operator's role; the severity boundary turns on whether the role allows engagement initiation, target modification, or ROE bypass."
+  - position: compromised_implant_callback_endpoint
+    description: "An attacker who has hijacked the C2 server's listener endpoint (DNS takeover of the callback domain, BGP hijack of the listener IP, TLS termination at an attacker-controlled proxy, or compromised reverse-proxy in front of the listener). Can issue commands to every existing deployed implant that callback resolves to that endpoint — a turnkey conversion of the platform's deployed agents into attacker tools."
+  - position: compromised_implant
+    description: "An attacker who controls a deployed agent or implant on a target host (the target's defender has reverse-engineered the implant; the implant ran on a honeypot; the host was compromised before implant deployment). Can pivot toward the C2 server via the callback channel, feed false telemetry, attempt implant-to-C2-server exploitation, or harvest the C2 signing material if it's embedded in the implant."
+  - position: malicious_plugin_developer
+    description: "A supplier of a weaponized plugin/module/extension to the platform (typosquatted plugin name, compromised plugin author account, upstream supply-chain compromise of a legitimate plugin's dependencies, intentional backdoor in a community-contributed module). Equivalent in impact to OWASP API10-style unsafe consumption but with code-execution scope inside the platform's trust zone."
+  - position: target_breach_responder
+    description: "A defender on the target side of an engagement (the customer's blue team, an external incident-response firm called in after an alert, law-enforcement responding to a perceived intrusion). May reverse captured implants, replay implant traffic, probe the platform's listener, or — in legitimate-incident-response cases — discover and report platform vulnerabilities. Findings against this position calibrate the implant's resistance to reverse engineering and the listener's resistance to probing."
+  - position: internal_lateral_attacker_in_c2_tier
+    description: "A post-breach attacker pivoting inside the platform's trust zone (compromised CI/CD runner, compromised admin workstation, lateral movement from a co-located service). The 'assume compromise' position used to evaluate in-tier trust assumptions — implicit trust in localhost, in-cluster network, or shared filesystem becomes a critical-class finding from this position."
+  - position: unauthorized_third_party_observer
+    description: "A network observer of operator-implant traffic with no foothold on either end (passive on-path observer at a transit ISP, target-side network defender capturing traffic to the listener, traffic captured during a customer's pre-existing network-monitoring program). Confidentiality and traffic-analysis findings calibrate against this position."
+  - position: unauthorized_engagement_initiator
+    description: "An attacker who triggers an engagement against an out-of-scope target via the platform — either by bypassing the platform's ROE enforcement, by tricking a legitimate operator into initiating against an unauthorized target, or by directly invoking an engagement API without authorization. This is the legally-load-bearing position: out-of-scope engagement initiation creates CFAA exposure regardless of the platform operator's intent."
+  - position: compromised_admin_account
+    description: "An attacker holding a platform-admin or super-user credential. Can modify ROE, view all engagements, rotate or extract signing keys, install plugins, alter audit configuration. The boundary case where Authenticity, Non-Repudiation, and Immutability findings converge; SoD failure on admin accounts is itself a critical finding."
+default_trust_boundaries:
+  - boundary: public_internet_to_operator_console
+    description: "First crossing from operator workstations to the platform's web UI or operator API. TLS termination, operator authentication, MFA enforcement, IP allowlisting, and SSO integration enforce it; the boundary where most OWASP-API-Top-10-style findings against the operator surface materialize."
+  - boundary: operator_console_to_c2_orchestrator
+    description: "Crossing from the operator-facing UI/API tier to the C2 orchestration engine that translates operator intent into commands sent to implants. Authorization decisions about which operator can run which command against which implant live here; ROE enforcement at command-issue time is its load-bearing control."
+  - boundary: c2_orchestrator_to_implant_listener
+    description: "Crossing from the orchestrator to the listener service(s) that hold open inbound connections from deployed implants. Often a separate process for blast-radius reasons; the listener is the most-exposed component and frequently the lowest-privilege component in a defensible architecture."
+  - boundary: implant_listener_to_implant_callback
+    description: "The network channel implants use to reach the C2 — the most attacker-adjacent boundary in the entire platform. Implant authentication, mutual-TLS with certificate pinning, command-signature verification, and replay protection enforce it. Findings here scope to compromised_implant_callback_endpoint and unauthorized_third_party_observer attacker positions."
+  - boundary: c2_orchestrator_to_target_environment
+    description: "For embedded scanners, BAS systems, or integrated reconnaissance modules that reach DIRECTLY into target networks (not via implant callback), the egress boundary into the target environment. ROE enforcement, target-attestation gating, and engagement-scope assertions live here; SSRF-class findings on this boundary are critical because they can produce out-of-scope engagement initiation."
+  - boundary: plugin_runtime_to_plugin_module
+    description: "Module-isolation boundary — the runtime barrier between the platform core and a loaded plugin/module/extension. Frequently weak or non-existent (plugins execute as the platform process); strengthening this boundary requires process isolation, capability sandboxing, or signed-and-verified plugin loaders."
+  - boundary: operator_console_to_result_data_store
+    description: "Crossing from operator UI/API to the captured result data (screenshots, harvested files, harvested credentials, command outputs). Per-engagement and per-customer authorization, audit-on-read, and cross-tenant isolation enforce it; for SaaS-delivered platforms this is the boundary where customer data confidentiality is enforced or breached."

@@ -1,0 +1,430 @@
+schema_version: 1
+run_id: apd-20260527-caldera-adversary-emulation
+generated_by: apd-synthesizer
+generated_at: 2026-05-27T13:00:00Z
+
+stats:
+  total_unique_nist_controls_cited: 56
+  by_family:
+    AC: 11   # Access Control
+    AU: 13   # Audit and Accountability
+    CM: 6    # Configuration Management
+    CP: 7    # Contingency Planning
+    IA: 9    # Identification and Authentication
+    MP: 2    # Media Protection
+    SA: 1    # System and Services Acquisition
+    SC: 12   # System and Communications Protection
+    SI: 7    # System and Information Integrity
+    SR: 4    # Supply Chain Risk Management
+
+control_to_findings:
+  # Access Control family
+  AC-2:
+    - ephem-608839d8
+    - ephem-cc497fed
+    - ephem-06509c27
+    - auth-31296050
+  "AC-2(2)":
+    - ephem-d6c8d458
+  "AC-2(3)":
+    - ephem-608839d8
+  AC-3:
+    - conf-01d02036
+    - conf-88726ba8
+    - intg-899da63b
+    - nonrep-58511e00
+    - ephem-06509c27
+    - auth-cap-c186207a
+  "AC-3(7)":
+    - conf-88726ba8
+    - auth-5911ace7
+  AC-4:
+    - conf-88726ba8
+    - conf-056edb0c
+    - intg-899da63b
+    - dist-68e9d200
+  "AC-4(8)":
+    - intg-899da63b
+    - conf-bcbd4cb9
+    - intg-cap-61ba338f
+  AC-6:
+    - conf-88726ba8
+    - auth-cap-c186207a
+  "AC-6(1)":
+    - conf-88726ba8
+  "AC-6(5)":
+    - conf-aabbd48f
+    - dist-dbaf5c57
+    - dist-018ec97e
+  "AC-6(9)":
+    - nonrep-1f49427b
+  AC-12:
+    - ephem-cc497fed
+    - ephem-06509c27
+    - conf-cap-9f572979
+    - ephem-cap-053c3f98
+  "AC-12(1)":
+    - ephem-cc497fed
+    - conf-cap-9f572979
+  AC-16:
+    - intg-899da63b
+    - nonrep-58511e00
+
+  # Audit family
+  AU-2:
+    - intg-712b4709
+    - nonrep-d8bf1096
+    - nonrep-79ed516c
+    - nonrep-1f49427b
+    - nonrep-5f137373
+    - nonrep-58511e00
+  AU-3:
+    - nonrep-d8bf1096
+    - nonrep-79ed516c
+    - nonrep-1f49427b
+    - nonrep-58511e00
+    - nonrep-cap-f135a692
+  "AU-3(1)":
+    - nonrep-d8bf1096
+    - auth-31296050
+    - nonrep-cap-f135a692
+  "AU-3(3)":
+    - nonrep-d8bf1096
+  AU-6:
+    - nonrep-d8bf1096
+    - nonrep-1f49427b
+  AU-8:
+    - nonrep-d8bf1096
+    - nonrep-19e51298
+  "AU-8(1)":
+    - nonrep-19e51298
+  AU-9:
+    - intg-5152e7ba
+    - nonrep-d8bf1096
+    - nonrep-1f49427b
+  "AU-9(2)":
+    - nonrep-d8bf1096
+    - immut-b0fd1144
+    - immut-de3cc948
+  "AU-9(3)":
+    - nonrep-d8bf1096
+    - intg-5152e7ba
+    - immut-b0fd1144
+    - immut-de3cc948
+  "AU-9(4)":
+    - nonrep-d8bf1096
+    - immut-b0fd1144
+  AU-10:
+    - nonrep-d8bf1096
+    - nonrep-79ed516c
+    - nonrep-58511e00
+    - nonrep-cap-f135a692
+  "AU-10(1)":
+    - nonrep-79ed516c
+  "AU-10(2)":
+    - nonrep-79ed516c
+  AU-11:
+    - immut-b0fd1144
+    - immut-df8094e4
+    - immut-de3cc948
+    - immut-6352dd54
+    - ephem-d6c8d458
+  "AU-11(1)":
+    - immut-b0fd1144
+    - immut-6352dd54
+  AU-12:
+    - nonrep-d8bf1096
+    - nonrep-79ed516c
+    - nonrep-5f137373
+    - nonrep-58511e00
+    - avail-e4b13596
+    - auth-5911ace7
+  "AU-12(1)":
+    - nonrep-d8bf1096
+  "AU-12(3)":
+    - nonrep-d8bf1096
+    - nonrep-79ed516c
+
+  # CM family
+  CM-2:
+    - dist-85515eec
+    - immut-df8094e4
+    - immut-88339a4a
+  "CM-2(2)":
+    - immut-df8094e4
+    - immut-88339a4a
+  "CM-2(3)":
+    - immut-df8094e4
+    - immut-88339a4a
+  CM-3:
+    - intg-712b4709
+    - immut-df8094e4
+    - immut-88339a4a
+    - nonrep-5f137373
+  "CM-3(1)":
+    - intg-712b4709
+    - nonrep-5f137373
+  CM-5:
+    - intg-81c06dfa
+  CM-6:
+    - immut-88339a4a
+  CM-7:
+    - intg-899da63b
+    - dist-018ec97e
+  "CM-7(5)":
+    - ephem-1065948c
+
+  # CP family
+  CP-2:
+    - avail-c583c332
+    - avail-5399f916
+    - avail-623b8e59
+  "CP-2(3)":
+    - avail-c583c332
+    - avail-5399f916
+    - avail-623b8e59
+  CP-7:
+    - avail-5399f916
+    - dist-85515eec
+    - dist-a464c95f
+  CP-9:
+    - avail-5399f916
+    - conf-6414f95a
+    - immut-cap-dfe5518d
+  "CP-9(1)":
+    - avail-5399f916
+    - conf-6414f95a
+  "CP-9(8)":
+    - avail-5399f916
+    - conf-6414f95a
+  CP-10:
+    - avail-5399f916
+    - avail-cap-b6a750af
+    - immut-cap-dfe5518d
+    - resil-cap-d1dd2fd1
+  "CP-10(2)":
+    - avail-5399f916
+    - resil-cap-d1dd2fd1
+  CP-13:
+    - avail-623b8e59
+    - resil-ca256373
+    - resil-83950e96
+
+  # IA family
+  IA-2:
+    - conf-01d02036
+    - auth-1c9a7b78
+    - auth-31296050
+    - auth-5911ace7
+    - auth-cap-c186207a
+  "IA-2(1)":
+    - conf-01d02036
+    - auth-1c9a7b78
+    - auth-31296050
+  "IA-2(2)":
+    - auth-1c9a7b78
+  "IA-2(6)":
+    - auth-1c9a7b78
+  "IA-2(8)":
+    - auth-1c9a7b78
+  IA-3:
+    - intg-f6c14927
+    - auth-0e31c9b1
+    - auth-c1c1d0cb
+  "IA-3(1)":
+    - intg-f6c14927
+    - auth-0e31c9b1
+    - auth-c1c1d0cb
+  IA-5:
+    - conf-e223c03d
+    - conf-01d02036
+    - ephem-608839d8
+    - ephem-cc497fed
+    - ephem-06509c27
+    - ephem-1065948c
+    - auth-1c9a7b78
+    - auth-31296050
+    - ephem-cap-c2af080d
+  "IA-5(1)":
+    - conf-e223c03d
+    - conf-01d02036
+    - ephem-608839d8
+    - ephem-cap-c2af080d
+  "IA-5(2)":
+    - auth-0e31c9b1
+    - auth-ec69906a
+  "IA-5(7)":
+    - conf-01d02036
+    - ephem-608839d8
+  "IA-5(13)":
+    - ephem-608839d8
+  IA-8:
+    - auth-cap-17c17dd2
+  "IA-8(1)":
+    - auth-cap-17c17dd2
+  IA-9:
+    - auth-0e31c9b1
+
+  # MP family
+  MP-4:
+    - intg-5152e7ba
+    - immut-de3cc948
+    - conf-6414f95a
+
+  # SA family
+  SA-15:
+    - ephem-1065948c
+  "SA-15(7)":
+    - ephem-1065948c
+
+  # SC family
+  SC-5:
+    - avail-623b8e59
+    - avail-e4b13596
+    - avail-8d19a4b5
+    - resil-ca256373
+    - resil-83950e96
+    - resil-ca36d2ac
+    - avail-cap-1e1a88ee
+  "SC-5(1)":
+    - avail-623b8e59
+    - avail-e4b13596
+    - resil-ca256373
+  SC-6:
+    - avail-e4b13596
+    - avail-8d19a4b5
+    - resil-ca36d2ac
+    - avail-cap-1e1a88ee
+  SC-7:
+    - dist-dbaf5c57
+    - dist-85515eec
+    - dist-68e9d200
+    - dist-cap-5006e4c2
+  "SC-7(5)":
+    - dist-85515eec
+  "SC-7(13)":
+    - dist-dbaf5c57
+  "SC-7(21)":
+    - dist-dbaf5c57
+  SC-8:
+    - conf-056edb0c
+    - conf-cap-0d91e0de
+  "SC-8(1)":
+    - conf-056edb0c
+    - conf-cap-0d91e0de
+  SC-10:
+    - ephem-cc497fed
+    - ephem-cap-053c3f98
+  SC-12:
+    - conf-e223c03d
+    - conf-aabbd48f
+    - auth-c1c1d0cb
+  "SC-12(1)":
+    - conf-e223c03d
+  "SC-12(2)":
+    - conf-e223c03d
+    - conf-aabbd48f
+  SC-13:
+    - conf-e223c03d
+    - conf-056edb0c
+    - conf-cap-ce39d07c
+    - conf-cap-0d91e0de
+  SC-16:
+    - intg-cap-27c5021a
+    - conf-bcbd4cb9
+  SC-17:
+    - auth-0e31c9b1
+    - auth-c1c1d0cb
+  SC-22:
+    - dist-a464c95f
+  SC-23:
+    - intg-f6c14927
+  "SC-23(3)":
+    - auth-c1c1d0cb
+    - conf-056edb0c
+    - intg-f6c14927
+    - conf-cap-9f572979
+  SC-24:
+    - resil-f57932c6
+  SC-28:
+    - conf-aabbd48f
+    - conf-6414f95a
+    - dist-68e9d200
+    - conf-cap-ce39d07c
+  "SC-28(1)":
+    - conf-e223c03d
+    - conf-aabbd48f
+    - conf-cap-ce39d07c
+  SC-36:
+    - avail-5399f916
+    - dist-85515eec
+    - dist-68e9d200
+    - dist-a464c95f
+  SC-39:
+    - dist-dbaf5c57
+    - dist-018ec97e
+    - dist-cap-5006e4c2
+    - avail-623b8e59
+
+  # SI family
+  SI-4:
+    - avail-cap-b6a750af
+    - intg-cap-c933c8e0
+  SI-7:
+    - intg-81c06dfa
+    - intg-f6c14927
+    - intg-5152e7ba
+    - intg-712b4709
+    - intg-3575082e
+  "SI-7(1)":
+    - intg-81c06dfa
+  "SI-7(2)":
+    - intg-712b4709
+  "SI-7(6)":
+    - intg-5152e7ba
+  "SI-7(8)":
+    - immut-b0fd1144
+    - immut-de3cc948
+  "SI-7(15)":
+    - intg-81c06dfa
+    - intg-3575082e
+  SI-10:
+    - intg-899da63b
+    - intg-3575082e
+    - conf-bcbd4cb9
+    - intg-cap-27c5021a
+    - intg-cap-61ba338f
+  SI-12:
+    - immut-6352dd54
+    - ephem-d6c8d458
+  SI-13:
+    - avail-c583c332
+    - avail-8d19a4b5
+    - resil-ca256373
+    - resil-83950e96
+    - resil-f57932c6
+    - resil-ca36d2ac
+    - avail-623b8e59
+  "SI-13(1)":
+    - resil-ca256373
+    - resil-f57932c6
+  "SI-13(4)":
+    - resil-ca256373
+  SI-15:
+    - conf-bcbd4cb9
+
+  # SR family
+  SR-4:
+    - intg-81c06dfa
+    - auth-ec69906a
+    - nonrep-5f137373
+  "SR-4(3)":
+    - intg-81c06dfa
+    - auth-ec69906a
+  "SR-4(4)":
+    - auth-ec69906a
+  SR-10:
+    - auth-ec69906a
+  SR-11:
+    - intg-81c06dfa
+    - auth-ec69906a

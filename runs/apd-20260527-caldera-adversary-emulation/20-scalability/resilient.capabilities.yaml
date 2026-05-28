@@ -1,0 +1,32 @@
+schema_version: 1
+agent: resilient
+capability:
+  - schema_version: 1
+    id: resil-cap-d1dd2fd1
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Operation resumer rehydrates active operations from data/ on restart"
+    description: |
+      Server bootstrap restores object-store state from data/ via
+      DataService.restore_state and KnowledgeService.restore_state.
+      Combined with the operation resumer background task,
+      mid-flight operations resume after server restart, reducing
+      the impact of a planned or unplanned restart on an active
+      engagement.
+    maturity: implemented
+    scope: |
+      Confirmed for first-class objects restored from data/. Not
+      addressed: in-memory-only state at the time of crash (recent
+      facts harvested but not yet persisted; in-flight Link records
+      not yet flushed); idempotency of resumed operations.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2.1 'Top-level entrypoint' step 5"
+        excerpt: "background tasks: untrusted-agent sniffer, operation resumer"
+    control_mappings:
+      nist_800_53r5: [CP-10, "CP-10(2)", SI-13]
+    caveats:
+      - "Window-of-loss bounded by save_state cadence (not documented)."
+      - "No durable transaction log; restart may double-execute non-idempotent abilities."
+    related_concerns: [availability, integrity]

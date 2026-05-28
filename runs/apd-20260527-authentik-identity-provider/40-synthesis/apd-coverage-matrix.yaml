@@ -1,0 +1,223 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+
+# 9-goal × N-finding coverage matrix. Confirms every APD goal is exercised
+# in this run; surfaces cross-goal merged findings; shows cap-vs-finding
+# balance per goal.
+
+goals:
+  confidentiality:
+    findings_count: 10
+    capabilities_count: 3
+    findings:
+      - {id: conf-477ff8a1, severity: critical, disposition: risk}
+      - {id: conf-6dd9d98a, severity: high, disposition: gap}
+      - {id: conf-7174bf6f, severity: high, disposition: gap}
+      - {id: conf-68ab158e, severity: high, disposition: gap}
+      - {id: conf-22a9ce55, severity: high, disposition: risk}
+      - {id: conf-2a905f1d, severity: medium, disposition: risk}
+      - {id: conf-e08662e7, severity: high, disposition: gap}
+      - {id: conf-4a2c9273, severity: medium, disposition: gap}
+      - {id: conf-3d461eb8, severity: high, disposition: gap}
+      - {id: conf-92954884, severity: medium, disposition: risk}
+    capabilities:
+      - {id: conf-cap-1150e561, maturity: designed}
+      - {id: conf-cap-6db56a6d, maturity: designed}
+      - {id: conf-cap-253fdeb0, maturity: designed}
+
+  integrity:
+    findings_count: 10
+    capabilities_count: 4
+    findings:
+      - {id: intg-96d4de40, severity: critical, disposition: risk}
+      - {id: intg-e1d79aee, severity: high, disposition: uncertainty}
+      - {id: intg-0a313721, severity: high, disposition: risk}
+      - {id: intg-568208e5, severity: high, disposition: risk}
+      - {id: intg-3f9318c2, severity: high, disposition: risk}
+      - {id: intg-c6371014, severity: high, disposition: blocked}
+      - {id: intg-7111d094, severity: medium, disposition: risk}
+      - {id: intg-294a9c9e, severity: medium, disposition: risk}
+      - {id: intg-7fb03642, severity: high, disposition: risk}
+      - {id: intg-59ecc48b, severity: high, disposition: risk}
+    capabilities:
+      - {id: intg-cap-f8801874, maturity: designed}
+      - {id: intg-cap-20ca5f2c, maturity: designed}
+      - {id: intg-cap-8613272f, maturity: designed}
+      - {id: intg-cap-13411b16, maturity: designed}
+
+  availability:
+    findings_count: 9
+    capabilities_count: 3
+    findings:
+      - {id: avail-3a9189a2, severity: high, disposition: gap}
+      - {id: avail-1160b595, severity: high, disposition: blocked}
+      - {id: avail-cfd2b6e8, severity: high, disposition: risk}
+      - {id: avail-8ad0769e, severity: medium, disposition: uncertainty}
+      - {id: avail-57898caa, severity: medium, disposition: uncertainty}
+      - {id: avail-311725ea, severity: medium, disposition: risk}
+      - {id: avail-66ccddd3, severity: medium, disposition: blocked}
+      - {id: avail-b46582cb, severity: medium, disposition: uncertainty}
+      - {id: avail-d903948f, severity: medium, disposition: risk}
+    capabilities:
+      - {id: avail-cap-594bb90c, maturity: designed}
+      - {id: avail-cap-2e726aa6, maturity: designed}
+      - {id: avail-cap-119c6e20, maturity: designed}
+
+  distributed:
+    findings_count: 5
+    capabilities_count: 2
+    findings:
+      - {id: dist-b8b7603b, severity: high, disposition: risk}
+      - {id: dist-71a64a88, severity: high, disposition: risk}
+      - {id: dist-9b598237, severity: high, disposition: risk}
+      - {id: dist-bf087181, severity: medium, disposition: uncertainty}
+      - {id: dist-b07412b8, severity: medium, disposition: blocked}
+    capabilities:
+      - {id: dist-cap-8cbb523a, maturity: designed}
+      - {id: dist-cap-1e67e7bc, maturity: designed}
+
+  resilient:
+    findings_count: 6
+    capabilities_count: 3
+    findings:
+      - {id: resil-0e6a988b, severity: high, disposition: gap}
+      - {id: resil-4d9c7873, severity: high, disposition: gap}
+      - {id: resil-8ebcae62, severity: high, disposition: gap}
+      - {id: resil-a572e09b, severity: medium, disposition: uncertainty}
+      - {id: resil-32c37d49, severity: high, disposition: risk}
+      - {id: resil-0af10c5c, severity: medium, disposition: uncertainty}
+    capabilities:
+      - {id: resil-cap-c79efff1, maturity: implemented}
+      - {id: resil-cap-0eaa47dd, maturity: designed}
+      - {id: resil-cap-867eac4f, maturity: designed}
+
+  ephemeral:
+    findings_count: 7
+    capabilities_count: 2
+    findings:
+      - {id: ephem-0fb143ce, severity: high, disposition: gap}
+      - {id: ephem-07f6fad6, severity: high, disposition: gap}
+      - {id: ephem-6af8665b, severity: high, disposition: gap}
+      - {id: ephem-a0d1afcd, severity: medium, disposition: gap}
+      - {id: ephem-6f83fa77, severity: medium, disposition: uncertainty}
+      - {id: ephem-d87f9e6e, severity: medium, disposition: risk}
+      - {id: ephem-4018416d, severity: medium, disposition: blocked}
+    capabilities:
+      - {id: ephem-cap-efe92498, maturity: designed}
+      - {id: ephem-cap-9095fc38, maturity: designed}
+
+  authenticity:
+    findings_count: 6
+    capabilities_count: 2
+    findings:
+      - {id: auth-4793933a, severity: high, disposition: gap}
+      - {id: auth-190b06f7, severity: high, disposition: gap}
+      - {id: auth-c80d79e6, severity: high, disposition: risk}
+      - {id: auth-f667a1e6, severity: high, disposition: risk}
+      - {id: auth-3bd1768d, severity: high, disposition: risk}
+      - {id: auth-5216893e, severity: medium, disposition: blocked}
+    capabilities:
+      - {id: auth-cap-3a143747, maturity: designed}
+      - {id: auth-cap-56233f34, maturity: designed}
+
+  non_repudiation:
+    findings_count: 8
+    capabilities_count: 3
+    findings:
+      - {id: nonrep-6ff98de3, severity: high, disposition: gap}
+      - {id: nonrep-c3d8f98d, severity: high, disposition: risk}
+      - {id: nonrep-c772c9f2, severity: high, disposition: gap}
+      - {id: nonrep-fd5e012c, severity: high, disposition: risk}
+      - {id: nonrep-a18644b2, severity: medium, disposition: blocked}
+      - {id: nonrep-4ff2b1ac, severity: medium, disposition: risk}
+      - {id: nonrep-a8ea0a0c, severity: high, disposition: gap}
+      - {id: nonrep-52e5e762, severity: high, disposition: gap}
+    capabilities:
+      - {id: nonrep-cap-9d3d9d4c, maturity: designed}
+      - {id: nonrep-cap-f303cd8d, maturity: designed}
+      - {id: nonrep-cap-d9e5c53d, maturity: designed}
+
+  immutability:
+    findings_count: 6
+    capabilities_count: 1
+    findings:
+      - {id: immut-d98cdc96, severity: high, disposition: gap}
+      - {id: immut-512f82c9, severity: high, disposition: gap}
+      - {id: immut-1dc13874, severity: high, disposition: gap}
+      - {id: immut-df287568, severity: high, disposition: gap}
+      - {id: immut-d9147be5, severity: medium, disposition: blocked}
+      - {id: immut-fc608bca, severity: medium, disposition: uncertainty}
+    capabilities:
+      - {id: immut-cap-14525881, maturity: designed}
+
+# Tier-level rollup
+tiers:
+  trustworthiness:
+    goals: [confidentiality, integrity, availability]
+    findings_total: 29
+    capabilities_total: 10
+    critical_count: 2
+    high_count: 16
+    medium_count: 8
+    low_count: 0
+    informational_count: 0
+
+  scalability:
+    goals: [distributed, resilient, ephemeral]
+    findings_total: 18
+    capabilities_total: 7
+    critical_count: 0
+    high_count: 11
+    medium_count: 7
+    low_count: 0
+    informational_count: 0
+
+  auditability:
+    goals: [authenticity, non_repudiation, immutability]
+    findings_total: 20
+    capabilities_total: 6
+    critical_count: 0
+    high_count: 15
+    medium_count: 5
+    low_count: 0
+    informational_count: 0
+
+totals:
+  findings: 66
+  capabilities: 23
+  critical: 2
+  high: 42
+  medium: 22
+  low: 0
+  informational: 0
+  blocked: 11
+  uncertainty: 9
+  risk: 27
+  gap: 29
+
+coverage_check:
+  all_nine_goals_exercised: true
+  per_goal_finding_floor_met: true  # all goals >= 5 findings
+  per_goal_capability_floor_met: true  # all goals >= 1 capability
+  tier_balance:
+    trustworthiness: "29 findings — appropriate for IdP with substantial crypto/identity surface"
+    scalability: "18 findings — appropriate for HA + topology + rotation discipline"
+    auditability: "20 findings — appropriate for IdP audit/Immutability obligations"
+
+notes: |
+  All nine APD goals are exercised. The finding distribution is
+  identity-provider-shaped: Confidentiality and Integrity dominate the
+  Trustworthiness tier (the crypto / identity-binding surface), with
+  Non-Repudiation and Immutability heavy in Auditability (the audit
+  obligation surface). Capability counts are evenly distributed across
+  tiers (10/7/6) reflecting the platform's mature primitives across
+  most APD goals, but with single-capability count in Immutability
+  reflecting the absence of in-platform hash-chaining / WORM / drift-
+  detection mechanisms (the dominant Immutability findings).
+
+  Note: zero low and zero informational findings is correct for this
+  run; the severity rubric's Low / Informational clauses (hygiene,
+  documentation deficiency, defense-in-depth gap fully compensated)
+  did not match the architectural gaps surfaced. Specialists
+  consistently anchored to the High and Medium clauses.

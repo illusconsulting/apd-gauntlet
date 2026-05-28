@@ -1,0 +1,532 @@
+_meta:
+  run_id: apd-20260527-authentik-identity-provider
+  framework_version: 1.5.0
+  domain_pack: identity-security
+  synthesis_pass: 1
+  total_input_findings: 71
+  merged_count: 5
+  linked_count: 9
+  retained_count: 66
+
+merge_decisions:
+  - merge_group: master-secret-key-reachability
+    merged_into: conf-477ff8a1
+    merged_from: []
+    notes: |
+      The master AUTHENTIK_SECRET_KEY findings cluster (conf-477ff8a1
+      authoritative; conf-7174bf6f on embedded-outpost reachability
+      to the same secret retained as a related-but-distinct
+      finding because the architectural mechanism is different —
+      Expression-policy os.environ vs. embedded-outpost in-process
+      bug; both ship together).
+
+  - merge_group: secret-key-rotation-gap
+    merged_into: conf-3d461eb8
+    merged_from: [ephem-5a6042dc]
+    notes: |
+      Confidentiality finding (key cannot be re-protected after exposure)
+      and Ephemeral finding (key has unbounded lifetime) merge into a
+      single record presenting both lenses. The Ephemeral perspective is
+      preserved in lens_perspectives. Both flagged the same
+      runbook §5 / ADR-0004 §Negative item 3 GAP from different lenses.
+
+  - merge_group: outpost-ws-tls
+    merged_into: conf-e08662e7
+    merged_from: [auth-22bd304a]
+    notes: |
+      Confidentiality (secret-data-in-transit) and Authenticity (identity-
+      assertion-in-transit) merge into one record. Both cite INV-OPS-005
+      GAP and threat-model S-6. The remediation (TLS-required + optional
+      mTLS workload identity) addresses both lenses.
+
+  - merge_group: oauth-client-auth-mechanism-and-rotation
+    merged_into: ephem-07f6fad6
+    merged_from: [auth-04c4919b]
+    notes: |
+      Ephemeral (client_secret rotation gap, no rotation procedure) and
+      Authenticity (no private_key_jwt/mTLS alternatives at registration)
+      merge into one record with both lens perspectives. They prescribe
+      the same architectural change.
+
+  - merge_group: backup-encryption-and-immutability
+    merged_into: conf-68ab158e
+    merged_from: [immut-fd3aafdd]
+    notes: |
+      Confidentiality (backup-file encryption GAP, key-separation between
+      secret_key and dump) and Immutability (object-lock / compliance-mode
+      retention) merge: same backup substrate, complementary controls,
+      same runbook §8 location. The merged finding documents both
+      perspectives.
+
+link_decisions:
+  - cross_link_group: rate-limiting-and-bruteforce-related
+    findings: [avail-3a9189a2, auth-4793933a, ephem-0fb143ce]
+    rationale: "Default-deny rate-limiting (Availability), default admin-MFA binding (Authenticity), and signing-key rotation cadence (Ephemeral) are three of the four 'shipped default hardening' recommendations that converge into the production-default-hardening pass."
+
+  - cross_link_group: postgres-spof-and-failure-concentration
+    findings: [avail-cfd2b6e8, dist-b8b7603b, dist-9b598237]
+    rationale: "Postgres as universal SPOF (Availability SLO consequence), multi-region topology gap (Distributed topology consequence), and substrate concentration (Distributed failure-domain consequence) cite the same ADR-0002 architectural facts from three lenses; ship together."
+
+  - cross_link_group: bulkhead-and-circuit-breaker-pattern
+    findings: [avail-311725ea, resil-4d9c7873, resil-8ebcae62, resil-0af10c5c]
+    rationale: "Per-task queue isolation (Availability), circuit breakers on outbound calls (Resilient), bulkhead between user-facing and admin paths (Resilient), and retry-with-jitter discipline (Resilient) form a coherent Resilient hardening pass; ship together."
+
+  - cross_link_group: cached-ldap-outpost-trade-offs
+    findings: [resil-32c37d49, ephem-4018416d, nonrep-fd5e012c]
+    rationale: "Cached LDAP outpost mode trade-offs surface in Resilient (no failure-mode signaling of bypassed revocation), Ephemeral (cache TTL unenumerated), and Non-Repudiation (per-bind audit only on cache-miss); the cache-invalidation-push mechanism resolves all three."
+
+  - cross_link_group: expression-engine-rce-second-order
+    findings: [conf-477ff8a1, intg-0a313721, immut-d98cdc96, nonrep-6ff98de3]
+    rationale: "Expression engine RCE per ADR-0001 is a documented architectural fact. Its second-order consequences land in Confidentiality (master-secret reachability), Integrity (Source mapping privilege escalation), Immutability (Event-log alteration via DB write), and Non-Repudiation (helper functions without audit emission). The hardening recommendation (reverse-proxy API blocklist) is the same compensating control; the specialists frame the second-order consequence from their lens."
+
+  - cross_link_group: audit-pipeline-substrate-and-immutability
+    findings: [nonrep-c3d8f98d, immut-d98cdc96, immut-d9147be5]
+    rationale: "Audit-pipeline substrate (Postgres-resident, operator-driven log forwarding), Event-log immutability (mutable rows), and per-class retention (single platform-wide default) form the audit-substrate hardening pass."
+
+  - cross_link_group: federation-trust-establishment-and-drift
+    findings: [auth-c80d79e6, immut-df287568, nonrep-4ff2b1ac]
+    rationale: "Federation-trust onboarding without domain-control-validation (Authenticity), GitOps drift detection (Immutability), and admin-action audit context (Non-Repudiation) cover the federation-trust hygiene surface from three lenses."
+
+  - cross_link_group: signing-key-lifecycle-end-to-end
+    findings: [ephem-0fb143ce, immut-1dc13874, intg-96d4de40]
+    rationale: "Per-Provider signing-key rotation cadence (Ephemeral), rotation-history retention for after-the-fact verification (Immutability), and HMAC-fallback-when-empty (Integrity) describe the signing-key lifecycle from three lenses; ship as a coordinated key-management pass."
+
+  - cross_link_group: per-token-audit-anchor-pattern
+    findings: [nonrep-c772c9f2, resil-0e6a988b, immut-1dc13874]
+    rationale: "Per-token audit anchor (Non-Repudiation), refresh-token rotation with family-revocation (Resilient), and JWKS rotation history (Immutability) form the token-lifecycle observability + integrity pass."
+
+finding:
+  - id: conf-477ff8a1
+    severity: critical
+    title: "AUTHENTIK_SECRET_KEY is single master decryption key for all stored secrets; in-process reachable from any Expression policy"
+    apd_goal: confidentiality
+    disposition: risk
+    source_file: 10-trustworthiness/confidentiality.findings.yaml
+    cross_references: []
+
+  - id: conf-6dd9d98a
+    severity: high
+    title: "PostgreSQL transport TLS is configurable but not default; in-cluster lateral attacker can read secret-bearing rows in transit"
+    apd_goal: confidentiality
+    disposition: gap
+    source_file: 10-trustworthiness/confidentiality.findings.yaml
+
+  - id: conf-7174bf6f
+    severity: high
+    title: "Embedded outpost runs in same process as Server core — no process boundary protects AUTHENTIK_SECRET_KEY from a colocated outpost bug"
+    apd_goal: confidentiality
+    disposition: gap
+    source_file: 10-trustworthiness/confidentiality.findings.yaml
+
+  - id: conf-68ab158e
+    severity: high
+    title: "PostgreSQL backups encrypt rows only with AUTHENTIK_SECRET_KEY; off-site dump encryption, key separation, and backup immutability (object-lock/WORM) are not documented"
+    apd_goal: confidentiality
+    disposition: gap
+    source_file: 10-trustworthiness/confidentiality.findings.yaml
+    lens_perspectives:
+      confidentiality:
+        summary: "Off-site dump encryption with operator-managed key distinct from AUTHENTIK_SECRET_KEY is not specified."
+        detail: "Co-located pg_dump and .env compromise = total unmasking. Runbook §8 explicitly flags two GAPs."
+      immutability:
+        summary: "Backup immutability (object-lock / compliance-mode / WORM) is not described; deletion-by-single-credential is the canonical ransomware target."
+        detail: "Per identity-security immutability-classes catalog: IdP backup is post-breach recovery anchor; mutability or deletion-by-single-credential is a critical pattern."
+
+  - id: conf-22a9ce55
+    severity: high
+    title: "Default SAML attribute mappings release UPN + Group + Email + Name + User ID + Username + WindowsAccountName to every SP unless operator strips them"
+    apd_goal: confidentiality
+    disposition: risk
+
+  - id: conf-2a905f1d
+    severity: medium
+    title: "Default OAuth `profile` scope releases group memberships including superuser-shaped groups unless operator filters per-Application"
+    apd_goal: confidentiality
+    disposition: risk
+
+  - id: conf-e08662e7
+    severity: high
+    title: "Outpost-to-Server WebSocket TLS requirement is not enumerated; outpost service-account token plus configuration payload travel on possibly-plaintext channel"
+    apd_goal: confidentiality
+    disposition: gap
+    lens_perspectives:
+      confidentiality:
+        summary: "Configuration payload (with per-Provider client_secrets) and outpost service-account token traverse possibly-plaintext WebSocket."
+        detail: "Network-positioned attacker between outpost and Server reads service-account token plus payload."
+      authenticity:
+        summary: "Outpost service-account token is the outpost's identity assertion to the Server; plaintext channel makes credential passively recoverable."
+        detail: "Common-pattern High clause 'shared bearer tokens, not mTLS or workload identity'; mTLS workload identity is the proportional upgrade."
+
+  - id: conf-4a2c9273
+    severity: medium
+    title: "Redis (when configured) bundled compose does not enforce authentication; session cache and channels-layer pub/sub readable by anything in the cluster"
+    apd_goal: confidentiality
+    disposition: gap
+
+  - id: conf-3d461eb8
+    severity: high
+    title: "AUTHENTIK_SECRET_KEY rotation procedure is not documented; key compromise is effectively permanent in current operational guidance; rotation cadence absent"
+    apd_goal: confidentiality
+    disposition: gap
+    lens_perspectives:
+      confidentiality:
+        summary: "Key cannot be re-protected after exposure without a documented procedure."
+        detail: "Per runbook §5 GAP and ADR-0004 §Negative item 3."
+      ephemeral:
+        summary: "Effective master-key lifetime is unbounded; no rotation cadence shipped."
+        detail: "Per common-pattern High clause 'Signing-key rotation cadence absent or longer than the longest token lifetime' — generalised to master key."
+
+  - id: conf-92954884
+    severity: medium
+    title: "Prompt stage HTML is unescaped by design; user-controlled or operator-misconfigured prompts can render exfiltrating content"
+    apd_goal: confidentiality
+    disposition: risk
+
+  - id: intg-96d4de40
+    severity: critical
+    title: "OAuth Provider with no Signing Key configured silently falls back to HMAC-signing JWTs with the Provider client_secret"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-e1d79aee
+    severity: high
+    title: "SAML signature-validation discipline (XSW resistance) is not asserted in inputs beyond dependency posture"
+    apd_goal: integrity
+    disposition: uncertainty
+
+  - id: intg-0a313721
+    severity: high
+    title: "Source attribute mapping can write `is_superuser=True` to local User; INV-FED-001 is not platform-enforced"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-568208e5
+    severity: high
+    title: "Account Lockdown atomic-revocation is Enterprise-only; Community-tier operators must execute a multi-step racy manual procedure"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-3f9318c2
+    severity: high
+    title: "OAuth redirect-URI regex supports operator-error pattern (`.` un-escaped matches arbitrary character)"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-c6371014
+    severity: high
+    title: "OAuth `state` / OIDC `nonce` / `c_hash` / `at_hash` validation discipline at the IdP is not enumerated"
+    apd_goal: integrity
+    disposition: blocked
+
+  - id: intg-7111d094
+    severity: medium
+    title: "SAML signing digest SHA-1 remains configurable per Provider despite deprecation; hardening misstep is one-click"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-294a9c9e
+    severity: medium
+    title: "Flow Policy-binding default `policy_engine_mode=ANY` permits operator-error defense-in-depth gap"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-7fb03642
+    severity: high
+    title: "Forward-auth header trust model — protected app trusts `X-authentik-*` headers as authoritative without out-of-band proof"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: intg-59ecc48b
+    severity: high
+    title: "SAML NameID email-policy is documented as unstable but remains a configurable option per Provider"
+    apd_goal: integrity
+    disposition: risk
+
+  - id: avail-3a9189a2
+    severity: high
+    title: "No per-endpoint rate-limit shipped by default; Reputation policy provides primitives but operator must bind it deliberately"
+    apd_goal: availability
+    disposition: gap
+
+  - id: avail-1160b595
+    severity: high
+    title: "Per-endpoint SLO and burn-rate alerting for /authorize, /token, /userinfo, /application/saml are not enumerated"
+    apd_goal: availability
+    disposition: blocked
+
+  - id: avail-cfd2b6e8
+    severity: high
+    title: "PostgreSQL is the universal SPOF for identity / session / audit / secret material — loss = total platform unavailability"
+    apd_goal: availability
+    disposition: risk
+
+  - id: avail-8ad0769e
+    severity: medium
+    title: "Per-Flow execution timeout and Worker per-task timeout are not enumerated; pathological Expression chains can exhaust resources"
+    apd_goal: availability
+    disposition: uncertainty
+
+  - id: avail-57898caa
+    severity: medium
+    title: "Health probes at `/-/health/live/` and `/-/health/ready/` are shallow; do not exercise sign-token / verify-password / reach-Source paths"
+    apd_goal: availability
+    disposition: uncertainty
+
+  - id: avail-311725ea
+    severity: medium
+    title: "SCIM outbound provisioning runs in the same Worker pool as notification dispatch and Source sync; slow SCIM target stalls all background work"
+    apd_goal: availability
+    disposition: risk
+
+  - id: avail-66ccddd3
+    severity: medium
+    title: "Slowloris-style HTTP server timeouts: closed in 2025.12 per IncludeSec L4; default value not enumerated for current 2026.x branch"
+    apd_goal: availability
+    disposition: blocked
+
+  - id: avail-b46582cb
+    severity: medium
+    title: "Source-IdP outage during federated login: behavior is not specified — does the IdP fail-closed or fall back to cached identity?"
+    apd_goal: availability
+    disposition: uncertainty
+
+  - id: avail-d903948f
+    severity: medium
+    title: "Signing-key availability vs. latency: per-Provider signing happens in the Server process; HSM/KMS round-trip latency not characterized"
+    apd_goal: availability
+    disposition: risk
+
+  - id: dist-b8b7603b
+    severity: high
+    title: "Multi-region active-active topology and cross-region replication policy are unspecified"
+    apd_goal: distributed
+    disposition: risk
+
+  - id: dist-71a64a88
+    severity: high
+    title: "Embedded outpost shares Server image and process space; no process boundary across outpost protocol-handler surface and Core"
+    apd_goal: distributed
+    disposition: risk
+
+  - id: dist-9b598237
+    severity: high
+    title: "PostgreSQL serves identity, audit, session, secret material, AND the task queue / channels-layer — single substrate concentrates failure domains"
+    apd_goal: distributed
+    disposition: risk
+
+  - id: dist-bf087181
+    severity: medium
+    title: "Outpost-local PostgreSQL access via `gorm.io/driver/postgres` is in go.mod but its boundary is unconfirmed"
+    apd_goal: distributed
+    disposition: uncertainty
+
+  - id: dist-b07412b8
+    severity: medium
+    title: "Session affinity / sticky-session requirements across the Server load-balancer are not specified for the Flow executor"
+    apd_goal: distributed
+    disposition: blocked
+
+  - id: resil-0e6a988b
+    severity: high
+    title: "OAuth refresh-token reuse detection (rotation + family-revocation per OAuth 2.1 §6.1) is not asserted in inputs"
+    apd_goal: resilient
+    disposition: gap
+
+  - id: resil-4d9c7873
+    severity: high
+    title: "Circuit breakers on outbound calls to upstream Source IdPs, SCIM targets, and webhook subscribers are not enumerated"
+    apd_goal: resilient
+    disposition: gap
+
+  - id: resil-8ebcae62
+    severity: high
+    title: "Bulkheading absent between user-facing auth paths and admin / background-task paths"
+    apd_goal: resilient
+    disposition: gap
+
+  - id: resil-a572e09b
+    severity: medium
+    title: "Chaos-engineering / game-day evidence for federation flows, signing-key rotation, JWKS-endpoint failure, SCIM-target outage is not enumerated"
+    apd_goal: resilient
+    disposition: uncertainty
+
+  - id: resil-32c37d49
+    severity: high
+    title: "Cached LDAP outpost bind mode violates session-revocation invariant for cache lifetime; no graceful fail-closed mechanism for credential change"
+    apd_goal: resilient
+    disposition: risk
+
+  - id: resil-0af10c5c
+    severity: medium
+    title: "Retry-with-jitter discipline on Source / SCIM / webhook outbound calls is not asserted"
+    apd_goal: resilient
+    disposition: uncertainty
+
+  - id: ephem-0fb143ce
+    severity: high
+    title: "Per-Provider OAuth/SAML signing key rotation cadence is not enforced; operator-initiated rotation is the only mechanism"
+    apd_goal: ephemeral
+    disposition: gap
+
+  - id: ephem-07f6fad6
+    severity: high
+    title: "OAuth client_secret rotation procedure is undocumented; private_key_jwt and mTLS client authentication alternatives are not first-class in the registration flow"
+    apd_goal: ephemeral
+    disposition: gap
+    lens_perspectives:
+      ephemeral:
+        summary: "client_secret rotation cadence and procedure are undocumented; client_secret leak is permanent without rotation."
+        detail: "Per identity-security common-pattern High clause."
+      authenticity:
+        summary: "Modern client-auth alternatives (private_key_jwt, mTLS) are not first-class at registration; client_secret is the implicit default."
+        detail: "Per common-pattern High clause 'OAuth client authentication is client_secret_basic or client_secret_post for confidential clients'."
+
+  - id: ephem-6af8665b
+    severity: high
+    title: "SCIM target static-token rotation is not enumerated; Community-tier deployments cannot use the OAuth-token mode"
+    apd_goal: ephemeral
+    disposition: gap
+
+  - id: ephem-a0d1afcd
+    severity: medium
+    title: "Outpost service-account token rotation UI control is unconfirmed; per runbook §7 rotation may require outpost recreation"
+    apd_goal: ephemeral
+    disposition: gap
+
+  - id: ephem-6f83fa77
+    severity: medium
+    title: "Session lifetime defaults per AAL tier are not enumerated; per-Flow User Login stage settings are operator-tuned"
+    apd_goal: ephemeral
+    disposition: uncertainty
+
+  - id: ephem-d87f9e6e
+    severity: medium
+    title: "Default self-signed certificate at first startup is 1-year-valid; no rotation reminder shipped"
+    apd_goal: ephemeral
+    disposition: risk
+
+  - id: ephem-4018416d
+    severity: medium
+    title: "Cached LDAP outpost bind cache TTL is not enumerated"
+    apd_goal: ephemeral
+    disposition: blocked
+
+  - id: auth-4793933a
+    severity: high
+    title: "MFA enforcement on the admin Flow / admin Groups is operator-action-required; default-authentication-flow does not require MFA for admins"
+    apd_goal: authenticity
+    disposition: gap
+
+  - id: auth-190b06f7
+    severity: high
+    title: "SMS-OTP and email-OTP fallback per Authenticator Validation stage; AAL3 surfaces have no platform-enforced 'no SMS/email fallback' policy"
+    apd_goal: authenticity
+    disposition: gap
+
+  - id: auth-c80d79e6
+    severity: high
+    title: "Federation-trust onboarding for SAML SPs and OAuth confidential clients has no domain-control-validation or contact-attestation requirement"
+    apd_goal: authenticity
+    disposition: risk
+
+  - id: auth-f667a1e6
+    severity: high
+    title: "RAC `Ignore Server certificate` per-Endpoint setting silently bypasses RDP TLS verification for that endpoint"
+    apd_goal: authenticity
+    disposition: risk
+
+  - id: auth-3bd1768d
+    severity: high
+    title: "Service-to-service auth inside the IdP cluster (Server↔Worker, Server↔PostgreSQL) uses Django session / bearer tokens not workload identity"
+    apd_goal: authenticity
+    disposition: risk
+
+  - id: auth-5216893e
+    severity: medium
+    title: "OIDC `pairwise` subject type support is not enumerated; default subject mode is hashed user ID"
+    apd_goal: authenticity
+    disposition: blocked
+
+  - id: nonrep-6ff98de3
+    severity: high
+    title: "Expression-policy side-effecting helpers (`ak_send_email`, `ak_create_jwt`, `ak_call_policy`) do not auto-emit audit Events; `ak_create_event` is opt-in"
+    apd_goal: non_repudiation
+    disposition: gap
+
+  - id: nonrep-c3d8f98d
+    severity: high
+    title: "Audit pipeline is operator-driven via container stdout aggregation; absent log forwarding, the source-of-truth is the mutable Postgres-resident Event log"
+    apd_goal: non_repudiation
+    disposition: risk
+
+  - id: nonrep-c772c9f2
+    severity: high
+    title: "Per-token audit anchor (linking issuance, refresh, revocation, use via JWT `jti` or opaque token ID) is not enumerated"
+    apd_goal: non_repudiation
+    disposition: gap
+
+  - id: nonrep-fd5e012c
+    severity: high
+    title: "Cached LDAP outpost bind-success events are audited only on cache-miss; per-bind audit is incomplete during the cache lifetime"
+    apd_goal: non_repudiation
+    disposition: risk
+
+  - id: nonrep-a18644b2
+    severity: medium
+    title: "Audit time-source policy is not enumerated; timestamp precision and NTP discipline for token-issuance audit are unconfirmed"
+    apd_goal: non_repudiation
+    disposition: blocked
+
+  - id: nonrep-4ff2b1ac
+    severity: medium
+    title: "Account Lockdown audit Event captures actor and reason but not actor AAL / source IP / geographic context"
+    apd_goal: non_repudiation
+    disposition: risk
+
+  - id: nonrep-a8ea0a0c
+    severity: high
+    title: "OAuth consent grant events are audited at grant; per-use of the granted scope is not audited (GDPR Article 5(2) accountability gap)"
+    apd_goal: non_repudiation
+    disposition: gap
+
+  - id: nonrep-52e5e762
+    severity: high
+    title: "SAML assertion log captures issuance; per-assertion attribute-release set is not enumerated as captured"
+    apd_goal: non_repudiation
+    disposition: gap
+
+  - id: immut-d98cdc96
+    severity: high
+    title: "Event audit records live in mutable PostgreSQL rows with no hash-chain, no WORM substrate, no append-only enforcement"
+    apd_goal: immutability
+    disposition: gap
+
+  - id: immut-512f82c9
+    severity: high
+    title: "OAuth UserConsent records appear to be mutable; consent revocation as a new event vs. consent-record overwrite is not asserted"
+    apd_goal: immutability
+    disposition: gap
+
+  - id: immut-1dc13874
+    severity: high
+    title: "Signing-key rotation history retention is not enumerated; after-the-fact 'which kid signed which token at what time' verification not supported"
+    apd_goal: immutability
+    disposition: gap
+
+  - id: immut-df287568
+    severity: high
+    title: "Federation-trust changes are admin-tier consequential actions without GitOps drift detection between declared and actual state"
+    apd_goal: immutability
+    disposition: gap
+
+  - id: immut-d9147be5
+    severity: medium
+    title: "Per-audit-class retention policy is not enumerated; the platform-wide '365 days' default does not differentiate authn / token / consent / federation / key-lifecycle / admin retention"
+    apd_goal: immutability
+    disposition: blocked
+
+  - id: immut-fc608bca
+    severity: medium
+    title: "Identity-proofing artifact retention (IAL2/IAL3 verification evidence) is not addressed in inputs"
+    apd_goal: immutability
+    disposition: uncertainty

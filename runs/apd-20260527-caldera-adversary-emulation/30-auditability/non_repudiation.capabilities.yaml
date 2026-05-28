@@ -1,0 +1,37 @@
+schema_version: 1
+agent: non_repudiation
+capability:
+  - schema_version: 1
+    id: nonrep-cap-f135a692
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    title: "Link record carries operator-creator attribution by Operation reference"
+    description: |
+      Operation carries a creator field at create time; each Link
+      generated as part of an Operation inherits the Operation
+      reference, transitively attributing the executed step to the
+      creating operator. Provides an in-memory attribution chain
+      that — if audit were emitted — would carry operator identity.
+    maturity: implemented
+    scope: |
+      Confirmed for Links created via the standard Operation +
+      Planner flow. Not addressed: ad-hoc manual REST POSTs that
+      create Links outside the Operation pipeline (INV-AUTHZ-001
+      reviewer-note); the API-key path attributes only to a group
+      (auth-31296050); no audit emit makes the attribution data
+      undurable.
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTHZ-001"
+        excerpt: "Operation carries a creator field at create time; Link inherits it via the Operation reference"
+      - artifact: tech_plan.md
+        locator: "§8 'Data model'"
+        excerpt: "Link — one executed step in an operation (the audit grain)"
+    control_mappings:
+      nist_800_53r5: [AU-3, "AU-3(1)", AU-10]
+    caveats:
+      - "In-memory only; no durable audit emission."
+      - "Ad-hoc manual flows may bypass the attribution path."
+      - "API-key path only attributes to group, not user."
+    related_concerns: [authenticity, immutability]
