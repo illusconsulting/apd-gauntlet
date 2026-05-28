@@ -1,0 +1,394 @@
+finding:
+  - schema_version: 1
+    id: resil-c7975476
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No circuit breaker on outbound calls — identity to gateway, workshop to mechanic, chatbot to LLM"
+    summary: "Three outbound integration points have no documented circuit-breaker; vendor degradation cascades unbounded into the caller."
+    detail: |
+      The Resilient lens on the outbound integration topology:
+
+      - identity → gateway-service: VIN owner lookup and payment dispatch.
+        No circuit breaker documented.
+      - workshop → user-supplied mechanic_api: the SSRF surface; per
+        avail-6af5aff7 no rate limit either, but separately no
+        circuit breaker on per-target failure state.
+      - chatbot → external LLM provider: per architecture-index, the
+        chatbot calls OpenAI/Anthropic/Bedrock/etc. over the public
+        internet. No circuit breaker on provider failures.
+
+      Per the rubric's "No circuit breaker on outbound calls to
+      third-party APIs" pattern, this is a high-severity Resilient
+      finding: when the gateway is slow, identity's request-handler pool
+      saturates (no circuit-break → no fail-fast). When the LLM provider
+      is degraded, chatbot calls hang. The failure cascades because
+      the caller has no mechanism to mark the target as failing and
+      reject quickly.
+
+      This finding sits alongside avail-fb795bfb (no timeout) — the
+      timeout fix bounds the per-call cost; the circuit-breaker fix
+      bounds the aggregate cost across a window. Both are required.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS to https://api.mypremiumdealership.com (basic-auth) for VIN owner lookup and payment dispatch"
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Outbound"
+        excerpt: "plus the configured LLM provider over the public internet"
+      - artifact: architecture-index.md
+        locator: "§crapi-workshop Outbound"
+        excerpt: "arbitrary HTTP — merchant/contact_mechanic accepts a webhook URL and fetches it server-side"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "SC-5", "CP-13", "SI-17"]
+      cwe: ["CWE-405", "CWE-754"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: required
+      summary: "Add per-target circuit breakers with failure-rate threshold (50%, 5-second window) on every outbound integration."
+      detail: |
+        Per outbound path: (a) identity → gateway-service: Spring
+        Cloud Resilience4j CircuitBreaker around the
+        `GatewayServiceClient`, threshold 50% over 10 calls in a
+        5-second window, half-open after 30 seconds; (b) workshop →
+        mechanic_api: Python `pybreaker` or equivalent, per-host
+        breaker; (c) chatbot → LLM provider: per-provider breaker
+        with the provider-specific timeout-vs-error categorization
+        (rate-limit errors are not the same as provider unavailability).
+        Document in a §11 Resilience section of tech_plan.md.
+    related_concerns: [availability, distributed]
+    cross_references: [avail-fb795bfb]
+
+  - schema_version: 1
+    id: resil-776fc650
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No refresh-token rotation, no refresh-token reuse detection — 7-day session theft has no recovery signal"
+    summary: "JWT_EXPIRATION=604800000 (7 days) with no refresh-token rotation; a stolen token is valid for its full TTL with no signal a steal occurred."
+    detail: |
+      Per tech_plan §4, JWTs are 7-day TTL bearer tokens with no
+      refresh-token rotation, no JTI deny-list, no introspection
+      channel. Per R-2 in the threat model, after an account takeover
+      via JWT forgery (intg-15c04a1c) or OTP brute-force
+      (avail-e96ad7ff), the attacker's token persists for the full
+      7-day window even after the legitimate owner resets their
+      password or remediates.
+
+      The Resilient framing is recovery-signal: a robust auth design
+      converts credential theft into a detection event via
+      refresh-token reuse detection (the OAuth2.1 standard). crAPI's
+      absence of refresh tokens means there is no rotation, no reuse,
+      and therefore no detection signal. The runbook §10 explicitly
+      states "Cannot invalidate the attacker's session" — the absence
+      of a recovery mechanism is documented.
+
+      Severity is high per the rubric's "No detection of refresh-token
+      reuse" clause — even more sharply, the underlying refresh-token
+      mechanism is absent entirely so the rubric's premise is missing.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "No refresh-token rotation is specified. Expiration defaults to JWT_EXPIRATION=604800000 milliseconds (7 days)"
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "Cannot invalidate the attacker's session. No JTI revocation list. The attacker's bearer JWT remains valid until its 7-day expiry"
+      - artifact: threat-model.md
+        locator: "§3 R-2"
+        excerpt: "After account takeover via S-1/S-6, the legitimate owner regains access but the attacker's old token remains valid for the 7-day window"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(13)", "AC-12", "SI-4", "SI-17"]
+      mitre_attack:
+        - technique: "T1550"
+          sub_technique: "T1550.001"
+          tactic: "TA0008"
+          rationale: "7-day bearer-token TTL with no rotation provides a long-lived stolen token window with no detection of replay or reuse."
+      cwe: ["CWE-613", "CWE-384"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Introduce short-lived access tokens (1 hour) + rotating refresh tokens with reuse-detection; add a JTI deny-list for emergency revocation."
+      detail: |
+        (1) Drop access-token TTL to 1 hour. (2) Issue a refresh token
+        per login; refresh-token rotation on each access-token refresh.
+        (3) Detect refresh-token reuse (a previously-rotated refresh
+        token presented again) and revoke the entire token family on
+        the reuse signal — convert theft to detection. (4) Add a JTI
+        deny-list (Redis-backed; per-account, with the access-token
+        TTL as the deny-window) so password-change can revoke
+        outstanding tokens. (5) Document the runbook §10 update so
+        operators can use the revocation channel.
+    related_concerns: [authenticity, ephemeral, non_repudiation]
+    cross_references: [intg-15c04a1c, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: resil-5738d03e
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No graceful degradation for identity outage — total auth failure across cluster"
+    summary: "Identity unavailability collapses the entire crAPI deploy; no documented degraded-mode (read-only, cached-JWKS, queue-and-replay)."
+    detail: |
+      When identity is unavailable: (a) no new logins (no JWT issuance);
+      (b) verifier JWKS caches expire (per dist-5e588812) and
+      verifiers fail; (c) any flow that depends on identity
+      verification — every workshop call, every community call, every
+      chatbot call — degrades to 5xx.
+
+      There is no documented degraded-mode for any service. The
+      runbook §10 covers user-account incident response but not
+      identity-service outage response. The rubric's "No graceful
+      degradation specified for identity-provider outage" clause
+      maps directly.
+
+      Severity is medium per the rubric for the demo intent (no
+      enterprise reliance, no SLO commitment per avail-470902f0);
+      escalates to critical per the rubric clause for any deploy that
+      treats crAPI as a production identity tier.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "identity ↔ peers. Other services consume IDENTITY_SERVICE=crapi-identity:8080 to validate bearer JWTs"
+      - artifact: agents.md
+        locator: "§Implication for the APD review"
+        excerpt: "The operator is not expected to respond to security incidents — the deploy purpose is for the operator to cause security incidents and study them"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13", "IA-2", "SI-17"]
+      cwe: ["CWE-754"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For any deploy with user reliance, document a degraded-mode: verifiers retain last-known-good JWKS for 24h on identity outage."
+      detail: |
+        Document a degraded-mode protocol: on identity outage, every
+        verifier uses its last-known-good JWKS for up to 24 hours
+        (cross-ref dist-5e588812). New logins fail; existing tokens
+        continue to verify. Add an explicit `/healthz` distinction:
+        identity-up vs identity-degraded-but-tokens-verify.
+    related_concerns: [availability, distributed, authenticity]
+    cross_references: [dist-1f123cef, dist-5e588812]
+
+  - schema_version: 1
+    id: resil-9e865b2e
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No bulkhead between consumer-facing API paths and admin / contact_mechanic outbound paths"
+    summary: "All workshop endpoints share the same Python thread pool; an admin enumeration or contact_mechanic burst starves customer-facing traffic."
+    detail: |
+      The workshop service hosts:
+      - Customer-facing paths: /shop/products, /shop/orders, /shop/orders/{id}
+      - Admin enumeration paths: /shop/orders/all, /management/users/all
+      - Outbound-fetch paths: /merchant/contact_mechanic
+
+      All share a single thread/worker pool. An admin call to
+      `/shop/orders/all` that pulls a large result set, or a malicious
+      burst against `/contact_mechanic` (avail-6af5aff7), starves the
+      customer-facing /shop/orders endpoint of workers. The pattern
+      generalizes: any high-cost path in the same pool degrades every
+      other path.
+
+      Per the rubric's "No bulkhead between consumer-facing API paths
+      and administrative or batch paths" — severity is high there
+      because it cites CDE-scope batch jobs. Here severity is medium
+      because the batch surface is not CDE-bearing, but the customer-
+      starvation pattern is the same.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 Workshop surface"
+        excerpt: "GET /workshop/api/shop/orders/all <-- admin-shaped enumeration. GET /workshop/api/management/users/all <-- admin enumeration. POST /workshop/api/merchant/contact_mechanic <-- SSRF webhook (challenge 11), no rate limit (challenge 6)"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-6", "SI-13"]
+      cwe: ["CWE-400", "CWE-770"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Move /contact_mechanic and admin enumeration paths to a separate worker pool or a separate deployment."
+      detail: |
+        (a) Move the outbound-fetch logic of /contact_mechanic into a
+        separate worker (Celery task queue or a dedicated workshop
+        deployment with `cmd: gunicorn -k gthread` and a separate
+        worker count); (b) move admin enumeration paths to a separate
+        URL prefix /admin/* served by a sister deployment with
+        independent rate limits; (c) consider per-path rate budgets
+        within the same process if true deployment split is not
+        feasible.
+    related_concerns: [availability, distributed]
+    cross_references: [avail-6af5aff7]
+
+  - schema_version: 1
+    id: resil-01a11294
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Retry policy unspecified for outbound calls — backoff, jitter, budget, and idempotency interaction unknown"
+    summary: "Inputs do not specify retry behavior on identity→gateway, workshop→mechanic, or chatbot→LLM; thundering-herd risk on partial broker failure."
+    detail: |
+      Per the rubric's "Retry policy without jitter on the event-bus
+      consumer or webhook delivery" pattern, retry posture is an
+      Resilient finding when it is documented but inadequate, or
+      unspecified when the policy should exist. crAPI's three outbound
+      paths have no retry-policy documentation in inputs.
+
+      The interaction with idempotency (intg-ab3edc7a) is also
+      load-bearing: retries without idempotency keys produce duplicate
+      side effects. Per the rubric clause this is the relevant
+      coupling.
+
+      Disposition is `blocked` because the actual retry behavior in
+      each service is library-default — Spring's `RestTemplate` does
+      not retry; Python `requests` does not retry; Go `http.Client`
+      does not retry — so the structural concern is "no retries at all"
+      rather than "retries without discipline". This is itself a
+      Resilient finding (no resilience on transient failure) but
+      requires source confirmation; flagging blocked rather than
+      asserting absence.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS to https://api.mypremiumdealership.com (basic-auth) for VIN owner lookup and payment dispatch"
+      - artifact: architecture-index.md
+        locator: "§crapi-workshop Outbound"
+        excerpt: "arbitrary HTTP — merchant/contact_mechanic accepts a webhook URL and fetches it server-side"
+    prerequisite_evidence:
+      - "Per-service outbound HTTP client wrapper code (Spring RestTemplate config, Python requests retry adapter, Go transport config)"
+      - "Idempotency-key handling on each outbound path"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "SI-13(4)", "SC-5(1)"]
+      cwe: ["CWE-754", "CWE-755"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document and implement a retry policy: exponential backoff with jitter (2^n + rand), 3 retries max, with idempotency keys."
+      detail: |
+        Add a §11 retry-policy section to tech_plan.md declaring: 3
+        retries max, exponential backoff (1s, 2s, 4s base) with
+        jittered ±25% randomness, retry only on 5xx and connection
+        errors (not on 4xx), idempotency-key required on every
+        retryable outbound POST. Implement per-language: Spring
+        Retry, Python `requests-toolbelt` with `Retry`, Go `retryablehttp`.
+    related_concerns: [integrity, availability]
+    cross_references: [intg-ab3edc7a]
+
+  - schema_version: 1
+    id: resil-373918f9
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No graceful degradation specified for vendor outage (gateway-service or LLM provider)"
+    summary: "When gateway-service or any LLM provider returns 5xx, the calling service has no documented cached-fallback or queued-retry path; user-facing 500 is the default."
+    detail: |
+      Per the rubric's "Third-party API failure cascades to user-facing
+      5xx response" pattern, the absence of a graceful-degradation
+      strategy converts every vendor incident into a crAPI incident.
+
+      Two specific outbound paths:
+      - identity → gateway-service: when gateway returns 5xx, VIN
+        lookups and payment dispatch fail with no cached fallback.
+      - chatbot → LLM provider: when the configured provider is
+        rate-limiting or down, chatbot calls return 5xx with no
+        provider-fallback (the architecture supports multiple
+        providers — selection per-call would be the natural
+        degradation path).
+
+      Severity is medium per the rubric's "Third-party API failure
+      cascades" clause; the user-impact is bounded by how often the
+      vendor is degraded.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS to https://api.mypremiumdealership.com (basic-auth)"
+      - artifact: tech_plan.md
+        locator: "§3 boundary #6"
+        excerpt: "chatbot → ChromaDB and LLM provider. LLM providers are external; credentials are passed via environment"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13", "SI-17", "SC-5"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Define per-outbound degradation: cached-fallback for gateway VIN lookups, multi-provider fallback for LLM."
+      detail: |
+        (1) identity → gateway: cache the VIN→owner lookup in a
+        per-vehicle TTL cache (24h reasonable); on gateway 5xx, serve
+        cached value; on cache miss, return a 503 with Retry-After.
+        (2) chatbot → LLM: define a provider-preference list (e.g.,
+        OpenAI primary, Anthropic fallback) and switch on the
+        configured-provider 5xx; emit a header signaling the
+        provider-used so clients can interpret latency variance.
+    related_concerns: [availability, distributed, ephemeral]
+    cross_references: [resil-c7975476]
+
+  - schema_version: 1
+    id: resil-592113d0
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No chaos-engineering or game-day evidence; runbook lacks failure-mode catalog"
+    summary: "Runbook §12 punts to upstream GitHub Issues for in-depth troubleshooting; no documented failure-mode catalog, no game-day rehearsal evidence."
+    detail: |
+      Per the rubric's evidence ladder, `tested` and `operationalized`
+      maturity for Resilient capabilities requires chaos-engineering
+      or game-day evidence. crAPI's runbook covers only basic startup,
+      health checks, and known-incident response (a balance-went-wrong
+      report; an account-takeover report). There is no failure-mode
+      catalog ("what fails when X is down"), no documented
+      degraded-mode triggers, no game-day cadence.
+
+      This is `blocked` because the underlying intent (demo-only) makes
+      chaos-engineering inapplicable per agents.md. The prerequisite
+      for declaring resilience capabilities is a deploy intent that
+      warrants the investment.
+
+      Severity is medium because for the demo intent the absence is
+      correct; for any other intent it is the missing operational
+      foundation under everything else in this tier.
+    evidence:
+      - artifact: runbook.md
+        locator: "§12 Troubleshooting reference"
+        excerpt: "For in-depth issues, the operator is referred to the upstream GitHub Issues; no internal escalation path is defined"
+      - artifact: agents.md
+        locator: "§Operator capabilities"
+        excerpt: "The operator is not expected to: Respond to security incidents — the purpose of the deploy is for the operator to cause security incidents"
+    prerequisite_evidence:
+      - "Deploy intent declaration (demo / production-contemplated)"
+      - "Failure-mode catalog: per-service failure scenarios and their user-visible effects"
+      - "Game-day or chaos-engineering exercise records"
+    control_mappings:
+      nist_800_53r5: ["CP-2", "CP-2(5)", "SI-13"]
+      cwe: []
+      owasp_api_top10: []
+    recommendation:
+      posture: consider
+      summary: "For any non-demo deploy, add a failure-mode catalog to runbook.md; quarterly game-days for production-contemplated deploys."
+      detail: |
+        For demo: continue as-is. For non-demo: add a §13 to runbook.md
+        enumerating per-service failure scenarios (identity down,
+        Postgres down, Mongo down, gateway down, LLM provider down)
+        with the user-visible effect, the diagnostic step, and the
+        recovery action. For production-contemplated: schedule
+        quarterly game-days simulating each scenario and document the
+        observed behavior.
+    related_concerns: [availability, distributed]
+    cross_references: []

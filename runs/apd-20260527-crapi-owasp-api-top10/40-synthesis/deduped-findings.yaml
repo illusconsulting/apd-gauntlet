@@ -1,0 +1,1975 @@
+finding:
+  # ============================================================
+  # TIER 1 — Trustworthiness
+  # ============================================================
+  - schema_version: 1
+    id: conf-fb05be4e
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Vehicle-location endpoint discloses owner identity + GPS across users (BOLA #1)"
+    summary: "GET /identity/api/v2/vehicle/{vehicleId}/location returns latitude/longitude and owner full name to any authenticated caller; vehicleId leaks via community recent-posts."
+    detail: "See finding source; not duplicated in synthesis."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 BOLA #1"
+        excerpt: "endpoint accepts any UUID and returns latitude, longitude, and the owner's full name"
+    control_mappings:
+      nist_800_53r5: ["AC-3", "AC-3(7)", "AC-4", "AC-6", "SC-8", "SI-15"]
+      mitre_attack:
+        - {technique: "T1213", sub_technique: null, tactic: "TA0009", rationale: "Missing object-level authorization permits authenticated callers to harvest vehicle records at enumeration scale."}
+      cwe: ["CWE-639", "CWE-285"]
+      owasp_api_top10: ["API1:2023", "API3:2023"]
+    recommendation:
+      posture: required
+      summary: "Add ownership check on /vehicle/{vehicleId}/location and strip vehicleid from community recent-posts response."
+    related_concerns: [authenticity, integrity]
+
+  - schema_version: 1
+    id: conf-5369e807
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Mechanic-report endpoint discloses report bodies across users (BOLA #2)"
+    summary: "GET /workshop/api/mechanic/mechanic_report?report_id=N uses sequential integer IDs with no ownership check."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 BOLA #2"
+        excerpt: "Mechanic report IDs are sequential integers; the endpoint does not authorise the requester against the report owner"
+    control_mappings:
+      nist_800_53r5: ["AC-3", "AC-4", "AC-6", "SI-15"]
+      mitre_attack:
+        - {technique: "T1213", sub_technique: null, tactic: "TA0009", rationale: "Sequential integer IDs with missing ownership check enable trivial enumeration of mechanic-report records."}
+      cwe: ["CWE-639", "CWE-285", "CWE-340"]
+      owasp_api_top10: ["API1:2023"]
+    recommendation:
+      posture: required
+      summary: "Add ownership check on mechanic_report and migrate report_id to UUID."
+    related_concerns: [authenticity, non_repudiation]
+
+  - schema_version: 1
+    id: conf-c237e01d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "User dashboard and video responses leak internal fields (BOPLA read-side, EDE #4/#5)"
+    summary: "Dashboard and /videos/{video_id} serialize underlying ORM objects, exposing fields the UI never consumes (e.g., conversion_params)."
+    detail: "Linked to intg-62ebf664 (write-side of same field name)."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 EDE #4 and #5"
+        excerpt: "user dashboard / profile endpoints serialize fields the UI does not display; video object response includes an internal property"
+    control_mappings:
+      nist_800_53r5: ["AC-4", "SI-15", "SC-8"]
+      mitre_attack:
+        - {technique: "T1213", sub_technique: null, tactic: "TA0009", rationale: "ORM-default serialization exposes internal property names that aid downstream exploitation of write-side mass assignment."}
+      cwe: ["CWE-200", "CWE-213"]
+      owasp_api_top10: ["API3:2023"]
+    recommendation:
+      posture: required
+      summary: "Add explicit response-field allowlists to dashboard and video serializers."
+    related_concerns: [integrity, authenticity]
+    cross_references: [intg-62ebf664]
+
+  - schema_version: 1
+    id: merged-c829ffc8
+    agent: confidentiality  # primary; merged across 3 lenses
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Default JWT signing key + multi-algorithm verifier accepts forgeries — cluster-wide identity trust broken"
+    summary: "Merged: (a) services/identity/jwks.json ships private-key components by default, (b) verifier accepts alg:none, HS256-confusion, jku-fetch, kid-traversal; cluster auth is forgeable."
+    detail: |
+      Merged from three specialist findings (conf-c66f08cf Confidentiality,
+      intg-15c04a1c Integrity, auth-09ae00ed Authenticity).
+
+      The architectural concern combines two failures: (a) the default
+      install ships an RSA private key in `services/identity/jwks.json`
+      committed to the repo, and (b) the verifier accepts at least four
+      documented JWT forgery patterns. Either failure independently
+      yields forge-any-identity capability; together they are critical
+      authentication-bypass.
+
+      Severity is critical per "Forgeable session tokens at platform
+      scope" and "Authentication bypass to high-privilege functions
+      with no factor required" — both rubric clauses independently
+      apply.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication"
+        excerpt: "crAPI ships a default jwks.json containing the private key components (d, p, q, dp, dq, qi)"
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Consequences"
+        excerpt: "Algorithm-confusion (RS256 ↔ HS256) is the headline forgery vector"
+      - artifact: tech_plan.md
+        locator: "§9 JWT vulnerabilities #15"
+        excerpt: "Four documented variants: RS256↔HS256 algorithm confusion, alg:none on dashboard, jku misuse, kid path traversal"
+    lens_perspectives:
+      confidentiality:
+        summary: "Private signing key disclosed via repo commit; defaults compromise the trust anchor."
+        detail: "conf-c66f08cf framing — focuses on the key material disclosure."
+      integrity:
+        summary: "Verifier accepts forged tokens via multiple algorithm-confusion patterns; tamper detection on the JWT fails."
+        detail: "intg-15c04a1c framing — focuses on the verifier's tamper-detection failure."
+      authenticity:
+        summary: "Identity provenance broken: verifier cannot cryptographically prove the asserted identity is genuine."
+        detail: "auth-09ae00ed framing — focuses on the identity-verifiability collapse."
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-12(1)", "SC-12(2)", "SC-13", "IA-2", "IA-2(1)", "IA-2(8)", "IA-5(2)", "SI-7", "SI-7(1)", "SC-23", "SC-23(3)", "SC-17", "SC-28(1)"]
+      mitre_attack:
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Signing key checked into repository is a credential-in-files disclosure that enables forge-any-JWT against the entire cluster."}
+        - {technique: "T1606", sub_technique: null, tactic: "TA0006", rationale: "Verifier accepts forged web credentials due to absent algorithm pin, jku fetch, and kid-as-path."}
+        - {technique: "T1550", sub_technique: "T1550.001", tactic: "TA0008", rationale: "Forged JWT is presented as a valid application access token to every downstream service."}
+      cwe: ["CWE-321", "CWE-347", "CWE-345", "CWE-22", "CWE-798", "CWE-287"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Generate fresh per-install keypair; pin alg:RS256; remove JWT_SECRET; allowlist jku; restrict kid to known set."
+    related_concerns: [ephemeral, distributed, immutability, non_repudiation]
+    cross_references: [ephem-30d38360, dist-0a56c5f0]
+
+  - schema_version: 1
+    id: conf-8f7c8c8d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Mailhog web UI on :8025 exposes every OTP and password-reset email when LISTEN_IP!=127.0.0.1"
+    summary: "No authentication on Mailhog UI; documented LISTEN_IP=0.0.0.0 override removes the only barrier with no startup warning."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0003-mailhog-for-otp-delivery.md
+        locator: "Consequences"
+        excerpt: "Mailhog has no built-in authentication on :8025"
+    control_mappings:
+      nist_800_53r5: ["AC-3", "AC-4", "SC-7", "IA-2", "SC-8"]
+      mitre_attack:
+        - {technique: "T1110", sub_technique: "T1110.001", tactic: "TA0006", rationale: "Direct read access to delivered OTPs collapses the OTP entropy bound to zero."}
+      cwe: ["CWE-306", "CWE-200"]
+      owasp_api_top10: ["API8:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Gate Mailhog UI behind basic-auth; emit startup warning on LISTEN_IP override."
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: merged-44bdb663
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Shared plaintext admin/crapisecretpassword on Postgres+Mongo, all services, repo-tracked"
+    summary: "Merged: single shared credential in compose env (Confidentiality disclosure) collapses datastore tier into one failure domain (Distributed) and enables direct DB write bypass of service-layer controls."
+    detail: |
+      Merged from conf-3e324699 and dist-c047a7c0. The plaintext
+      credential is both a credential-disclosure concern
+      (Confidentiality) and a topology-of-trust concern (Distributed).
+      The same fix — per-service users + rotation — addresses both.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "user/password admin / crapisecretpassword (hardcoded in deploy/docker/docker-compose.yml)"
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Decision"
+        excerpt: "Both datastores accept the same admin credential. Every service that needs either datastore authenticates as admin"
+    lens_perspectives:
+      confidentiality:
+        summary: "Credential is plaintext in repo; anyone with repo or container access has datastore admin."
+        detail: "conf-3e324699 framing — the credential-itself disclosure."
+      distributed:
+        summary: "Single shared credential collapses N service trust domains into one datastore trust domain; service compromise yields full datastore."
+        detail: "dist-c047a7c0 framing — the topology-of-trust concern."
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-5(7)", "SC-12", "SC-28(1)", "AC-2", "AC-6", "AC-6(1)", "AC-6(5)", "SC-7"]
+      mitre_attack:
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Credentials in compose file are credentials-in-files disclosure granting full datastore read/write."}
+      cwe: ["CWE-798", "CWE-256", "CWE-250"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Provision per-service Postgres+Mongo users with collection-scoped grants; remove static creds from compose; rotate per-deploy."
+    related_concerns: [authenticity, ephemeral, integrity]
+    cross_references: [ephem-22c2358c]
+
+  - schema_version: 1
+    id: merged-514507e6
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "SSRF on contact_mechanic with unbounded rate — cloud metadata + internal services exfiltration"
+    summary: "Merged: (a) no URL allowlist on outbound fetch, (b) no input validation on URL field, (c) no rate limit, (d) response body returned to caller."
+    detail: |
+      Merged from conf-cf457739 (Confidentiality / data exfiltration),
+      intg-5c659bdb (Integrity / input validation), and avail-6af5aff7
+      (Availability / rate limit). The single architectural fix —
+      input-validating typed URL with allowlist + per-token rate limit
+      + no response-body return — closes all three concerns.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 SSRF #11"
+        excerpt: "mechanic_api URL fetched server-side, returning the HTTP response body to the caller. No allowlist"
+      - artifact: tech_plan.md
+        locator: "§9 No Rate Limit #6"
+        excerpt: "No throttle on the contact-mechanic submission endpoint; arbitrary outbound webhook fan-out"
+    lens_perspectives:
+      confidentiality:
+        summary: "Response body returned to caller enables cloud-metadata + internal-service data extraction."
+        detail: "conf-cf457739 framing."
+      integrity:
+        summary: "URL field accepts arbitrary string; no validation, no IP-resolution check, no DNS-rebinding defense."
+        detail: "intg-5c659bdb framing."
+      availability:
+        summary: "Unbounded request rate exhausts outbound socket/worker pool; reflective-DoS launchpad."
+        detail: "avail-6af5aff7 framing."
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-7(5)", "AC-4", "SC-8(1)", "SI-10", "SC-5", "SC-5(1)", "SC-6", "SI-13"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "SSRF on a public-facing endpoint with response body returned to caller enables cloud-metadata and internal-service data extraction."}
+        - {technique: "T1499", sub_technique: "T1499.003", tactic: "TA0040", rationale: "Unbounded outbound-fetch endpoint enables application-exhaustion DoS through resource starvation."}
+      cwe: ["CWE-918", "CWE-441", "CWE-770", "CWE-400", "CWE-20"]
+      owasp_api_top10: ["API7:2023", "API4:2023"]
+    recommendation:
+      posture: required
+      summary: "Add typed URL field with hostname allowlist + IP-resolution check; per-token rate limit (10/min); do not return fetched body to caller."
+    related_concerns: [authenticity, resilient]
+
+  - schema_version: 1
+    id: conf-bd613330
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Encryption at rest unconfigured on Postgres, Mongo, ChromaDB"
+    summary: "tech_plan and ADR-0004 explicitly state no encryption-at-rest is configured; specifics of remediation depend on deploy substrate."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§10 Out-of-scope"
+        excerpt: "Encryption at rest. Not configured anywhere in the inputs"
+    prerequisite_evidence:
+      - "Target deploy substrate and disk-encryption posture"
+      - "Field-level vs full-disk encryption decision; key-management hierarchy"
+    control_mappings:
+      nist_800_53r5: ["SC-28", "SC-28(1)", "SC-12", "MP-4"]
+      cwe: ["CWE-311", "CWE-312"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add encryption-at-rest posture to ADR-0004 with deploy-substrate-specific implementation."
+    related_concerns: [ephemeral, immutability]
+
+  - schema_version: 1
+    id: conf-b7aaa1e7
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Password storage scheme unspecified in inputs"
+    summary: "users.password storage is not described; modern API security demands argon2/scrypt/bcrypt with tuned parameters."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§5 Data model"
+        excerpt: "password (storage scheme unspecified in inputs)"
+    prerequisite_evidence:
+      - "Spring Security password-encoder bean configuration in identity"
+      - "argon2/scrypt/bcrypt cost factor in effect"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "SC-13"]
+      cwe: ["CWE-916", "CWE-256", "CWE-326"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document password-storage posture in ADRs or tech_plan and confirm via code review."
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: conf-d760cafe
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Gateway-service VIN-to-PII oracle exposes bulk PII and payment data"
+    summary: "api.mypremiumdealership.com returns SSN/address/card_number deterministically seeded by VIN; basic-auth alone gates."
+    detail: "See finding source."
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§api.mypremiumdealership.com"
+        excerpt: "Returns deterministically faked PII (name, phone, ssn, address, card_number) seeded from fnv32a(VIN)"
+    control_mappings:
+      nist_800_53r5: ["AC-3", "AC-4", "AC-6", "SC-7", "IA-5"]
+      mitre_attack:
+        - {technique: "T1213", sub_technique: null, tactic: "TA0009", rationale: "Deterministic VIN-seeded PII repository with weak basic-auth gating enables collection of bulk personal and payment data when paired with VIN enumeration."}
+      cwe: ["CWE-639", "CWE-340", "CWE-200"]
+      owasp_api_top10: ["API1:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Replace deterministic VIN-seeding with per-deploy random; add rate-limit + audit on /owners."
+    related_concerns: [authenticity, ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: conf-fffef009
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "JWT carries excessive claims — full PII profile likely embedded in 7-day bearer tokens"
+    summary: "7-day TTL with no documented claim-minimization; standard Spring practice serializes full user record."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "Expiration defaults to JWT_EXPIRATION=604800000 milliseconds (7 days)"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "AC-4", "SC-28", "AU-3"]
+      cwe: ["CWE-200", "CWE-532"]
+      owasp_api_top10: ["API3:2023", "API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Reduce JWT TTL to 1 hour and limit claims to {sub, iss, aud, exp, jti, scope}."
+    related_concerns: [ephemeral, authenticity]
+    cross_references: [ephem-96d3befb]
+
+  - schema_version: 1
+    id: conf-5f25ca4e
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "TLS configuration policy unspecified when TLS_ENABLED=true"
+    summary: "Version floor, cipher suite, certificate validation, mTLS topology unspecified."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Deployment topologies"
+        excerpt: "TLS_ENABLED=true to switch services into HTTPS-backed mode"
+    prerequisite_evidence:
+      - "TLS policy: version floor, cipher suite allowlist, certificate-validation on outbound"
+      - "mTLS posture at in-cluster service-to-service hop"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "SC-8(1)", "SC-12", "SC-23", "IA-3"]
+      cwe: ["CWE-326", "CWE-319"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add TLS policy section to tech_plan.md naming version floor, cipher allowlist, certificate-validation."
+    related_concerns: [authenticity, integrity, ephemeral]
+
+  # ---- Integrity ----
+  - schema_version: 1
+    id: intg-e7ebcc95
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "Mass assignment on /workshop/api/shop/orders accepts negative quantity → arbitrary credit inflation"
+    summary: "Server multiplies unit_price × quantity unconditionally; quantity:-100 inflates balance by 100×price."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 Mass Assignment #8/#9"
+        excerpt: "POST /workshop/api/shop/orders allows negative quantity. The server applies the credit delta unconditionally, letting the caller mint balance"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "SI-10(5)", "AC-3", "SI-15", "CM-5"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "Allowlist-free deserialization with missing input constraint enables direct manipulation of financial state via a single crafted request."}
+      cwe: ["CWE-915", "CWE-20", "CWE-840"]
+      owasp_api_top10: ["API3:2023", "API6:2023"]
+    recommendation:
+      posture: required
+      summary: "Enforce quantity ≥ 1 server-side; replace ORM-bind with explicit allowlist serializer; compute unit_price server-side."
+    related_concerns: [confidentiality, availability]
+
+  - schema_version: 1
+    id: intg-6d98c520
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: uncertainty
+    severity: high
+    confidence: medium
+    title: "Server-derived unit_price not confirmed on order-create path"
+    summary: "Inputs do not confirm whether unit_price is server-derived from product record or accepted from request body."
+    detail: "See finding source."
+    evidence:
+      - artifact: threat-model.md
+        locator: "§2 T-4"
+        excerpt: "If unit_price or total is passed in the request body and stored verbatim, the attacker pays an arbitrary amount"
+    prerequisite_evidence:
+      - "POST /shop/orders request-body schema"
+      - "OrderCreateView source for unit_price assignment"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "AC-3", "SI-15"]
+      cwe: ["CWE-915", "CWE-840"]
+      owasp_api_top10: ["API3:2023", "API6:2023"]
+    recommendation:
+      posture: required
+      summary: "Confirm unit_price is server-derived; if not, fix per intg-e7ebcc95."
+    related_concerns: [confidentiality]
+
+  - schema_version: 1
+    id: intg-b7417f91
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "NoSQL injection on /community/api/v2/coupon/validate-coupon"
+    summary: "Request body is parsed directly into a Mongo query selector; arbitrary document read across shared-credential collections."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 NoSQL Injection #12"
+        excerpt: "/community/api/v2/coupon/validate-coupon endpoint parses the request body directly into a Mongo query selector"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "SI-10(5)", "AC-3", "AC-6"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "User-controlled JSON forwarded as a Mongo query selector enables operator-injection against arbitrary collections in the shared-credential datastore."}
+      cwe: ["CWE-943", "CWE-89", "CWE-20"]
+      owasp_api_top10: ["API10:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Unmarshal into typed struct; never pass user input as Mongo selector."
+    related_concerns: [confidentiality, availability]
+
+  - schema_version: 1
+    id: intg-2aeb03f1
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "SQL injection on /workshop/api/shop/apply_coupon (string-concat UPDATE)"
+    summary: "Coupon code concatenated into SQL UPDATE; UPDATE injection re-arms claimed flags; UNION reads PII tables under shared admin."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 SQL Injection #13"
+        excerpt: "workshop apply_coupon flow concatenates SQL; UPDATE statements can be injected to clear claimed flags"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "SI-10(5)", "AC-3", "AC-6", "CM-5"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "User input concatenated into SQL fragment enables UNION-based read of PII tables sharing the same connection credential."}
+      cwe: ["CWE-89", "CWE-20"]
+      owasp_api_top10: ["API10:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Replace string-concat SQL with parameterized queries; audit every workshop handler."
+    related_concerns: [confidentiality, immutability]
+
+  - schema_version: 1
+    id: intg-62ebf664
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Mass assignment on /identity/api/v2/user/videos/{video_id} accepts internal fields"
+    summary: "Shadow video-update endpoint persists arbitrary request body fields including the conversion_params field leaked by EDE #5."
+    detail: "Linked to conf-c237e01d (read-side leak of same field)."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 Mass Assignment #10"
+        excerpt: "shadow update endpoint accepts arbitrary internal video fields, reachable by leveraging the leaked field name from #5"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "AC-3", "SI-15"]
+      mitre_attack:
+        - {technique: "T1190", sub_technique: null, tactic: "TA0001", rationale: "Allowlist-free deserialization permits writes to internal fields whose names leak via paired read-side BOPLA."}
+      cwe: ["CWE-915", "CWE-20"]
+      owasp_api_top10: ["API3:2023"]
+    recommendation:
+      posture: required
+      summary: "Add allowlist serializer on video-update; strip conversion_params from writeable set."
+    related_concerns: [confidentiality, authenticity]
+    cross_references: [conf-c237e01d]
+
+  - schema_version: 1
+    id: intg-a6b6d147
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: medium
+    title: "Mass-assignment on user-update may expose role field (E-3)"
+    summary: "Possible mass-assignment to users.role on self-update endpoint; not confirmed in OpenAPI but consistent with pattern."
+    detail: "See finding source."
+    evidence:
+      - artifact: threat-model.md
+        locator: "§6 E-3"
+        excerpt: "Caller submits {role: admin} alongside benign fields on a self-update; the field is bound to the user record"
+    prerequisite_evidence:
+      - "Identity user-update endpoint definition and request schema"
+      - "Spring binding-allowlist or @JsonIgnoreProperties on User entity"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "AC-3", "AC-6"]
+      mitre_attack:
+        - {technique: "T1078", sub_technique: null, tactic: "TA0004", rationale: "Mass-assignment write to role field is the canonical privilege-escalation path through valid-account binding."}
+      cwe: ["CWE-915", "CWE-269"]
+      owasp_api_top10: ["API3:2023", "API5:2023"]
+    recommendation:
+      posture: required
+      summary: "Add allowlist DTO that excludes role on any user-update endpoint."
+    related_concerns: [authenticity, confidentiality]
+
+  - schema_version: 1
+    id: intg-ab3edc7a
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Coupon redemption is not idempotent — SQL injection re-arms claimed flag"
+    summary: "INV-INPUT-003 asserts idempotency; SQL injection on apply_coupon defeats the claimed-state check."
+    detail: "Linked to intg-2aeb03f1."
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-INPUT-003"
+        excerpt: "Challenge 13 contradicts via SQL injection on the claimed-state UPDATE"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "SI-7", "SC-5", "AU-12"]
+      cwe: ["CWE-89", "CWE-840"]
+      owasp_api_top10: ["API6:2023", "API10:2023"]
+    recommendation:
+      posture: required
+      summary: "Fix underlying SQL injection (intg-2aeb03f1); add UNIQUE (coupon_code, claimed_by) constraint."
+    related_concerns: [confidentiality, availability, non_repudiation]
+    cross_references: [intg-2aeb03f1]
+
+  - schema_version: 1
+    id: merged-d2e871f5
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Chatbot prompt-injection drives admin actions; embedded credential breaks attribution"
+    summary: "Merged: (a) chatbot holds admin credential, (b) prompt-injection induces tool calls under admin authority, (c) downstream audit attributes to admin not prompt author."
+    detail: |
+      Merged from intg-078ee9f6 (Integrity write-path), auth-55e76c4d
+      (Authenticity credential-binding), nonrep-fc423071 (Non-
+      Repudiation attribution), ephem-b95a7d11 (Ephemeral rotation).
+      Four-lens merge; single fix.
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Role"
+        excerpt: "API_USER=admin@example.com / API_PASSWORD=Admin!123 — a privileged crAPI credential used to act on behalf of users"
+      - artifact: tech_plan.md
+        locator: "§9 LLM #16/17/18"
+        excerpt: "Chatbot prompt-injection allowing client-side rendering injection (#16), credential extraction (#17), action-on-behalf-of (#18)"
+    lens_perspectives:
+      integrity:
+        summary: "Prompt-injection bypasses input validation on the chatbot tool surface; user prompt drives crAPI write-path."
+        detail: "intg-078ee9f6 framing."
+      authenticity:
+        summary: "Embedded admin credential makes the chatbot a credential proxy; identity-to-actor binding is broken."
+        detail: "auth-55e76c4d framing."
+      non_repudiation:
+        summary: "Downstream audit (if any) attributes to admin@example.com, not prompt author."
+        detail: "nonrep-fc423071 framing."
+      ephemeral:
+        summary: "Embedded credential has no rotation procedure; compromise is permanent and undetectable."
+        detail: "ephem-b95a7d11 framing."
+    control_mappings:
+      nist_800_53r5: ["SI-10", "AC-3", "AC-6", "AC-6(1)", "AC-6(5)", "IA-9", "IA-2", "AU-3", "AU-3(1)", "AU-10", "IA-5"]
+      mitre_attack:
+        - {technique: "T1078", sub_technique: null, tactic: "TA0004", rationale: "Embedded admin credential is a valid-account that prompt-injection coerces into use for privileged operations on behalf of unprivileged users."}
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Long-lived admin credential in container env; single exposure (image pull, prompt-injection extraction) yields permanent admin authority."}
+      cwe: ["CWE-77", "CWE-285", "CWE-269", "CWE-94", "CWE-798", "CWE-223"]
+      owasp_api_top10: ["API5:2023", "API8:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Remove embedded credential; chatbot acts under prompt author's bearer; tool-call allowlist per user role; audit every chat-driven call."
+    related_concerns: [confidentiality]
+
+  - schema_version: 1
+    id: intg-8d97cd9f
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "ENABLE_LOG4J and ENABLE_SHELL_INJECTION feature flags wire deliberate injection sinks"
+    summary: "Default-false env flags activate log4shell-style and command-injection sinks when flipped; no operator signal on activation."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 Implicit posture facts"
+        excerpt: "ENABLE_LOG4J=false flag exists. ENABLE_SHELL_INJECTION=false flag exists in the identity env"
+    control_mappings:
+      nist_800_53r5: ["CM-7", "CM-7(5)", "SI-10", "SI-7", "CM-3"]
+      cwe: ["CWE-94", "CWE-78", "CWE-117"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Remove injection-sink flags entirely; replace with explicit demo-mode versioning with startup banner."
+    related_concerns: [confidentiality, availability]
+
+  - schema_version: 1
+    id: intg-b097f9a8
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Cross-store consistency between coupons (Postgres) and coupon_documents (Mongo) is application-mediated"
+    summary: "No coordination protocol; partial-failure behavior unspecified."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Consequences"
+        excerpt: "Cross-store consistency is the application's responsibility"
+    prerequisite_evidence:
+      - "Cross-store coupon-flow source"
+      - "Reconciliation script or runbook"
+    control_mappings:
+      nist_800_53r5: ["SI-7", "SI-10", "CP-12"]
+      cwe: ["CWE-362", "CWE-840"]
+      owasp_api_top10: ["API6:2023", "API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document the coupon-flow saga; add reconciliation runbook and periodic divergence check."
+    related_concerns: [resilient, distributed, non_repudiation]
+
+  # ---- Availability ----
+  # avail-6af5aff7 was merged into merged-514507e6
+  - schema_version: 1
+    id: avail-e96ad7ff
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No rate limit on /identity/api/auth/v3/check-otp (4-digit space, 10k entries)"
+    summary: "Unbounded guess attempts against trivial OTP space; brute force completes in seconds."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication, /v3/check-otp"
+        excerpt: "rate-limiting on v2 was added but v3 and other variants remain bypassable"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-5(1)", "AC-7", "AC-7(2)", "IA-5"]
+      mitre_attack:
+        - {technique: "T1110", sub_technique: "T1110.001", tactic: "TA0006", rationale: "Unrate-limited OTP verification permits brute-force of 4-digit keyspace in seconds, enabling account takeover."}
+      cwe: ["CWE-307", "CWE-770"]
+      owasp_api_top10: ["API4:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Apply identical rate-limit + lockout to every check-otp variant; centralize OTP-verification logic; increase OTP entropy to 6+ digits."
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: avail-c1ffcf8e
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No rate limit on /identity/api/auth/forget-password"
+    summary: "Unbounded OTP-issuance saturates mailhog ring buffer and resets active OTP."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0003-mailhog-for-otp-delivery.md
+        locator: "Consequences"
+        excerpt: "No replay or throttling discipline on OTP issuance"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "AC-7", "IA-5"]
+      cwe: ["CWE-307", "CWE-770"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: required
+      summary: "Cap OTP issuance to 3 per account per hour; per-IP cap 20/hour."
+    related_concerns: [authenticity, ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: avail-fb795bfb
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No timeout on outbound calls — identity→gateway, workshop→mechanic, chatbot→LLM"
+    summary: "Outbound HTTP timeout discipline undocumented; vendor slowdown pins thread pools."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS to https://api.mypremiumdealership.com"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SI-13", "CP-13"]
+      cwe: ["CWE-400", "CWE-1088"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: required
+      summary: "Establish outbound timeout policy: 5s connect, 10s total per call."
+    related_concerns: [resilient, distributed]
+
+  - schema_version: 1
+    id: avail-470902f0
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No SLO/SLI declared for any service or surface"
+    summary: "agents.md explicitly states no SLO commitment; no error budget, no burn-rate alerting."
+    detail: "See finding source."
+    evidence:
+      - artifact: agents.md
+        locator: "§Who operates crAPI"
+        excerpt: "There is no enterprise operator. There is no on-call rotation. There is no SLO commitment"
+    prerequisite_evidence:
+      - "Declared availability target for any production-intent deploy"
+    control_mappings:
+      nist_800_53r5: ["CP-2", "CP-2(3)", "SI-13"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "If non-demo deploy contemplated, declare 99% SLO on auth path."
+    related_concerns: [resilient, distributed]
+
+  - schema_version: 1
+    id: avail-898bfad0
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Health checks are shallow — port-availability, not dependency-aware"
+    summary: "/health_check endpoints probe local readiness only; chatbot has no documented external health endpoint."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§2 Health checks"
+        excerpt: "Each service ships a health.sh invoked by the compose healthcheck: block"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "CP-10", "SC-5"]
+      cwe: ["CWE-754", "CWE-1088"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add dependency-aware /readyz endpoints; document expected shape."
+    related_concerns: [resilient]
+
+  - schema_version: 1
+    id: avail-8ad04f0e
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No backup or restore procedure documented"
+    summary: "Runbook §10 explicitly states no backup/restore tooling; PITR, RPO/RTO unspecified."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "Backups: unspecified. No backup, restore, or PITR procedure ships"
+    prerequisite_evidence:
+      - "Deploy intent and corresponding RPO/RTO target"
+      - "Cross-store consistency requirement for backup approach"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "CP-9(1)", "CP-9(8)", "CP-10", "CP-10(2)"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, add coordinated Postgres+Mongo backup with stated RPO/RTO."
+    related_concerns: [immutability, distributed, confidentiality]
+
+  - schema_version: 1
+    id: avail-b01847b0
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Compose resource limits (cpus:0.8, memory:384M) easily exhausted by DoS"
+    summary: "Tight limits + rate-limit gaps = trivial pod OOM under modest probe traffic."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "Resource limits are uniformly tight. cpus: 0.8, memory: 384M per service"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-6", "SI-13"]
+      cwe: ["CWE-770", "CWE-400"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, raise limits to ≥1 vCPU/1 GiB; add per-service profiles in Helm."
+    related_concerns: [distributed, resilient]
+
+  - schema_version: 1
+    id: avail-004444b5
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Chatbot LLM cost amplification (denial of wallet)"
+    summary: "No prompt-length cap, no per-user rate limit, no token-budget guardrail."
+    detail: "See finding source."
+    evidence:
+      - artifact: threat-model.md
+        locator: "§5 D-3"
+        excerpt: "Caller submits very long prompts that the chatbot forwards to the configured LLM provider"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-6", "AC-7"]
+      cwe: ["CWE-770", "CWE-400"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add prompt-length cap (4K tokens), per-user 10/hr, per-user daily token budget."
+    related_concerns: [ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: avail-4f60016d
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No unbounded-request-size guard documented on ingress or backend services"
+    summary: "max_request_body_size unspecified; 200 MiB POST can pin a worker on a 384 MiB pod."
+    detail: "See finding source."
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-web"
+        excerpt: "Nginx config templates under services/web/ (nginx.conf.template, nginx.ssl.conf.template)"
+    prerequisite_evidence:
+      - "nginx.conf.template content showing client_max_body_size directive"
+      - "Per-backend service request-size configuration"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-5(1)", "SI-10"]
+      cwe: ["CWE-400", "CWE-770"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Set client_max_body_size=2M on OpenResty; mirror in each backend service."
+    related_concerns: [integrity, resilient]
+
+  # ============================================================
+  # TIER 2 — Scalability
+  # ============================================================
+  - schema_version: 1
+    id: dist-1f123cef
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Single-host topology by design — identity is a cluster-wide SPOF"
+    summary: "All services on one host per agents.md; identity service compromise/outage = total cluster auth failure."
+    detail: "See finding source."
+    evidence:
+      - artifact: agents.md
+        locator: "§Intended runtime"
+        excerpt: "Default target: a single host"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "CP-7", "SC-36", "CP-2"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, split into ≥2 AZs with identity replicated."
+    related_concerns: [availability, resilient, authenticity]
+
+  - schema_version: 1
+    id: dist-04709717
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Postgres and Mongo are single-instance with no replication topology"
+    summary: "Single-container datastores; no Mongo replSet, no Postgres streaming replication; single corrupted volume = total data loss."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "PostgreSQL 14 (postgresdb). Single database crapi"
+    control_mappings:
+      nist_800_53r5: ["SC-36", "CP-7", "CP-9", "SC-7"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, configure Postgres streaming replication and Mongo replSet."
+    related_concerns: [availability, integrity, ephemeral]
+    cross_references: [avail-8ad04f0e]
+
+  - schema_version: 1
+    id: dist-5e588812
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Service-to-service auth via shared single JWKS — coupled failure with identity"
+    summary: "Every service fetches JWKS from identity; identity unavailability eventually fails every verifier."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "Other services consume IDENTITY_SERVICE=crapi-identity:8080 to validate bearer JWTs against the JWKS endpoint"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-22", "CP-13"]
+      cwe: ["CWE-754"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document and harden per-service JWKS cache: TTL 1h, last-known-good 24h on fetch failure."
+    related_concerns: [resilient, availability, authenticity, ephemeral]
+    cross_references: [dist-1f123cef]
+
+  # dist-c047a7c0 merged into merged-44bdb663
+  - schema_version: 1
+    id: dist-bc4789b6
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No network policy in shipped Helm values restricts in-cluster reachability"
+    summary: "Default-Kubernetes networking allows any-to-any; combined with shared creds, SSRF pivots to direct datastore access."
+    detail: "See finding source."
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Operational gaps"
+        excerpt: "No network policy in shipped Helm values"
+    prerequisite_evidence:
+      - "deploy/helm/values.yaml content"
+      - "Cluster CNI declaration"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-7(5)", "SC-7(21)", "AC-4"]
+      cwe: ["CWE-732"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Add per-service NetworkPolicy resources to Helm chart."
+    related_concerns: [authenticity, confidentiality, ephemeral]
+    cross_references: [merged-44bdb663, merged-514507e6]
+
+  - schema_version: 1
+    id: dist-0a56c5f0
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Heterogeneous JWT-verifier implementations across language stacks (no shared module)"
+    summary: "Each service picks its own JWT library; verifier consistency is operator-discipline; alg-pinning drifts per challenge 15."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "JWT verification surface is heterogeneous. Every service has to pick a JWT library. There is no shared verification module"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-5(2)", "SC-23", "CM-2"]
+      cwe: ["CWE-345", "CWE-347"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Adopt a verifier-validation matrix in CI: single test suite hits every service's verifier with same forgery samples."
+    related_concerns: [authenticity, integrity]
+    cross_references: [merged-c829ffc8]
+
+  - schema_version: 1
+    id: dist-c5b2799b
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Mailhog is single instance with in-memory storage — OTP delivery is SPOF"
+    summary: "Container restart drops every captured OTP; no production SMTP path."
+    detail: "See finding source."
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§mailhog Datastores touched"
+        excerpt: "In-memory ring buffer"
+    control_mappings:
+      nist_800_53r5: ["CP-7", "SI-13", "SC-36"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, swap Mailhog for real SMTP relay."
+    related_concerns: [availability, authenticity, ephemeral]
+
+  # ---- Resilient ----
+  - schema_version: 1
+    id: resil-c7975476
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No circuit breaker on outbound calls — three integration points unprotected"
+    summary: "identity→gateway, workshop→mechanic, chatbot→LLM all lack documented circuit breakers; vendor degradation cascades."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "SC-5", "CP-13", "SI-17"]
+      cwe: ["CWE-405", "CWE-754"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: required
+      summary: "Add per-target circuit breakers with failure-rate threshold (50%, 5s window) on every outbound integration."
+    related_concerns: [availability, distributed]
+    cross_references: [avail-fb795bfb]
+
+  - schema_version: 1
+    id: resil-776fc650
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No refresh-token rotation, no refresh-token reuse detection — 7-day session theft has no recovery signal"
+    summary: "7-day bearer-token TTL with no revocation; stolen token persists full lifetime with no detection signal."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "Cannot invalidate the attacker's session. No JTI revocation list"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(13)", "AC-12", "SI-4", "SI-17"]
+      mitre_attack:
+        - {technique: "T1550", sub_technique: "T1550.001", tactic: "TA0008", rationale: "7-day TTL with no rotation provides long-lived stolen-token window with no replay or reuse detection."}
+      cwe: ["CWE-613", "CWE-384"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Short-lived (1h) access + rotating refresh + reuse-detection + JTI deny-list."
+    related_concerns: [authenticity, ephemeral, non_repudiation]
+    cross_references: [merged-c829ffc8, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: resil-5738d03e
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No graceful degradation for identity outage — total auth failure across cluster"
+    summary: "Identity unavailability collapses entire deploy; no documented degraded-mode."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "identity ↔ peers. Other services consume IDENTITY_SERVICE"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13", "IA-2", "SI-17"]
+      cwe: ["CWE-754"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: consider
+      summary: "Document degraded-mode: verifiers retain last-known-good JWKS for 24h on identity outage."
+    related_concerns: [availability, distributed, authenticity]
+    cross_references: [dist-1f123cef, dist-5e588812]
+
+  - schema_version: 1
+    id: resil-9e865b2e
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No bulkhead between consumer-facing API paths and admin / contact_mechanic outbound paths"
+    summary: "All workshop endpoints share one thread pool; admin enumeration or contact_mechanic burst starves customer traffic."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 Workshop surface"
+        excerpt: "GET /workshop/api/shop/orders/all <-- admin-shaped enumeration. POST /workshop/api/merchant/contact_mechanic <-- SSRF webhook, no rate limit"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "SC-6", "SI-13"]
+      cwe: ["CWE-400", "CWE-770"]
+      owasp_api_top10: ["API4:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Move /contact_mechanic and admin paths to separate worker pool or deployment."
+    related_concerns: [availability, distributed]
+    cross_references: [merged-514507e6]
+
+  - schema_version: 1
+    id: resil-01a11294
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Retry policy unspecified — no backoff, jitter, budget, idempotency-key interaction"
+    summary: "Three outbound paths have no documented retry posture; thundering-herd risk."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service"
+    prerequisite_evidence:
+      - "Per-service outbound HTTP client wrapper code"
+      - "Idempotency-key handling on each outbound path"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "SI-13(4)", "SC-5(1)"]
+      cwe: ["CWE-754", "CWE-755"]
+      owasp_api_top10: ["API4:2023", "API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document retry policy: 3 retries, exponential backoff with jitter, idempotency keys."
+    related_concerns: [integrity, availability]
+    cross_references: [intg-ab3edc7a]
+
+  - schema_version: 1
+    id: resil-373918f9
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No graceful degradation specified for vendor outage (gateway or LLM)"
+    summary: "Vendor 5xx cascades to user-facing 500; no cached fallback or multi-provider switching."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #5"
+        excerpt: "identity → gateway-service. Outbound HTTPS"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13", "SI-17", "SC-5"]
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API10:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Cached-fallback for gateway VIN lookups; multi-provider fallback for LLM."
+    related_concerns: [availability, distributed, ephemeral]
+    cross_references: [resil-c7975476]
+
+  - schema_version: 1
+    id: resil-592113d0
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "No chaos-engineering or game-day evidence; runbook lacks failure-mode catalog"
+    summary: "Operational maturity for Resilient capabilities requires chaos/game-day evidence; demo intent makes this blocked."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§12 Troubleshooting reference"
+        excerpt: "For in-depth issues, the operator is referred to the upstream GitHub Issues; no internal escalation path is defined"
+    prerequisite_evidence:
+      - "Deploy intent declaration"
+      - "Failure-mode catalog"
+      - "Game-day or chaos-engineering exercise records"
+    control_mappings:
+      nist_800_53r5: ["CP-2", "CP-2(5)", "SI-13"]
+      owasp_api_top10: []
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, add failure-mode catalog; quarterly game-days for production-contemplated."
+    related_concerns: [availability, distributed]
+
+  # ---- Ephemeral ----
+  - schema_version: 1
+    id: ephem-30d38360
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "JWT signing key has no rotation procedure (jwks.json effectively static)"
+    summary: "Runbook §5 GAP; ADR-0002 confirms no rotation tooling; key has indefinite lifetime."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§5 Rotate the JWT signing key"
+        excerpt: "GAP. No documented procedure ships in the input set"
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Consequences"
+        excerpt: "No rotation tooling"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-5(7)", "SC-12", "SC-12(1)", "AC-2"]
+      mitre_attack:
+        - {technique: "T1552", sub_technique: "T1552.001", tactic: "TA0006", rationale: "Static long-lived signing key makes credential-in-files exposure a permanent compromise."}
+      cwe: ["CWE-321", "CWE-798"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Ship rotate-jwks.sh with multi-kid grace window; document cutover policy."
+    related_concerns: [authenticity, integrity, immutability]
+    cross_references: [merged-c829ffc8]
+
+  - schema_version: 1
+    id: ephem-22c2358c
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Datastore admin credentials static — multi-service simultaneous restart required to rotate"
+    summary: "Runbook §6 GAP; rotation requires all consuming services restart simultaneously."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§6 Rotate datastore credentials"
+        excerpt: "GAP. The Postgres and Mongo passwords (crapisecretpassword) are hardcoded"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-5(7)", "AC-2", "SC-12"]
+      cwe: ["CWE-798", "CWE-321"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Per-service credentials via init container; rotate independently via secret store."
+    related_concerns: [authenticity, distributed, confidentiality]
+    cross_references: [merged-44bdb663]
+
+  # ephem-b95a7d11 merged into merged-d2e871f5
+  - schema_version: 1
+    id: ephem-96d3befb
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "7-day JWT TTL with no refresh-token rotation, no idle timeout, no logout"
+    summary: "Per tech_plan §4: 7-day bearer; no /logout endpoint; no idle-timeout, no credential-change-revokes-sessions semantics."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "There is no MFA. There is no documented session-revocation surface (no /logout endpoint)"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(13)", "AC-12", "AC-12(1)", "SC-10"]
+      cwe: ["CWE-613", "CWE-384"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "JWT TTL 1h; refresh-token rotation; /logout with JTI deny-list; idle timeout 30m."
+    related_concerns: [authenticity, resilient, non_repudiation]
+    cross_references: [resil-776fc650, merged-c829ffc8]
+
+  - schema_version: 1
+    id: ephem-6020f861
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "OTP TTL implied ~10 minutes but not asserted; re-issuance unbounded"
+    summary: "Challenge 3 implies TTL; ADR-0003 explicit on no throttling discipline."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§7 OTP delivery"
+        excerpt: "TTL: per challenge 3 solution discussion, the OTP expiry is short (~10 minutes) but the per-OTP attempt count on the v3 variant is unbounded"
+    prerequisite_evidence:
+      - "Identity OTP-handler TTL config value"
+      - "OTP re-issuance behavior (invalidates prior?)"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(13)", "AC-12"]
+      cwe: ["CWE-613"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Pin OTP TTL to 5 minutes; invalidate prior OTP on re-issuance."
+    related_concerns: [authenticity, availability]
+    cross_references: [avail-c1ffcf8e, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: ephem-a39a1f7b
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Gateway-service basic-auth credential undocumented and unrotated"
+    summary: "Per S-5 hard-coded in identity binary; rotation requires rebuild and redeploy."
+    detail: "See finding source."
+    evidence:
+      - artifact: threat-model.md
+        locator: "§1 S-5"
+        excerpt: "if static and obtainable (env dump, log leak, or simple guess against admin / Admin!123 — visible in the chatbot env)"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-5(7)", "SC-12"]
+      cwe: ["CWE-798"]
+      owasp_api_top10: ["API2:2023", "API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Externalize gateway basic-auth credential to env or vault; document rotation."
+    related_concerns: [authenticity, confidentiality]
+
+  - schema_version: 1
+    id: ephem-edcc17b4
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "ChromaDB pinned to :latest — image content can change without pull event"
+    summary: "Mutable image tag introduces deploy-time version drift."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services table"
+        excerpt: "chromadb — chromadb (chromadb/chroma:latest)"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "CM-3", "SA-15(7)", "SI-7", "SR-4"]
+      cwe: ["CWE-1357"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "Pin ChromaDB to specific version + digest; apply digest-pinning to all images."
+    related_concerns: [authenticity, immutability, integrity]
+
+  - schema_version: 1
+    id: ephem-2c1c7ecf
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Just-in-time human access not modeled; operator uses shared admin against datastores"
+    summary: "Runbook §9 instructs docker compose exec into postgresdb as admin; no time-boxed, audited, or approval-gated access."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§9 Respond to balance went wrong"
+        excerpt: "docker compose exec postgresdb psql -U admin -d crapi"
+    control_mappings:
+      nist_800_53r5: ["AC-2", "AC-2(2)", "AC-2(3)", "AC-6", "AC-6(9)", "AU-12"]
+      cwe: ["CWE-269"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "For shared deploys, per-operator credentials via vault dynamic secrets + bastion."
+    related_concerns: [authenticity, non_repudiation, confidentiality]
+
+  - schema_version: 1
+    id: ephem-3ad94819
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Per-session chatbot LLM provider key bootstrap has no session-end revocation documented"
+    summary: "POST /chatbot/genai/init accepts per-session OpenAI/Anthropic key; storage location and lifetime unspecified."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§8 Chatbot endpoints"
+        excerpt: "POST /genai/init <-- per-session LLM provider key bootstrap (OpenAI/Anthropic only)"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "AC-12", "SC-28"]
+      cwe: ["CWE-256", "CWE-613"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Document per-session key handling: in-memory only, scrubbed on session end, never logged."
+    related_concerns: [authenticity, confidentiality, non_repudiation]
+
+  # ============================================================
+  # TIER 3 — Auditability
+  # ============================================================
+  # auth-09ae00ed merged into merged-c829ffc8
+  - schema_version: 1
+    id: auth-4ef8b512
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "BFLA — admin video-delete reachable by non-admin tokens"
+    summary: "DELETE /identity/api/v2/admin/videos/{id} accepts any user token; role claim not checked."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 BFLA #7"
+        excerpt: "The admin path DELETE /identity/api/v2/admin/videos/{video_id} does not check the caller's role"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "AC-3", "AC-6", "AC-6(1)", "AC-6(7)"]
+      mitre_attack:
+        - {technique: "T1078", sub_technique: null, tactic: "TA0004", rationale: "Missing role check on admin-prefixed endpoint lets valid low-priv account perform admin operations."}
+      cwe: ["CWE-285", "CWE-269", "CWE-862"]
+      owasp_api_top10: ["API5:2023"]
+    recommendation:
+      posture: required
+      summary: "Add role check on /admin/* prefix; audit /shop/orders/all, /management/users/all for same pattern."
+    related_concerns: [integrity, non_repudiation]
+
+  - schema_version: 1
+    id: auth-0925a719
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: critical
+    confidence: high
+    title: "No MFA on any authentication surface — including admin"
+    summary: "Per tech_plan §4: 'There is no MFA' on any surface, including admin actions."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "There is no MFA"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-2(2)", "IA-2(6)", "IA-2(8)", "AC-6"]
+      mitre_attack:
+        - {technique: "T1078", sub_technique: null, tactic: "TA0004", rationale: "Absence of MFA on admin surfaces means stolen or forged credential yields admin authority with no second-factor barrier."}
+      cwe: ["CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Add TOTP MFA on login (optional user, required admin); WebAuthn for admin step-up."
+    related_concerns: [ephemeral, non_repudiation]
+
+  - schema_version: 1
+    id: auth-b57f022f
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OTP-based password reset is single-factor account-recovery"
+    summary: "Forget-password initiates reset via email-only claim; OTP success completes recovery with no additional verification."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication endpoints"
+        excerpt: "POST /identity/api/auth/forget-password — OTP email dispatch"
+    control_mappings:
+      nist_800_53r5: ["IA-5", "IA-5(1)", "IA-2", "IA-2(8)", "AC-7"]
+      cwe: ["CWE-640", "CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Require knowledge of prior password OR MFA factor for password reset; rate-limit forget-password."
+    related_concerns: [ephemeral, availability]
+    cross_references: [avail-c1ffcf8e, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: auth-5b90d6c3
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Service-to-service authentication via bearer JWT only, not mTLS or workload identity"
+    summary: "Plaintext HTTP in-cluster with header-trust; no mTLS, no SPIFFE."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #2"
+        excerpt: "Plain HTTP inside the Compose network unless TLS_ENABLED=true. No mutual TLS"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "SC-8(1)", "SC-23", "IA-3", "IA-9"]
+      mitre_attack:
+        - {technique: "T1557", sub_technique: null, tactic: "TA0006", rationale: "Plaintext in-cluster traffic with header-trust posture allows in-cluster observers to intercept and forge inter-service requests."}
+      cwe: ["CWE-319", "CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "For non-demo deploys, enable mTLS via service mesh (Linkerd/Istio) with SPIFFE workload identity."
+    related_concerns: [distributed, confidentiality, ephemeral]
+    cross_references: [dist-bc4789b6]
+
+  # auth-55e76c4d merged into merged-d2e871f5
+  - schema_version: 1
+    id: auth-04fcfb9a
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: gap
+    severity: medium
+    confidence: medium
+    title: "Container images not signed; no admission control verifies image authenticity"
+    summary: "No cosign/notation signature posture, no admission control; image-pull trust relies on registry."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "crapi/crapi-identity:${VERSION}"
+    control_mappings:
+      nist_800_53r5: ["SI-7", "SR-4", "SR-4(3)", "SR-4(4)", "SR-11", "CM-5"]
+      cwe: ["CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Upstream: sign crAPI images via cosign; publish verification key; document operator verification."
+    related_concerns: [ephemeral, immutability, integrity]
+    cross_references: [ephem-edcc17b4]
+
+  - schema_version: 1
+    id: auth-c990b0ff
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "AAL target undeclared (NIST SP 800-63B AAL1/AAL2/AAL3 not stated)"
+    summary: "No Authenticator Assurance Level target; cannot evaluate MFA-strength against defined standard."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "There is no MFA. There is no documented session-revocation surface"
+    prerequisite_evidence:
+      - "AAL target declaration per deploy intent"
+      - "Per-surface AAL declaration"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "IA-2(1)", "IA-2(2)", "IA-2(8)"]
+      cwe: ["CWE-308"]
+      owasp_api_top10: ["API2:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Add AAL target to tech_plan §4; couple with MFA introduction."
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: [auth-0925a719]
+
+  # ---- Non-Repudiation ----
+  - schema_version: 1
+    id: nonrep-7fad26d8
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No application-level audit log for consequential actions across any service"
+    summary: "Per runbook §8: GAP. No audit log; only LOG_LEVEL=INFO stdout. No actor attribution, no schema, no retention."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "GAP. No application-level audit log is shipped"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-3", "AU-3(1)", "AU-3(3)", "AU-6", "AU-12", "AU-12(1)"]
+      mitre_attack:
+        - {technique: "T1562", sub_technique: "T1562.008", tactic: "TA0005", rationale: "Absence of any audit log means an attacker does not need to disable audit; the defender has no audit to disable."}
+      cwe: ["CWE-778", "CWE-223"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Define audit schema; emit per consequential action with actor attribution; ship to separate sink."
+    related_concerns: [immutability, availability, authenticity]
+
+  # nonrep-fc423071 merged into merged-d2e871f5
+  - schema_version: 1
+    id: nonrep-fa2c351c
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "OTP issuance and verification not audit-logged at application layer"
+    summary: "ADR-0003 explicit: identity does not audit-log dispatch; mailhog records SMTP envelope only."
+    detail: "See finding source."
+    evidence:
+      - artifact: adrs/0003-mailhog-for-otp-delivery.md
+        locator: "Consequences"
+        excerpt: "OTP delivery is unattributed at the application layer"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-3", "AU-12", "AU-10"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023", "API2:2023"]
+    recommendation:
+      posture: required
+      summary: "Audit-log OTP issuance and verification per nonrep-7fad26d8 schema with source IP / user-agent."
+    related_concerns: [immutability, availability, authenticity]
+    cross_references: [nonrep-7fad26d8, avail-e96ad7ff]
+
+  - schema_version: 1
+    id: nonrep-304b32af
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "No source IP / user-agent attribution on any consequential action"
+    summary: "Runbook §10: no source IP/UA in audit trail; per-request actor context missing."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "There is no source IP / user-agent in the audit trail"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-3(1)", "AU-3(3)"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Propagate source IP, user-agent, request-id from OpenResty into backend services; include in every audit event."
+    related_concerns: [authenticity, integrity]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-9faa010e
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Audit shipping reliability — no documented shipper, retention, or buffering posture"
+    summary: "Runbook §8 punts log-shipper/retention/schema/tamper-evidence to operator."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "A log shipper (Fluent Bit, Filebeat) collecting per-container stdout. A retention policy. A schema. Tamper-evidence"
+    prerequisite_evidence:
+      - "Operator-chosen log shipper and aggregator"
+      - "Retention policy"
+      - "Shipping reliability posture"
+    control_mappings:
+      nist_800_53r5: ["AU-4", "AU-5", "AU-5(1)", "AU-5(2)"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: recommended
+      summary: "When nonrep-7fad26d8 is addressed, ship via buffered, retry-aware shipper with documented dead-letter."
+    related_concerns: [availability, immutability]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-c32e3967
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Time-source policy unspecified — audit timestamps will be local clocks without drift bounds"
+    summary: "No NTP policy, no drift bounds; per-container clock drift defeats forensic ordering."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8"
+        excerpt: "Tamper-evidence on stored logs (currently none)"
+    prerequisite_evidence:
+      - "Host time-source posture"
+      - "Per-container clock-source declaration"
+    control_mappings:
+      nist_800_53r5: ["AU-8", "AU-8(1)"]
+      cwe: ["CWE-829"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: consider
+      summary: "Document NTP posture: chrony on host; drift bound <1s for audit consistency."
+    related_concerns: [immutability]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-b9ba65ab
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No audit-of-audit-access; audit access controls undefined because audit does not exist"
+    summary: "Rubric requires separate-role audit access and audit-of-audit-access; both contingent on audit existing."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8"
+        excerpt: "What an operator would need: A log shipper. A retention policy. A schema. Tamper-evidence on stored logs"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(4)", "AU-9(6)", "AC-5", "AC-6"]
+      cwe: ["CWE-732"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Design audit-introduction with separate-role audit access and audit-of-audit-access emission."
+    related_concerns: [authenticity, confidentiality]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: nonrep-af88acb6
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Break-glass and emergency-action audit not designed"
+    summary: "Runbook lacks emergency-action procedure; no distinguishable audit stream for break-glass events."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§10 Respond to user account takeover"
+        excerpt: "Cannot invalidate the attacker's session"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-12(1)", "AC-6(9)", "AC-6(10)", "IR-4"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, add break-glass procedures and dedicated audit streams."
+    related_concerns: [resilient, availability, ephemeral]
+    cross_references: [resil-776fc650, ephem-22c2358c]
+
+  # ---- Immutability ----
+  - schema_version: 1
+    id: immut-e50364e4
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "Audit substrate is mutable — no append-only, WORM, or hash-chain"
+    summary: "When audit is introduced (nonrep-7fad26d8), substrate must enforce immutability; default would land in Postgres/Mongo."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8"
+        excerpt: "Tamper-evidence on stored logs (currently none)"
+    control_mappings:
+      nist_800_53r5: ["AU-9", "AU-9(2)", "AU-9(3)", "AU-11", "SI-7", "SI-7(8)"]
+      mitre_attack:
+        - {technique: "T1070", sub_technique: null, tactic: "TA0005", rationale: "Mutable audit storage enables Indicator Removal — attacker who gains write access can delete/modify attribution."}
+      cwe: ["CWE-117", "CWE-778"]
+      owasp_api_top10: ["API9:2023"]
+    recommendation:
+      posture: required
+      summary: "Ship audit to WORM substrate (object-lock S3, append-only Loki, or hash-chained Postgres audit-table)."
+    related_concerns: [non_repudiation, confidentiality, ephemeral]
+    cross_references: [nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: immut-a6c69999
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: high
+    confidence: high
+    title: "Backup immutability not addressed — no backups exist; ransomware resilience absent"
+    summary: "Per rubric backups must be immutable; crAPI has no backups (avail-8ad04f0e)."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§6 Persistence and storage"
+        excerpt: "Backups: unspecified. No backup, restore, or PITR procedure ships"
+    prerequisite_evidence:
+      - "Backup procedure introduction per avail-8ad04f0e"
+      - "Choice of backup substrate"
+    control_mappings:
+      nist_800_53r5: ["CP-9", "CP-9(1)", "CP-9(8)", "MP-4", "SI-7"]
+      mitre_attack:
+        - {technique: "T1490", sub_technique: null, tactic: "TA0040", rationale: "Absence of immutable backups means ransomware that destroys primary data cannot be recovered from."}
+      cwe: ["CWE-1188"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: required
+      summary: "When backups introduced (avail-8ad04f0e), use S3 object-lock compliance mode, ≥30 days primary, ≥1 year monthlies."
+    related_concerns: [availability, confidentiality, ephemeral]
+    cross_references: [avail-8ad04f0e]
+
+  - schema_version: 1
+    id: immut-79a844dd
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Configuration spread across compose env, env-vars, mounted files, and hard-coded binary — no drift detection"
+    summary: "ENABLE_LOG4J/SHELL flags, JWKS file, gateway basic-auth in binary; no declared baseline."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§9 Implicit posture facts"
+        excerpt: "Postgres + Mongo creds are static literals in the compose file. JWT_SECRET=crapi shipped alongside the RS256 keys"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "CM-2(2)", "CM-3", "CM-3(1)", "CM-6", "CM-6(1)", "CM-6(2)"]
+      cwe: ["CWE-1357"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "Declare baseline in IaC (Helm values + compose with required overrides); add config-drift check."
+    related_concerns: [integrity, authenticity]
+    cross_references: [intg-8d97cd9f]
+
+  - schema_version: 1
+    id: immut-c97f668f
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: medium
+    title: "Configuration repository protected-branch / signed-commit posture unspecified"
+    summary: "Project repo branch-protection and signed-commit settings not in input scope."
+    detail: "See finding source."
+    evidence:
+      - artifact: prior-audit.md
+        locator: "§Source"
+        excerpt: "synthesised from the upstream OWASP crAPI documentation and the shipped artifacts"
+    prerequisite_evidence:
+      - "GitHub repo branch-protection settings"
+      - "Signed-commit requirement status"
+    control_mappings:
+      nist_800_53r5: ["CM-3", "CM-3(1)", "SI-7(8)", "SA-10", "SR-4"]
+      cwe: ["CWE-345"]
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "Upstream recommendation: protected main, required signed commits, PR review for security paths."
+    related_concerns: [authenticity, integrity]
+
+  - schema_version: 1
+    id: immut-b74ae78a
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "No SBOM, no per-deployment artifact-provenance history"
+    summary: "Upstream does not publish per-version SBOMs nor SLSA provenance; chain from running image to source commit unverifiable."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "crapi/crapi-identity:${VERSION}"
+    control_mappings:
+      nist_800_53r5: ["SR-4", "SR-4(3)", "CM-8", "AU-11", "SR-11"]
+      mitre_attack:
+        - {technique: "T1195", sub_technique: "T1195.002", tactic: "TA0001", rationale: "Absent SBOM and provenance attestation prevent detection of supply-chain compromise."}
+      owasp_api_top10: ["API8:2023"]
+    recommendation:
+      posture: consider
+      summary: "Upstream: publish SBOMs per release; integrate SLSA-3 build provenance."
+    related_concerns: [authenticity, ephemeral]
+    cross_references: [auth-04fcfb9a]
+
+  - schema_version: 1
+    id: immut-49cb874c
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: gap
+    severity: medium
+    confidence: high
+    title: "Cryptographic key lifecycle events not auditable"
+    summary: "No record of jwks.json mutation or credential rotation; key-lifecycle events go unaudited."
+    detail: "See finding source."
+    evidence:
+      - artifact: runbook.md
+        locator: "§5 Rotate the JWT signing key"
+        excerpt: "GAP. No documented procedure ships"
+    control_mappings:
+      nist_800_53r5: ["AU-3", "AU-12", "SC-12", "IA-5"]
+      cwe: ["CWE-778"]
+      owasp_api_top10: ["API9:2023", "API8:2023"]
+    recommendation:
+      posture: recommended
+      summary: "When rotation tooling added, rotation scripts emit key-lifecycle audit events."
+    related_concerns: [ephemeral, non_repudiation]
+    cross_references: [ephem-30d38360, nonrep-7fad26d8]
+
+  - schema_version: 1
+    id: immut-56949f0a
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    disposition: blocked
+    severity: medium
+    confidence: high
+    title: "Retention policy for any data class is unspecified"
+    summary: "No per-data-class retention declared; rubric requires regulatory-anchored retention."
+    detail: "See finding source."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§10 Out-of-scope"
+        excerpt: "Operational hardening. crAPI does not target production deployment. No on-call posture, no SLO commitments, no key rotation, no log retention"
+    prerequisite_evidence:
+      - "Deploy intent and regulatory anchors"
+      - "Per-data-class retention table"
+    control_mappings:
+      nist_800_53r5: ["AU-11", "AU-11(1)", "SI-12"]
+      owasp_api_top10: []
+    recommendation:
+      posture: consider
+      summary: "For non-demo deploys, declare per-data-class retention in tech_plan §11 with regulatory citation."
+    related_concerns: [non_repudiation, availability, confidentiality]
+    cross_references: [nonrep-7fad26d8, avail-8ad04f0e]

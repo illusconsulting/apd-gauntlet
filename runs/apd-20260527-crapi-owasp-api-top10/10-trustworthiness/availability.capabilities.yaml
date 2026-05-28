@@ -1,0 +1,90 @@
+capability:
+  - schema_version: 1
+    id: avail-cap-a85aeb7f
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Per-service health.sh scripts with compose healthcheck wiring"
+    description: |
+      Each service ships a `health.sh` script invoked by the compose
+      `healthcheck:` block. Compose evaluates the script result and
+      reports a `(unhealthy)` row in `docker compose ps`. The mechanism
+      is in place for liveness detection.
+    maturity: implemented
+    scope: |
+      Confirmed for identity, workshop, community, mailhog (per runbook
+      §2). NOT confirmed: chatbot has no documented external health
+      endpoint; depth of the existing checks (whether they probe
+      dependencies) is not documented — see avail-898bfad0 for the
+      depth-side finding.
+    evidence:
+      - artifact: runbook.md
+        locator: "§2 Health checks table"
+        excerpt: "identity — curl -sk http://localhost:8888/identity/health_check; workshop — curl -sk http://localhost:8888/workshop/health_check/; community — curl -sk http://localhost:8888/community/home"
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Enforcement"
+        excerpt: "services/<svc>/health.sh per language; compose healthcheck: blocks invoke them"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "CP-10"]
+    caveats:
+      - "Chatbot has no documented external health endpoint"
+      - "Check depth (process-liveness vs dependency-aware) unspecified"
+      - "No load-balancer or k8s readiness wired to act on the health signal"
+    related_concerns: [resilient]
+
+  - schema_version: 1
+    id: avail-cap-5af461f2
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Rate limit on /identity/api/auth/v2/check-otp (partial coverage)"
+    description: |
+      Per challenge 3 solution discussion, the v2/check-otp endpoint
+      received a rate limit after the original publication. The control
+      exists; the project chose to retain v3 as an un-throttled teaching
+      variant.
+    maturity: implemented
+    scope: |
+      Confirmed for v2/check-otp specifically. NOT confirmed for any
+      other auth-surface endpoint — forget-password is unthrottled
+      (avail-c1ffcf8e), v3/check-otp is unthrottled (avail-e96ad7ff),
+      login has no documented rate limit.
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication, /forget-password row"
+        excerpt: "this path is rate-limited but neighboring /v3/check-otp variants are not"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "AC-7"]
+    caveats:
+      - "Threshold, identity dimension, and behavior on breach not documented"
+      - "Coverage is partial; v3 and forget-password are unprotected"
+    related_concerns: [authenticity]
+
+  - schema_version: 1
+    id: avail-cap-26d2f293
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Per-service compose resource limits prevent single-service runaway"
+    description: |
+      Compose `cpus: 0.8, memory: 384M` per service prevents a single
+      runaway service from starving the others. The limits are tight
+      (see avail-b01847b0 for the DoS-amplification side) but they do
+      provide bounded blast radius.
+    maturity: implemented
+    scope: |
+      Confirmed for compose deploy. NOT confirmed for Helm — the
+      shipped values.yaml resources are not in the input set.
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "cpus: 0.8, memory: 384M per service to meet the t2.micro target"
+      - artifact: threat-model.md
+        locator: "§5 D-4"
+        excerpt: "Every service has cpus: 0.8, memory: 384M"
+    control_mappings:
+      nist_800_53r5: ["SC-6", "SC-5"]
+    caveats:
+      - "Limits are tight enough that any DoS easily exhausts them"
+      - "Helm values.yaml limits not in evidence"
+    related_concerns: [resilient, distributed]

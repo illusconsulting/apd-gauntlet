@@ -1,0 +1,24 @@
+severity_disagreements: []
+notes: |
+  No severity disagreements between specialists. Where two or more
+  specialists wrote findings on the same architectural concern, severity
+  was either consistent or the synthesizer escalated to the highest
+  cited tier during merging (per rubric guidance, do not average across
+  multiple impacts). Examples:
+
+  - merged-c829ffc8: conf-c66f08cf (critical), intg-15c04a1c
+    (critical), auth-09ae00ed (critical) — all critical, merged at
+    critical.
+  - merged-d2e871f5: intg-078ee9f6 (high), auth-55e76c4d
+    (high), nonrep-fc423071 (high), ephem-b95a7d11 (high) — all
+    high, merged at high.
+  - merged-514507e6: conf-cf457739 (high),
+    intg-5c659bdb (high), avail-6af5aff7 (high) — all high.
+  - merged-44bdb663: conf-3e324699 (high),
+    dist-c047a7c0 (high) — both high.
+
+  The synthesizer notes the absence of disagreement is itself
+  signal: the inputs were sufficiently candid (especially
+  prior-audit.md's carry-forward and threat-model.md's STRIDE
+  catalog) that severity calibration was anchored on the same
+  rubric clauses across all 9 lenses.

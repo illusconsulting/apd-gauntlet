@@ -1,0 +1,32 @@
+capability:
+  - schema_version: 1
+    id: immut-cap-8e77982d
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    title: "Pinned image versions on Postgres (postgres:14) and Mongo (mongo:4.4)"
+    description: |
+      Per ADR-0004 / tech_plan §6, datastores are pinned to specific
+      version tags rather than `:latest`. This is the floor for
+      configuration immutability on the datastore tier — the version
+      is deliberate at deploy time and cannot silently change.
+    maturity: implemented
+    scope: |
+      Confirmed for Postgres and Mongo. NOT confirmed for ChromaDB
+      (uses :latest per ephem-edcc17b4), Mailhog, or crAPI service
+      images (use ${VERSION} interpolation, which is determined at
+      build time but not digest-pinned at deploy time).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services table"
+        excerpt: "postgresdb (postgres:14); mongodb (mongo:4.4)"
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Enforcement"
+        excerpt: "Two image: blocks in deploy/docker/docker-compose.yml (postgres:14, mongo:4.4)"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "SI-7"]
+    caveats:
+      - "ChromaDB uses :latest (ephem-edcc17b4)"
+      - "Mongo 4.4 is past upstream EOL"
+      - "Image digests not pinned (cf ephem-edcc17b4 recommendation)"
+    related_concerns: [ephemeral, integrity]

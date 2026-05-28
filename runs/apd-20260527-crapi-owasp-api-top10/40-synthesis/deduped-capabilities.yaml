@@ -1,0 +1,474 @@
+capability:
+  # ---- Confidentiality (5) ----
+  - schema_version: 1
+    id: conf-cap-c354ef8e
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "JWKS endpoint published over standard /.well-known/jwks.json path"
+    description: "Standard OIDC posture; verifiers can be decoupled from identity."
+    maturity: designed
+    scope: "Mechanism in place. Significantly weakened by default private key in repo (merged-c829ffc8) and verifier multi-algo acceptance."
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "The corresponding public key is published at GET /.well-known/jwks.json"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "IA-5(2)", "SC-17"]
+    caveats:
+      - "Default jwks.json contains private-key components"
+      - "No key rotation procedure"
+      - "Verifier algorithm-pinning not enforced consistently"
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: conf-cap-0eea8c9d
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Default Mailhog loopback binding (LISTEN_IP=127.0.0.1)"
+    description: "Default compose binds Mailhog UI to 127.0.0.1; loopback-only."
+    maturity: designed
+    scope: "Confirmed for documented default. NOT enforced — LISTEN_IP=0.0.0.0 override removes it."
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-OPS-004"
+        excerpt: "Enforced by LISTEN_IP=127.0.0.1 default"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "AC-3"]
+    caveats:
+      - "Documented override removes binding"
+      - "Operator-enforced, not pinned"
+    related_concerns: [authenticity]
+
+  - schema_version: 1
+    id: conf-cap-545144bc
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "Datastores not exposed externally by default compose"
+    description: "Default compose does not publish Postgres/Mongo ports."
+    maturity: implemented
+    scope: "Confirmed for default Compose. NOT confirmed for Helm — NetworkPolicy not in values."
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§postgresdb"
+        excerpt: "Inbound: identity, workshop, community, chatbot. Outbound: None"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-7(5)", "AC-4"]
+    caveats:
+      - "Helm NetworkPolicy not in shipped values"
+      - "SSRF on contact_mechanic penetrates this from any in-cluster service"
+      - "Shared admin credential defeats segmentation"
+    related_concerns: [authenticity, distributed]
+
+  - schema_version: 1
+    id: conf-cap-95d55d61
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "TLS-capable mode (TLS_ENABLED=true) available across all services"
+    description: "Every service ships nginx.ssl.conf.template + certs/ for HTTPS on :8443."
+    maturity: designed
+    scope: "Mechanism exists. NOT confirmed production posture (real certs, TLS policy, mTLS)."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Deployment topologies"
+        excerpt: "TLS_ENABLED=true to switch services into HTTPS-backed mode"
+    control_mappings:
+      nist_800_53r5: ["SC-8", "SC-8(1)", "SC-23"]
+    caveats:
+      - "Default is TLS_ENABLED=false"
+      - "Shipped certs are self-signed dev material"
+      - "Outbound TLS posture not separately documented"
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: conf-cap-e149eaec
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    title: "UUID identifier choice on vehicles (vs sequential integer)"
+    description: "Vehicle identifiers are UUIDv4, defeating simple enumeration."
+    maturity: implemented
+    scope: "Confirmed for vehicles. Weakened in practice by leak via community recent-posts."
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTHZ-002"
+        excerpt: "Enforced by: UUIDv4 randomness at vehicle creation"
+    control_mappings:
+      nist_800_53r5: ["AC-4", "SC-7"]
+    caveats:
+      - "Leaked via community recent-posts"
+      - "Other identifier surfaces (mechanic_report.id) use sequential integers"
+    related_concerns: [authenticity]
+
+  # ---- Integrity (4) ----
+  - schema_version: 1
+    id: intg-cap-4212a616
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "OpenAPI specification published for the API surface"
+    description: "Workshop serves the canonical OpenAPI spec at /workshop/openapi-spec/."
+    maturity: implemented
+    scope: "Confirmed: spec exists, is served, is indexed. NOT confirmed: handler conformance."
+    evidence:
+      - artifact: runbook.md
+        locator: "§4 Extract the OpenAPI spec"
+        excerpt: "curl -sk http://localhost:8888/workshop/openapi-spec/ -o crapi-openapi.json"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "CM-2"]
+    caveats:
+      - "Spec ≠ enforced schema; handlers accept inputs the spec doesn't document"
+      - "No CI gate verifying handler behavior matches spec"
+    related_concerns: [authenticity]
+
+  - schema_version: 1
+    id: intg-cap-d764e156
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "RS256 asymmetric JWT mint (signing key not distributed to verifiers)"
+    description: "RS256 means verifiers do not hold signing capability."
+    maturity: designed
+    scope: "Asymmetric design choice confirmed. Significantly weakened by default key in repo, multi-algo acceptance, no rotation."
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "crapi-identity mints RS256-signed JWTs"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "IA-5(2)", "SI-7", "SC-13"]
+    caveats:
+      - "Default JWKS file contains private key"
+      - "HS256 also accepted; benefit defeated"
+      - "No rotation procedure"
+    related_concerns: [confidentiality, authenticity, ephemeral]
+
+  - schema_version: 1
+    id: intg-cap-a070072a
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "Coupon claim-state column (intended per-user idempotency)"
+    description: "coupons.claimed_by intended as idempotency mechanism per INV-INPUT-003."
+    maturity: designed
+    scope: "Mechanism in place as column. Defeated by SQL injection in apply_coupon."
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-INPUT-003"
+        excerpt: "Coupon redemption is idempotent per user"
+    control_mappings:
+      nist_800_53r5: ["SI-10", "SI-7"]
+    caveats:
+      - "SQL injection defeats idempotency check"
+      - "No DB-level unique constraint"
+    related_concerns: [confidentiality]
+
+  - schema_version: 1
+    id: intg-cap-c6f2bf49
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    title: "Rate limit on /identity/api/auth/v2/check-otp (partial coverage)"
+    description: "v2/check-otp has rate limit per challenge 3 solution discussion."
+    maturity: implemented
+    scope: "Confirmed for v2/check-otp. NOT confirmed for any other auth surface."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication, /forget-password row"
+        excerpt: "this path is rate-limited but neighboring /v3/check-otp variants are not"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "AC-7", "IA-5"]
+    caveats:
+      - "Threshold and identity dimension not documented"
+      - "Coverage partial; v3, forget-password, login unprotected"
+    related_concerns: [availability, authenticity]
+
+  # ---- Availability (3) ----
+  - schema_version: 1
+    id: avail-cap-a85aeb7f
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Per-service health.sh scripts with compose healthcheck wiring"
+    description: "Each service ships health.sh invoked by compose healthcheck blocks."
+    maturity: implemented
+    scope: "Confirmed for identity/workshop/community/mailhog. NOT confirmed for chatbot."
+    evidence:
+      - artifact: runbook.md
+        locator: "§2 Health checks table"
+        excerpt: "identity — curl -sk http://localhost:8888/identity/health_check"
+    control_mappings:
+      nist_800_53r5: ["SI-13", "CP-10"]
+    caveats:
+      - "Chatbot has no documented external health endpoint"
+      - "Check depth (process-liveness vs dependency-aware) unspecified"
+      - "No load-balancer or k8s readiness wired to act on signal"
+    related_concerns: [resilient]
+
+  - schema_version: 1
+    id: avail-cap-5af461f2
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Rate limit on /v2/check-otp (partial coverage)"
+    description: "v2/check-otp rate-limited per challenge 3 solution; other auth surfaces are not."
+    maturity: implemented
+    scope: "Confirmed v2 only; v3 and forget-password absent."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4 Authentication"
+        excerpt: "this path is rate-limited but neighboring /v3/check-otp variants are not"
+    control_mappings:
+      nist_800_53r5: ["SC-5", "AC-7"]
+    caveats:
+      - "Threshold not documented"
+      - "Coverage partial; v3 and forget-password unprotected"
+    related_concerns: [authenticity]
+
+  - schema_version: 1
+    id: avail-cap-26d2f293
+    agent: availability
+    apd_tier: trustworthiness
+    apd_goal: availability
+    title: "Per-service compose resource limits prevent single-service runaway"
+    description: "cpus:0.8, memory:384M per service prevents single runaway from starving others."
+    maturity: implemented
+    scope: "Confirmed for compose. NOT confirmed for Helm values."
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Consequences"
+        excerpt: "cpus: 0.8, memory: 384M per service to meet the t2.micro target"
+    control_mappings:
+      nist_800_53r5: ["SC-6", "SC-5"]
+    caveats:
+      - "Limits tight enough that any DoS exhausts them"
+      - "Helm values.yaml limits not in evidence"
+    related_concerns: [resilient, distributed]
+
+  # ---- Distributed (3) ----
+  - schema_version: 1
+    id: dist-cap-a2ac68b2
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "Microservice split with per-service container boundary"
+    description: "8+ independent containers; failure modes don't bleed at the process level."
+    maturity: implemented
+    scope: "Confirmed for compose. Boundary is process-only — not network-policy, not credential."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "eight containers (or nine, depending on chatbot configuration) coordinated by Docker Compose, Helm, or Vagrant"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "CM-2"]
+    caveats:
+      - "All containers single-host by intent"
+      - "Inter-service network reach unrestricted"
+      - "Shared datastore credential collapses isolation"
+    related_concerns: [authenticity, availability]
+
+  - schema_version: 1
+    id: dist-cap-452d749b
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "Stateless application tier — JWT-based auth, no in-process session"
+    description: "Session state in bearer token; application tier horizontally replicable in principle."
+    maturity: designed
+    scope: "Confirmed for auth path. NOT confirmed for chatbot per-session LLM state via /genai/init."
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "crapi-identity mints RS256-signed JWTs"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-36"]
+    caveats:
+      - "Chatbot per-session key may introduce in-process state"
+      - "Theoretical replication; single-host SPOF unresolved"
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: dist-cap-90969f60
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "JWKS endpoint at standard path — externalizable"
+    description: "OIDC-standard /.well-known/jwks.json path allows CDN fronting / external replication."
+    maturity: implemented
+    scope: "Endpoint exists at standard path. NOT confirmed any actual CDN/external replication."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "validate bearer JWTs against the JWKS endpoint http://crapi-identity:8080/.well-known/jwks.json (also republished externally at http://localhost:8888/.well-known/jwks.json)"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-17", "IA-5(2)"]
+    caveats:
+      - "Served by identity directly; coupled failure"
+      - "Cache TTL per verifier not documented"
+    related_concerns: [authenticity, resilient]
+
+  # ---- Resilient (2) ----
+  - schema_version: 1
+    id: resil-cap-35c0088d
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "depends_on: service_healthy gating in compose enforces startup order"
+    description: "Healthchecks gate startup ordering via compose depends_on conditions."
+    maturity: implemented
+    scope: "Confirmed for compose. Helm equivalents not in input set."
+    evidence:
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Enforcement"
+        excerpt: "Healthchecks gate startup ordering (depends_on: condition: service_healthy)"
+    control_mappings:
+      nist_800_53r5: ["CP-10", "SI-13"]
+    caveats:
+      - "Healthchecks are shallow"
+      - "Helm-side ordering not in evidence"
+      - "Startup-only; runtime degradation not addressed"
+    related_concerns: [availability, distributed]
+
+  - schema_version: 1
+    id: resil-cap-c6fc34e3
+    agent: resilient
+    apd_tier: scalability
+    apd_goal: resilient
+    title: "Multi-provider chatbot architecture supports provider fallback (not yet implemented)"
+    description: "8 pluggable LLM providers; architecture supports per-call provider selection."
+    maturity: designed
+    scope: "Multi-provider support confirmed. NOT confirmed: automatic fallback on failure."
+    evidence:
+      - artifact: architecture-index.md
+        locator: "§crapi-chatbot Role"
+        excerpt: "chat completion against pluggable LLM providers (openai, anthropic, azure_openai, bedrock, vertex, groq, mistral, cohere)"
+    control_mappings:
+      nist_800_53r5: ["CP-12", "CP-13"]
+    caveats:
+      - "Provider selection per-deploy, not per-call"
+      - "No automatic failure-fallback"
+    related_concerns: [availability, distributed]
+
+  # ---- Ephemeral (1) ----
+  - schema_version: 1
+    id: ephem-cap-fd22b084
+    agent: ephemeral
+    apd_tier: scalability
+    apd_goal: ephemeral
+    title: "Image versioning on Postgres (postgres:14) and Mongo (mongo:4.4)"
+    description: "Datastores pinned to specific version tags rather than :latest."
+    maturity: implemented
+    scope: "Confirmed for Postgres/Mongo. NOT confirmed for ChromaDB (:latest)."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§2 Services table"
+        excerpt: "postgresdb (postgres:14); mongodb (mongo:4.4)"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "SI-7"]
+    caveats:
+      - "ChromaDB uses :latest"
+      - "Mongo 4.4 past upstream EOL"
+      - "Image digests not pinned"
+    related_concerns: [authenticity, immutability]
+
+  # ---- Authenticity (2) ----
+  - schema_version: 1
+    id: auth-cap-125067f9
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "RS256 asymmetric JWT mint + JWKS publication (OIDC-style identity provenance)"
+    description: "Per ADR-0002, identity mints RS256 JWTs; verification material at standard /.well-known path."
+    maturity: implemented
+    scope: "Mint and JWKS-publication confirmed. Significantly weakened by default private key, multi-algo verifier, no rotation."
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "crapi-identity mints RS256-signed JWTs"
+    control_mappings:
+      nist_800_53r5: ["IA-5(2)", "SC-12", "SC-17", "IA-2"]
+      mitre_attack:
+        - technique: "T1606"
+          tactic: "TA0006"
+          rationale: "Asymmetric JWT minting counters web-credential forgery; RS256+JWKS publication is the reference countermeasure against forged credential issuance."
+      mitre_attack_mitigations:
+        - id: "M1041"
+          rationale: "Asymmetric signing means verifiers do not hold signing capability; defeats verifier-side credential theft."
+      d3fend:
+        - technique: "D3-IAA"
+          counters_attack: ["T1606"]
+          rationale: "Identity-Assertion-Attestation via cryptographically-signed JWT issued by a designated authority counters web-credential forgery when verifier is correctly configured."
+    caveats:
+      - "Default private key in repo (merged-c829ffc8)"
+      - "Verifier accepts multiple algorithms"
+      - "No rotation procedure"
+      - "Per-service verifier consistency not enforced"
+    related_concerns: [confidentiality, integrity, ephemeral, distributed]
+
+  - schema_version: 1
+    id: auth-cap-9703a609
+    agent: authenticity
+    apd_tier: auditability
+    apd_goal: authenticity
+    title: "OpenAPI bearerAuth security scheme declared on every authenticated path"
+    description: "OpenAPI declares bearerAuth on every non-public path; declared intent for auth coverage."
+    maturity: designed
+    scope: "Confirmed in spec. NOT confirmed in implementation per challenge 14 and INV-AUTH-001."
+    evidence:
+      - artifact: invariants.md
+        locator: "INV-AUTH-001"
+        excerpt: "Asserted in: OpenAPI bearerAuth security scheme on every non-signup/login/forget-password path"
+    control_mappings:
+      nist_800_53r5: ["IA-2", "AC-3"]
+    caveats:
+      - "Challenge 14: at least one privileged endpoint lacks auth (unconfirmed endpoint)"
+      - "OpenAPI is documentation; handlers diverge"
+    related_concerns: [integrity]
+
+  # ---- Non-Repudiation (1) ----
+  - schema_version: 1
+    id: nonrep-cap-81fb6e54
+    agent: non_repudiation
+    apd_tier: auditability
+    apd_goal: non_repudiation
+    title: "Stdout logging at LOG_LEVEL=INFO across all services (operational, not auditable)"
+    description: "Every service emits to stdout at INFO; Docker logging driver captures."
+    maturity: implemented
+    scope: "Stdout streams exist. NOT confirmed: schema, content coverage, or consequential-action coverage."
+    evidence:
+      - artifact: runbook.md
+        locator: "§8 Inspect audit data"
+        excerpt: "Containers emit to stdout at LOG_LEVEL=INFO; aggregation is operator-provided"
+    control_mappings:
+      nist_800_53r5: ["AU-2", "AU-12"]
+    caveats:
+      - "No audit schema"
+      - "No actor attribution"
+      - "No retention"
+      - "Aggregation operator-provided"
+      - "Not immutable"
+    related_concerns: [availability, immutability]
+
+  # ---- Immutability (1) ----
+  - schema_version: 1
+    id: immut-cap-8e77982d
+    agent: immutability
+    apd_tier: auditability
+    apd_goal: immutability
+    title: "Pinned image versions on Postgres and Mongo"
+    description: "Datastores at postgres:14 and mongo:4.4 rather than :latest; deploy-time version is deliberate."
+    maturity: implemented
+    scope: "Confirmed for Postgres/Mongo. NOT confirmed for ChromaDB, Mailhog, crAPI service images (digest not pinned)."
+    evidence:
+      - artifact: adrs/0004-dual-datastore-postgres-and-mongo.md
+        locator: "Enforcement"
+        excerpt: "Two image: blocks in deploy/docker/docker-compose.yml (postgres:14, mongo:4.4)"
+    control_mappings:
+      nist_800_53r5: ["CM-2", "SI-7"]
+    caveats:
+      - "ChromaDB uses :latest"
+      - "Mongo 4.4 past upstream EOL"
+      - "Image digests not pinned"
+    related_concerns: [ephemeral, integrity]

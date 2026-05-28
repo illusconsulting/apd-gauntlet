@@ -1,0 +1,94 @@
+capability:
+  - schema_version: 1
+    id: dist-cap-a2ac68b2
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "Microservice split with per-service container boundary"
+    description: |
+      Per ADR-0001, crAPI is structured as 8+ independent containers
+      with per-service Dockerfiles, health scripts, and build chains.
+      Failure modes don't bleed between services at the process level
+      — workshop OOM does not kill identity. The architecture is
+      decomposable.
+    maturity: implemented
+    scope: |
+      Confirmed for the compose deploy. Service boundary is a process
+      boundary; not a network-policy boundary (dist-bc4789b6) and not
+      a credential boundary (dist-c047a7c0).
+    evidence:
+      - artifact: adrs/0001-microservice-split-by-language.md
+        locator: "Enforcement"
+        excerpt: "services/<svc>/Dockerfile per language; services/<svc>/health.sh per language; compose healthcheck: blocks invoke them"
+      - artifact: tech_plan.md
+        locator: "§2 Services"
+        excerpt: "eight containers (or nine, depending on chatbot configuration) coordinated by Docker Compose, Helm, or Vagrant"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "CM-2"]
+    caveats:
+      - "All containers on a single host by intent (dist-1f123cef)"
+      - "Inter-service network reach unrestricted (dist-bc4789b6)"
+      - "Shared datastore credential collapses isolation (dist-c047a7c0)"
+    related_concerns: [authenticity, availability]
+
+  - schema_version: 1
+    id: dist-cap-452d749b
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "Stateless application tier — JWT-based auth, no in-process session state"
+    description: |
+      Per ADR-0002, authentication is JWT-based; per the OpenAPI
+      `bearerAuth` security scheme, the session state lives entirely
+      in the bearer token. There is no documented in-process session
+      store, no sticky-session dependency, no per-instance session
+      affinity. The application tier is horizontally replicable in
+      principle.
+    maturity: designed
+    scope: |
+      Confirmed for the authentication path. NOT confirmed for the
+      chatbot — chat history lives in Mongo (per architecture-index)
+      so the chatbot tier is also stateless, but the chatbot's
+      session-key bootstrap via POST /genai/init may carry in-process
+      LLM-provider state per session.
+    evidence:
+      - artifact: adrs/0002-jwt-with-rsa-and-jwks.md
+        locator: "Decision"
+        excerpt: "crapi-identity mints RS256-signed JWTs"
+      - artifact: tech_plan.md
+        locator: "§4 Authentication and sessions"
+        excerpt: "The session token (a JWT) is included as Authorization: Bearer <token> per the OpenAPI bearerAuth security scheme"
+    control_mappings:
+      nist_800_53r5: ["SC-7", "SC-36"]
+    caveats:
+      - "Chatbot per-session LLM-provider key via /genai/init may introduce in-process state"
+      - "Replication is theoretical — actually replicating requires the dist-1f123cef SPOF to be resolved"
+    related_concerns: [authenticity, ephemeral]
+
+  - schema_version: 1
+    id: dist-cap-90969f60
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    title: "JWKS endpoint exposed at standard /.well-known/jwks.json — externalizable"
+    description: |
+      Per ADR-0002, the JWKS endpoint follows the OIDC standard
+      `.well-known` convention. This means the verifier tier can be
+      decoupled from identity itself — JWKS can be fronted by a CDN or
+      replicated to an external endpoint without code changes.
+    maturity: implemented
+    scope: |
+      Confirmed: the endpoint exists, is served, follows the standard
+      path. NOT confirmed: any actual CDN fronting or external
+      replication — the JWKS is served directly by identity in the
+      default deploy (dist-5e588812 covers the coupling).
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3 boundary #3"
+        excerpt: "validate bearer JWTs against the JWKS endpoint http://crapi-identity:8080/.well-known/jwks.json (also republished externally at http://localhost:8888/.well-known/jwks.json)"
+    control_mappings:
+      nist_800_53r5: ["SC-12", "SC-17", "IA-5(2)"]
+    caveats:
+      - "Served by identity directly; coupled failure with identity (dist-5e588812)"
+      - "JWKS cache TTL per verifier not documented"
+    related_concerns: [authenticity, resilient]
