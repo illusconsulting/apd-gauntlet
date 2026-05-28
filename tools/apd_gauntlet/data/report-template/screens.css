@@ -888,6 +888,14 @@
   color: var(--ink-3);
   font-size: var(--text-sm);
 }
+.empty-state--info {
+  text-align: left;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  color: var(--ink-2);
+  line-height: var(--line-loose);
+}
 
 .copy-toast {
   position: fixed;

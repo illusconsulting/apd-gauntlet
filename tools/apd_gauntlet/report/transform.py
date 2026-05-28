@@ -777,7 +777,26 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
     if artifacts.defense_graph is not None:
         overlays = artifacts.defense_graph.get("bottleneck_overlays") or []
 
-    return {
+    node_count = len(artifacts.asset_graph.get("nodes") or [])
+    edge_count = len(artifacts.asset_graph.get("edges") or [])
+
+    # Build a helpful explanation when no paths were enumerated but the graph exists.
+    pairs_empty_explanation: str | None = None
+    if not pairs and (node_count > 0 or edge_count > 0):
+        pairs_empty_explanation = (
+            f"No (attacker, crown-jewel) paths were enumerated for this run. "
+            f"The asset graph has {node_count} node{'s' if node_count != 1 else ''} / "
+            f"{edge_count} edge{'s' if edge_count != 1 else ''} but those edges don't form "
+            f"a chain from any declared attacker position to any declared crown jewel. "
+            f"This is common for runs where finding evidence references documents "
+            f"(e.g., tech_plan.md) rather than specific asset names — the analyzer "
+            f"can't synthesize edges from prose. To enable path enumeration, enrich "
+            f"00-context/asset-inventory.yaml with explicit trust boundaries connecting "
+            f"attacker positions to crown jewels, OR have specialists tag finding evidence "
+            f"with the asset_id of the affected component."
+        )
+
+    result: dict[str, Any] = {
         "mermaid": _build_mermaid(artifacts.asset_graph),
         "pairs":   pairs,
         "bottleneck_overlays": overlays,
@@ -789,7 +808,14 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
                 if artifacts.defense_graph is not None else 0
             ),
         },
+        "asset_graph_summary": {
+            "node_count": node_count,
+            "edge_count": edge_count,
+        },
     }
+    if pairs_empty_explanation is not None:
+        result["pairs_empty_explanation"] = pairs_empty_explanation
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -909,8 +935,10 @@ def build_apd_data(
         "findings":      findings_array(
             artifacts, headline_supplement=supplement.get("headline_findings"),
         ),
-        "contradictions":         contradictions_section(artifacts),
-        "severity_disagreements": severity_disagreements_section(artifacts),
+        "contradictions":              contradictions_section(artifacts),
+        "contradictions_notes":        artifacts.contradictions_notes,
+        "severity_disagreements":      severity_disagreements_section(artifacts),
+        "severity_disagreements_notes": artifacts.severity_disagreements_notes,
         "nist_rollup":      nist_rollup_rows(artifacts),
         "attack_exposure":  attack_exposure_rows(artifacts),
         "apd_matrix":       apd_matrix(artifacts),

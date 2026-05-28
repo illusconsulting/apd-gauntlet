@@ -15,9 +15,18 @@ function Annexes({ data, onOpenFinding }) {
           </div>
           <span className="pill">{data.contradictions.length} surfaced</span>
         </header>
-        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
-          Cases where a finding asserts a property is absent and a capability confirms it is present, or vice versa. In all three cases here, the recommended disposition is <strong>scope clarification of the capability</strong>, not capability downgrade — these indicate language that could be over-read by a reviewer outside the architectural context.
-        </p>
+        {data.contradictions.length > 0 && (
+          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+            Cases where a finding asserts a property is absent and a capability confirms it is present, or vice versa. In all three cases here, the recommended disposition is <strong>scope clarification of the capability</strong>, not capability downgrade — these indicate language that could be over-read by a reviewer outside the architectural context.
+          </p>
+        )}
+        {data.contradictions.length === 0 && (
+          <p className="empty-state">
+            {data.contradictions_notes
+              ? data.contradictions_notes
+              : "No contradictions surfaced."}
+          </p>
+        )}
 
         {data.contradictions.map((c) => (
           <div key={c.id} className="contradiction">
@@ -49,9 +58,18 @@ function Annexes({ data, onOpenFinding }) {
           </div>
           <span className="pill">{data.severity_disagreements.length} clusters</span>
         </header>
-        <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
-          Records where two agents agreed on the concern but disagreed on severity. The merged finding takes the higher severity per the synthesis rule; the disagreement is preserved here for transparency.
-        </p>
+        {data.severity_disagreements.length > 0 && (
+          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+            Records where two agents agreed on the concern but disagreed on severity. The merged finding takes the higher severity per the synthesis rule; the disagreement is preserved here for transparency.
+          </p>
+        )}
+        {data.severity_disagreements.length === 0 && (
+          <p className="empty-state">
+            {data.severity_disagreements_notes
+              ? data.severity_disagreements_notes
+              : "No severity disagreements surfaced."}
+          </p>
+        )}
 
         {data.severity_disagreements.map((d) => (
           <div key={d.id} className="sev-disagreement">
