@@ -70,7 +70,17 @@ writeFileSync(join(OUT_DIR, ".source-hash"), hash.digest("hex"));
 writeFileSync(join(OUT_DIR, "vendor-licenses.txt"), [
   "React 18.3.1 — MIT — https://github.com/facebook/react/blob/main/LICENSE",
   "Mermaid 10.9.1 — MIT — https://github.com/mermaid-js/mermaid/blob/develop/LICENSE",
-  "Fonts: Google Fonts — see SIL OFL / Apache 2.0 license files alongside each .woff2",
+  "",
+  "Vendored fonts (woff2, latin subset) — SIL Open Font License 1.1",
+  "  Newsreader v26 — Production Type / Google Fonts",
+  "    https://fonts.google.com/specimen/Newsreader",
+  "    https://github.com/productiontype/Newsreader/blob/master/OFL.txt",
+  "  IBM Plex Sans v23 — IBM Corp.",
+  "    https://fonts.google.com/specimen/IBM+Plex+Sans",
+  "    https://github.com/IBM/plex/blob/master/LICENSE.txt",
+  "  IBM Plex Mono v20 — IBM Corp.",
+  "    https://fonts.google.com/specimen/IBM+Plex+Mono",
+  "    https://github.com/IBM/plex/blob/master/LICENSE.txt",
 ].join("\n") + "\n");
 
 console.log(`Wrote bundle to ${OUT_DIR}`);
