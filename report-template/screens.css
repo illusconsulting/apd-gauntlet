@@ -933,6 +933,48 @@
   margin-bottom: var(--space-3);
   color: var(--ink);
 }
+.attack-paths__graph-wrapper {
+  position: relative;  /* anchor for the absolute-positioned toolbar */
+}
+.attack-paths__zoom-toolbar {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--paper);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.attack-paths__zoom-toolbar button {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font: inherit;
+  line-height: 1;
+}
+.attack-paths__zoom-toolbar button:hover {
+  background: var(--surface-2);
+}
+.attack-paths__zoom-toolbar button:disabled {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+.attack-paths__zoom-toolbar .zoom-level {
+  min-width: 44px;
+  text-align: center;
+  color: var(--ink-2);
+}
 .attack-paths__mermaid {
   background: var(--surface-1);
   border: 1px solid var(--border-2);
@@ -945,13 +987,34 @@
   max-width: none !important;     /* defeat Mermaid's inline style="max-width: NNNpx" */
   height: auto !important;
 }
-.attack-paths__mermaid svg .node text {
-  font-size: 12px !important;     /* slightly larger; readable at scroll */
+/* Mermaid 10+ renders node labels inside <foreignObject> as HTML <div> nodes,
+   not as <text> elements. Target both so labels are visible regardless of the
+   renderer Mermaid picks based on the security level. */
+.attack-paths__mermaid svg .nodeLabel,
+.attack-paths__mermaid svg .node .label,
+.attack-paths__mermaid svg .node text,
+.attack-paths__mermaid svg foreignObject div {
+  font-size: 13px !important;
+  color: var(--ink) !important;
+  fill: var(--ink) !important;
+  font-family: var(--font-sans) !important;
+}
+.attack-paths__mermaid svg .edgeLabel,
+.attack-paths__mermaid svg .edgeLabel rect,
+.attack-paths__mermaid svg .edgeLabel foreignObject div {
+  font-size: 11px !important;
+  color: var(--ink-2) !important;
+  fill: var(--ink-2) !important;
+}
+.attack-paths__mermaid--focused {
+  /* Cap the focused-subgraph container so the SVG doesn't stretch the whole page */
+  max-width: 720px;
 }
 .attack-paths__mermaid--focused svg {
-  min-width: unset;   /* focused subgraph is small enough to fit without forced scroll */
-  max-width: 100%;
-  height: auto;
+  /* Defeat the parent's !important min-width for the focused subgraph */
+  min-width: unset !important;
+  max-width: 100% !important;
+  height: auto !important;
 }
 .attack-pair {
   border: 1px solid var(--border-2);
