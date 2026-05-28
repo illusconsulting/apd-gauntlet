@@ -941,12 +941,17 @@
   overflow-x: auto;
 }
 .attack-paths__mermaid svg {
-  min-width: 1600px;   /* force readable scale for 40+ node graphs; user scrolls */
-  max-width: none;     /* override any inherited 100% constraint */
-  height: auto;
+  min-width: 2400px !important;   /* 41 nodes need ~60px each for label readability */
+  max-width: none !important;     /* defeat Mermaid's inline style="max-width: NNNpx" */
+  height: auto !important;
 }
 .attack-paths__mermaid svg .node text {
-  font-size: 11px;     /* explicit, in case Mermaid defaults change across versions */
+  font-size: 12px !important;     /* slightly larger; readable at scroll */
+}
+.attack-paths__mermaid--focused svg {
+  min-width: unset;   /* focused subgraph is small enough to fit without forced scroll */
+  max-width: 100%;
+  height: auto;
 }
 .attack-pair {
   border: 1px solid var(--border-2);

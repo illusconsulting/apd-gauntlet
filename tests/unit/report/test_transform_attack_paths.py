@@ -312,3 +312,134 @@ def test_mermaid_sanitizes_adversarial_labels() -> None:
     assert "alert" not in src.lower() or "alert" in "(unnamed)"  # only if accidentally allowed
     assert "\n  ../etc" not in src  # bad id must have been remapped
     assert "n1" in src and "n2" in src
+
+
+def test_mermaid_path_focused_present_when_pairs_nonempty() -> None:
+    """mermaid_path_focused must be a non-empty string when paths are present."""
+    from apd_gauntlet.report.loader import RunArtifacts
+
+    art = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={
+            "paths": [
+                {
+                    "attacker_position": "atk-9dadadaa",
+                    "crown_jewel": "jewel-3e9a8535",
+                    "path_id": "path-abc",
+                    "hop_count": 1,
+                    "feasibility": "high",
+                    "severity_sum": 4,
+                    "mitigation_count": 0,
+                    "edges": ["edge-0e2085ac"],
+                    "bottleneck_edges": [],
+                }
+            ]
+        },
+        asset_graph={
+            "nodes": [
+                {
+                    "node_id": "atk-9dadadaa", "name": "compromised_admin_account",
+                    "node_type": "attacker_position",
+                },
+                {
+                    "node_id": "jewel-3e9a8535", "name": "service_account_credential_store",
+                    "node_type": "crown_jewel",
+                },
+            ],
+            "edges": [
+                {
+                    "edge_id": "edge-0e2085ac",
+                    "edge_type": "compromisable_via_finding",
+                    "from": "atk-9dadadaa",
+                    "to": "jewel-3e9a8535",
+                    "finding_id": "conf-477ff8a1",
+                    "confidence": "high",
+                }
+            ],
+        },
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data = attack_paths_data(art)
+    assert data is not None
+    focused = data.get("mermaid_path_focused")
+    assert isinstance(focused, str), "mermaid_path_focused must be a string when pairs non-empty"
+    assert len(focused) > 0
+
+
+def test_mermaid_path_focused_is_none_when_no_pairs() -> None:
+    """mermaid_path_focused must be None when no paths are enumerated."""
+    from apd_gauntlet.report.loader import RunArtifacts
+
+    art = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={"paths": []},
+        asset_graph={"nodes": [], "edges": []},
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data = attack_paths_data(art)
+    assert data is not None
+    assert data.get("mermaid_path_focused") is None, (
+        "mermaid_path_focused must be None when paths list is empty"
+    )
+
+
+def test_mermaid_path_focused_uses_LR_direction() -> None:
+    """The focused subgraph must use `graph LR` so attacker → crown-jewel reads left-to-right."""
+    from apd_gauntlet.report.loader import RunArtifacts
+
+    art = RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p", domain_pack_version="1",
+        subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths={
+            "paths": [
+                {
+                    "attacker_position": "internet",
+                    "crown_jewel": "db",
+                    "path_id": "p1",
+                    "hop_count": 1,
+                    "feasibility": "high",
+                    "severity_sum": 8,
+                    "mitigation_count": 0,
+                    "edges": ["e1"],
+                    "bottleneck_edges": [],
+                }
+            ]
+        },
+        asset_graph={
+            "nodes": [
+                {"node_id": "internet", "name": "Internet", "node_type": "attacker_position"},
+                {"node_id": "db", "name": "DB", "node_type": "crown_jewel"},
+            ],
+            "edges": [
+                {
+                    "edge_id": "e1",
+                    "edge_type": "compromisable_via_finding",
+                    "from": "internet",
+                    "to": "db",
+                }
+            ],
+        },
+        defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
+    data = attack_paths_data(art)
+    assert data is not None
+    focused = data.get("mermaid_path_focused")
+    assert isinstance(focused, str)
+    assert "graph LR" in focused, "Focused subgraph must use `graph LR` direction"
