@@ -8,7 +8,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
-    "esbuild": "0.21.5",
+    "esbuild": "0.25.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "mermaid": "10.9.1"
