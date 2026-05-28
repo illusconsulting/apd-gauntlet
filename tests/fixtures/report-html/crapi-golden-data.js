@@ -3654,8 +3654,203 @@ window.APD_DATA = {
   ],
   "contradictions": [],
   "severity_disagreements": [],
-  "nist_rollup": [],
-  "attack_exposure": [],
+  "nist_rollup": [
+    {
+      "family": "AU",
+      "title": "Audit & Accountability",
+      "covered": 0,
+      "gapped": 20,
+      "both": 2,
+      "notable": "AU-12, AU-3, AU-11 cited"
+    },
+    {
+      "family": "SC",
+      "title": "System & Communications Protection",
+      "covered": 0,
+      "gapped": 10,
+      "both": 11,
+      "notable": "SC-5, SC-7, SC-12 cited"
+    },
+    {
+      "family": "AC",
+      "title": "Access Control",
+      "covered": 0,
+      "gapped": 14,
+      "both": 3,
+      "notable": "AC-3, AC-6, AC-4 cited"
+    },
+    {
+      "family": "IA",
+      "title": "Identification & Authentication",
+      "covered": 0,
+      "gapped": 10,
+      "both": 3,
+      "notable": "IA-5, IA-2, IA-5(1) cited"
+    },
+    {
+      "family": "CM",
+      "title": "Configuration Management",
+      "covered": 0,
+      "gapped": 10,
+      "both": 1,
+      "notable": "CM-2, CM-3, CM-5 cited"
+    },
+    {
+      "family": "CP",
+      "title": "Contingency Planning",
+      "covered": 0,
+      "gapped": 8,
+      "both": 3,
+      "notable": "CP-13, CP-12, CP-2 cited"
+    },
+    {
+      "family": "SI",
+      "title": "System & Information Integrity",
+      "covered": 0,
+      "gapped": 8,
+      "both": 3,
+      "notable": "SI-10, SI-13, SI-7 cited"
+    },
+    {
+      "family": "SR",
+      "title": "Supply Chain Risk Management",
+      "covered": 0,
+      "gapped": 4,
+      "both": 0,
+      "notable": "SR-4, SR-11, SR-4(3) cited"
+    },
+    {
+      "family": "SA",
+      "title": "System & Services Acquisition",
+      "covered": 0,
+      "gapped": 2,
+      "both": 0,
+      "notable": "SA-10, SA-15(7) cited"
+    },
+    {
+      "family": "MP",
+      "title": "Media Protection",
+      "covered": 0,
+      "gapped": 1,
+      "both": 0,
+      "notable": "MP-4 cited"
+    }
+  ],
+  "attack_exposure": [
+    {
+      "id": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "findings": 6,
+      "mitigations": [
+        "intg-cap-4212a616"
+      ],
+      "coverage": "partial",
+      "note": ""
+    },
+    {
+      "id": "T1078",
+      "name": "Valid Accounts",
+      "findings": 4,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1213",
+      "name": "Data from Information Repositories",
+      "findings": 4,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1552.001",
+      "name": "Credentials in Files",
+      "findings": 4,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1110.001",
+      "name": "Password Guessing",
+      "findings": 2,
+      "mitigations": [
+        "intg-cap-c6f2bf49",
+        "avail-cap-5af461f2"
+      ],
+      "coverage": "partial",
+      "note": ""
+    },
+    {
+      "id": "T1550.001",
+      "name": "Application Access Token",
+      "findings": 2,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1070",
+      "name": "Indicator Removal",
+      "findings": 1,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1195.002",
+      "name": "Software Supply Chain",
+      "findings": 1,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1490",
+      "name": "Inhibit System Recovery",
+      "findings": 1,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1499.003",
+      "name": "Application Exhaustion Flood",
+      "findings": 1,
+      "mitigations": [
+        "avail-cap-26d2f293"
+      ],
+      "coverage": "partial",
+      "note": ""
+    },
+    {
+      "id": "T1557",
+      "name": "Adversary-in-the-Middle",
+      "findings": 1,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1562.008",
+      "name": "Disable or Modify Cloud Logs",
+      "findings": 1,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1606",
+      "name": "Forge Web Credentials",
+      "findings": 1,
+      "mitigations": [
+        "auth-cap-125067f9"
+      ],
+      "coverage": "partial",
+      "note": ""
+    }
+  ],
   "apd_matrix": {
     "goals": [
       "conf",
@@ -3679,7 +3874,148 @@ window.APD_DATA = {
       "nonrep": "NonRep",
       "immut": "Immut"
     },
-    "rows": []
+    "rows": [
+      {
+        "component": "adrs/0001-microservice-split-by-language.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "covered",
+          "avail": "both",
+          "dist": "both",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "adrs/0003-mailhog-for-otp-delivery.md",
+        "cells": {
+          "conf": "both",
+          "intg": "covered",
+          "avail": "both",
+          "dist": "covered",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "both",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "adrs/0004-dual-datastore-postgres-and-mongo.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "both",
+          "avail": "covered",
+          "dist": "covered",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "agents.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "covered",
+          "avail": "both",
+          "dist": "both",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "architecture-index.md",
+        "cells": {
+          "conf": "both",
+          "intg": "both",
+          "avail": "both",
+          "dist": "both",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "invariants.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "both",
+          "avail": "covered",
+          "dist": "covered",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      },
+      {
+        "component": "prior-audit.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "covered",
+          "avail": "covered",
+          "dist": "both",
+          "resil": "covered",
+          "ephem": "covered",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "both"
+        }
+      },
+      {
+        "component": "runbook.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "covered",
+          "avail": "both",
+          "dist": "covered",
+          "resil": "both",
+          "ephem": "both",
+          "auth": "covered",
+          "nonrep": "both",
+          "immut": "both"
+        }
+      },
+      {
+        "component": "tech_plan.md",
+        "cells": {
+          "conf": "both",
+          "intg": "both",
+          "avail": "both",
+          "dist": "both",
+          "resil": "both",
+          "ephem": "both",
+          "auth": "both",
+          "nonrep": "covered",
+          "immut": "both"
+        }
+      },
+      {
+        "component": "threat-model.md",
+        "cells": {
+          "conf": "covered",
+          "intg": "both",
+          "avail": "both",
+          "dist": "covered",
+          "resil": "covered",
+          "ephem": "both",
+          "auth": "covered",
+          "nonrep": "covered",
+          "immut": "covered"
+        }
+      }
+    ]
   },
   "attack_paths": {
     "mermaid": "graph TD\n  asset-a1b2c3d4[\"crapi-identity\"]\n  asset-a3b4c5d6[\"API_USER/API_PASSWORD (chatbot admin credential)\"]\n  asset-a7b8c9d0[\"mongodb\"]\n  asset-b2c3d4e5[\"crapi-workshop\"]\n  asset-b8c9d0e1[\"chromadb\"]\n  asset-c3d4e5f6[\"crapi-community\"]\n  asset-c9d0e1f2[\"mailhog\"]\n  asset-d0e1f2a3[\"api.mypremiumdealership.com\"]\n  asset-d4e5f6a7[\"crapi-chatbot\"]\n  asset-e1f2a3b4[\"services/identity/jwks.json (private key)\"]\n  asset-e5f6a7b8[\"crapi-web\"]\n  asset-f2a3b4c5[\"JWT_SECRET env var\"]\n  asset-f6a7b8c9[\"postgresdb\"]\n  atk-264bde5f((\"internal_lateral_attacker\"))\n  atk-2a628eed((\"authenticated_user_seeking_authz_bypass\"))\n  atk-3f205280((\"compromised_admin_session\"))\n  atk-404a3c86((\"unauthenticated_internet\"))\n  atk-43ba1c0a((\"supply_chain_attacker\"))\n  atk-5331accf((\"compromised_user_session_token\"))\n  atk-5ec33a11((\"compromised_oauth_client_credentials\"))\n  atk-82a39ff7((\"authenticated_low_priv_user_with_bola_target\"))\n  atk-a3d36625((\"compromised_third_party_integration\"))\n  jewel-10ff98db{{\"session_token_signing_keys\"}}\n  jewel-168c256c{{\"backup_artifact_store\"}}\n  jewel-277b3f04{{\"third_party_integration_secrets\"}}\n  jewel-3257f37f{{\"pii_profile_store\"}}\n  jewel-47b02c84{{\"payment_methods_store\"}}\n  jewel-4da600e8{{\"audit_log_store\"}}\n  jewel-61f49a34{{\"authorization_decision_engine\"}}\n  jewel-681465d8{{\"user_credentials_store\"}}\n  asset-d0e1f2a3 --> asset-a1b2c3d4\n  asset-d0e1f2a3 --> asset-d4e5f6a7\n  asset-c9d0e1f2 --> asset-a1b2c3d4\n  asset-a1b2c3d4 --> asset-c9d0e1f2\n  asset-a7b8c9d0 --> asset-f6a7b8c9\n  asset-a1b2c3d4 --> asset-e5f6a7b8\n  asset-a1b2c3d4 --> asset-e5f6a7b8\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-e5f6a7b8 --> asset-d0e1f2a3\n  asset-a1b2c3d4 --> asset-d0e1f2a3\n  asset-a7b8c9d0 --> asset-b8c9d0e1\n  asset-f6a7b8c9 --> asset-a7b8c9d0\n  asset-b8c9d0e1 --> asset-d0e1f2a3\n  asset-d0e1f2a3 --> asset-e5f6a7b8\n  asset-f6a7b8c9 --> asset-b8c9d0e1\n  asset-d4e5f6a7 --> asset-d0e1f2a3\n  asset-e5f6a7b8 --> asset-a1b2c3d4",
@@ -3811,6 +4147,10 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "AC-4"
     },
+    "AC-4(8)": {
+      "family": "NIST 800-53r5",
+      "title": "AC-4(8)"
+    },
     "AC-5": {
       "family": "NIST 800-53r5",
       "title": "AC-5"
@@ -3850,6 +4190,10 @@ window.APD_DATA = {
     "AU-10": {
       "family": "NIST 800-53r5",
       "title": "AU-10"
+    },
+    "AU-10(1)": {
+      "family": "NIST 800-53r5",
+      "title": "AU-10(1)"
     },
     "AU-11": {
       "family": "NIST 800-53r5",
@@ -4043,6 +4387,10 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "IA-3"
     },
+    "IA-3(1)": {
+      "family": "NIST 800-53r5",
+      "title": "IA-3(1)"
+    },
     "IA-5": {
       "family": "NIST 800-53r5",
       "title": "IA-5"
@@ -4103,6 +4451,10 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "SC-13"
     },
+    "SC-16": {
+      "family": "NIST 800-53r5",
+      "title": "SC-16"
+    },
     "SC-17": {
       "family": "NIST 800-53r5",
       "title": "SC-17"
@@ -4131,6 +4483,10 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "SC-36"
     },
+    "SC-36(1)": {
+      "family": "NIST 800-53r5",
+      "title": "SC-36(1)"
+    },
     "SC-5": {
       "family": "NIST 800-53r5",
       "title": "SC-5"
@@ -4138,6 +4494,10 @@ window.APD_DATA = {
     "SC-5(1)": {
       "family": "NIST 800-53r5",
       "title": "SC-5(1)"
+    },
+    "SC-5(2)": {
+      "family": "NIST 800-53r5",
+      "title": "SC-5(2)"
     },
     "SC-6": {
       "family": "NIST 800-53r5",
@@ -4235,6 +4595,10 @@ window.APD_DATA = {
       "family": "MITRE ATT&CK",
       "title": "T1110"
     },
+    "T1110.001": {
+      "family": "MITRE ATT&CK",
+      "title": "T1110.001"
+    },
     "T1190": {
       "family": "MITRE ATT&CK",
       "title": "T1190"
@@ -4242,6 +4606,10 @@ window.APD_DATA = {
     "T1195": {
       "family": "MITRE ATT&CK",
       "title": "T1195"
+    },
+    "T1195.002": {
+      "family": "MITRE ATT&CK",
+      "title": "T1195.002"
     },
     "T1213": {
       "family": "MITRE ATT&CK",
@@ -4255,13 +4623,25 @@ window.APD_DATA = {
       "family": "MITRE ATT&CK",
       "title": "T1499"
     },
+    "T1499.003": {
+      "family": "MITRE ATT&CK",
+      "title": "T1499.003"
+    },
     "T1550": {
       "family": "MITRE ATT&CK",
       "title": "T1550"
     },
+    "T1550.001": {
+      "family": "MITRE ATT&CK",
+      "title": "T1550.001"
+    },
     "T1552": {
       "family": "MITRE ATT&CK",
       "title": "T1552"
+    },
+    "T1552.001": {
+      "family": "MITRE ATT&CK",
+      "title": "T1552.001"
     },
     "T1557": {
       "family": "MITRE ATT&CK",
@@ -4270,6 +4650,10 @@ window.APD_DATA = {
     "T1562": {
       "family": "MITRE ATT&CK",
       "title": "T1562"
+    },
+    "T1562.008": {
+      "family": "MITRE ATT&CK",
+      "title": "T1562.008"
     },
     "T1606": {
       "family": "MITRE ATT&CK",
