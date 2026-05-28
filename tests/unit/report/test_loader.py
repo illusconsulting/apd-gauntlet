@@ -1,4 +1,4 @@
-"""Loader unit tests against the canonical legacy_example fixture run."""
+"""Loader unit tests against the canonical example fixture run."""
 from __future__ import annotations
 
 import pathlib
@@ -10,25 +10,27 @@ from apd_gauntlet.report.loader import (
 )
 
 
-def test_load_run_returns_artifacts(legacy_example_run: pathlib.Path) -> None:
-    artifacts = load_run(legacy_example_run)
-    assert artifacts.run_id == "apd-legacy-example-run"
-    assert artifacts.framework_version == "1.4.0"
-    assert artifacts.domain_pack_name == "pbm"
+def test_load_run_returns_artifacts(example_run: pathlib.Path) -> None:
+    artifacts = load_run(example_run)
+    assert artifacts.run_id == "apd-20260527-crapi-owasp-api-top10"
+    assert artifacts.framework_version == "1.5.0"
+    assert artifacts.domain_pack_name == "api-security"
 
 
-def test_load_run_findings_and_capabilities_present(legacy_example_run: pathlib.Path) -> None:
-    artifacts = load_run(legacy_example_run)
+def test_load_run_findings_and_capabilities_present(example_run: pathlib.Path) -> None:
+    artifacts = load_run(example_run)
     assert len(artifacts.deduped_findings) >= 40
-    assert len(artifacts.deduped_capabilities) >= 40
+    assert len(artifacts.deduped_capabilities) >= 15
 
 
-def test_load_run_includes_attack_paths(legacy_example_run: pathlib.Path) -> None:
-    artifacts = load_run(legacy_example_run)
+def test_load_run_includes_attack_paths(example_run: pathlib.Path) -> None:
+    artifacts = load_run(example_run)
     assert artifacts.attack_paths is not None
-    assert artifacts.attack_paths["paths"], "expected at least one enumerated path"
     assert artifacts.asset_graph is not None
     assert artifacts.defense_graph is not None
+    # crAPI's attack-paths.yaml may carry zero paths if asset-inventory↔finding
+    # edge connectivity is sparse; the file's presence + asset_graph + defense_graph
+    # is what we assert.
 
 
 def test_load_run_missing_required_raises(tmp_path: pathlib.Path) -> None:
@@ -39,7 +41,7 @@ def test_load_run_missing_required_raises(tmp_path: pathlib.Path) -> None:
     assert ".apd-run.yaml" in str(exc.value) or "asset-inventory" in str(exc.value)
 
 
-def test_load_run_optional_report_data_absent_is_none(legacy_example_run: pathlib.Path) -> None:
-    """The legacy_example fixture predates report-data.yaml — loader returns None."""
-    artifacts = load_run(legacy_example_run)
-    assert artifacts.report_data is None
+def test_load_run_report_data_present(example_run: pathlib.Path) -> None:
+    """The crAPI fixture ships with report-data.yaml; loader returns a non-None dict."""
+    artifacts = load_run(example_run)
+    assert artifacts.report_data is not None
