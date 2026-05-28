@@ -648,7 +648,7 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
 
         # For each artifact, build its row.
         for artifact_name in sorted(all_artifacts):
-            cells_out: dict[str, str] = {}
+            row_cells: dict[str, str] = {}
             for full_goal, short in _GOAL_SHORT.items():
                 goal_data = coverage.get(full_goal) or {}
                 has_caps = bool(goal_data.get("capabilities"))
@@ -670,8 +670,8 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
                     posture = "covered"
                 else:
                     posture = "silent"
-                cells_out[short] = posture
-            rows.append({"component": artifact_name, "cells": cells_out})
+                row_cells[short] = posture
+            rows.append({"component": artifact_name, "cells": row_cells})
 
     return {
         "goals":      goals,
