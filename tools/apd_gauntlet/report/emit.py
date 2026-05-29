@@ -4,9 +4,11 @@ and write a per-run build manifest.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime as _dt
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 from typing import Any
@@ -16,12 +18,30 @@ class BundleMissingError(FileNotFoundError):
     """Raised when the precompiled template bundle is absent."""
 
 
+def _atomic_write_text(path: pathlib.Path, body: str) -> None:
+    """Write `body` to `path` atomically: temp file in same dir + os.replace.
+
+    Same-directory tmp is required for POSIX rename atomicity across
+    filesystems (cross-fs rename is a copy + delete).
+    """
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        tmp.write_text(body, encoding="utf-8")
+        os.replace(tmp, path)
+    except BaseException:
+        # Best-effort cleanup of leftover tmp on any failure.
+        if tmp.exists():
+            with contextlib.suppress(OSError):
+                tmp.unlink()
+        raise
+
+
 def write_data_js(data: dict[str, Any], path: pathlib.Path) -> None:
     """Write `window.APD_DATA = {...};` to path. JSON body is pretty-printed,
     Unicode preserved (ensure_ascii=False) so diffs are human-readable.
     """
     body = json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False, default=str)
-    path.write_text(f"window.APD_DATA = {body};\n")
+    _atomic_write_text(path, f"window.APD_DATA = {body};\n")
 
 
 def copy_bundle(src: pathlib.Path, dst: pathlib.Path) -> None:
@@ -52,7 +72,7 @@ def write_manifest(
     ]
     for k, v in sorted(source_hashes.items()):
         lines.append(f"{k}={v}")
-    path.write_text("\n".join(lines) + "\n")
+    _atomic_write_text(path, "\n".join(lines) + "\n")
 
 
 def hash_dir(dir_path: pathlib.Path) -> str:
