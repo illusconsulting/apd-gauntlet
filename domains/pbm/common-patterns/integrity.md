@@ -29,7 +29,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Idempotency claimed at API but key derivation is request-body hash.**
 
-- Severity: medium to high depending on adjudication impact (a malicious or accidental change to a single field defeats dedup)
+- Severity: medium (high when the affected dedup path is PDE submission, NCPDP B2 reversal, or formulary fanout — clinical-decision adjudication scope)
 - NIST: SI-10, SI-7
 - Detail must call out the specific risk: client retry under transient network failure produces double-adjudication if the body changed between attempts.
 

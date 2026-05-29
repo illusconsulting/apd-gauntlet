@@ -25,8 +25,6 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 ## Common finding patterns
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style and severity.
-
 **Pattern: Broker-level encryption only on PHI event stream.**
 
 - Severity: typically high (PHI exposure beyond minimum-necessary; broker compromise yields plaintext)
@@ -41,7 +39,7 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: PHI displayed unmasked by default in admin UI.**
 
-- Severity: high to critical depending on scope of admin role
+- Severity: high (critical when the admin role can affect >500 members or >1 plan sponsor per the severity rubric Critical clause)
 - NIST: AC-3, AC-6, SC-28
 - Related concerns: non_repudiation (unmask audit), authenticity (admin identity assurance)
 
@@ -53,7 +51,7 @@ These are illustrative templates, not all-inclusive. Use them to calibrate analy
 
 **Pattern: Tech plan describes encryption-in-transit generically without specifying TLS version or cipher suite policy.**
 
-- Disposition: uncertainty or blocked depending on what else the artifacts say
+- Disposition: blocked when no artifact establishes the masking discipline; uncertainty when one artifact references it but the implementation discipline is not enumerated
 - Severity: typically medium when blocked, deferred when uncertainty
 - prerequisite_evidence: "TLS configuration policy — (1) minimum TLS version per ingress (pharmacy NCPDP, member portal, admin console, vendor egress, CMS outbound); (2) cipher-suite allowlist per ingress; (3) certificate-pinning configuration for pharmacy-network ingress and outbound CMS submission; (4) HSTS enforcement on member-facing surfaces; (5) certificate rotation cadence and CA-trust policy; (6) certificate-revocation handling (OCSP stapling, CRL refresh interval); (7) configuration source-of-truth pointer (Terraform module, NGINX config, ALB listener) and CD pipeline applying it"
 

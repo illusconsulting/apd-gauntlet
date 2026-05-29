@@ -29,7 +29,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Hidden SPOF in CI/CD — emergency deployment depends on single pipeline.**
 
-- Severity: medium to high depending on RTO sensitivity
+- Severity: medium (high when the RTO commitment in the plan-sponsor MSA is ≤4 hours or covers PDE submission)
 - NIST: CM-2(2), CP-2
 - Related concerns: ephemeral (immutable infra readiness for redeployment)
 
@@ -40,7 +40,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Cross-region replication for audit logs is asynchronous with unspecified lag.**
 
-- Severity: medium to high (cross-references Non-Repudiation tier 3)
+- Severity: medium (escalates to high when the missing audit attribution falls under HIPAA §164.312(b) audit-controls)
 - NIST: AU-9(2), SC-36
 - Related concerns: non_repudiation, immutability
 
@@ -62,3 +62,5 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 When a finding in this lens is dispositioned blocked or uncertainty for missing distribution evidence, the operator unblock-pack should provide multi-clause specifications, not single-line attestations.
 
 **Failure-domain isolation:** (1) blast-radius diagram for a single-region failure of each critical service (adjudication, PHI store, PA engine, eligibility); (2) tenant-and-region isolation guarantees if the PBM is multi-tenant; (3) the load-shedding plan when a regional dependency degrades.
+
+**Cross-region replication and CAP-positioning evidence:** (1) per-data-class replication topology (sync vs async) and lag SLO for PHI store, adjudication-state, audit substrate, formulary cache, PDE staging; (2) consistency model declared per critical operation (strong consistency on claim adjudication and PA decisions; eventual on analytics replicas; bounded staleness on member-portal reads); (3) the explicit CAP-positioning choice when a network partition severs cross-region replication — which operations continue (read-only adjudication against cached formulary, eligibility cache, accumulator deferral) and which fail-closed (PDE submission, PA-criteria configuration changes); (4) the recovery-validation procedure when partition heals (replication-divergence detection, conflict resolution, audit chain reconciliation).

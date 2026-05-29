@@ -41,7 +41,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Container images mutable in production — `:latest` tags, in-place container updates.**
 
-- Severity: medium to high depending on what's mutable
+- Severity: medium (high when the mutable surface includes signing keys for NCPDP SCRIPT, PDE submission, or formulary configuration)
 - NIST: CM-2, CM-3, SA-15(7)
 - Related concerns: authenticity (image signing), integrity (configuration drift)
 

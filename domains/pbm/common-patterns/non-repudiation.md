@@ -52,7 +52,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Break-glass procedure exists but break-glass actions are not specially audited beyond normal logging.**
 
-- Severity: medium to high
+- Severity: medium (high when the audit gap covers PHI access — §164.312(b) audit-controls obligation)
 - NIST: AU-3, AU-12(1), AC-6(9)
 
 ## Common capability patterns

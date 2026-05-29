@@ -191,6 +191,16 @@ apd-gauntlet validate examples/your-new-example/expected/
 
 Wire it into `tests/test_examples.py` as an integration test.
 
+## ATT&CK / D3FEND mapping discipline
+
+Each `common-patterns/<goal>.md` file references MITRE ATT&CK techniques to help downstream specialists recognize the adversary behavior a pattern resists or detects. Across the shipped packs, two structural conventions have emerged. The PBM pack carries a dedicated `## ATT&CK + D3FEND defensive mapping` section in every common-patterns goal file, *as well as* inline ATT&CK references on individual patterns. The three newer packs (`api-security`, `identity-security`, `security-tooling`) only use inline references on individual patterns — no dedicated goal-level mapping section.
+
+Both approaches are valid. Choose one and apply it consistently within your pack — don't mix conventions across goals.
+
+The dedicated section gives downstream specialists a goal-level mapping summary they can reference without reading every pattern, which helps when an intake names a control or detection family rather than a specific scenario. The inline-only approach keeps each pattern self-contained — readers see the technique IDs next to the prose that motivates them — but requires the reader to enumerate techniques across patterns to build a goal-level view.
+
+For future packs, the recommended default is inline-only — it matches the three newer packs and keeps the per-pattern prose unambiguously the source of truth. The PBM pack carries both because Effort 4 of the `pbm-pack-larger-efforts` plan specifically required a dedicated mapping section; that requirement was scoped to PBM and does not extend to other packs.
+
 ## Submitting the pack
 
 Open a PR with:
@@ -201,6 +211,28 @@ Open a PR with:
 - Use the [domain_pack_proposal](.github/ISSUE_TEMPLATE/domain_pack_proposal.yml) issue template to open a discussion first.
 
 CI runs `apd-gauntlet validate-domain <pack>` automatically on every PR touching a `domains/` directory.
+
+## Reusable pattern: multi-regulator retention pinning
+
+When a single data class is governed by more than one regulator (or by a regulator plus a contract floor), `immutability-classes.md` should not pick one and ignore the others. Instead, declare retention by *pinning to the longest applicable floor* and enumerate every floor that contributes. The canonical phrasing used in `domains/pbm/immutability-classes.md` is:
+
+> Retention is pinned to the longest of (a) *regulatory floor A*, (b) *regulatory floor B*, (c) *contract floor*.
+
+Use this pattern whenever a data class is covered by overlapping obligations — for example, HIPAA plus CMS Part D plus a network-pharmacy contract; or GDPR plus a sector-specific national retention law plus a customer master agreement; or PCI-DSS plus a card-network operating regulation plus a merchant contract. The trigger is "more than one source can independently demand a retention floor on this class," not "we have lots of regulators."
+
+Specify each floor concretely. A regulatory floor needs a CFR or USC (or non-US-equivalent) section citation so the synthesizer and downstream auditors can verify the duration without re-deriving it. A contract floor needs a reference to the master-agreement type whose retention clause is the source (e.g., "the manufacturer rebate contract term plus 3 years for dispute"). A signed-artifact floor — used when the artifact's signature must remain verifiable for as long as the signed artifact itself is retained anywhere — needs a reference to the retention obligation on the signed artifact, not a fixed duration.
+
+The synthesizer's posture when the declared floors disagree: the **longest floor wins** for the actual retention configuration, and the others remain operative as audit-defensibility evidence. Specialists do not file a contradiction finding when the floors differ in duration — that is the *expected* shape of multi-regulator overlap. Specialists do file a finding when (a) only one floor is named and the data class plainly falls under another regulator the pack lists, or (b) the configured retention is shorter than the longest declared floor.
+
+### Worked example: cryptographic key lifecycle records (from PBM pack)
+
+The cryptographic key lifecycle class in `domains/pbm/immutability-classes.md` covers every CMS PDE signing key, NCPDP SCRIPT message-signing key, and key-encrypting key in the PBM's custody — creation, rotation, suspension, and destruction events. Retention is pinned to the longest of:
+
+- **(a) HIPAA 6-year** per 45 CFR §164.316(b)(2)(i) — covers the key records as HIPAA security-policy documentation.
+- **(b) CMS Part D 10-year PDE retention** per 42 CFR §423.505(d) — required because PDE submissions are signed with these keys and CMS audit defensibility depends on proving which key signed which PDE.
+- **(c) Any signed-artifact retention floor that outlives both** — covers cases where a long-lived signed artifact (e.g., a multi-year rebate contract attestation) still references a key, so the key record must survive as long as the artifact does.
+
+The configured floor is 10 years from CMS Part D, *unless* a covered signed artifact extends past that — in which case the artifact's retention obligation pulls the key record floor with it. The HIPAA 6-year clause is not redundant: it is the floor the PBM cites to HHS OCR if the CMS retention is ever shortened by Part D regulatory change, and it is the floor an HHS investigator references when reviewing security-policy documentation. All three remain operative as audit-defensibility evidence even though only the longest controls the storage configuration.
 
 ## What stays the same across domains
 

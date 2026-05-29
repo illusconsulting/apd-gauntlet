@@ -67,8 +67,8 @@ When a specialist agent cannot determine which data class a given field belongs 
 
 - aggregate analytics with k-anonymity ≥ 5 AND no quasi-identifier combination from the section above present in the export schema
 - de-identified per Safe Harbor (45 CFR §164.514(b)(2)) when none of the quasi-identifier combinations above apply; otherwise Expert Determination under §164.514(b)(1) is required
-
-This taxonomy is consulted by Confidentiality, Integrity, Authenticity, Non-Repudiation, and Immutability specialists. The intake agent enumerates fields by reading artifacts against this list.
+- **Aggregate research-data exports under 45 CFR §164.512(i)** — when a research IRB has approved the use, PHI may be disclosed for research purposes under the §164.512(i) framework (including the optional Waiver of Authorization at §164.512(i)(2)). Out of scope for this taxonomy when the disclosure is governed by an IRB-approved protocol.
+- **Limited Data Sets under 45 CFR §164.514(e)** — datasets stripped to the §164.514(e)(2) identifier list and shared under a Data Use Agreement satisfying §164.514(e)(4). Out of scope for the quasi-identifier-combination escalation when the LDS recipient is bound by a §164.514(e)(4)-compliant DUA. Reapplies when the LDS leaves the DUA scope.
 
 ## NCPDP D.0 SCRIPT field reference
 
@@ -213,4 +213,4 @@ For each major field class, the decision of whether to mask, tokenize, redact, o
 
 - **Pass-through for plan-sponsor reporting** within the contract-defined scope.
 - **Encrypt-at-rest tier-2** for PBM-internal pricing data; CMS PDE pricing is tier-1 under the CMS DUA.
-- **Mask for non-contractual analytics** export — the rebate-aggregator surface, the COB-carrier surface, and analytics tenants outside the plan-sponsor scope cannot see ingredient cost, MAC, or dispensing fee.
+- **Mask for non-contractual analytics** export — the rebate-aggregator surface, the COB-carrier surface, and analytics tenants outside the plan-sponsor scope cannot see ingredient cost, MAC (Maximum Allowable Cost), or dispensing fee.

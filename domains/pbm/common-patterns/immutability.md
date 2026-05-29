@@ -34,13 +34,13 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: Configuration is partly IaC, partly manual; no drift detection.**
 
-- Severity: medium to high depending on what's manually managed
+- Severity: medium (high when the manually-managed retention covers HIPAA §164.316(b)(2)(i) 6-year or CMS §423.505(d) 10-year floors)
 - NIST: CM-2, CM-2(2), CM-3, CM-6
 - Related concerns: integrity (configuration correctness), authenticity (signed-commit posture)
 
 **Pattern: Configuration repository allows history rewrite (no protected branches).**
 
-- Severity: medium to high
+- Severity: medium (high when the affected retention floor is regulator-mandated rather than contractual)
 - NIST: CM-3, CM-3(1), SI-7(8)
 - Related concerns: authenticity (signed commits provide attribution but mutable history defeats it)
 

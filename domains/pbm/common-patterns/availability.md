@@ -12,7 +12,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 - **T1499** (Endpoint Denial of Service) — request-volume attacks against pharmacy ingress, member portal, or PA workflow endpoints
 - **T1498** (Network Denial of Service) — network-layer attacks against the PBM's public surface area
-- **T1485** (Data Destruction) — destruction of formulary, PA-criteria, or adjudication-state data to disrupt claims processing
+- **T1485** (Data Destruction) — destruction of formulary, PA-criteria, or adjudication-state data to disrupt claims processing — no clean D3FEND counter is mapped for data-destruction recovery; rely on backup-immutability (see common-patterns/immutability.md) and the AU-9 NIST 800-53r5 anchor in the severity rubric.
 
 **D3FEND counters:**
 

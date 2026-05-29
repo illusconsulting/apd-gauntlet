@@ -51,7 +51,7 @@ This goal defends against (or is exploited by) the following MITRE ATT&CK techni
 
 **Pattern: SBOM not generated; no vulnerability attribution path.**
 
-- Severity: medium to high depending on regulatory commitments
+- Severity: medium (high when the PBM has a HITRUST CSF or URAC commitment that explicitly requires SBOM)
 - NIST: SR-4, SR-4(3), SR-11
 
 **Pattern: Tech plan describes "authenticated APIs" generically.**
