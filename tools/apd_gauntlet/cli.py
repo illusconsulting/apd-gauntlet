@@ -887,14 +887,20 @@ def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
               help="Override output directory. Default: <run_dir>/40-synthesis/report-html/")
 @click.option("--quiet", is_flag=True, help="Suppress per-file progress messages.")
 def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untyped-def]
-    from .report.build import build_report
+    from .report.build import ReportBuildError, build_report
     from .report.emit import BundleMissingError
     from .report.loader import MissingArtifactError
     try:
-        target = build_report(run_dir, out_dir, quiet=quiet)
-    except (MissingArtifactError, BundleMissingError) as exc:
+        target, data = build_report(run_dir, out_dir, quiet=quiet)
+    except (MissingArtifactError, BundleMissingError, ReportBuildError) as exc:
         click.echo(f"Error: {exc}", err=True)
         raise SystemExit(1) from None
+    # Surface per-section failures so CI can grep for them and operators see
+    # which sections rendered with placeholders. The report itself still emits
+    # successfully — see data.meta.section_errors in data.js.
+    section_errors = (data.get("meta") or {}).get("section_errors") or {}
+    for name, err in section_errors.items():
+        click.echo(f"warning: section '{name}' failed: {err}", err=True)
     if not quiet:
         click.echo(f"HTML report at {target}")
 

@@ -26,7 +26,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_data_js_matches_golden(tmp_path: pathlib.Path) -> None:
-    out = build_report(FIXTURE_RUN, out_dir=tmp_path)
+    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     actual = (out / "data.js").read_text()
     expected = GOLDEN.read_text()
     if actual != expected:
@@ -41,7 +41,7 @@ def test_data_js_matches_golden(tmp_path: pathlib.Path) -> None:
 
 
 def test_all_expected_files_present(tmp_path: pathlib.Path) -> None:
-    out = build_report(FIXTURE_RUN, out_dir=tmp_path)
+    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     expected = {
         "index.html", "app.js", "data.js", "styles.css", "screens.css",
         "mermaid.min.js", "vendor-licenses.txt", "build-manifest.txt",

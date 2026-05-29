@@ -36,7 +36,8 @@ window.APD_DATA = {
       "compromised_admin_session",
       "supply_chain_attacker",
       "internal_lateral_attacker"
-    ]
+    ],
+    "section_errors": {}
   },
   "summary": {
     "findings_total": 72,

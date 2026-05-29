@@ -1433,33 +1433,104 @@ def build_apd_data(
     *,
     run_dir: pathlib.Path | None = None,
 ) -> dict[str, Any]:
-    """Assemble the full window.APD_DATA dict from a RunArtifacts."""
+    """Assemble the full ``window.APD_DATA`` dict from a ``RunArtifacts``.
+
+    Per-section isolation: each top-level section call runs inside a try/except.
+    If a section transformer raises, the section is filled with a safe
+    placeholder (empty list / dict / None) and the failure is recorded in
+    ``data["meta"]["section_errors"]`` as ``{section_name: "ErrType: message"}``.
+    One bad finding, one corrupt asset graph, or one misshapen capability
+    cannot block the entire report — the orchestrator either completes with
+    section_errors populated, or raises ``ReportBuildError`` when the meta
+    layer itself cannot be assembled (a fatal authoring problem).
+    """
     supplement = artifacts.report_data or {}
-    return {
-        "meta":     meta_block(artifacts, run_dir=run_dir),
-        "summary":  summary_rollup(artifacts),
-        "exec_summary": (supplement.get("exec_summary") or {}).get(
-            "paragraphs", ["Run summary not provided by synthesizer."]
-        ),
-        "posture_summary": posture_summary_section(supplement.get("posture_summary")),
-        "capabilities":  capability_grid(artifacts),
-        "strengths":     strengths_section(
-            artifacts, supplied_strengths=supplement.get("strengths"),
-        ),
-        "findings":      findings_array(
-            artifacts, headline_supplement=supplement.get("headline_findings"),
-        ),
-        "contradictions":              contradictions_section(artifacts),
-        "contradictions_notes":        artifacts.contradictions_notes,
-        "severity_disagreements":      severity_disagreements_section(artifacts),
-        "severity_disagreements_notes": artifacts.severity_disagreements_notes,
-        "nist_rollup":      nist_rollup_rows(artifacts),
-        "attack_exposure":  attack_exposure_rows(artifacts),
-        "apd_matrix":       apd_matrix(artifacts),
-        "attack_paths":     attack_paths_data(artifacts),
-        "next_steps":       next_steps_section(supplement.get("next_steps")),
-        "taxonomy":         taxonomy_dict(artifacts),
+    section_errors: dict[str, str] = {}
+    out: dict[str, Any] = {"meta": meta_block(artifacts, run_dir=run_dir)}
+
+    # Per-section work units. Each tuple is ``(name, thunk, placeholder)``.
+    # The thunks capture artifacts/supplement by closure so the loop body
+    # stays uniform. Placeholder shapes match what the React template expects
+    # when a section is empty (an empty list for the array sections, an empty
+    # dict for the keyed sections, ``None`` for ``attack_paths`` which the
+    # template treats as "v1.4 artifacts absent").
+    sections: list[tuple[str, Any, Any]] = [
+        ("summary",
+         lambda: summary_rollup(artifacts),
+         {}),
+        ("exec_summary",
+         lambda: (supplement.get("exec_summary") or {}).get(
+             "paragraphs", ["Run summary not provided by synthesizer."],
+         ),
+         ["Run summary not provided by synthesizer."]),
+        ("posture_summary",
+         lambda: posture_summary_section(supplement.get("posture_summary")),
+         {}),
+        ("capabilities",
+         lambda: capability_grid(artifacts),
+         []),
+        ("strengths",
+         lambda: strengths_section(
+             artifacts, supplied_strengths=supplement.get("strengths"),
+         ),
+         []),
+        ("findings",
+         lambda: findings_array(
+             artifacts, headline_supplement=supplement.get("headline_findings"),
+         ),
+         []),
+        ("contradictions",
+         lambda: contradictions_section(artifacts),
+         []),
+        ("severity_disagreements",
+         lambda: severity_disagreements_section(artifacts),
+         []),
+        ("nist_rollup",
+         lambda: nist_rollup_rows(artifacts),
+         []),
+        ("attack_exposure",
+         lambda: attack_exposure_rows(artifacts),
+         []),
+        ("apd_matrix",
+         lambda: apd_matrix(artifacts),
+         {"goals": [], "goalLabels": {}, "rows": []}),
+        ("attack_paths",
+         lambda: attack_paths_data(artifacts),
+         None),
+        ("next_steps",
+         lambda: next_steps_section(supplement.get("next_steps")),
+         []),
+        ("taxonomy",
+         lambda: taxonomy_dict(artifacts),
+         {}),
+    ]
+
+    # Passthrough fields are spliced in right after their related section to
+    # preserve the field ordering callers (golden tests, downstream consumers)
+    # expect from data.js. They come straight off the RunArtifacts so they
+    # cannot fail at this layer (loader-level failures bubble up before we
+    # reach build_apd_data).
+    passthrough_after: dict[str, list[tuple[str, Any]]] = {
+        "contradictions": [
+            ("contradictions_notes", artifacts.contradictions_notes),
+        ],
+        "severity_disagreements": [
+            ("severity_disagreements_notes", artifacts.severity_disagreements_notes),
+        ],
     }
+
+    for name, thunk, placeholder in sections:
+        try:
+            value = thunk()
+        except Exception as exc:  # noqa: BLE001 — wide catch is the point
+            value = placeholder
+            section_errors[name] = f"{type(exc).__name__}: {exc}"
+        out[name] = value
+        for pt_name, pt_value in passthrough_after.get(name, ()):
+            out[pt_name] = pt_value
+
+    out["meta"]["section_errors"] = section_errors
+    return out
 
 
 # ---------------------------------------------------------------------------

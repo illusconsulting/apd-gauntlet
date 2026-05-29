@@ -23,21 +23,21 @@ def _require_bundle() -> None:
 
 
 def test_build_writes_data_js(tmp_path: pathlib.Path) -> None:
-    out = build_report(FIXTURE_RUN, out_dir=tmp_path)
+    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     assert (out / "data.js").exists()
     body = (out / "data.js").read_text()
     assert "window.APD_DATA" in body
 
 
 def test_build_writes_index_html_and_bundle(tmp_path: pathlib.Path) -> None:
-    out = build_report(FIXTURE_RUN, out_dir=tmp_path)
+    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     assert (out / "index.html").exists()
     assert (out / "app.js").exists()
     assert (out / "styles.css").exists()
 
 
 def test_build_writes_manifest(tmp_path: pathlib.Path) -> None:
-    out = build_report(FIXTURE_RUN, out_dir=tmp_path)
+    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     manifest = (out / "build-manifest.txt").read_text()
     assert "framework_version=" in manifest
     assert "deduped-findings.yaml=" in manifest
@@ -48,7 +48,7 @@ def test_build_default_out_dir_is_under_synthesis(tmp_path: pathlib.Path) -> Non
     import shutil as _sh
     work = tmp_path / "run"
     _sh.copytree(FIXTURE_RUN, work)
-    out = build_report(work)
+    out, _ = build_report(work)
     assert out == work / "40-synthesis" / "report-html"
     assert (out / "data.js").exists()
 
