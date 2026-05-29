@@ -3,14 +3,14 @@ window.APD_DATA = {
     "framework_version": "1.5.0",
     "domain_pack": {
       "name": "api-security",
-      "version": ""
+      "version": "unknown"
     },
     "run_id": "apd-20260527-crapi-owasp-api-top10",
     "synthesizer_version": "1.0.0",
     "specialists_skipped": [],
     "subject": "OWASP crAPI v1.1.5",
     "subject_tagline": "automotive B2C demonstration platform (Apache-2.0)",
-    "date": "",
+    "date": "2026-05-29",
     "artifact_count": 9,
     "artifact_types": [
       "md×8",

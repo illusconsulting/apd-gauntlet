@@ -19,9 +19,52 @@ Fixture-shape notes (apd-20260527-crapi-owasp-api-top10 and earlier runs):
     from the frontmatter of `deduped-findings.yaml` (`domain_pack.version`).
   - There is no `subject:` key in `.apd-run.yaml`; the loader falls back to
     `cbm_project` when present, otherwise an empty string.
+
+Manifest schema (the keys populated on the returned RunArtifacts dataclass)
+-------------------------------------------------------------------------
+
+Required artifacts (raise MissingArtifactError when absent):
+  - ``.apd-run.yaml``                          → ``run_cfg`` (run-level config)
+  - ``00-context/asset-inventory.yaml``         → ``asset_inventory``
+  - ``40-synthesis/deduped-findings.yaml``      → ``deduped_findings``
+  - ``40-synthesis/deduped-capabilities.yaml``  → ``deduped_capabilities``
+  - ``40-synthesis/nist-coverage.yaml``         → ``nist_coverage``
+  - ``40-synthesis/attack-exposure.yaml``       → ``attack_exposure``
+  - ``40-synthesis/apd-coverage-matrix.yaml``   → ``apd_coverage_matrix``
+
+Optional artifacts (default to ``None`` / ``[]`` when absent):
+  - ``40-synthesis/contradictions.yaml``        → ``contradictions`` / notes
+  - ``40-synthesis/severity-disagreements.yaml``→ ``severity_disagreements`` / notes
+  - ``40-synthesis/attack-paths.yaml``          → ``attack_paths``
+  - ``40-synthesis/asset-graph.yaml``           → ``asset_graph``
+  - ``40-synthesis/defense-graph.yaml``         → ``defense_graph``
+  - ``40-synthesis/attack-path.findings.yaml``  → ``attack_path_findings``
+  - ``40-synthesis/report-data.yaml``           → ``report_data``
+
+Source-of-truth + fallback chain for each manifest field:
+  - ``run_id`` — ``run_cfg.run_id``; falls back to ``run_dir.name``.
+  - ``framework_version`` — ``run_cfg.framework_version``; falls back to
+    ``deduped-findings.yaml`` top-level ``framework_version``; final empty
+    string is treated downstream (transform.meta_block) as a warning case
+    and substituted with ``"unknown"``.
+  - ``domain_pack_name`` — ``run_cfg.domain_pack.name`` if dict-shaped;
+    accepts ``run_cfg.domain_pack`` as a bare string; falls back to
+    ``run_cfg.domain`` (legacy fixture shape).
+  - ``domain_pack_version`` — ``run_cfg.domain_pack.version``; falls back to
+    ``run_cfg.domain_pack_version``; then to
+    ``deduped-findings.yaml._meta.domain_pack_version``; then to
+    ``deduped-findings.yaml.domain_pack.version`` (legacy frontmatter
+    shape); final fallback ``"unknown"``.
+  - ``subject`` — ``run_cfg.subject``; falls back to a humanised
+    ``run_cfg.cbm_project`` when the latter is not a filesystem-path slug.
+  - ``date`` — ``run_cfg.date``; falls back to
+    ``nist_coverage.generated_at`` (date portion); then to
+    ``attack_exposure.generated_at`` (date portion); final fallback is
+    today's ISO date (build-time stamp).
 """
 from __future__ import annotations
 
+import datetime
 import hashlib
 import pathlib
 from dataclasses import dataclass, field
@@ -208,23 +251,63 @@ def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
 
 def _extract_domain_pack_version(
     run_cfg: dict[str, Any],
-    findings_doc: dict[str, Any],
+    findings_doc: dict[str, Any] | None = None,
 ) -> str:
-    """Extract domain pack version.
+    """Extract domain pack version with cascading fallbacks.
 
-    Current fixture stores this in deduped-findings.yaml frontmatter
-    (``domain_pack.version``) rather than in `.apd-run.yaml`.
+    Fallback chain:
+      1. ``run_cfg.domain_pack.version`` (planned schema)
+      2. ``run_cfg.domain_pack_version`` (flat alternate shape)
+      3. ``findings_doc._meta.domain_pack_version`` (PR-T4-G addition —
+         synthesizer-emitted metadata)
+      4. ``findings_doc.domain_pack.version`` (legacy frontmatter shape)
+      5. ``"unknown"`` (final build-time fallback so the rendered report
+         never shows an empty version string)
     """
     domain_pack = run_cfg.get("domain_pack")
     if isinstance(domain_pack, dict):
         version = domain_pack.get("version", "")
         if version:
             return str(version)
-    # Fall back to deduped-findings.yaml frontmatter.
-    findings_dp = findings_doc.get("domain_pack")
-    if isinstance(findings_dp, dict):
-        return str(findings_dp.get("version", ""))
-    return ""
+    flat_version = run_cfg.get("domain_pack_version")
+    if flat_version:
+        return str(flat_version)
+    if findings_doc:
+        meta = findings_doc.get("_meta")
+        if isinstance(meta, dict):
+            meta_version = meta.get("domain_pack_version")
+            if meta_version:
+                return str(meta_version)
+        # Legacy frontmatter shape.
+        findings_dp = findings_doc.get("domain_pack")
+        if isinstance(findings_dp, dict):
+            legacy_version = findings_dp.get("version", "")
+            if legacy_version:
+                return str(legacy_version)
+    return "unknown"
+
+
+def _resolve_date(
+    run_cfg: dict[str, Any],
+    nist_doc: dict[str, Any] | None = None,
+    attack_doc: dict[str, Any] | None = None,
+) -> str:
+    """Resolve the manifest ``date`` field with cascading fallbacks.
+
+    Fallback chain:
+      1. ``run_cfg.date`` (canonical, run-config supplied)
+      2. ``nist_doc.generated_at`` (date portion before any "T")
+      3. ``attack_doc.generated_at`` (date portion before any "T")
+      4. ``datetime.date.today().isoformat()`` (build-time stamp)
+    """
+    date = run_cfg.get("date") or ""
+    if not date and nist_doc:
+        date = str(nist_doc.get("generated_at") or "").split("T")[0]
+    if not date and attack_doc:
+        date = str(attack_doc.get("generated_at") or "").split("T")[0]
+    if not date:
+        date = datetime.date.today().isoformat()
+    return str(date)
 
 
 def _is_path_slug(value: str) -> bool:
@@ -391,7 +474,9 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         domain_pack_name=_extract_domain_pack_name(run_cfg),
         domain_pack_version=_extract_domain_pack_version(run_cfg, findings_doc),
         subject=_extract_subject(run_cfg),
-        date=str(run_cfg.get("date", "")),
+        # Use T4-F's cached docs (nist_doc + attack_exposure_doc) to feed
+        # T4-G's _resolve_date fallback chain — no third read needed.
+        date=_resolve_date(run_cfg, nist_doc, attack_exposure_doc),
         asset_inventory=inventory,
         deduped_findings=_records_from_doc(findings_doc, "finding"),
         deduped_capabilities=_records_from_doc(caps_doc, "capability"),

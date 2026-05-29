@@ -124,8 +124,20 @@ def meta_block(
         is_empty_run = (
             (findings_len + attack_paths_len == 0) and (caps_len == 0)
         )
+    # PR-T4-G: surface empty framework_version as a build-time warning and
+    # substitute "unknown" so the rendered report never shows a blank.
+    framework_version = artifacts.framework_version or "unknown"
+    if framework_version == "unknown" and not artifacts.framework_version:
+        try:
+            import click  # noqa: PLC0415 — intentional lazy import
+            click.echo(
+                'warning: framework_version is empty; substituting "unknown"',
+                err=True,
+            )
+        except ImportError:
+            pass
     return {
-        "framework_version": artifacts.framework_version,
+        "framework_version": framework_version,
         "domain_pack": {
             "name": artifacts.domain_pack_name,
             "version": artifacts.domain_pack_version,
