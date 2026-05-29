@@ -1580,17 +1580,21 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
     refs = _collect_referenced_ids(artifacts)
     out: dict[str, dict[str, str]] = {}
 
-    # NIST 800-53r5: titles come from the nist-coverage artifact (already loaded).
-    nist_titles = {
+    # NIST 800-53r5: titles come from the nist-coverage artifact when present
+    # (Shape A inline title), otherwise fall back to the bundled OSCAL catalog.
+    inline_titles = {
         c.get("id"): c.get("title", "")
         for c in (artifacts.nist_coverage.get("control") or [])
+        if isinstance(c, dict)
     }
+    catalog_titles = _taxonomy.nist_control_titles()
     for cid in sorted(refs["nist"]):
         if not cid:
             continue
+        title = inline_titles.get(cid) or catalog_titles.get(cid, cid)
         out[cid] = {
             "family": _NIST_FAMILY_DISPLAY,
-            "title":  nist_titles.get(cid, cid),
+            "title":  title,
         }
 
     # ATT&CK techniques: titles from taxonomy module; fall back to id if absent.

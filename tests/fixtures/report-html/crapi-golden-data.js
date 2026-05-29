@@ -4134,547 +4134,547 @@ window.APD_DATA = {
   "taxonomy": {
     "AC-12": {
       "family": "NIST 800-53r5",
-      "title": "AC-12"
+      "title": "Session Termination"
     },
     "AC-12(1)": {
       "family": "NIST 800-53r5",
-      "title": "AC-12(1)"
+      "title": "Session Termination | User-initiated Logouts"
     },
     "AC-2": {
       "family": "NIST 800-53r5",
-      "title": "AC-2"
+      "title": "Account Management"
     },
     "AC-2(2)": {
       "family": "NIST 800-53r5",
-      "title": "AC-2(2)"
+      "title": "Account Management | Automated Temporary and Emergency Account Management"
     },
     "AC-2(3)": {
       "family": "NIST 800-53r5",
-      "title": "AC-2(3)"
+      "title": "Account Management | Disable Accounts"
     },
     "AC-3": {
       "family": "NIST 800-53r5",
-      "title": "AC-3"
+      "title": "Access Enforcement"
     },
     "AC-3(7)": {
       "family": "NIST 800-53r5",
-      "title": "AC-3(7)"
+      "title": "Access Enforcement | Role-based Access Control"
     },
     "AC-4": {
       "family": "NIST 800-53r5",
-      "title": "AC-4"
+      "title": "Information Flow Enforcement"
     },
     "AC-4(8)": {
       "family": "NIST 800-53r5",
-      "title": "AC-4(8)"
+      "title": "Information Flow Enforcement | Security and Privacy Policy Filters"
     },
     "AC-5": {
       "family": "NIST 800-53r5",
-      "title": "AC-5"
+      "title": "Separation of Duties"
     },
     "AC-6": {
       "family": "NIST 800-53r5",
-      "title": "AC-6"
+      "title": "Least Privilege"
     },
     "AC-6(1)": {
       "family": "NIST 800-53r5",
-      "title": "AC-6(1)"
+      "title": "Least Privilege | Authorize Access to Security Functions"
     },
     "AC-6(10)": {
       "family": "NIST 800-53r5",
-      "title": "AC-6(10)"
+      "title": "Least Privilege | Prohibit Non-privileged Users from Executing Privileged Functions"
     },
     "AC-6(5)": {
       "family": "NIST 800-53r5",
-      "title": "AC-6(5)"
+      "title": "Least Privilege | Privileged Accounts"
     },
     "AC-6(7)": {
       "family": "NIST 800-53r5",
-      "title": "AC-6(7)"
+      "title": "Least Privilege | Review of User Privileges"
     },
     "AC-6(9)": {
       "family": "NIST 800-53r5",
-      "title": "AC-6(9)"
+      "title": "Least Privilege | Log Use of Privileged Functions"
     },
     "AC-7": {
       "family": "NIST 800-53r5",
-      "title": "AC-7"
+      "title": "Unsuccessful Logon Attempts"
     },
     "AC-7(2)": {
       "family": "NIST 800-53r5",
-      "title": "AC-7(2)"
+      "title": "Unsuccessful Logon Attempts | Purge or Wipe Mobile Device"
     },
     "AU-10": {
       "family": "NIST 800-53r5",
-      "title": "AU-10"
+      "title": "Non-repudiation"
     },
     "AU-10(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-10(1)"
+      "title": "Non-repudiation | Association of Identities"
     },
     "AU-11": {
       "family": "NIST 800-53r5",
-      "title": "AU-11"
+      "title": "Audit Record Retention"
     },
     "AU-11(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-11(1)"
+      "title": "Audit Record Retention | Long-term Retrieval Capability"
     },
     "AU-12": {
       "family": "NIST 800-53r5",
-      "title": "AU-12"
+      "title": "Audit Record Generation"
     },
     "AU-12(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-12(1)"
+      "title": "Audit Record Generation | System-wide and Time-correlated Audit Trail"
     },
     "AU-2": {
       "family": "NIST 800-53r5",
-      "title": "AU-2"
+      "title": "Event Logging"
     },
     "AU-3": {
       "family": "NIST 800-53r5",
-      "title": "AU-3"
+      "title": "Content of Audit Records"
     },
     "AU-3(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-3(1)"
+      "title": "Content of Audit Records | Additional Audit Information"
     },
     "AU-3(3)": {
       "family": "NIST 800-53r5",
-      "title": "AU-3(3)"
+      "title": "Content of Audit Records | Limit Personally Identifiable Information Elements"
     },
     "AU-4": {
       "family": "NIST 800-53r5",
-      "title": "AU-4"
+      "title": "Audit Log Storage Capacity"
     },
     "AU-5": {
       "family": "NIST 800-53r5",
-      "title": "AU-5"
+      "title": "Response to Audit Logging Process Failures"
     },
     "AU-5(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-5(1)"
+      "title": "Response to Audit Logging Process Failures | Storage Capacity Warning"
     },
     "AU-5(2)": {
       "family": "NIST 800-53r5",
-      "title": "AU-5(2)"
+      "title": "Response to Audit Logging Process Failures | Real-time Alerts"
     },
     "AU-6": {
       "family": "NIST 800-53r5",
-      "title": "AU-6"
+      "title": "Audit Record Review, Analysis, and Reporting"
     },
     "AU-8": {
       "family": "NIST 800-53r5",
-      "title": "AU-8"
+      "title": "Time Stamps"
     },
     "AU-8(1)": {
       "family": "NIST 800-53r5",
-      "title": "AU-8(1)"
+      "title": "Time Stamps | Synchronization with Authoritative Time Source"
     },
     "AU-9": {
       "family": "NIST 800-53r5",
-      "title": "AU-9"
+      "title": "Protection of Audit Information"
     },
     "AU-9(2)": {
       "family": "NIST 800-53r5",
-      "title": "AU-9(2)"
+      "title": "Protection of Audit Information | Store on Separate Physical Systems or Components"
     },
     "AU-9(3)": {
       "family": "NIST 800-53r5",
-      "title": "AU-9(3)"
+      "title": "Protection of Audit Information | Cryptographic Protection"
     },
     "AU-9(4)": {
       "family": "NIST 800-53r5",
-      "title": "AU-9(4)"
+      "title": "Protection of Audit Information | Access by Subset of Privileged Users"
     },
     "AU-9(6)": {
       "family": "NIST 800-53r5",
-      "title": "AU-9(6)"
+      "title": "Protection of Audit Information | Read-only Access"
     },
     "CM-2": {
       "family": "NIST 800-53r5",
-      "title": "CM-2"
+      "title": "Baseline Configuration"
     },
     "CM-2(2)": {
       "family": "NIST 800-53r5",
-      "title": "CM-2(2)"
+      "title": "Baseline Configuration | Automation Support for Accuracy and Currency"
     },
     "CM-3": {
       "family": "NIST 800-53r5",
-      "title": "CM-3"
+      "title": "Configuration Change Control"
     },
     "CM-3(1)": {
       "family": "NIST 800-53r5",
-      "title": "CM-3(1)"
+      "title": "Configuration Change Control | Automated Documentation, Notification, and Prohibition of Changes"
     },
     "CM-5": {
       "family": "NIST 800-53r5",
-      "title": "CM-5"
+      "title": "Access Restrictions for Change"
     },
     "CM-6": {
       "family": "NIST 800-53r5",
-      "title": "CM-6"
+      "title": "Configuration Settings"
     },
     "CM-6(1)": {
       "family": "NIST 800-53r5",
-      "title": "CM-6(1)"
+      "title": "Configuration Settings | Automated Management, Application, and Verification"
     },
     "CM-6(2)": {
       "family": "NIST 800-53r5",
-      "title": "CM-6(2)"
+      "title": "Configuration Settings | Respond to Unauthorized Changes"
     },
     "CM-7": {
       "family": "NIST 800-53r5",
-      "title": "CM-7"
+      "title": "Least Functionality"
     },
     "CM-7(5)": {
       "family": "NIST 800-53r5",
-      "title": "CM-7(5)"
+      "title": "Least Functionality | Authorized Software — Allow-by-exception"
     },
     "CM-8": {
       "family": "NIST 800-53r5",
-      "title": "CM-8"
+      "title": "System Component Inventory"
     },
     "CP-10": {
       "family": "NIST 800-53r5",
-      "title": "CP-10"
+      "title": "System Recovery and Reconstitution"
     },
     "CP-10(2)": {
       "family": "NIST 800-53r5",
-      "title": "CP-10(2)"
+      "title": "System Recovery and Reconstitution | Transaction Recovery"
     },
     "CP-12": {
       "family": "NIST 800-53r5",
-      "title": "CP-12"
+      "title": "Safe Mode"
     },
     "CP-13": {
       "family": "NIST 800-53r5",
-      "title": "CP-13"
+      "title": "Alternative Security Mechanisms"
     },
     "CP-2": {
       "family": "NIST 800-53r5",
-      "title": "CP-2"
+      "title": "Contingency Plan"
     },
     "CP-2(3)": {
       "family": "NIST 800-53r5",
-      "title": "CP-2(3)"
+      "title": "Contingency Plan | Resume Mission and Business Functions"
     },
     "CP-2(5)": {
       "family": "NIST 800-53r5",
-      "title": "CP-2(5)"
+      "title": "Contingency Plan | Continue Mission and Business Functions"
     },
     "CP-7": {
       "family": "NIST 800-53r5",
-      "title": "CP-7"
+      "title": "Alternate Processing Site"
     },
     "CP-9": {
       "family": "NIST 800-53r5",
-      "title": "CP-9"
+      "title": "System Backup"
     },
     "CP-9(1)": {
       "family": "NIST 800-53r5",
-      "title": "CP-9(1)"
+      "title": "System Backup | Testing for Reliability and Integrity"
     },
     "CP-9(8)": {
       "family": "NIST 800-53r5",
-      "title": "CP-9(8)"
+      "title": "System Backup | Cryptographic Protection"
     },
     "IA-2": {
       "family": "NIST 800-53r5",
-      "title": "IA-2"
+      "title": "Identification and Authentication (Organizational Users)"
     },
     "IA-2(1)": {
       "family": "NIST 800-53r5",
-      "title": "IA-2(1)"
+      "title": "Identification and Authentication (Organizational Users) | Multi-factor Authentication to Privileged Accounts"
     },
     "IA-2(2)": {
       "family": "NIST 800-53r5",
-      "title": "IA-2(2)"
+      "title": "Identification and Authentication (Organizational Users) | Multi-factor Authentication to Non-privileged Accounts"
     },
     "IA-2(6)": {
       "family": "NIST 800-53r5",
-      "title": "IA-2(6)"
+      "title": "Identification and Authentication (Organizational Users) | Access to Accounts —separate Device"
     },
     "IA-2(8)": {
       "family": "NIST 800-53r5",
-      "title": "IA-2(8)"
+      "title": "Identification and Authentication (Organizational Users) | Access to Accounts — Replay Resistant"
     },
     "IA-3": {
       "family": "NIST 800-53r5",
-      "title": "IA-3"
+      "title": "Device Identification and Authentication"
     },
     "IA-3(1)": {
       "family": "NIST 800-53r5",
-      "title": "IA-3(1)"
+      "title": "Device Identification and Authentication | Cryptographic Bidirectional Authentication"
     },
     "IA-5": {
       "family": "NIST 800-53r5",
-      "title": "IA-5"
+      "title": "Authenticator Management"
     },
     "IA-5(1)": {
       "family": "NIST 800-53r5",
-      "title": "IA-5(1)"
+      "title": "Authenticator Management | Password-based Authentication"
     },
     "IA-5(13)": {
       "family": "NIST 800-53r5",
-      "title": "IA-5(13)"
+      "title": "Authenticator Management | Expiration of Cached Authenticators"
     },
     "IA-5(2)": {
       "family": "NIST 800-53r5",
-      "title": "IA-5(2)"
+      "title": "Authenticator Management | Public Key-based Authentication"
     },
     "IA-5(7)": {
       "family": "NIST 800-53r5",
-      "title": "IA-5(7)"
+      "title": "Authenticator Management | No Embedded Unencrypted Static Authenticators"
     },
     "IA-9": {
       "family": "NIST 800-53r5",
-      "title": "IA-9"
+      "title": "Service Identification and Authentication"
     },
     "IR-4": {
       "family": "NIST 800-53r5",
-      "title": "IR-4"
+      "title": "Incident Handling"
     },
     "MP-4": {
       "family": "NIST 800-53r5",
-      "title": "MP-4"
+      "title": "Media Storage"
     },
     "SA-10": {
       "family": "NIST 800-53r5",
-      "title": "SA-10"
+      "title": "Developer Configuration Management"
     },
     "SA-15(7)": {
       "family": "NIST 800-53r5",
-      "title": "SA-15(7)"
+      "title": "Development Process, Standards, and Tools | Automated Vulnerability Analysis"
     },
     "SC-10": {
       "family": "NIST 800-53r5",
-      "title": "SC-10"
+      "title": "Network Disconnect"
     },
     "SC-12": {
       "family": "NIST 800-53r5",
-      "title": "SC-12"
+      "title": "Cryptographic Key Establishment and Management"
     },
     "SC-12(1)": {
       "family": "NIST 800-53r5",
-      "title": "SC-12(1)"
+      "title": "Cryptographic Key Establishment and Management | Availability"
     },
     "SC-12(2)": {
       "family": "NIST 800-53r5",
-      "title": "SC-12(2)"
+      "title": "Cryptographic Key Establishment and Management | Symmetric Keys"
     },
     "SC-13": {
       "family": "NIST 800-53r5",
-      "title": "SC-13"
+      "title": "Cryptographic Protection"
     },
     "SC-16": {
       "family": "NIST 800-53r5",
-      "title": "SC-16"
+      "title": "Transmission of Security and Privacy Attributes"
     },
     "SC-17": {
       "family": "NIST 800-53r5",
-      "title": "SC-17"
+      "title": "Public Key Infrastructure Certificates"
     },
     "SC-22": {
       "family": "NIST 800-53r5",
-      "title": "SC-22"
+      "title": "Architecture and Provisioning for Name/Address Resolution Service"
     },
     "SC-23": {
       "family": "NIST 800-53r5",
-      "title": "SC-23"
+      "title": "Session Authenticity"
     },
     "SC-23(3)": {
       "family": "NIST 800-53r5",
-      "title": "SC-23(3)"
+      "title": "Session Authenticity | Unique System-generated Session Identifiers"
     },
     "SC-28": {
       "family": "NIST 800-53r5",
-      "title": "SC-28"
+      "title": "Protection of Information at Rest"
     },
     "SC-28(1)": {
       "family": "NIST 800-53r5",
-      "title": "SC-28(1)"
+      "title": "Protection of Information at Rest | Cryptographic Protection"
     },
     "SC-36": {
       "family": "NIST 800-53r5",
-      "title": "SC-36"
+      "title": "Distributed Processing and Storage"
     },
     "SC-36(1)": {
       "family": "NIST 800-53r5",
-      "title": "SC-36(1)"
+      "title": "Distributed Processing and Storage | Polling Techniques"
     },
     "SC-5": {
       "family": "NIST 800-53r5",
-      "title": "SC-5"
+      "title": "Denial-of-service Protection"
     },
     "SC-5(1)": {
       "family": "NIST 800-53r5",
-      "title": "SC-5(1)"
+      "title": "Denial-of-service Protection | Restrict Ability to Attack Other Systems"
     },
     "SC-5(2)": {
       "family": "NIST 800-53r5",
-      "title": "SC-5(2)"
+      "title": "Denial-of-service Protection | Capacity, Bandwidth, and Redundancy"
     },
     "SC-6": {
       "family": "NIST 800-53r5",
-      "title": "SC-6"
+      "title": "Resource Availability"
     },
     "SC-7": {
       "family": "NIST 800-53r5",
-      "title": "SC-7"
+      "title": "Boundary Protection"
     },
     "SC-7(21)": {
       "family": "NIST 800-53r5",
-      "title": "SC-7(21)"
+      "title": "Boundary Protection | Isolation of System Components"
     },
     "SC-7(5)": {
       "family": "NIST 800-53r5",
-      "title": "SC-7(5)"
+      "title": "Boundary Protection | Deny by Default — Allow by Exception"
     },
     "SC-8": {
       "family": "NIST 800-53r5",
-      "title": "SC-8"
+      "title": "Transmission Confidentiality and Integrity"
     },
     "SC-8(1)": {
       "family": "NIST 800-53r5",
-      "title": "SC-8(1)"
+      "title": "Transmission Confidentiality and Integrity | Cryptographic Protection"
     },
     "SI-10": {
       "family": "NIST 800-53r5",
-      "title": "SI-10"
+      "title": "Information Input Validation"
     },
     "SI-10(5)": {
       "family": "NIST 800-53r5",
-      "title": "SI-10(5)"
+      "title": "Information Input Validation | Restrict Inputs to Trusted Sources and Approved Formats"
     },
     "SI-12": {
       "family": "NIST 800-53r5",
-      "title": "SI-12"
+      "title": "Information Management and Retention"
     },
     "SI-13": {
       "family": "NIST 800-53r5",
-      "title": "SI-13"
+      "title": "Predictable Failure Prevention"
     },
     "SI-13(4)": {
       "family": "NIST 800-53r5",
-      "title": "SI-13(4)"
+      "title": "Predictable Failure Prevention | Standby Component Installation and Notification"
     },
     "SI-15": {
       "family": "NIST 800-53r5",
-      "title": "SI-15"
+      "title": "Information Output Filtering"
     },
     "SI-17": {
       "family": "NIST 800-53r5",
-      "title": "SI-17"
+      "title": "Fail-safe Procedures"
     },
     "SI-4": {
       "family": "NIST 800-53r5",
-      "title": "SI-4"
+      "title": "System Monitoring"
     },
     "SI-7": {
       "family": "NIST 800-53r5",
-      "title": "SI-7"
+      "title": "Software, Firmware, and Information Integrity"
     },
     "SI-7(1)": {
       "family": "NIST 800-53r5",
-      "title": "SI-7(1)"
+      "title": "Software, Firmware, and Information Integrity | Integrity Checks"
     },
     "SI-7(8)": {
       "family": "NIST 800-53r5",
-      "title": "SI-7(8)"
+      "title": "Software, Firmware, and Information Integrity | Auditing Capability for Significant Events"
     },
     "SR-11": {
       "family": "NIST 800-53r5",
-      "title": "SR-11"
+      "title": "Component Authenticity"
     },
     "SR-4": {
       "family": "NIST 800-53r5",
-      "title": "SR-4"
+      "title": "Provenance"
     },
     "SR-4(3)": {
       "family": "NIST 800-53r5",
-      "title": "SR-4(3)"
+      "title": "Provenance | Validate as Genuine and Not Altered"
     },
     "SR-4(4)": {
       "family": "NIST 800-53r5",
-      "title": "SR-4(4)"
+      "title": "Provenance | Supply Chain Integrity — Pedigree"
     },
     "T1070": {
       "family": "MITRE ATT&CK",
-      "title": "T1070"
+      "title": "Indicator Removal"
     },
     "T1078": {
       "family": "MITRE ATT&CK",
-      "title": "T1078"
+      "title": "Valid Accounts"
     },
     "T1110": {
       "family": "MITRE ATT&CK",
-      "title": "T1110"
+      "title": "Brute Force"
     },
     "T1110.001": {
       "family": "MITRE ATT&CK",
-      "title": "T1110.001"
+      "title": "Brute Force: Password Guessing"
     },
     "T1190": {
       "family": "MITRE ATT&CK",
-      "title": "T1190"
+      "title": "Exploit Public-Facing Application"
     },
     "T1195": {
       "family": "MITRE ATT&CK",
-      "title": "T1195"
+      "title": "Supply Chain Compromise"
     },
     "T1195.002": {
       "family": "MITRE ATT&CK",
-      "title": "T1195.002"
+      "title": "Supply Chain Compromise: Compromise Software Supply Chain"
     },
     "T1213": {
       "family": "MITRE ATT&CK",
-      "title": "T1213"
+      "title": "Data from Information Repositories"
     },
     "T1490": {
       "family": "MITRE ATT&CK",
-      "title": "T1490"
+      "title": "Inhibit System Recovery"
     },
     "T1499": {
       "family": "MITRE ATT&CK",
-      "title": "T1499"
+      "title": "Endpoint Denial of Service"
     },
     "T1499.003": {
       "family": "MITRE ATT&CK",
-      "title": "T1499.003"
+      "title": "Endpoint Denial of Service: Application Exhaustion Flood"
     },
     "T1550": {
       "family": "MITRE ATT&CK",
-      "title": "T1550"
+      "title": "Use Alternate Authentication Material"
     },
     "T1550.001": {
       "family": "MITRE ATT&CK",
-      "title": "T1550.001"
+      "title": "Use Alternate Authentication Material: Application Access Token"
     },
     "T1552": {
       "family": "MITRE ATT&CK",
-      "title": "T1552"
+      "title": "Unsecured Credentials"
     },
     "T1552.001": {
       "family": "MITRE ATT&CK",
-      "title": "T1552.001"
+      "title": "Unsecured Credentials: Credentials In Files"
     },
     "T1557": {
       "family": "MITRE ATT&CK",
-      "title": "T1557"
+      "title": "Adversary-in-the-Middle"
     },
     "T1562": {
       "family": "MITRE ATT&CK",
-      "title": "T1562"
+      "title": "Impair Defenses"
     },
     "T1562.008": {
       "family": "MITRE ATT&CK",
-      "title": "T1562.008"
+      "title": "Impair Defenses: Disable or Modify Cloud Logs"
     },
     "T1606": {
       "family": "MITRE ATT&CK",
-      "title": "T1606"
+      "title": "Forge Web Credentials"
     },
     "CWE-1088": {
       "family": "CWE",

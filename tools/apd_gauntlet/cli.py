@@ -286,10 +286,140 @@ def summarize_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
     default=pathlib.Path(__file__).resolve().parent / "data" / "mitre-mitigations.json",
     show_default=False,
 )
-def refresh_mitre_cmd(out) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Fetch the upstream bundle and report its byte size without writing.",
+)
+def refresh_mitre_cmd(out, dry_run) -> None:  # type: ignore[no-untyped-def]
+    if dry_run:
+        from .refresh_mitre import fetch_mitre_bundle
+
+        click.echo("Fetching MITRE ATT&CK bundle (dry-run)...")
+        body = fetch_mitre_bundle()
+        click.echo(
+            f"Would write {out} ({len(body)} bytes fetched from upstream)."
+        )
+        return
     click.echo("Fetching MITRE ATT&CK bundle...")
     fetch_and_project(out)
     click.echo(f"Wrote {out}")
+
+
+# Upstream OSCAL 800-53r5 catalog. Stable enough that refresh-nist defaults to
+# the same source the bundled nist-controls.json was projected from.
+NIST_OSCAL_URL = (
+    "https://github.com/usnistgov/oscal-content/raw/main/nist.gov/SP800-53/rev5/"
+    "json/NIST_SP-800-53_rev5_catalog-min.json"
+)
+
+
+@main.command("refresh-nist")
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False, path_type=pathlib.Path),
+    default=pathlib.Path(__file__).resolve().parent / "data" / "nist-controls.json",
+    show_default=False,
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Fetch the upstream OSCAL catalog and report its byte size without writing.",
+)
+def refresh_nist_cmd(out, dry_run) -> None:  # type: ignore[no-untyped-def]
+    """Refresh the bundled NIST 800-53r5 control catalog from the OSCAL source.
+
+    Downloads the upstream OSCAL JSON, projects it to the compact
+    ``{control_id: title}`` shape the report taxonomy loader expects, and
+    writes it to the package data directory. Mirrors the security hardening
+    used by other ``refresh-*`` commands (bounded response size, defensive
+    Content-Length check).
+    """
+    from urllib.request import urlopen
+
+    MAX_RESPONSE_BYTES = 200 * 1024 * 1024  # 200 MiB
+    DEFAULT_TIMEOUT_SECONDS = 60
+
+    click.echo(f"Fetching NIST 800-53r5 OSCAL catalog from {NIST_OSCAL_URL} ...")
+    try:
+        with urlopen(NIST_OSCAL_URL, timeout=DEFAULT_TIMEOUT_SECONDS) as resp:
+            content_length = resp.headers.get("Content-Length")
+            if content_length is not None:
+                try:
+                    advertised = int(content_length)
+                except (TypeError, ValueError):
+                    advertised = None
+                if advertised is not None and advertised > MAX_RESPONSE_BYTES:
+                    raise click.ClickException(
+                        f"OSCAL response Content-Length ({advertised}) exceeds "
+                        f"maximum ({MAX_RESPONSE_BYTES} bytes); refusing to load."
+                    )
+            body = resp.read(MAX_RESPONSE_BYTES + 1)
+    except OSError as exc:
+        # Network failure or upstream unavailable. Tell the operator what would
+        # happen so they can fall back to the bundled artifact in the meantime.
+        raise click.ClickException(
+            f"Could not reach OSCAL catalog at {NIST_OSCAL_URL}: {exc}. "
+            f"refresh-nist would normally download the OSCAL JSON, extract every "
+            f"control id + title, and write the projected catalog to {out}."
+        ) from exc
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise click.ClickException(
+            f"OSCAL response body exceeds maximum ({MAX_RESPONSE_BYTES} bytes); "
+            "refusing to load. Verify the upstream feed before retrying."
+        )
+
+    if dry_run:
+        click.echo(
+            f"Would write {out} ({len(body)} bytes fetched from upstream)."
+        )
+        return
+
+    catalog = _stdjson.loads(body.decode("utf-8"))
+    controls: dict[str, str] = {}
+
+    def _walk_groups(groups: list[Any]) -> None:
+        for group in groups:
+            if not isinstance(group, dict):
+                continue
+            for ctrl in group.get("controls") or []:
+                _walk_control(ctrl)
+            sub_groups = group.get("groups")
+            if isinstance(sub_groups, list):
+                _walk_groups(sub_groups)
+
+    def _walk_control(ctrl: dict[str, Any]) -> None:
+        if not isinstance(ctrl, dict):
+            return
+        cid = ctrl.get("id")
+        title = ctrl.get("title")
+        if isinstance(cid, str) and isinstance(title, str):
+            controls[cid.upper()] = title
+        for nested in ctrl.get("controls") or []:
+            _walk_control(nested)
+
+    root = catalog.get("catalog") or catalog
+    groups = root.get("groups") if isinstance(root, dict) else None
+    if isinstance(groups, list):
+        _walk_groups(groups)
+
+    if not controls:
+        raise click.ClickException(
+            "OSCAL catalog parsed but no controls were extracted; aborting "
+            "rather than overwriting the bundled artifact with an empty file."
+        )
+
+    payload = {
+        "_meta": {
+            "source": NIST_OSCAL_URL,
+            "schema_version": 1,
+            "control_count": len(controls),
+        },
+        "controls": controls,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(_stdjson.dumps(payload, indent=2, sort_keys=True))
+    click.echo(f"Wrote {out} ({len(controls)} controls).")
 
 
 @main.command("refresh-cwe")

@@ -2,8 +2,10 @@
 
 Loads from package data shipped by refresh-* CLI verbs:
 - data/cwe.json
+- data/mitre-attack-techniques.json
 - data/mitre-mitigations.json
 - data/d3fend.json
+- data/nist-controls.json
 - data/owasp_top10.json / owasp_api_top10.json / owasp_llm_top10.json
 
 All loaders are defensively written: they inspect the actual shape of the
@@ -17,6 +19,7 @@ import pathlib
 from functools import lru_cache
 
 _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
+_DATA = _PKG_DATA
 
 
 @lru_cache(maxsize=1)
@@ -57,17 +60,21 @@ def cwe_titles() -> dict[str, str]:
 def attack_technique_titles() -> dict[str, str]:
     """Map ATT&CK technique id (T####[.###]) → name.
 
-    mitre-mitigations.json carries mitigation rows but may also embed
-    technique titles. We try every shape we know about; if none yield
-    technique titles the returned dict is empty and callers fall back
-    to using the id as the display title.
+    Reads the bundled MITRE ATT&CK techniques catalog produced by
+    ``apd-gauntlet refresh-mitre``. Returns an empty dict if the file is
+    missing or unparseable so callers fall back to using the id as the
+    display title.
 
     Supported shapes:
     - {"techniques": {"T1234": "Name", ...}, ...}
     - {"techniques": {"T1234": {"name": "Name"}, ...}, ...}
-    - {"mitigations": {"M1013": ["T1234", ...], ...}, ...} — no technique names; empty return
     """
-    raw = json.loads((_PKG_DATA / "mitre-mitigations.json").read_text())
+    path = _DATA / "mitre-attack-techniques.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
     out: dict[str, str] = {}
     if not isinstance(raw, dict):
         return out
@@ -79,9 +86,19 @@ def attack_technique_titles() -> dict[str, str]:
                 else (v.get("name") or tid) if isinstance(v, dict)
                 else tid
             )
-    # No "techniques" key (e.g. mitigations-only shape) → return empty dict;
-    # callers use the id as the title.
     return out
+
+
+@lru_cache(maxsize=1)
+def nist_control_titles() -> dict[str, str]:
+    """Return {control_id: title} from the bundled NIST 800-53r5 catalog."""
+    path = _DATA / "nist-controls.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    return doc.get("controls") or {}
 
 
 @lru_cache(maxsize=1)
