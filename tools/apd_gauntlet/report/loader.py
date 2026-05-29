@@ -34,6 +34,18 @@ class MissingArtifactError(FileNotFoundError):
     """Raised when a required input file is absent from the run dir."""
 
 
+class MalformedArtifactError(ValueError):
+    """An artifact exists but does not parse to the expected shape."""
+
+    def __init__(self, path: pathlib.Path, expected: str, got: type) -> None:
+        super().__init__(
+            f"{path}: expected {expected}, got {got.__name__}"
+        )
+        self.path = path
+        self.expected = expected
+        self.got = got
+
+
 @dataclass(frozen=True)
 class RunArtifacts:
     run_id: str
@@ -66,13 +78,45 @@ class RunArtifacts:
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
     path = run_dir / rel
-    if not path.exists():
+    if not path.is_file():
+        if path.is_dir():
+            raise MissingArtifactError(
+                f"required artifact is a directory, not a file: {path}"
+            )
         raise MissingArtifactError(f"required artifact missing: {path}")
     return path
 
 
 def _yaml(path: pathlib.Path) -> dict[str, Any]:
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if doc is None:
+        return {}
+    if not isinstance(doc, dict):
+        raise MalformedArtifactError(path, "mapping (dict)", type(doc))
+    return doc
+
+
+def _yaml_optional(path: pathlib.Path) -> dict[str, Any] | None:
+    """Return _yaml(path) if the file exists and parses; else None.
+
+    On yaml.YAMLError emit a click.echo warning to stderr and return None
+    so the caller treats the artifact as absent rather than aborting.
+    """
+    if not path.is_file():
+        return None
+    try:
+        return _yaml(path)
+    except yaml.YAMLError as e:
+        # Best-effort warning; do not crash the build for an optional artifact.
+        try:
+            import click  # noqa: PLC0415 — intentional lazy import
+            click.echo(
+                f"warning: {path}: malformed YAML, skipping ({e})",
+                err=True,
+            )
+        except ImportError:
+            pass
+        return None
 
 
 def _records(
@@ -222,8 +266,8 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     # Optional artifacts.
     synth = run_dir / "40-synthesis"
     contradictions_notes: str | None = None
-    if (synth / "contradictions.yaml").exists():
-        _contra_doc = _yaml(synth / "contradictions.yaml")
+    _contra_doc = _yaml_optional(synth / "contradictions.yaml")
+    if _contra_doc is not None:
         # Plural ``contradictions`` is the shipped-fixture key; singular
         # ``contradiction`` is the planned-schema key. Accept both.
         contradictions = _records(
@@ -236,8 +280,8 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     else:
         contradictions = []
     sev_dis_notes: str | None = None
-    if (synth / "severity-disagreements.yaml").exists():
-        _sevdis_doc = _yaml(synth / "severity-disagreements.yaml")
+    _sevdis_doc = _yaml_optional(synth / "severity-disagreements.yaml")
+    if _sevdis_doc is not None:
         # crapi/example use ``severity_disagreements``; caldera/authentik
         # use the abbreviated ``disagreements``; the planned schema named
         # the singular ``severity_disagreement``. Accept all three.
@@ -252,16 +296,15 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         )
     else:
         sev_dis = []
-    attack_paths = _yaml(synth / "attack-paths.yaml") \
-        if (synth / "attack-paths.yaml").exists() else None
-    asset_graph = _yaml(synth / "asset-graph.yaml") \
-        if (synth / "asset-graph.yaml").exists() else None
-    defense_graph = _yaml(synth / "defense-graph.yaml") \
-        if (synth / "defense-graph.yaml").exists() else None
-    apath_findings = _records(synth / "attack-path.findings.yaml", "finding") \
-        if (synth / "attack-path.findings.yaml").exists() else []
-    report_data = _yaml(synth / "report-data.yaml") \
-        if (synth / "report-data.yaml").exists() else None
+    attack_paths = _yaml_optional(synth / "attack-paths.yaml")
+    asset_graph = _yaml_optional(synth / "asset-graph.yaml")
+    defense_graph = _yaml_optional(synth / "defense-graph.yaml")
+    apath_findings = (
+        _records(synth / "attack-path.findings.yaml", "finding")
+        if (synth / "attack-path.findings.yaml").is_file()
+        else []
+    )
+    report_data = _yaml_optional(synth / "report-data.yaml")
 
     source_hashes = {
         ".apd-run.yaml": _hash(run_cfg_path),

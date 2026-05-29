@@ -889,10 +889,15 @@ def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
 def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untyped-def]
     from .report.build import ReportBuildError, build_report
     from .report.emit import BundleMissingError
-    from .report.loader import MissingArtifactError
+    from .report.loader import MalformedArtifactError, MissingArtifactError
     try:
         target, data = build_report(run_dir, out_dir, quiet=quiet)
-    except (MissingArtifactError, BundleMissingError, ReportBuildError) as exc:
+    except (
+        MissingArtifactError,
+        MalformedArtifactError,
+        BundleMissingError,
+        ReportBuildError,
+    ) as exc:
         click.echo(f"Error: {exc}", err=True)
         raise SystemExit(1) from None
     # Surface per-section failures so CI can grep for them and operators see

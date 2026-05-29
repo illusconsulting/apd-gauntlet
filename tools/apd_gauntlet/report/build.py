@@ -8,7 +8,7 @@ from typing import Any
 import click
 
 from . import emit
-from .loader import MissingArtifactError, load_run
+from .loader import MalformedArtifactError, MissingArtifactError, load_run
 from .transform import build_apd_data
 
 _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
@@ -40,9 +40,10 @@ def build_report(
     to surface per-section failures (the CLI emits one stderr warning per entry).
 
     Raises:
-      - MissingArtifactError if a required input YAML is absent
-      - BundleMissingError  if the precompiled template bundle is absent
-      - ReportBuildError    if the meta layer itself cannot be assembled
+      - MissingArtifactError   if a required input YAML is absent
+      - MalformedArtifactError if a required input YAML is the wrong shape
+      - BundleMissingError     if the precompiled template bundle is absent
+      - ReportBuildError       if the meta layer itself cannot be assembled
     """
     bundle_src = bundle_src or DEFAULT_BUNDLE
     target = out_dir or (run_dir / "40-synthesis" / "report-html")
@@ -50,7 +51,7 @@ def build_report(
 
     try:
         artifacts = load_run(run_dir)
-    except MissingArtifactError as exc:
+    except (MissingArtifactError, MalformedArtifactError) as exc:
         click.echo(f"build-report: cannot build — {exc}", err=True)
         raise
 
