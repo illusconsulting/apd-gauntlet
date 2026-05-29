@@ -295,7 +295,7 @@ def refresh_d3fend(output_path: Path | None = None) -> Path:
     json_bytes = fetch_d3fend_json()
     projected = project_d3fend_json(json_bytes)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True))
+    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True), encoding="utf-8")
     return output_path
 
 

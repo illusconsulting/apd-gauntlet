@@ -164,7 +164,7 @@ def _write_projected(
         "entries": entries,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True))
+    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True), encoding="utf-8")
 
 
 def refresh_owasp(output_dir: Path | None = None) -> dict[str, Path]:

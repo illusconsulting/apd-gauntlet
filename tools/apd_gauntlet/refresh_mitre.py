@@ -94,4 +94,4 @@ def fetch_and_project(out_path: pathlib.Path) -> None:
         "mitigations": {k: sorted(set(v)) for k, v in mit_to_techs.items()},
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")

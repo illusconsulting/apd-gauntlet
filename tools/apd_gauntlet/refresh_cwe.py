@@ -122,7 +122,7 @@ def refresh_cwe(output_path: Path | None = None) -> Path:
     xml_bytes = fetch_cwe_xml()
     projected = project_cwe_xml_to_json(xml_bytes)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True))
+    output_path.write_text(json.dumps(projected, indent=2, sort_keys=True), encoding="utf-8")
     return output_path
 
 

@@ -59,5 +59,5 @@ def scaffold_run(
         config_text += f"threat_model: {threat_model}\n"
     if methodology_hint:
         config_text += f"methodology_hint: {methodology_hint}\n"
-    (run_dir / ".apd-run.yaml").write_text(config_text)
+    (run_dir / ".apd-run.yaml").write_text(config_text, encoding="utf-8")
     return run_dir

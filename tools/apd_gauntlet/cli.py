@@ -181,7 +181,7 @@ def validate_domain_cmd(domain_name, domains_dir) -> None:  # type: ignore[no-un
     schema_path = (
         pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "domain.schema.json"
     )
-    schema = _stdjson.loads(schema_path.read_text())
+    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
     pack_dir = domains_dir / domain_name
     meta_path = pack_dir / "domain.yaml"
     if not meta_path.exists():
@@ -189,7 +189,7 @@ def validate_domain_cmd(domain_name, domains_dir) -> None:  # type: ignore[no-un
         raise SystemExit(1)
     import yaml as _yaml
 
-    meta = _yaml.safe_load(meta_path.read_text())
+    meta = _yaml.safe_load(meta_path.read_text(encoding="utf-8"))
     errors = list(Draft202012Validator(schema).iter_errors(meta))
     if errors:
         for e in errors:
@@ -217,8 +217,8 @@ def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def
     schema_path = (
         pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"
     )
-    schema = _stdjson.loads(schema_path.read_text())
-    data = _yaml.safe_load(config_path.read_text())
+    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+    data = _yaml.safe_load(config_path.read_text(encoding="utf-8"))
     errors = list(Draft202012Validator(schema).iter_errors(data))
     if errors:
         for e in errors:
@@ -232,7 +232,7 @@ def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def
 def check_ids_cmd(yaml_file) -> None:  # type: ignore[no-untyped-def]
     import yaml as _yaml
 
-    data = _yaml.safe_load(yaml_file.read_text()) or {}
+    data = _yaml.safe_load(yaml_file.read_text(encoding="utf-8")) or {}
     payload = data.get("finding") or data.get("capability")
     records = payload if isinstance(payload, list) else ([payload] if payload else [])
     is_capability = "capability" in data and "finding" not in data
@@ -418,7 +418,7 @@ def refresh_nist_cmd(out, dry_run) -> None:  # type: ignore[no-untyped-def]
         "controls": controls,
     }
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(_stdjson.dumps(payload, indent=2, sort_keys=True))
+    out.write_text(_stdjson.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     click.echo(f"Wrote {out} ({len(controls)} controls).")
 
 
@@ -495,7 +495,7 @@ def parse_threat_model_cmd(
             / "schemas"
             / "threat-model-normalized.schema.json"
         )
-        schema = _stdjson.loads(schema_path.read_text())
+        schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
         registry = build_registry()
         validator = Draft202012Validator(schema, registry=registry)
         errors = list(validator.iter_errors(normalized))
@@ -511,7 +511,7 @@ def parse_threat_model_cmd(
     text = yaml.safe_dump(normalized, sort_keys=False)
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(text)
+        output.write_text(text, encoding="utf-8")
         click.echo(f"Wrote {output}", err=True)
         click.echo(f"  methodology: {normalized['methodology']}", err=True)
         click.echo(f"  entries:     {normalized['extraction_summary']['entry_count']}", err=True)
@@ -549,7 +549,9 @@ def analyze_attack_paths(run_dir: Path) -> None:
     run_cfg_path = run_dir / ".apd-run.yaml"
     try:
         run_cfg: dict[str, Any] = (
-            yaml.safe_load(run_cfg_path.read_text()) if run_cfg_path.exists() else {}
+            yaml.safe_load(run_cfg_path.read_text(encoding="utf-8"))
+            if run_cfg_path.exists()
+            else {}
         ) or {}
     except yaml.YAMLError as exc:
         raise click.UsageError(f".apd-run.yaml is not valid YAML: {exc}") from exc
@@ -680,7 +682,10 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
             }
         ],
     }
-    (synth / "attack-path.findings.yaml").write_text(yaml.safe_dump(doc, sort_keys=False))
+    (synth / "attack-path.findings.yaml").write_text(
+        yaml.safe_dump(doc, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 def _load_records(
@@ -703,7 +708,7 @@ def _load_records(
     for f in sorted(run_dir.glob("**/*.findings.yaml")):
         if "40-synthesis" in f.parts and f.name == "attack-path.findings.yaml":
             continue
-        doc = yaml.safe_load(f.read_text()) or {}
+        doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
         # Canonical root key is singular (`finding`), per validate.RECORD_KINDS.
         # Accept legacy plural (`findings`) defensively so older or hand-rolled
         # fixtures still load — writers always emit singular.
@@ -726,7 +731,7 @@ def _load_records(
                 continue
             findings_by_id[rec["id"]] = rec
     for f in sorted(run_dir.glob("**/*.capabilities.yaml")):
-        doc = yaml.safe_load(f.read_text()) or {}
+        doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
         # Singular canonical; accept legacy plural defensively (see above).
         raw = doc.get("capability")
         if raw is None:
@@ -773,7 +778,7 @@ def _write_asset_graph(path: Path, graph: Graph, sources_used: list[str]) -> Non
             "sources_used": sources_used,
         },
     }
-    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 
 
 def _serialize_node(n: Node) -> dict[str, Any]:
@@ -850,7 +855,7 @@ def _write_attack_paths(
             "bottleneck_edge_count": len(bottleneck_edges),
         },
     }
-    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 
 
 def _write_defense_graph(path: Path, overlays: list[dict[str, Any]]) -> None:
@@ -868,7 +873,7 @@ def _write_defense_graph(path: Path, overlays: list[dict[str, Any]]) -> None:
             ),
         },
     }
-    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 
 
 def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
@@ -877,7 +882,7 @@ def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
     plural — only the YAML root key is singular.
     """
     doc = {"schema_version": 1, "finding": findings}
-    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 
 
 @main.command("build-report",

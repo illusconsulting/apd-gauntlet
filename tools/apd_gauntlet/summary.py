@@ -32,10 +32,10 @@ def summarize_run(run_dir: pathlib.Path) -> dict[str, Any]:
     contradictions = 0
     severity_disagreements = 0
     if contradictions_path.exists():
-        data = yaml.safe_load(contradictions_path.read_text()) or {}
+        data = yaml.safe_load(contradictions_path.read_text(encoding="utf-8")) or {}
         contradictions = len(data.get("contradictions") or [])
     if severity_disagreements_path.exists():
-        data = yaml.safe_load(severity_disagreements_path.read_text()) or {}
+        data = yaml.safe_load(severity_disagreements_path.read_text(encoding="utf-8")) or {}
         severity_disagreements = len(data.get("severity_disagreements") or [])
 
     return {

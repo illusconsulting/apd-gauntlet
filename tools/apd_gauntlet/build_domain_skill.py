@@ -9,7 +9,7 @@ import yaml
 from jsonschema import Draft202012Validator
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
-DOMAIN_SCHEMA = json.loads((REPO / "schemas" / "domain.schema.json").read_text())
+DOMAIN_SCHEMA = json.loads((REPO / "schemas" / "domain.schema.json").read_text(encoding="utf-8"))
 
 
 SemverTuple = tuple[int, int, int]
@@ -49,7 +49,7 @@ def build_domain_skill(
     meta_path = pack_dir / "domain.yaml"
     if not meta_path.exists():
         raise FileNotFoundError(f"Domain pack '{domain_name}' not found at {pack_dir}")
-    meta = yaml.safe_load(meta_path.read_text())
+    meta = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
     Draft202012Validator(DOMAIN_SCHEMA).validate(meta)
 
     if not _version_in_range(framework_version, meta["framework_compat"]):
@@ -65,7 +65,7 @@ def build_domain_skill(
             # rstrip so each source contribution ends cleanly; otherwise the
             # next section's leading "\n\n" stacks on the source's trailing
             # newline and trips MD012 (multiple consecutive blank lines).
-            sections.append(f.read_text().rstrip())
+            sections.append(f.read_text(encoding="utf-8").rstrip())
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     frontmatter = (
@@ -83,5 +83,5 @@ def build_domain_skill(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "SKILL.md"
-    out_path.write_text(frontmatter + "".join(sections) + "\n")
+    out_path.write_text(frontmatter + "".join(sections) + "\n", encoding="utf-8")
     return out_path

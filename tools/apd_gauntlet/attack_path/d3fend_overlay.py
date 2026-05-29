@@ -30,7 +30,7 @@ def load_d3fend_data() -> dict[str, Any]:
     Public API for callers (e.g. the analyze-attack-paths CLI). Unit tests
     pass an in-memory fixture directly to :func:`build_overlays` instead.
     """
-    return json.loads(_D3FEND_DATA_PATH.read_text())  # type: ignore[no-any-return]
+    return json.loads(_D3FEND_DATA_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
 
 def lookup_d3fend_counters(

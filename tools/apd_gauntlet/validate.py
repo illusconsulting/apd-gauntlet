@@ -69,7 +69,7 @@ def build_registry() -> Registry:
     """
     resources: list[tuple[str, Resource[Any]]] = []
     for schema_path in sorted(SCHEMAS_DIR.glob("*.schema.json")):
-        schema = json.loads(schema_path.read_text())
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
         schema_id = schema.get("$id")
         if not schema_id:
             continue
@@ -82,7 +82,7 @@ def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, di
     for kind, (_schema, root_key, glob) in RECORD_KINDS.items():
         for path in sorted(run_dir.rglob(glob)):
             try:
-                data = yaml.safe_load(path.read_text()) or {}
+                data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
             except yaml.YAMLError as e:
                 yield path, kind, {"_parse_error": str(e)}
                 continue
@@ -133,9 +133,11 @@ def _validate_code_evidence_index(
     path = _code_evidence_index_path(run_dir)
     if not path.exists():
         return
-    schema = json.loads((SCHEMAS_DIR / "code-evidence-index.schema.json").read_text())
+    schema = json.loads(
+        (SCHEMAS_DIR / "code-evidence-index.schema.json").read_text(encoding="utf-8")
+    )
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
         report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
         return
@@ -165,9 +167,9 @@ def _validate_synthesis_rollups(
         if not path.exists():
             continue
         seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text())
+        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as e:
             report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
             continue
@@ -199,9 +201,9 @@ def _validate_context_rollups(
         if not path.exists():
             continue
         seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text())
+        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as e:
             report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
             continue
@@ -218,7 +220,7 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     report = ValidationReport()
     validators = {
         kind: Draft202012Validator(
-            json.loads((SCHEMAS_DIR / schema).read_text()),
+            json.loads((SCHEMAS_DIR / schema).read_text(encoding="utf-8")),
             registry=registry,
         )
         for kind, (schema, _, _) in RECORD_KINDS.items()
@@ -247,7 +249,7 @@ def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:
     """Extract the YAML frontmatter block from context-brief.md."""
     if not brief_path.exists():
         return {}
-    text = brief_path.read_text()
+    text = brief_path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         return {}
     end = text.find("\n---\n", 4)
@@ -303,7 +305,7 @@ def _validate_report_data_cross_refs(
     if not path.exists():
         return
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError:
         return  # schema pass already complained
     finding_ids: set[str] = set()
@@ -399,7 +401,7 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     asset_graph_path = run_dir / "40-synthesis" / "asset-graph.yaml"
     if asset_graph_path.exists():
         try:
-            ag = yaml.safe_load(asset_graph_path.read_text()) or {}
+            ag = yaml.safe_load(asset_graph_path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as e:
             report.errors.append(
                 Violation(asset_graph_path, None, f"YAML parse error: {e}")
@@ -447,7 +449,7 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     # Contradictions reference real IDs.
     contradictions_path = run_dir / "40-synthesis" / "contradictions.yaml"
     if contradictions_path.exists():
-        data = yaml.safe_load(contradictions_path.read_text()) or {}
+        data = yaml.safe_load(contradictions_path.read_text(encoding="utf-8")) or {}
         for entry in (data.get("contradictions") or []):
             fid = entry.get("finding_id")
             cid = entry.get("capability_id")

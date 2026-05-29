@@ -111,7 +111,7 @@ def build_graph(run_dir: Path) -> BuildResult:
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     return data if isinstance(data, dict) else {}
 
 
