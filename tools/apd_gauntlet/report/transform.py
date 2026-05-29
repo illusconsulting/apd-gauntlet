@@ -5,6 +5,7 @@ Python (dict / list / str / int) suitable for json.dumps.
 from __future__ import annotations
 
 import collections
+import hashlib
 import json as _json
 import pathlib
 import re
@@ -1004,12 +1005,20 @@ _LABEL_STRIP = re.compile(r"[^A-Za-z0-9 _./:()-]")
 # HTML tag pattern: reject the entire label if angle-bracket tags are present.
 _HTML_TAG = re.compile(r"<[^>]*>")
 
+# Tighter than the full-graph 100-cap because path-focused subgraphs are meant
+# to be human-readable storytelling artifacts, not exhaustive inventories.
+_PATH_FOCUSED_NODE_CAP = 60
 
-def _safe_node_id(raw: str, fallback: str) -> str:
-    """Mermaid node ids must be plain identifiers. Drop anything that could
-    inject syntax (newlines, brackets, html); fall back if nothing left.
-    """
-    return raw if _NODE_ID_OK.match(raw or "") else fallback
+
+def _safe_node_id(raw: str, fallback_seed: str = "") -> str:
+    """Return a Mermaid-safe node id. When raw is invalid, derive a stable
+    hash-based id so two nodes with distinct raw ids cannot collide on the
+    synthetic fallback. The optional fallback_seed namespaces ids across
+    rendering contexts (full asset graph vs path-focused subgraph)."""
+    if _NODE_ID_OK.match(raw or ""):
+        return raw
+    digest = hashlib.sha256(((raw or "") + "::" + fallback_seed).encode("utf-8")).hexdigest()
+    return f"n_{digest[:8]}"
 
 
 def _safe_label(raw: str) -> str:
@@ -1050,7 +1059,12 @@ def _build_mermaid(asset_graph: dict[str, Any]) -> str:
     id_remap: dict[str, str] = {}
     for idx, n in enumerate(nodes):
         raw_id = str(n.get("node_id", f"n{idx}"))
-        safe_id = _safe_node_id(raw_id, f"n{idx}")
+        safe_id = _safe_node_id(raw_id, fallback_seed="asset_graph")
+        existing = next((r for r, s in id_remap.items() if s == safe_id), None)
+        if existing is not None and existing != raw_id:
+            raise RuntimeError(
+                f"_safe_node_id collision: {existing!r} and {raw_id!r} both → {safe_id!r}"
+            )
         id_remap[raw_id] = safe_id
         label = _safe_label(str(n.get("name") or raw_id))
         ntype = n.get("node_type", "")
@@ -1115,6 +1129,12 @@ def _build_mermaid_path_focused(
     if not touched_node_ids:
         return None
 
+    if len(touched_node_ids) > _PATH_FOCUSED_NODE_CAP:
+        return (
+            f"graph LR\n  too_large[\"Path-focused subgraph has "
+            f"{len(touched_node_ids)} nodes; see attack-paths.yaml\"]"
+        )
+
     # Edge type → short label for edge annotation.
     _EDGE_LABEL: dict[str, str] = {
         "compromisable_via_finding": "finding",
@@ -1131,7 +1151,12 @@ def _build_mermaid_path_focused(
     id_remap: dict[str, str] = {}
     for raw_id in sorted(touched_node_ids):
         n = node_by_id.get(raw_id, {})
-        safe_id = _safe_node_id(raw_id, f"n_{len(id_remap)}")
+        safe_id = _safe_node_id(raw_id, fallback_seed="path_focused")
+        existing = next((r for r, s in id_remap.items() if s == safe_id), None)
+        if existing is not None and existing != raw_id:
+            raise RuntimeError(
+                f"_safe_node_id collision: {existing!r} and {raw_id!r} both → {safe_id!r}"
+            )
         id_remap[raw_id] = safe_id
         label = _safe_label(str(n.get("name") or raw_id))
         ntype = n.get("node_type", "")
