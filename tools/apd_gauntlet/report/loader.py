@@ -87,12 +87,41 @@ def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
     return path
 
 
-def _yaml(path: pathlib.Path) -> dict[str, Any]:
-    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+def _yaml_with_hash(path: pathlib.Path) -> tuple[dict[str, Any], str]:
+    """Read *path* once, returning the parsed mapping and a short content hash.
+
+    The bytes are read a single time and both YAML parsing and the SHA-256
+    digest are computed from that buffer. This eliminates the TOCTOU window
+    that exists when a separate ``_hash(path)`` follows ``_yaml(path)``: if
+    the file is replaced between the two reads, the parsed contents and the
+    recorded hash would diverge, and an OS error on the second read would
+    abort an otherwise successful load.
+
+    Returns a ``(doc, hash_str)`` tuple. ``hash_str`` is the first 16 hex
+    characters of the SHA-256 digest — identical to the format produced by
+    ``_hash`` so callers comparing against shipped hashes are unaffected.
+    Empty or whitespace-only YAML resolves to an empty dict (matching
+    ``_yaml``'s prior behavior); a non-mapping top level raises
+    :class:`MalformedArtifactError`.
+    """
+    raw = path.read_bytes()
+    doc = yaml.safe_load(raw.decode("utf-8"))
+    hash_str = hashlib.sha256(raw).hexdigest()[:16]
     if doc is None:
-        return {}
+        return {}, hash_str
     if not isinstance(doc, dict):
         raise MalformedArtifactError(path, "mapping (dict)", type(doc))
+    return doc, hash_str
+
+
+def _yaml(path: pathlib.Path) -> dict[str, Any]:
+    """Return the parsed YAML mapping at *path*.
+
+    Thin wrapper around :func:`_yaml_with_hash` preserved as a stable
+    public-ish helper for callers that do not need the content hash
+    (the common case across the loader and tests).
+    """
+    doc, _hash_str = _yaml_with_hash(path)
     return doc
 
 
@@ -119,6 +148,28 @@ def _yaml_optional(path: pathlib.Path) -> dict[str, Any] | None:
         return None
 
 
+def _records_from_doc(
+    doc: dict[str, Any],
+    root_key: str,
+    *fallback_keys: str,
+) -> list[dict[str, Any]]:
+    """Pluck the list under root_key (or fallback_keys) from an already-parsed doc.
+
+    Same semantics as :func:`_records` but operates on an in-memory dict,
+    which lets callers reuse a single YAML read instead of re-reading the
+    file. Required by ``load_run`` to eliminate the double-read pattern.
+    """
+    for key in (root_key, *fallback_keys):
+        payload = doc.get(key)
+        if payload is None:
+            continue
+        if isinstance(payload, list):
+            return [r for r in payload if isinstance(r, dict)]
+        if isinstance(payload, dict):
+            return [payload]
+    return []
+
+
 def _records(
     path: pathlib.Path,
     root_key: str,
@@ -132,16 +183,7 @@ def _records(
     in shipped runs but the planned schema named the key ``contradiction:``
     (singular). Passing both keys lets the loader stay agnostic.
     """
-    doc = _yaml(path)
-    for key in (root_key, *fallback_keys):
-        payload = doc.get(key)
-        if payload is None:
-            continue
-        if isinstance(payload, list):
-            return [r for r in payload if isinstance(r, dict)]
-        if isinstance(payload, dict):
-            return [payload]
-    return []
+    return _records_from_doc(_yaml(path), root_key, *fallback_keys)
 
 
 def _hash(path: pathlib.Path) -> str:
@@ -259,9 +301,28 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     attack_exposure_path = _required(run_dir, "40-synthesis/attack-exposure.yaml")
     apd_matrix_path = _required(run_dir, "40-synthesis/apd-coverage-matrix.yaml")
 
-    run_cfg = _yaml(run_cfg_path)
-    inventory = _yaml(asset_inventory_path)
-    findings_doc = _yaml(deduped_findings_path)
+    # Read required artifacts once each, collecting hashes inline. Reading
+    # bytes + hashing in one pass closes the TOCTOU window that a separate
+    # post-parse hashing loop would open if the file were replaced after the
+    # initial read.
+    source_hashes: dict[str, str] = {}
+    run_cfg, source_hashes[".apd-run.yaml"] = _yaml_with_hash(run_cfg_path)
+    inventory, source_hashes["asset-inventory.yaml"] = _yaml_with_hash(
+        asset_inventory_path,
+    )
+    findings_doc, source_hashes["deduped-findings.yaml"] = _yaml_with_hash(
+        deduped_findings_path,
+    )
+    caps_doc, source_hashes["deduped-capabilities.yaml"] = _yaml_with_hash(
+        deduped_caps_path,
+    )
+    nist_doc, source_hashes["nist-coverage.yaml"] = _yaml_with_hash(nist_path)
+    attack_exposure_doc, source_hashes["attack-exposure.yaml"] = (
+        _yaml_with_hash(attack_exposure_path)
+    )
+    apd_matrix_doc, source_hashes["apd-coverage-matrix.yaml"] = (
+        _yaml_with_hash(apd_matrix_path)
+    )
 
     # Optional artifacts.
     synth = run_dir / "40-synthesis"
@@ -306,15 +367,12 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     )
     report_data = _yaml_optional(synth / "report-data.yaml")
 
-    source_hashes = {
-        ".apd-run.yaml": _hash(run_cfg_path),
-        "asset-inventory.yaml": _hash(asset_inventory_path),
-        "deduped-findings.yaml": _hash(deduped_findings_path),
-        "deduped-capabilities.yaml": _hash(deduped_caps_path),
-        "nist-coverage.yaml": _hash(nist_path),
-        "attack-exposure.yaml": _hash(attack_exposure_path),
-        "apd-coverage-matrix.yaml": _hash(apd_matrix_path),
-    }
+    # Optional artifacts are hashed via the existing single-read helper:
+    # they are already loaded above and we tolerate the second read here
+    # because (a) the file is known to exist (loaded successfully) and
+    # (b) the optional-artifact set is small. The required-artifact set
+    # — the actual TOCTOU hotspot, since it would abort an otherwise
+    # successful load — is hashed inline in the read pass above.
     if attack_paths is not None:
         source_hashes["attack-paths.yaml"] = _hash(synth / "attack-paths.yaml")
     if asset_graph is not None:
@@ -335,15 +393,15 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         subject=_extract_subject(run_cfg),
         date=str(run_cfg.get("date", "")),
         asset_inventory=inventory,
-        deduped_findings=_records(deduped_findings_path, "finding"),
-        deduped_capabilities=_records(deduped_caps_path, "capability"),
+        deduped_findings=_records_from_doc(findings_doc, "finding"),
+        deduped_capabilities=_records_from_doc(caps_doc, "capability"),
         contradictions=contradictions,
         contradictions_notes=contradictions_notes,
         severity_disagreements=sev_dis,
         severity_disagreements_notes=sev_dis_notes,
-        nist_coverage=_yaml(nist_path),
-        attack_exposure=_yaml(attack_exposure_path),
-        apd_coverage_matrix=_yaml(apd_matrix_path),
+        nist_coverage=nist_doc,
+        attack_exposure=attack_exposure_doc,
+        apd_coverage_matrix=apd_matrix_doc,
         attack_paths=attack_paths,
         asset_graph=asset_graph,
         defense_graph=defense_graph,
