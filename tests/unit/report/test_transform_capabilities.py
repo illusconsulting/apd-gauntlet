@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pathlib
 
-import pytest
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import capability_grid, strengths_section
 
@@ -52,9 +51,27 @@ def test_strengths_section_with_supplement_joins_titles(example_run: pathlib.Pat
     assert s[0]["caveats"] == ["A caveat long enough."]
 
 
-def test_strengths_section_unknown_id_raises(example_run: pathlib.Path) -> None:
+def test_strengths_section_unknown_id_warns_not_raises(
+    example_run: pathlib.Path,
+) -> None:
+    """Post-PR-T4-D: unknown capability ids are warn-and-skip, not fatal.
+
+    Sibling supplements (``headline_findings``, ``next_steps``) already
+    fail silently on unknown ids. The strengths helper now matches that
+    contract — an unknown id is dropped from the output and (when the caller
+    supplies a warnings list) a structured record is appended so the issue
+    surfaces in ``data.meta.warnings`` without aborting the whole report.
+    """
     artifacts = load_run(example_run)
     supplement = [{"id": "conf-cap-deadbeef", "caveats": ["x" * 20]}]
-    with pytest.raises(ValueError) as exc:
-        strengths_section(artifacts, supplied_strengths=supplement)
-    assert "conf-cap-deadbeef" in str(exc.value)
+    warnings: list[dict[str, str]] = []
+    # No exception is raised any more.
+    result = strengths_section(
+        artifacts, supplied_strengths=supplement, warnings=warnings,
+    )
+    assert result == []
+    assert warnings == [{
+        "section": "strengths",
+        "issue":   "unknown_capability_id",
+        "id":      "conf-cap-deadbeef",
+    }]

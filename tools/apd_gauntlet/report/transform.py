@@ -385,12 +385,20 @@ def strengths_section(
     artifacts: RunArtifacts,
     *,
     supplied_strengths: list[dict[str, Any]] | None,
+    warnings: list[dict[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """Join supplied strengths (id + caveats) with capability titles.
 
-    Raises ValueError if a supplied id does not resolve to a capability — this
-    is a synthesizer authoring error caught by the validator's cross-file pass,
-    but we double-check here so build-time misuse fails loudly.
+    Unknown capability ids used to raise ``ValueError`` here. As of PR-T4-D
+    they are normalized to a warn-and-skip contract that matches sibling
+    supplements (``headline_findings``, ``next_steps``): the unknown entry is
+    dropped and a structured record is appended to the optional ``warnings``
+    list. Callers that want to surface the warning should pass the shared
+    list owned by :func:`build_apd_data` (it lands in ``data.meta.warnings``).
+
+    Backwards-compatible: when ``warnings`` is omitted the function still
+    silently skips unknown ids — matching the existing behaviour of the
+    sibling supplement helpers when their callers do not capture warnings.
     """
     if not supplied_strengths:
         return []
@@ -400,9 +408,13 @@ def strengths_section(
         cid = s.get("id")
         cap = by_id.get(cid)
         if cap is None:
-            raise ValueError(
-                f"strengths references unknown capability {cid!r}"
-            )
+            if warnings is not None:
+                warnings.append({
+                    "section": "strengths",
+                    "issue":   "unknown_capability_id",
+                    "id":      cid if isinstance(cid, str) and cid else "(missing)",
+                })
+            continue
         out.append({
             "id":       cid,
             "title":    cap.get("title", ""),
@@ -1564,9 +1576,11 @@ def build_apd_data(
     """
     supplement = artifacts.report_data or {}
     section_errors: dict[str, str] = {}
-    # Shared aggregator threaded into transformers that surface soft mapping
-    # warnings (T4-C). The list is appended in-place by callees and copied
-    # onto out["meta"]["warnings"] at the end.
+    # Shared aggregator threaded into transformers that surface soft warnings:
+    # unknown ids in supplements (T4-D), name-fallback usage in mappings (T4-C),
+    # findings_with_unknown_goal (T4-E). Appended in-place by callees and
+    # copied onto out["meta"]["warnings"] at the end. Additive to
+    # section_errors; warnings never imply the section failed.
     warnings: list[dict[str, str]] = []
     out: dict[str, Any] = {"meta": meta_block(artifacts, run_dir=run_dir)}
 
@@ -1593,7 +1607,9 @@ def build_apd_data(
          []),
         ("strengths",
          lambda: strengths_section(
-             artifacts, supplied_strengths=supplement.get("strengths"),
+             artifacts,
+             supplied_strengths=supplement.get("strengths"),
+             warnings=warnings,
          ),
          []),
         ("findings",
