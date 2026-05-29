@@ -373,7 +373,9 @@ _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 
 
 def _nist_family_titles() -> dict[str, str]:
-    result: dict[str, str] = _json.loads((_PKG_DATA / "nist-families.json").read_text())
+    result: dict[str, str] = _json.loads(
+        (_PKG_DATA / "nist-families.json").read_text(encoding="utf-8")
+    )
     return result
 
 

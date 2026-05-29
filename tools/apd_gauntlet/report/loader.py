@@ -72,7 +72,7 @@ def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
 
 
 def _yaml(path: pathlib.Path) -> dict[str, Any]:
-    return yaml.safe_load(path.read_text()) or {}
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
 def _records(

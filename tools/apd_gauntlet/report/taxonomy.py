@@ -31,7 +31,7 @@ def cwe_titles() -> dict[str, str]:
     - Flat dict: {"CWE-NNN": {"title": ..., "name": ..., ...}, ...}
     - Envelope: {"entries": [{cwe_id: "CWE-NNN", name: "...", ...}, ...], ...}
     """
-    raw = json.loads((_PKG_DATA / "cwe.json").read_text())
+    raw = json.loads((_PKG_DATA / "cwe.json").read_text(encoding="utf-8"))
     out: dict[str, str] = {}
     if isinstance(raw, dict):
         # Envelope shape: {"entries": [...], ...}
@@ -110,7 +110,7 @@ def d3fend_titles() -> dict[str, str]:
     - {"techniques": {"D3-AA": {"name": "Name"}, ...}, ...}
     - {"entries": [{"d3fend_id": "D3-AA", "name": "...", ...}, ...], ...}
     """
-    raw = json.loads((_PKG_DATA / "d3fend.json").read_text())
+    raw = json.loads((_PKG_DATA / "d3fend.json").read_text(encoding="utf-8"))
     out: dict[str, str] = {}
     if not isinstance(raw, dict):
         return out
