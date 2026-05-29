@@ -26,12 +26,45 @@ class ReportBuildError(RuntimeError):
     """
 
 
+class BundleFreshnessError(RuntimeError):
+    """Raised when the precompiled bundle is stale relative to report-template/.
+
+    Only triggered with --strict on editable installs. Default mode emits a
+    stderr warning and proceeds.
+    """
+
+
+def _load_freshness_checker(repo_root: pathlib.Path) -> Any:
+    """Return ``compute_source_hash`` from tools/check_report_template_freshness.py.
+
+    Returns ``None`` if the module cannot be loaded (e.g. wheel install with no
+    ``tools/`` directory alongside the package). Uses ``importlib.util`` to
+    bypass sys.path entirely and avoid polluting it.
+    """
+    path = repo_root / "tools" / "check_report_template_freshness.py"
+    if not path.is_file():
+        return None
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_apd_freshness", path,
+        )
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return getattr(mod, "compute_source_hash", None)
+    except Exception:  # noqa: BLE001 — never let the gate crash the build
+        return None
+
+
 def build_report(
     run_dir: pathlib.Path,
     out_dir: pathlib.Path | None = None,
     *,
     bundle_src: pathlib.Path | None = None,
     quiet: bool = False,
+    strict: bool = False,
 ) -> tuple[pathlib.Path, dict[str, Any]]:
     """Run the full HTML report build for a completed gauntlet run.
 
@@ -44,6 +77,8 @@ def build_report(
       - MalformedArtifactError if a required input YAML is the wrong shape
       - BundleMissingError     if the precompiled template bundle is absent
       - ReportBuildError       if the meta layer itself cannot be assembled
+      - BundleFreshnessError   if ``strict`` and report-template/ source differs
+                               from the shipped bundle's .source-hash
     """
     bundle_src = bundle_src or DEFAULT_BUNDLE
     target = out_dir or (run_dir / "40-synthesis" / "report-html")
@@ -68,6 +103,29 @@ def build_report(
         raise ReportBuildError(
             f"meta layer could not be assembled: {type(exc).__name__}: {exc}"
         ) from exc
+
+    # Editable-install freshness gate: when report-template/ ships alongside
+    # the package (i.e., user installed via `pip install -e .`), recompute
+    # the source hash and compare against the shipped bundle's .source-hash.
+    repo_root = pathlib.Path(__file__).resolve().parent.parent.parent.parent
+    template_src = repo_root / "report-template"
+    hash_file = bundle_src / ".source-hash"
+    if template_src.is_dir() and hash_file.is_file():
+        compute_source_hash = _load_freshness_checker(repo_root)
+        if compute_source_hash is not None:
+            expected = hash_file.read_text(encoding="utf-8").strip()
+            actual = compute_source_hash()
+            if expected != actual:
+                msg = (
+                    "report-template/ source differs from the shipped bundle "
+                    "(.source-hash mismatch). Run "
+                    "`python tools/build_report_template.py` to refresh."
+                )
+                if strict:
+                    raise BundleFreshnessError(msg)
+                import contextlib
+                with contextlib.suppress(Exception):
+                    click.echo(f"warning: {msg}", err=True)
 
     emit.copy_bundle(bundle_src, target)
     emit.write_data_js(data, target / "data.js")

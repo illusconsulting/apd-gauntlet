@@ -887,7 +887,7 @@ def _write_findings(path: Path, findings: list[dict[str, Any]]) -> None:
               help="Override output directory. Default: <run_dir>/40-synthesis/report-html/")
 @click.option("--quiet", is_flag=True, help="Suppress per-file progress messages.")
 def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untyped-def]
-    from .report.build import ReportBuildError, build_report
+    from .report.build import BundleFreshnessError, ReportBuildError, build_report
     from .report.emit import BundleMissingError
     from .report.loader import MalformedArtifactError, MissingArtifactError
     try:
@@ -896,6 +896,7 @@ def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untype
         MissingArtifactError,
         MalformedArtifactError,
         BundleMissingError,
+        BundleFreshnessError,
         ReportBuildError,
     ) as exc:
         click.echo(f"Error: {exc}", err=True)

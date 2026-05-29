@@ -26,7 +26,10 @@ def compute_source_hash() -> str:
             continue
         if rel.parts and rel.parts[0].startswith("."):
             continue
-        h.update(rel.name.encode())
+        # Hash the FULL relative path with NUL separator so a rename
+        # invalidates the hash even when content is unchanged.
+        h.update(str(rel).encode())
+        h.update(b"\x00")
         h.update(entry.read_bytes())
     return h.hexdigest()
 

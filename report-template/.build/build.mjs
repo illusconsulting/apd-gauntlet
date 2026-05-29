@@ -55,12 +55,17 @@ copyFileSync(
 
 // 5. Source hash of report-template/ JSX + CSS sources.
 const hash = createHash("sha256");
-function walk(d) {
+function walk(d, prefix = "") {
   for (const e of readdirSync(d).sort()) {
     if (e === ".build" || e === "node_modules" || e.startsWith(".")) continue;
     const p = join(d, e);
-    if (statSync(p).isDirectory()) walk(p);
-    else { hash.update(e); hash.update(readFileSync(p)); }
+    const rel = prefix ? `${prefix}/${e}` : e;
+    if (statSync(p).isDirectory()) walk(p, rel);
+    else {
+      hash.update(rel);
+      hash.update(Buffer.from([0]));  // NUL separator matches Python
+      hash.update(readFileSync(p));
+    }
   }
 }
 walk(TEMPLATE_DIR);
