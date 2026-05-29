@@ -1,0 +1,53 @@
+# Scaffold asset inventory for the claim-event-bus example.
+#
+# The full, vetted asset inventory used by the gauntlet specialists lives at
+# expected/00-context/asset-inventory.yaml (8 assets, 3 identities, 5 trust
+# boundaries) and is what `apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/`
+# walks. This scaffold sits at the example root so:
+#
+#   - `apd-gauntlet validate examples/apd-20260601-claim-event-bus/` finds the
+#     expected directory shape (00-context + inputs + .apd-run.yaml) without
+#     missing-artifact errors;
+#   - readers exploring the repo see that an example run is anchored on an
+#     asset inventory, not just an unprefixed pile of intake docs.
+#
+# It is intentionally a minimal pass-through: a subset of the assets from
+# the expected/ tree, enough to demonstrate the schema shape. Real runs should
+# use a complete inventory derived from intake.
+schema_version: 1
+generated_by: intake
+assets:
+  - asset_id: asset-1a2b3c4d
+    name: "claim-ingress-api"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§4 Event Bus Architecture"
+    confidence: high
+  - asset_id: asset-3c4d5e6f
+    name: "adjudication-service"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.1 Database (Adjudication outcomes persisted to RDS)"
+    confidence: high
+  - asset_id: asset-7a8b9c0d
+    name: "member-record-store"
+    asset_type: data_store
+    data_classifications: [phi]
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.1 Database (member_demographics and claims tables, PostgreSQL RDS)"
+    confidence: high
+identities: []
+trust_boundaries: []
+extraction_summary:
+  asset_count: 3
+  identity_count: 0
+  trust_boundary_count: 0
+  high_confidence_count: 3
+  medium_confidence_count: 0
+  low_confidence_count: 0

@@ -1538,14 +1538,25 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
 
 def contradictions_section(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     """Return contradictions in the React template's shape:
-       [{id, finding{id, assertion}, capability{id, assertion}, comparison, resolution}]
+       [{id, finding{id, assertion},
+         capability{id, ids, assertion}, comparison, resolution}]
+
+    The ``capability.ids`` field is the canonical list of capability ids that
+    participate in the contradiction (one or many). The ``capability.id``
+    field is retained for back-compat as the joined string the template
+    historically rendered — the next React template revision is expected to
+    switch to iterating ``ids`` so anchor links don't break when there are
+    multiple capabilities.
     """
     out: list[dict[str, Any]] = []
     for c in artifacts.contradictions:
         # capability_ids may be a list — the template shows one; join with " + " if many.
-        cap_ids = c.get("capability_ids") or (
+        raw_ids = c.get("capability_ids") or (
             [c.get("capability_id")] if c.get("capability_id") else []
         )
+        cap_ids: list[str] = [
+            cid for cid in raw_ids if isinstance(cid, str) and cid
+        ]
         out.append({
             "id": c.get("id"),
             "finding": {
@@ -1553,7 +1564,11 @@ def contradictions_section(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                 "assertion": (c.get("finding_assertion") or "").strip(),
             },
             "capability": {
-                "id": " + ".join(filter(None, cap_ids)) or None,
+                # Canonical: list of ids the React template should iterate.
+                "ids": cap_ids,
+                # Back-compat: joined display string. The template renders this
+                # today; it will be replaced by an iteration over ``ids``.
+                "id": " + ".join(cap_ids) or None,
                 "assertion": (c.get("capability_assertion") or "").strip(),
             },
             "comparison": (c.get("evidence_comparison") or c.get("comparison") or "").strip(),

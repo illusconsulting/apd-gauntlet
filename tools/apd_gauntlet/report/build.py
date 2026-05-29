@@ -11,8 +11,40 @@ from . import emit
 from .loader import MalformedArtifactError, MissingArtifactError, load_run
 from .transform import build_apd_data
 
-_PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
-DEFAULT_BUNDLE = _PKG_DATA / "report-template"
+
+def _resolve_default_bundle() -> pathlib.Path:
+    """Resolve the precompiled report-template bundle path.
+
+    Prefers ``importlib.resources`` so wheel installs (where the package data
+    may live in a zip / site-packages layout) work the same as editable
+    installs. Falls back to walking up from ``__file__`` to find
+    ``tools/apd_gauntlet/data/report-template/`` for the rare editable-install
+    case where ``resources.files`` cannot produce a real filesystem path.
+    """
+    try:
+        from importlib import resources
+
+        candidate = resources.files("apd_gauntlet") / "data" / "report-template"
+        # ``MultiplexedPath`` (namespace packages) and ``Path`` both expose
+        # ``__fspath__``; coerce so callers can use ``pathlib.Path`` semantics.
+        return pathlib.Path(str(candidate))
+    except (ModuleNotFoundError, AttributeError, TypeError):
+        # Editable-install fallback: walk up from this file looking for the
+        # in-tree data dir. Stops at the filesystem root.
+        here = pathlib.Path(__file__).resolve()
+        for parent in here.parents:
+            candidate = parent / "tools" / "apd_gauntlet" / "data" / "report-template"
+            if candidate.is_dir():
+                return candidate
+            sibling = parent / "apd_gauntlet" / "data" / "report-template"
+            if sibling.is_dir():
+                return sibling
+        # Last-resort: the legacy relative path. Surfaces a clean error later
+        # in ``copy_bundle`` if the directory truly does not exist.
+        return here.parent.parent / "data" / "report-template"
+
+
+DEFAULT_BUNDLE = _resolve_default_bundle()
 
 
 class ReportBuildError(RuntimeError):

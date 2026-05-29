@@ -143,15 +143,39 @@ def write_manifest(
     _atomic_write_text(path, "\n".join(lines) + "\n")
 
 
-def hash_dir(dir_path: pathlib.Path) -> str:
-    """Hash every file under dir_path (sorted), returning a short hex digest.
+# 1 MiB chunk — large enough that small bundles need only a handful of reads,
+# small enough that a giant accidental file does not OOM the build.
+_HASH_CHUNK_BYTES = 1 << 20
 
-    Used for bundle_hash in the manifest.
+
+def hash_dir(dir_path: pathlib.Path, *, chunk_size: int = _HASH_CHUNK_BYTES) -> str:
+    """Hash every regular file under dir_path (sorted), returning a short hex
+    digest. Used for bundle_hash in the manifest.
+
+    Hardening:
+      - Reads files in ``chunk_size`` chunks (default 1 MiB) so the worst-case
+        memory footprint is one chunk per file, not the full bundle.
+      - Skips symlinks. A bundle directory is expected to be a self-contained
+        tree of regular files; following symlinks could leak data outside the
+        bundle into the manifest hash, or follow a dangling link and crash.
+      - Skips non-regular files (named pipes, sockets, devices). These cannot
+        appear in a sane bundle and reading from them would either block
+        forever or yield non-deterministic content.
     """
     h = hashlib.sha256()
     for f in sorted(dir_path.rglob("*")):
-        if f.is_file():
-            h.update(f.relative_to(dir_path).as_posix().encode())
-            h.update(b"\x00")
-            h.update(f.read_bytes())
+        # Order matters: ``is_symlink`` must be checked before ``is_file``
+        # because pathlib's ``is_file`` follows symlinks by default.
+        if f.is_symlink():
+            continue
+        if not f.is_file():
+            continue
+        h.update(f.relative_to(dir_path).as_posix().encode())
+        h.update(b"\x00")
+        with f.open("rb") as fh:
+            while True:
+                chunk = fh.read(chunk_size)
+                if not chunk:
+                    break
+                h.update(chunk)
     return h.hexdigest()[:16]
