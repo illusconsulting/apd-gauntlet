@@ -61,3 +61,119 @@ A PBM's consequential-action surface is not uniform — it is partitioned by act
 - **Vendor integration credential** (third-party machine-to-machine) — SCIM-style eligibility push from sponsor HRIS, rebate-aggregator file drop, COB carrier data exchange, mail-order pharmacy fulfillment hand-off, specialty-pharmacy hub data sync, clinical-data-exchange (CCD/CCDA) ingress and egress, manufacturer-rebate utilization-data egress. Audit must capture: vendor entity identifier, credential identifier (mTLS certificate fingerprint, API-key identifier, OAuth client_id), the operation, the record-count and field set transferred, the source-or-destination endpoint identifier, and the schema version of the exchange. Vendor PHI exports must additionally produce a HIPAA Accounting-of-Disclosures record per 45 CFR §164.528; specialists should specifically validate that machine-credentialed disclosures are captured in the accounting just as human-credentialed disclosures are — vendor exports are the most common gap in Accounting-of-Disclosures coverage because operators conflate "covered under the BAA" with "exempt from accounting," which the rule does not support.
 
 Specialists evaluating Non-Repudiation should walk every actor class above against the audit-event store and confirm coverage rather than presuming coverage from a single well-instrumented surface. A PBM that logs member-portal traffic perfectly but cannot reconstruct which CSR pulled which member's claim history three weeks ago does not have an audit story — it has an audit hole the size of its largest internal actor class.
+
+## Claims-adjudication lifecycle events
+
+The claim-adjudication path comprises distinct events, each a consequential action with its own audit requirement. The events below are anchored to NCPDP Telecommunication Standard D.0 transaction codes where applicable.
+
+### Inbound claim submission (NCPDP D.0 B1)
+
+The pharmacy submitter transmits a B1 claim-billing request. Audit content: submitter NCPDP pharmacy ID, submitter NPI, transmitting switch (RelayHealth / Change Healthcare / Surescripts), inbound message digest (for replay-detection), member identifier and group_id, claim_reference_number, RX_number, prescriber NPI, and the NCPDP message body retained for the audit-event retention floor (HIPAA §164.316(b)(2)(i) 6-year). <!-- SME-review: confirm whether the audit needs to retain the raw NCPDP message or whether a normalized projection is sufficient under the PBM's pharmacy-network contract terms. -->
+
+### Eligibility lookup (X12 270/271)
+
+The adjudication engine queries the eligibility surface. Audit content: eligibility-query timestamp, member identifier, group_id, plan_id, the 271 response detail (coverage tier, accumulator state, prior-authorization-required flags), and which downstream decisions were keyed off the lookup. <!-- SME-review: confirm the X12 270/271 use here — some PBMs use NCPDP eligibility transactions (E1) rather than X12; the audit content should follow whichever protocol the PBM actually uses. -->
+
+### DUR/COB pre-check
+
+DUR engine evaluates drug-drug, drug-disease, drug-allergy, drug-age, therapeutic-duplication, and refill-too-soon checks; COB engine evaluates primary-vs-secondary insurance and accumulator allocation. Audit content: DUR-rule set version applied, COB tree resolved, the specific alerts raised (or specific reasons no alerts were raised — silence is auditable too), and the pharmacist / operator response if any alert reached the dispensing surface.
+
+### Prior-authorization check
+
+PA-criteria engine evaluates the request against the configured criteria for the drug-and-condition combination. Audit content: PA-criteria version applied, drug NDC and member diagnosis (when available), the criteria-evaluation result (auto-approve, auto-deny, route-to-clinical-review), and any operator override of the auto-decision.
+
+### Formulary and tier resolution
+
+Formulary engine resolves drug-to-formulary-tier, applies step-therapy or quantity-limit rules, evaluates formulary exceptions, and computes the tier-anchored copay basis. Audit content: formulary version applied, tier assigned, exception or override applied (if any), and the tier-anchored copay calculation. <!-- SME-review: formulary-version audit is load-bearing for retroactive-claim-reprocessing disputes; confirm the PBM's formulary-version retention is sufficient to support member appeals filed up to N years post-claim. -->
+
+### Adjudication decision
+
+Adjudication engine emits the response code — paid, rejected with NCPDP reject codes (with reason), captured for audit. The decision is the canonical "consequential action" of the lifecycle; downstream copay-collection, pharmacy-reimbursement, and PDE-submission flows all key off this event.
+
+Audit content: decision code, ingredient cost, dispensing fee, copay calculation, gross amount due, basis-of-reimbursement, prescription origin code, and the full attribution chain (which rule version, which formulary version, which DUR result, which PA result).
+
+### DUR alert raised + operator/pharmacist response
+
+When a DUR alert reaches the dispensing surface, the pharmacist either acknowledges or overrides. Audit content: alert type and severity, the specific clinical issue, the pharmacist NPI overriding, the clinical justification entered (free-text or coded), and whether a supervising-pharmacist attestation was required and recorded.
+
+### Claim reversal (NCPDP D.0 B2)
+
+Pharmacy submits a reversal of a previously-paid claim. Audit content: the original claim_reference_number being reversed, the reversal reason, the reversal timestamp, and the impact on accumulator state. Maps to T1565.001 when the reversal is initiated by an unauthorized actor against an already-paid claim.
+
+### Claim rebill (NCPDP D.0 B3)
+
+Pharmacy submits a rebill of a previously-reversed claim. Audit content: the original claim_reference_number, the rebill's updated fields (typically NDC or quantity), and the linkage between the original, the reversal, and the rebill.
+
+### Mail-order or specialty pathway split
+
+When the formulary or PA criteria route a claim to mail-order or specialty fulfillment, a distinct fulfillment-side audit chain begins. Audit content: which fulfillment partner, the order-routing decision rationale, the shipping address and delivery method, and the partner-side dispensing-event linkage back to the original claim.
+
+## HIPAA patient-rights events (§§164.522–164.528)
+
+The HIPAA Privacy Rule grants individuals specific rights with respect to their PHI. Each exercise of one of these rights is a consequential action with audit and substantive-response requirements.
+
+### Right to request restriction (§164.522)
+
+Member requests restriction on the PBM's use or disclosure of their PHI. Audit content: request, identity verification of the requester, scope of the requested restriction, the PBM's response (granted / partially granted / denied with reasoning), and any downstream propagation of the restriction to vendor partners under §164.504(e) BAA. Note the §164.522(a)(1)(vi) exception: a restriction request related to a service paid for in full by the individual must be granted absent narrow exceptions.
+
+### Right of access (§164.524)
+
+Member requests a copy of their PHI in a designated record set. Audit content: requester identity, identity-verification artifact (especially load-bearing for portal-initiated requests where the verification depth is sometimes weaker than for paper requests), scope of the records requested, the fee charged if any (must conform to §164.524(c)(4) reasonable-cost-based fee), the delivery method (electronic to member, electronic to designated third party, paper), and the response timeline. The 30-day response window (§164.524(b)(2)) is part of the audit-event content because timeliness is itself a §164.524 compliance question.
+
+### Right to amend (§164.526)
+
+Member requests amendment to PHI. Audit content: the amendment request, the PBM's decision (accept / deny with permitted-disagreement-statement), the dissemination of the decision to those who received the unamended record per §164.526(c)(3), and the link between the original PHI item and the amendment.
+
+### Right to an accounting of disclosures (§164.528)
+
+Member requests an accounting of disclosures of their PHI for the preceding 6 years. Audit content: the disclosure-event records covering the 6-year window, the requester identity, the response timeline (60-day default; 30-day extension permissible), and any fee charged for additional accountings within a 12-month window. <!-- SME-review: confirm whether PBM-to-CMS PDE submissions count as "disclosures" required under §164.528 — the Treatment/Payment/Operations exception under §164.506 commonly applies but the determination is fact-specific. -->
+
+### Right to receive PHI via electronic delivery to a designated third party (§164.524(c)(4))
+
+Member directs the PBM to deliver PHI to a designated third party in an electronic format. Audit content: identity verification of the designated third party (a common attack surface), the format requested, the delivery confirmation, and the consent chain authorizing the disclosure.
+
+## Prior-authorization lifecycle
+
+Prior authorization is a distinct PBM workflow with its own audit surface, separate from claim-adjudication.
+
+### PA submission
+
+Prescriber or pharmacist initiates a PA request. Audit content: requesting prescriber NPI, member identifier, drug NDC, requested duration, supporting clinical information attached.
+
+### PA criteria evaluation
+
+PA engine evaluates the request against the configured criteria. Audit content: criteria version applied, evaluation result (auto-approve / auto-deny / route-to-clinical-review with reason), the specific criteria clauses that drove the result.
+
+### Clinical review (when applicable)
+
+Pharmacist or medical director reviews routed requests. Audit content: reviewer NPI / DEA, review timestamp, clinical-justification entered, decision (approve / approve-with-conditions / deny), conditions attached if any.
+
+### PA decision communication
+
+PA decision is communicated to the prescriber and the member. Audit content: decision timestamp, communication channel (fax / electronic / phone), recipient confirmation. Medicare Part D timelines are codified at 42 CFR §423.568 (standard coverage determinations — 72 hours) and §423.572 (expedited coverage determinations — 24 hours), within the broader coverage-determination framework at §423.566.
+
+### Appeals processing
+
+Member appeals a denied PA (Part D redetermination). Audit content: appeal initiation, appeal reviewer (must be different from initial decision-maker per 42 CFR §423.590(g)), appeal decision, appeal timeline tracking per §423.590 (7 calendar days standard, 72 hours expedited). <!-- SME-review: confirm whether the PBM operates as a Medicare-only Part D plan, a commercial-and-Medicare blend, or a primarily-commercial book; the appeals discipline shifts substantially between Medicare-Part-D-enforced timelines and ERISA-governed commercial-plan timelines. -->
+
+### Tier exception decisions
+
+Distinct from PA: member requests a formulary tier exception (drug X covered at lower-cost tier). Audit content: exception-request basis (clinical-necessity argument, comparable-effectiveness argument), reviewer NPI, decision, and the duration of the exception if granted.
+
+## DUR / COB lifecycle
+
+### DUR rule-set authoring
+
+Clinical operator authors or edits a DUR rule. Audit content: rule version, drug-trigger criteria, alert text shown to pharmacist, severity classification, operator NPI, dual-approval attestation (required for safety-class rules; absent = High clinical-harm finding per the severity rubric).
+
+### DUR rule deployment
+
+DUR rule moves from authoring to production. Audit content: deployment timestamp, deployment approver (separate from author), rollback availability, the version range of the rule's effective-date window.
+
+### DUR alert raise / response
+
+(See Claims-adjudication lifecycle — DUR alert raised + operator/pharmacist response above; the lifecycle event is the same.)
+
+### COB tree resolution
+
+Adjudication engine resolves the coordination-of-benefits tree across primary / secondary / tertiary coverage. Audit content: the COB version applied, the resolution path (which insurer was determined primary, secondary, tertiary), the accumulator-state inputs, and the apportionment of payment liability across insurers.
