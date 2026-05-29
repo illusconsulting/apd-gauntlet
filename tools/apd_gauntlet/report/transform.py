@@ -182,14 +182,34 @@ def summary_rollup(artifacts: RunArtifacts) -> dict[str, Any]:
     }
 
 
+def _goal_to_tier(goal: str | None) -> str | None:
+    """Reverse lookup: APD goal → APD tier. Used as a fallback when a capability
+    record carries apd_goal but no apd_tier (a schema-non-conformance found in
+    caldera/authentik fixtures)."""
+    if not goal:
+        return None
+    for tier, goals in TIER_GOALS.items():
+        if goal in goals:
+            return tier
+    return None
+
+
 def capability_grid(artifacts: RunArtifacts) -> list[dict[str, Any]]:
-    """Map every deduped capability to the template's flat cap-grid entry shape."""
+    """Map every deduped capability to the template's flat cap-grid entry shape.
+
+    Schema-tolerance: when a capability record lacks ``apd_goal`` (caldera fixture),
+    fall back to its ``agent`` field which carries the lens name. When it lacks
+    ``apd_tier`` (caldera + authentik fixtures), derive it from the goal via
+    ``_goal_to_tier`` rather than emitting None and collapsing the tier dimension.
+    """
     out: list[dict[str, Any]] = []
     for c in artifacts.deduped_capabilities:
+        goal = c.get("apd_goal") or c.get("agent")
+        tier = c.get("apd_tier") or _goal_to_tier(goal)
         entry: dict[str, Any] = {
             "id":       c.get("id"),
-            "tier":     c.get("apd_tier"),
-            "goal":     c.get("apd_goal"),
+            "tier":     tier,
+            "goal":     goal,
             "maturity": c.get("maturity", "implemented"),
             "title":    c.get("title", ""),
             "scope":    c.get("scope", ""),
@@ -288,13 +308,21 @@ def findings_array(
             "evidence":     f.get("evidence", []),
             "recommendation": f.get("recommendation"),
             "mappings": {
-                "nist":      (f.get("control_mappings") or {}).get("nist_800_53r5", []),
+                "nist":      _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("nist_800_53r5")
+                ),
                 "attack":    _extract_ids_from_mapping(
                     (f.get("control_mappings") or {}).get("mitre_attack"), "technique"
                 ),
-                "cwe":       (f.get("control_mappings") or {}).get("cwe", []),
-                "owasp_api": (f.get("control_mappings") or {}).get("owasp_api_top10", []),
-                "owasp":     (f.get("control_mappings") or {}).get("owasp_top10", []),
+                "cwe":       _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("cwe")
+                ),
+                "owasp_api": _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("owasp_api_top10")
+                ),
+                "owasp":     _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("owasp_top10")
+                ),
                 "d3fend":    _extract_ids_from_mapping(
                     (f.get("control_mappings") or {}).get("d3fend")
                 ),
@@ -449,10 +477,16 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     """Return rows for the NIST coverage table: one per family with counts +
     notable one-liner. Order: descending by (covered + gapped + both).
 
-    Tolerates four synthesizer output shapes:
+    Tolerates four synthesizer output shapes (plus a Shape-A variant):
 
     Shape A — ``family_summary`` + ``control`` list (chainguard-era):
       Uses the pre-computed counts and posture fields directly.
+
+    Shape A' — flat ``control`` / ``controls`` list of dicts (canonical example):
+      No ``family_summary`` pre-computation; each entry is a dict carrying
+      ``id``, ``family``, ``posture``, and ``finding_count`` /
+      ``capability_count``. Family counts are derived from the per-control
+      ``posture`` field. Treated as a degraded Shape A.
 
     Shape B — ``coverage_by_family`` (crAPI-era):
       Per-family {control_id: [finding_ids]} dict. Cross-walks capabilities
@@ -474,16 +508,25 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
       - both:    controls with both findings and ≥1 capability
     """
     family_summary = artifacts.nist_coverage.get("family_summary") or {}
-    control_list = artifacts.nist_coverage.get("control") or []
+    # Accept both singular ``control`` (chainguard) and plural ``controls``
+    # (canonical example) — but ONLY when ``controls`` is a list, not a dict.
+    # The plural ``controls`` MAY also be a {control_id: data} map (authentik
+    # Shape C); that is handled by the dedicated ``controls_map`` branch below.
+    raw_controls = artifacts.nist_coverage.get("controls")
+    if isinstance(raw_controls, list):
+        control_list = list(raw_controls)
+        controls_map = None
+    else:
+        control_list = list(artifacts.nist_coverage.get("control") or [])
+        controls_map = raw_controls if isinstance(raw_controls, dict) else None
     titles = _nist_family_titles()
     rows: list[dict[str, Any]] = []
 
     coverage_by_family = artifacts.nist_coverage.get("coverage_by_family")
-    controls_map = artifacts.nist_coverage.get("controls")
     control_to_findings = artifacts.nist_coverage.get("control_to_findings")
 
     if family_summary:
-        # Shape A.
+        # Shape A — pre-computed family_summary.
         for fam, summary in sorted(family_summary.items()):
             rows.append({
                 "family":  fam,
@@ -491,6 +534,34 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                 "covered": summary.get("covered", 0),
                 "gapped":  summary.get("gapped", 0),
                 "both":    summary.get("gapped_and_covered", 0),
+                "notable": _notable_for_family(fam, control_list),
+            })
+    elif control_list:
+        # Shape A' — flat list of control dicts (canonical example). Derive
+        # family counts from per-control ``posture``.
+        family_counts: dict[str, dict[str, int]] = {}
+        for c in control_list:
+            if not isinstance(c, dict):
+                continue
+            fam = c.get("family") or _nist_family_of(str(c.get("id") or ""))
+            if not fam:
+                continue
+            posture = c.get("posture") or "silent"
+            bucket = family_counts.setdefault(
+                fam, {"covered": 0, "gapped": 0, "both": 0},
+            )
+            if posture == "gapped_and_covered":
+                bucket["both"] += 1
+            elif posture in bucket:
+                bucket[posture] += 1
+        for fam in sorted(family_counts.keys()):
+            counts = family_counts[fam]
+            rows.append({
+                "family":  fam,
+                "title":   titles.get(fam, fam),
+                "covered": counts["covered"],
+                "gapped":  counts["gapped"],
+                "both":    counts["both"],
                 "notable": _notable_for_family(fam, control_list),
             })
     elif coverage_by_family:
@@ -570,17 +641,27 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
 
     technique_list = artifacts.attack_exposure.get("technique")
-    techniques_dict = artifacts.attack_exposure.get("techniques")
+    # Accept ``techniques`` as plural-form Shape-A list (canonical example)
+    # in addition to its established Shape-B dict form.
+    raw_techniques = artifacts.attack_exposure.get("techniques")
+    if technique_list is None and isinstance(raw_techniques, list):
+        technique_list = raw_techniques
+        techniques_dict = None
+    else:
+        techniques_dict = raw_techniques if isinstance(raw_techniques, dict) else None
     technique_to_findings = artifacts.attack_exposure.get("technique_to_findings")
 
     if technique_list is not None:
-        # Shape A.
+        # Shape A — list of per-technique dicts.
         for t in technique_list:
-            mits = [
-                m.get("capability_id")
-                for m in (t.get("mitigated_by_capabilities") or [])
-                if m.get("capability_id")
-            ]
+            if not isinstance(t, dict):
+                continue
+            mits: list[str] = []
+            for m in (t.get("mitigated_by_capabilities") or []):
+                if isinstance(m, dict):
+                    cap_id = m.get("capability_id")
+                    if isinstance(cap_id, str) and cap_id:
+                        mits.append(cap_id)
             findings = t.get("exposure_finding_count", 0)
             rows.append({
                 "id":          t.get("id"),
@@ -801,14 +882,24 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
     goals = list(_GOAL_LABEL_SHORT.keys())
     rows: list[dict[str, Any]] = []
 
-    component_list = artifacts.apd_coverage_matrix.get("component")
+    # Accept either singular ``component`` or plural ``components`` as the
+    # Shape-A container. The plural key is used by the canonical example.
+    component_list = (
+        artifacts.apd_coverage_matrix.get("component")
+        or artifacts.apd_coverage_matrix.get("components")
+    )
     coverage = artifacts.apd_coverage_matrix.get("coverage")
     goals_map = artifacts.apd_coverage_matrix.get("goals")
     matrix_map = artifacts.apd_coverage_matrix.get("matrix")
 
     if component_list is not None:
-        # Shape A.
+        # Shape A — list of {name, cells} entries.
         for comp in component_list:
+            # Guard against shorthand authoring (e.g. ``components: [svc-a]``
+            # as a list of bare strings) so a single bad entry does not abort
+            # the whole render.
+            if not isinstance(comp, dict):
+                continue
             cells_in = comp.get("cells") or {}
             cells_out: dict[str, str] = {}
             for full_goal, short in _GOAL_SHORT.items():
@@ -1417,42 +1508,58 @@ def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
     }
     for rec in artifacts.deduped_findings + artifacts.attack_path_findings:
         cm = rec.get("control_mappings") or {}
-        out["nist"].update(cm.get("nist_800_53r5") or [])
+        # nist_800_53r5 may be a list of bare ID strings OR a list of dicts
+        # per apd-control-mappings discipline. Use the helper for both.
+        out["nist"].update(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
         out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
         out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
         out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
     for rec in artifacts.deduped_capabilities:
         cm = rec.get("control_mappings") or {}
-        out["nist"].update(cm.get("nist_800_53r5") or [])
+        out["nist"].update(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
         out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
         out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
         out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
     # Coverage rollups — handle all four shapes.
-    # Shape A: nist_coverage has a "control" list with id fields.
-    for c in artifacts.nist_coverage.get("control") or []:
-        out["nist"].add(c.get("id", ""))
+    # Shape A: nist_coverage has a "control" / "controls" list with id fields.
+    for c in (artifacts.nist_coverage.get("control")
+              or (artifacts.nist_coverage.get("controls")
+                  if isinstance(artifacts.nist_coverage.get("controls"), list)
+                  else None)
+              or []):
+        if isinstance(c, dict):
+            out["nist"].add(c.get("id", ""))
     # Shape B: nist_coverage has "coverage_by_family" dict.
     for _fam, fam_controls in (artifacts.nist_coverage.get("coverage_by_family") or {}).items():
         out["nist"].update(fam_controls.keys() if isinstance(fam_controls, dict) else [])
-    # Shape C: nist_coverage has "controls" map (authentik).
-    for ctrl_id in (artifacts.nist_coverage.get("controls") or {}):
-        out["nist"].add(ctrl_id)
+    # Shape C: nist_coverage has "controls" map (authentik) — dict form only;
+    # the list form is handled by the Shape-A branch above.
+    raw_ctrls = artifacts.nist_coverage.get("controls")
+    if isinstance(raw_ctrls, dict):
+        for ctrl_id in raw_ctrls:
+            out["nist"].add(ctrl_id)
     # Shape D: nist_coverage has "control_to_findings" flat dict (caldera).
     for ctrl_id in (artifacts.nist_coverage.get("control_to_findings") or {}):
         out["nist"].add(ctrl_id)
 
-    # Shape A: attack_exposure has a "technique" list with id fields.
-    for t in artifacts.attack_exposure.get("technique") or []:
-        out["attack"].add(t.get("id", ""))
+    # Shape A: attack_exposure has a "technique" / "techniques" list with id fields.
+    raw_techs = artifacts.attack_exposure.get("technique")
+    if raw_techs is None and isinstance(artifacts.attack_exposure.get("techniques"), list):
+        raw_techs = artifacts.attack_exposure.get("techniques")
+    for t in raw_techs or []:
+        if isinstance(t, dict):
+            out["attack"].add(t.get("id", ""))
     # Shape B: attack_exposure has "techniques" dict (with optional sub_techniques
     # nested as a dict for crAPI). Authentik-era sub-techniques are top-level keys.
-    for tech_id, entry in (artifacts.attack_exposure.get("techniques") or {}).items():
-        out["attack"].add(tech_id)
-        if isinstance(entry, dict):
-            subs = entry.get("sub_techniques") or {}
-            if isinstance(subs, dict):
-                for sub_id in subs:
-                    out["attack"].add(sub_id)
+    raw_techs_dict = artifacts.attack_exposure.get("techniques")
+    if isinstance(raw_techs_dict, dict):
+        for tech_id, entry in raw_techs_dict.items():
+            out["attack"].add(tech_id)
+            if isinstance(entry, dict):
+                subs = entry.get("sub_techniques") or {}
+                if isinstance(subs, dict):
+                    for sub_id in subs:
+                        out["attack"].add(sub_id)
     # Shape C: attack_exposure has "technique_to_findings" dict (caldera).
     # Caldera sub_techniques is a list of IDs, not nested dicts.
     for tech_id, entry in (artifacts.attack_exposure.get("technique_to_findings") or {}).items():

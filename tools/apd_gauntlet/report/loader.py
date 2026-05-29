@@ -75,14 +75,28 @@ def _yaml(path: pathlib.Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text()) or {}
 
 
-def _records(path: pathlib.Path, root_key: str) -> list[dict[str, Any]]:
-    """Return the list under root_key. Accepts both list and single-dict shape."""
+def _records(
+    path: pathlib.Path,
+    root_key: str,
+    *fallback_keys: str,
+) -> list[dict[str, Any]]:
+    """Return the list under root_key (or any fallback_key). Accepts both
+    list and single-dict shape under any of the candidate keys.
+
+    Synthesizers across fixtures use different top-level keys for the same
+    record class — e.g. contradictions.yaml uses ``contradictions:`` (plural)
+    in shipped runs but the planned schema named the key ``contradiction:``
+    (singular). Passing both keys lets the loader stay agnostic.
+    """
     doc = _yaml(path)
-    payload = doc.get(root_key)
-    if isinstance(payload, list):
-        return [r for r in payload if isinstance(r, dict)]
-    if isinstance(payload, dict):
-        return [payload]
+    for key in (root_key, *fallback_keys):
+        payload = doc.get(key)
+        if payload is None:
+            continue
+        if isinstance(payload, list):
+            return [r for r in payload if isinstance(r, dict)]
+        if isinstance(payload, dict):
+            return [payload]
     return []
 
 
@@ -210,15 +224,32 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     contradictions_notes: str | None = None
     if (synth / "contradictions.yaml").exists():
         _contra_doc = _yaml(synth / "contradictions.yaml")
-        contradictions = _records(synth / "contradictions.yaml", "contradiction")
-        contradictions_notes = _contra_doc.get("notes") or None
+        # Plural ``contradictions`` is the shipped-fixture key; singular
+        # ``contradiction`` is the planned-schema key. Accept both.
+        contradictions = _records(
+            synth / "contradictions.yaml", "contradictions", "contradiction",
+        )
+        # ``notes`` (plural) and ``note`` (caldera's singular variant).
+        contradictions_notes = (
+            _contra_doc.get("notes") or _contra_doc.get("note") or None
+        )
     else:
         contradictions = []
     sev_dis_notes: str | None = None
     if (synth / "severity-disagreements.yaml").exists():
         _sevdis_doc = _yaml(synth / "severity-disagreements.yaml")
-        sev_dis = _records(synth / "severity-disagreements.yaml", "severity_disagreement")
-        sev_dis_notes = _sevdis_doc.get("notes") or None
+        # crapi/example use ``severity_disagreements``; caldera/authentik
+        # use the abbreviated ``disagreements``; the planned schema named
+        # the singular ``severity_disagreement``. Accept all three.
+        sev_dis = _records(
+            synth / "severity-disagreements.yaml",
+            "severity_disagreements",
+            "disagreements",
+            "severity_disagreement",
+        )
+        sev_dis_notes = (
+            _sevdis_doc.get("notes") or _sevdis_doc.get("note") or None
+        )
     else:
         sev_dis = []
     attack_paths = _yaml(synth / "attack-paths.yaml") \
