@@ -241,15 +241,24 @@ def capability_grid(artifacts: RunArtifacts) -> list[dict[str, Any]]:
         if is_merged and lp_raw:
             entry["merged"] = True
             # lens_perspectives may be a dict (key=lens name, value=dict with source_id)
-            # or a list of dicts with an apd_goal/goal field.
+            # or a list of dicts with an apd_goal/goal field. Either way, the
+            # cross_lens entry must carry APD goals, not lens names: the dict
+            # shape extracts apd_goal/goal from the VALUES so it matches the
+            # list-shape semantics. None goals are filtered out so the rendered
+            # list stays clean.
             if isinstance(lp_raw, dict):
-                cross_lens = list(lp_raw.keys())
+                cross_lens = [
+                    v.get("apd_goal", v.get("goal"))
+                    for v in lp_raw.values()
+                    if isinstance(v, dict)
+                ]
             else:
                 cross_lens = [
                     lp.get("apd_goal", lp.get("goal"))
                     for lp in lp_raw
                     if isinstance(lp, dict)
                 ]
+            cross_lens = [g for g in cross_lens if g]
             if cross_lens:
                 entry["cross_lens"] = cross_lens
         elif is_merged:
@@ -330,9 +339,9 @@ def findings_array(
             "evidence":     f.get("evidence", []),
             "recommendation": f.get("recommendation"),
             "mappings": {
-                "nist":      _extract_ids_from_mapping(
+                "nist":      _normalize_nist_ids(_extract_ids_from_mapping(
                     (f.get("control_mappings") or {}).get("nist_800_53r5")
-                ),
+                )),
                 "attack":    _extract_ids_from_mapping(
                     (f.get("control_mappings") or {}).get("mitre_attack"), "technique"
                 ),
@@ -438,13 +447,18 @@ def _notable_for_family_new(
 
 
 def _build_cap_controls_index(capabilities: list[dict[str, Any]]) -> dict[str, set[str]]:
-    """Return {control_id: {cap_id, ...}} for all capabilities with NIST mappings."""
+    """Return {control_id: {cap_id, ...}} for all capabilities with NIST mappings.
+
+    Control IDs are normalised to canonical form (e.g. 'ac-3' → 'AC-3') so the
+    index matches exactly against the normalised IDs used by the family
+    cross-walk; non-canonical IDs are dropped rather than emitted as junk keys.
+    """
     index: dict[str, set[str]] = {}
     for cap in capabilities:
         cap_id = cap.get("id", "")
         cm = cap.get("control_mappings") or {}
         nist_controls = cm.get("nist_800_53r5") or []
-        for ctrl in _extract_ids_from_mapping(nist_controls):
+        for ctrl in _normalize_nist_ids(_extract_ids_from_mapping(nist_controls)):
             # Strip enhancements to base control for family derivation, but keep
             # the full control id in the index so we match exact keys.
             index.setdefault(ctrl, set()).add(cap_id)
@@ -465,6 +479,38 @@ def _build_cap_attack_index(capabilities: list[dict[str, Any]]) -> dict[str, set
 def _nist_family_of(control_id: str) -> str:
     """Return the NIST family prefix of a control id (e.g., 'AC-2(2)' → 'AC')."""
     return control_id.split("-", 1)[0] if "-" in control_id else control_id
+
+
+_NIST_ID_CANONICAL = re.compile(r"[A-Z]{2,3}-\d+(\([\dA-Z]+\))?")
+
+
+def _normalize_nist_id(raw: str | None) -> str | None:
+    """Normalise a NIST 800-53r5 control id to canonical form.
+
+    Uppercases, strips whitespace, and validates the result has the
+    canonical 'FAM-N' or 'FAM-N(N)' shape. Returns None for input
+    that cannot be normalised so callers can drop the entry rather
+    than emit junk.
+
+    Canonical pattern: 2-3 letter family prefix, dash, digits, optional
+    parenthesised enhancement. Examples: AC-3, AC-2(13), SC-7(5).
+    """
+    if not isinstance(raw, str):
+        return None
+    norm = raw.strip().upper()
+    if not norm:
+        return None
+    if not _NIST_ID_CANONICAL.fullmatch(norm):
+        return None
+    return norm
+
+
+def _normalize_nist_ids(ids: list[str]) -> list[str]:
+    """Apply ``_normalize_nist_id`` to a list of raw ids, dropping invalid entries.
+
+    Preserves order; deduplication is not performed here (call sites that need
+    deduped output already use set semantics)."""
+    return [n for n in (_normalize_nist_id(x) for x in ids) if n]
 
 
 def _family_row(
@@ -706,7 +752,16 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
             if parent_findings is None:
                 parent_findings = entry.get("findings")
 
-            if parent_findings is not None:
+            # Distinguish a finding-bearing parent from a grouping-only parent:
+            #   - parent_findings truthy (non-empty list) → emit a row.
+            #   - parent_findings is [] AND sub_techniques present → parent is
+            #     a grouping node; skip its row and let the sub-technique loop
+            #     below emit the individual technique rows.
+            #   - parent_findings is None AND no sub_techniques → nothing to
+            #     emit (the entry carries no actionable data).
+            #   - parent_findings is None AND sub_techniques present → same;
+            #     defer to the sub-technique loop.
+            if parent_findings:
                 mits = list(
                     entry.get("countering_capabilities")
                     or entry.get("capabilities_with_mitigation")
@@ -1629,17 +1684,23 @@ def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
         cm = rec.get("control_mappings") or {}
         # nist_800_53r5 may be a list of bare ID strings OR a list of dicts
         # per apd-control-mappings discipline. Use the helper for both.
-        out["nist"].update(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+        out["nist"].update(
+            _normalize_nist_ids(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+        )
         out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
         out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
         out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
     for rec in artifacts.deduped_capabilities:
         cm = rec.get("control_mappings") or {}
-        out["nist"].update(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+        out["nist"].update(
+            _normalize_nist_ids(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+        )
         out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
         out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
         out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
-    # Coverage rollups — handle all four shapes.
+    # Coverage rollups — handle all four shapes. Every NIST id is normalised
+    # at ingest so 'ac-3' and 'AC-3' collapse to one taxonomy entry and junk
+    # ids (e.g. 'AC2(2)' missing the dash) are dropped rather than rendered.
     # Shape A: nist_coverage has a "control" / "controls" list with id fields.
     for c in (artifacts.nist_coverage.get("control")
               or (artifacts.nist_coverage.get("controls")
@@ -1647,19 +1708,22 @@ def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
                   else None)
               or []):
         if isinstance(c, dict):
-            out["nist"].add(c.get("id", ""))
+            norm = _normalize_nist_id(c.get("id"))
+            if norm:
+                out["nist"].add(norm)
     # Shape B: nist_coverage has "coverage_by_family" dict.
     for _fam, fam_controls in (artifacts.nist_coverage.get("coverage_by_family") or {}).items():
-        out["nist"].update(fam_controls.keys() if isinstance(fam_controls, dict) else [])
+        if isinstance(fam_controls, dict):
+            out["nist"].update(_normalize_nist_ids(list(fam_controls.keys())))
     # Shape C: nist_coverage has "controls" map (authentik) — dict form only;
     # the list form is handled by the Shape-A branch above.
     raw_ctrls = artifacts.nist_coverage.get("controls")
     if isinstance(raw_ctrls, dict):
-        for ctrl_id in raw_ctrls:
-            out["nist"].add(ctrl_id)
+        out["nist"].update(_normalize_nist_ids(list(raw_ctrls.keys())))
     # Shape D: nist_coverage has "control_to_findings" flat dict (caldera).
-    for ctrl_id in (artifacts.nist_coverage.get("control_to_findings") or {}):
-        out["nist"].add(ctrl_id)
+    out["nist"].update(_normalize_nist_ids(
+        list((artifacts.nist_coverage.get("control_to_findings") or {}).keys())
+    ))
 
     # Shape A: attack_exposure has a "technique" / "techniques" list with id fields.
     raw_techs = artifacts.attack_exposure.get("technique")
@@ -1701,11 +1765,15 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
 
     # NIST 800-53r5: titles come from the nist-coverage artifact when present
     # (Shape A inline title), otherwise fall back to the bundled OSCAL catalog.
-    inline_titles = {
-        c.get("id"): c.get("title", "")
-        for c in (artifacts.nist_coverage.get("control") or [])
-        if isinstance(c, dict)
-    }
+    # Keys are normalised so a Shape-A 'ac-3' inline title still resolves the
+    # canonical 'AC-3' lookup emitted by ``_collect_referenced_ids``.
+    inline_titles: dict[str, str] = {}
+    for c in (artifacts.nist_coverage.get("control") or []):
+        if not isinstance(c, dict):
+            continue
+        norm = _normalize_nist_id(c.get("id"))
+        if norm:
+            inline_titles[norm] = c.get("title", "")
     catalog_titles = _taxonomy.nist_control_titles()
     for cid in sorted(refs["nist"]):
         if not cid:
