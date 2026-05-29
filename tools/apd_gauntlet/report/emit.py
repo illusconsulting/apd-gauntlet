@@ -44,16 +44,47 @@ def write_data_js(data: dict[str, Any], path: pathlib.Path) -> None:
     _atomic_write_text(path, f"window.APD_DATA = {body};\n")
 
 
-def copy_bundle(src: pathlib.Path, dst: pathlib.Path) -> None:
-    """Copy every file under the precompiled bundle dir into dst.
+# Files owned by emit.py (not the bundle source); preserve across prune.
+_PROTECTED_OUTPUT_FILES = frozenset({"data.js", "build-manifest.txt"})
 
-    Uses dirs_exist_ok so re-runs overwrite cleanly.
+
+def copy_bundle(src: pathlib.Path, dst: pathlib.Path) -> None:
+    """Copy the precompiled bundle from src into dst, pruning files that
+    exist in dst but not in src so a previous bundle version cannot poison
+    the new copy. data.js and build-manifest.txt are preserved because they
+    are written by emit, not shipped from the source bundle.
     """
     if not src.exists():
         raise BundleMissingError(
             f"precompiled bundle missing at {src}. "
             "Run `python tools/build_report_template.py` to regenerate."
         )
+    dst.mkdir(parents=True, exist_ok=True)
+
+    # Inventory the source bundle's file list (relative paths).
+    src_files: set[pathlib.Path] = set()
+    for p in src.rglob("*"):
+        if p.is_file():
+            src_files.add(p.relative_to(src))
+
+    # Prune files in dst not in src — except protected (emit-owned) outputs.
+    for p in dst.rglob("*"):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(dst)
+        if rel.name in _PROTECTED_OUTPUT_FILES:
+            continue
+        if rel not in src_files:
+            # Best-effort prune; surface as a hint, not a hard failure.
+            with contextlib.suppress(OSError):
+                p.unlink()
+    # Remove now-empty subdirectories left over from pruned files.
+    for p in sorted(dst.rglob("*"), key=lambda q: -len(q.parts)):
+        if p.is_dir() and not any(p.iterdir()):
+            with contextlib.suppress(OSError):
+                p.rmdir()
+
+    # Copy / overwrite source into dst.
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
