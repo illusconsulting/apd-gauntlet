@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
 
@@ -23,6 +24,20 @@ _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 _DATA = _PKG_DATA
 
 
+_CACHED_LOADERS: tuple[Callable[[], dict[str, Any]], ...] = ()
+
+
+def _register_cached(fn: Callable[[], dict[str, Any]]) -> Callable[[], dict[str, Any]]:
+    """Register a @lru_cache'd loader so invalidate_all() can clear it.
+
+    Decorator pattern: apply BEFORE @lru_cache so we register the cached form.
+    """
+    global _CACHED_LOADERS
+    _CACHED_LOADERS = (*_CACHED_LOADERS, fn)
+    return fn
+
+
+@_register_cached
 @lru_cache(maxsize=1)
 def cwe_titles() -> dict[str, str]:
     """Return {CWE-NNN: title} for all entries in cwe.json.
@@ -57,6 +72,7 @@ def cwe_titles() -> dict[str, str]:
     return out
 
 
+@_register_cached
 @lru_cache(maxsize=1)
 def attack_technique_titles() -> dict[str, str]:
     """Map ATT&CK technique id (T####[.###]) → name.
@@ -90,6 +106,7 @@ def attack_technique_titles() -> dict[str, str]:
     return out
 
 
+@_register_cached
 @lru_cache(maxsize=1)
 def nist_control_titles() -> dict[str, str]:
     """Return {control_id: title} from the bundled NIST 800-53r5 catalog."""
@@ -102,6 +119,7 @@ def nist_control_titles() -> dict[str, str]:
     return doc.get("controls") or {}
 
 
+@_register_cached
 @lru_cache(maxsize=1)
 def d3fend_titles() -> dict[str, str]:
     """Map D3FEND technique id → name.
@@ -167,3 +185,54 @@ def reference_db_versions() -> dict[str, dict[str, Any]]:
             "count":      len(fn()),
         }
     return out
+
+
+def invalidate_all() -> None:
+    """Invalidate every reference-data LRU cache.
+
+    Call when the underlying data files have changed and the process must
+    pick up the refreshed values without restarting (e.g. a SaaS variant
+    receiving a refresh-mitre webhook, or a hot-reload workflow).
+    """
+    for fn in _CACHED_LOADERS:
+        fn.cache_clear()  # type: ignore[attr-defined]
+
+
+_LAST_SEEN_MTIMES: dict[pathlib.Path, float] = {}
+
+
+def invalidate_if_modified(
+    catalog_dir: pathlib.Path | None = None,
+) -> list[str]:
+    """Clear caches whose source JSON file mtime has changed since last call.
+
+    Returns the list of catalog filenames whose caches were cleared. On the
+    first call this populates the mtime registry but does NOT clear anything
+    (idempotent warm-up).
+    """
+    target = catalog_dir or _DATA
+    cleared: list[str] = []
+    # Mapping of catalog filename -> loader to invalidate.
+    catalog_to_loader: dict[str, Callable[[], dict[str, Any]]] = {
+        "nist-controls.json":            nist_control_titles,
+        "mitre-attack-techniques.json":  attack_technique_titles,
+        "cwe.json":                      cwe_titles,
+        "d3fend.json":                   d3fend_titles,
+    }
+    for filename, loader in catalog_to_loader.items():
+        path = target / filename
+        if not path.is_file():
+            continue
+        try:
+            current = path.stat().st_mtime
+        except OSError:
+            continue
+        previous = _LAST_SEEN_MTIMES.get(path)
+        if previous is None:
+            _LAST_SEEN_MTIMES[path] = current
+            continue  # warm-up
+        if current != previous:
+            loader.cache_clear()  # type: ignore[attr-defined]
+            _LAST_SEEN_MTIMES[path] = current
+            cleared.append(filename)
+    return cleared
