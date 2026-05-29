@@ -304,12 +304,18 @@ def findings_array(
     artifacts: RunArtifacts,
     *,
     headline_supplement: list[dict[str, Any]] | None,
+    warnings: list[dict[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """Map deduped findings + attack-path findings to the template's flat array.
 
     Headline rank: if supplement is supplied, use it (silently dropping ids that
     don't match a finding). Otherwise compute algorithmically (top-10 by severity
     desc, confidence desc, id asc).
+
+    ``warnings`` is an optional aggregator list threaded into
+    ``_extract_ids_from_mapping`` calls so soft mapping issues (id-missing
+    name-only entries, completely shapeless dicts) surface as structured
+    ``data.meta.warnings`` records instead of being silently dropped.
     """
     all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
     if headline_supplement is not None:
@@ -340,22 +346,29 @@ def findings_array(
             "recommendation": f.get("recommendation"),
             "mappings": {
                 "nist":      _normalize_nist_ids(_extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("nist_800_53r5")
+                    (f.get("control_mappings") or {}).get("nist_800_53r5"),
+                    warnings=warnings,
                 )),
                 "attack":    _extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("mitre_attack"), "technique"
+                    (f.get("control_mappings") or {}).get("mitre_attack"),
+                    "technique",
+                    warnings=warnings,
                 ),
                 "cwe":       _extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("cwe")
+                    (f.get("control_mappings") or {}).get("cwe"),
+                    warnings=warnings,
                 ),
                 "owasp_api": _extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("owasp_api_top10")
+                    (f.get("control_mappings") or {}).get("owasp_api_top10"),
+                    warnings=warnings,
                 ),
                 "owasp":     _extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("owasp_top10")
+                    (f.get("control_mappings") or {}).get("owasp_top10"),
+                    warnings=warnings,
                 ),
                 "d3fend":    _extract_ids_from_mapping(
-                    (f.get("control_mappings") or {}).get("d3fend")
+                    (f.get("control_mappings") or {}).get("d3fend"),
+                    warnings=warnings,
                 ),
             },
             "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
@@ -1551,6 +1564,10 @@ def build_apd_data(
     """
     supplement = artifacts.report_data or {}
     section_errors: dict[str, str] = {}
+    # Shared aggregator threaded into transformers that surface soft mapping
+    # warnings (T4-C). The list is appended in-place by callees and copied
+    # onto out["meta"]["warnings"] at the end.
+    warnings: list[dict[str, str]] = []
     out: dict[str, Any] = {"meta": meta_block(artifacts, run_dir=run_dir)}
 
     # Per-section work units. Each tuple is ``(name, thunk, placeholder)``.
@@ -1581,7 +1598,9 @@ def build_apd_data(
          []),
         ("findings",
          lambda: findings_array(
-             artifacts, headline_supplement=supplement.get("headline_findings"),
+             artifacts,
+             headline_supplement=supplement.get("headline_findings"),
+             warnings=warnings,
          ),
          []),
         ("contradictions",
@@ -1635,6 +1654,7 @@ def build_apd_data(
             out[pt_name] = pt_value
 
     out["meta"]["section_errors"] = section_errors
+    out["meta"]["warnings"] = warnings
     return out
 
 
@@ -1648,7 +1668,11 @@ _CWE_FAMILY_DISPLAY = "CWE"
 _D3FEND_FAMILY_DISPLAY = "MITRE D3FEND"
 
 
-def _extract_ids_from_mapping(raw: Any, *fallback_keys: str) -> list[str]:
+def _extract_ids_from_mapping(
+    raw: Any,
+    *fallback_keys: str,
+    warnings: list[dict[str, str]] | None = None,
+) -> list[str]:
     """Extract string IDs from a control-mapping field that may be:
 
     - A list of strings: ["ID1", "ID2"]
@@ -1657,6 +1681,21 @@ def _extract_ids_from_mapping(raw: Any, *fallback_keys: str) -> list[str]:
 
     ``fallback_keys`` is the ordered list of dict keys to try when "id" is absent.
     E.g. for mitre_attack: fallback_keys=("technique",)
+
+    ``warnings`` is an optional aggregator list. When supplied:
+    - Dict items lacking ``id`` and every fallback key but carrying a usable
+      ``name`` string emit ``{"issue": "mapping_id_missing_using_name",
+      "name": <name>}`` and the name is appended as a last-resort label so
+      partial signal is not silently dropped.
+    - Dict items lacking ``id``, every fallback key, AND any usable name emit
+      ``{"issue": "mapping_item_no_id_no_name", "shape": <comma-joined sorted
+      dict keys>}`` and the item is skipped.
+
+    When ``warnings`` is ``None`` (the default for existing callers) the
+    last-resort name fallback still fires silently — backwards-compatible
+    callers continue to recover partial signal without observing structured
+    warnings. Dict items with no name and no id are skipped, matching prior
+    behaviour.
     """
     if not raw:
         return []
@@ -1664,21 +1703,51 @@ def _extract_ids_from_mapping(raw: Any, *fallback_keys: str) -> list[str]:
     for item in raw:
         if isinstance(item, str):
             ids.append(item)
-        elif isinstance(item, dict):
-            # Try "id" first, then each fallback key in order.
-            found = item.get("id")
-            if not found:
-                for key in fallback_keys:
-                    found = item.get(key)
-                    if found:
-                        break
-            if found and isinstance(found, str):
-                ids.append(found)
+            continue
+        if not isinstance(item, dict):
+            continue
+        # Try "id" first, then each fallback key in order.
+        found = item.get("id")
+        if not found:
+            for key in fallback_keys:
+                found = item.get(key)
+                if found:
+                    break
+        if not found:
+            # Last-resort: emit the human-readable name so partial signal is
+            # not silently lost. Aggregate a structured warning when caller
+            # supplied the warnings list.
+            name = item.get("name")
+            if isinstance(name, str) and name:
+                if warnings is not None:
+                    warnings.append({
+                        "issue": "mapping_id_missing_using_name",
+                        "name":  name,
+                    })
+                ids.append(name)
+                continue
+            if warnings is not None:
+                warnings.append({
+                    "issue": "mapping_item_no_id_no_name",
+                    "shape": ",".join(sorted(item.keys())),
+                })
+            continue
+        if isinstance(found, str):
+            ids.append(found)
     return ids
 
 
-def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
-    """Return {family: {ids}} across all findings + capabilities + coverage rows."""
+def _collect_referenced_ids(
+    artifacts: RunArtifacts,
+    *,
+    warnings: list[dict[str, str]] | None = None,
+) -> dict[str, set[str]]:
+    """Return {family: {ids}} across all findings + capabilities + coverage rows.
+
+    ``warnings`` is an optional aggregator threaded into the underlying
+    ``_extract_ids_from_mapping`` calls so soft mapping issues surface in
+    ``data.meta.warnings`` rather than being silently dropped.
+    """
     out: dict[str, set[str]] = {
         "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(),
     }
@@ -1687,19 +1756,35 @@ def _collect_referenced_ids(artifacts: RunArtifacts) -> dict[str, set[str]]:
         # nist_800_53r5 may be a list of bare ID strings OR a list of dicts
         # per apd-control-mappings discipline. Use the helper for both.
         out["nist"].update(
-            _normalize_nist_ids(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+            _normalize_nist_ids(_extract_ids_from_mapping(
+                cm.get("nist_800_53r5"), warnings=warnings,
+            ))
         )
-        out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
-        out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
-        out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
+        out["attack"].update(_extract_ids_from_mapping(
+            cm.get("mitre_attack"), "technique", warnings=warnings,
+        ))
+        out["cwe"].update(_extract_ids_from_mapping(
+            cm.get("cwe"), warnings=warnings,
+        ))
+        out["d3fend"].update(_extract_ids_from_mapping(
+            cm.get("d3fend"), warnings=warnings,
+        ))
     for rec in artifacts.deduped_capabilities:
         cm = rec.get("control_mappings") or {}
         out["nist"].update(
-            _normalize_nist_ids(_extract_ids_from_mapping(cm.get("nist_800_53r5")))
+            _normalize_nist_ids(_extract_ids_from_mapping(
+                cm.get("nist_800_53r5"), warnings=warnings,
+            ))
         )
-        out["attack"].update(_extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
-        out["cwe"].update(_extract_ids_from_mapping(cm.get("cwe")))
-        out["d3fend"].update(_extract_ids_from_mapping(cm.get("d3fend")))
+        out["attack"].update(_extract_ids_from_mapping(
+            cm.get("mitre_attack"), "technique", warnings=warnings,
+        ))
+        out["cwe"].update(_extract_ids_from_mapping(
+            cm.get("cwe"), warnings=warnings,
+        ))
+        out["d3fend"].update(_extract_ids_from_mapping(
+            cm.get("d3fend"), warnings=warnings,
+        ))
     # Coverage rollups — handle all four shapes. Every NIST id is normalised
     # at ingest so 'ac-3' and 'AC-3' collapse to one taxonomy entry and junk
     # ids (e.g. 'AC2(2)' missing the dash) are dropped rather than rendered.

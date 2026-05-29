@@ -60,7 +60,8 @@ window.APD_DATA = {
         "count": 149
       }
     },
-    "section_errors": {}
+    "section_errors": {},
+    "warnings": []
   },
   "summary": {
     "findings_total": 72,
