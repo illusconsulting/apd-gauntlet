@@ -829,6 +829,11 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
     elif technique_to_findings is not None:
         # Shape C — caldera. Mitigations come from capability ATT&CK cross-walk.
         cap_attack = _build_cap_attack_index(artifacts.deduped_capabilities)
+        # Track emitted technique IDs so a sub_id listed under a parent that is
+        # ALSO present as its own top-level key does not produce a duplicate
+        # row. The top-level entry wins because it carries actual findings
+        # data; the sub-row would be a degenerate findings=0 placeholder.
+        emitted_ids: set[str] = set()
         for tech_id in sorted(technique_to_findings.keys()):
             entry = technique_to_findings[tech_id]
             if not isinstance(entry, dict):
@@ -843,12 +848,22 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                 "coverage":    _attack_coverage_label(mits, findings),
                 "note":        "",
             })
+            emitted_ids.add(tech_id)
             # Caldera sub_techniques is a list of IDs — emit each as its own
             # row with no parent-supplied name. Findings/mitigations are
             # derived from the cap index only (no per-sub finding bucket
             # exists in this shape, so findings=0 by construction).
             for sub_id in (entry.get("sub_techniques") or []):
                 if not isinstance(sub_id, str):
+                    continue
+                if sub_id in emitted_ids:
+                    # Already emitted — either via its own top-level key or a
+                    # previously-iterated parent. Skip to prevent duplicate rows.
+                    continue
+                if sub_id in technique_to_findings:
+                    # The sub_id is also a top-level key; defer to that
+                    # iteration since the top-level entry carries the actual
+                    # findings list.
                     continue
                 sub_mits = sorted(cap_attack.get(sub_id, set()))
                 rows.append({
@@ -859,6 +874,7 @@ def attack_exposure_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
                     "coverage":    _attack_coverage_label(sub_mits, 0),
                     "note":        "",
                 })
+                emitted_ids.add(sub_id)
 
     rows.sort(key=lambda r: (-r["findings"], r["id"] or ""))
     return rows
@@ -915,6 +931,7 @@ def _posture(has_findings: bool, has_caps: bool) -> str:
 def _matrix_rows_from_dedup(
     artifacts: RunArtifacts,
     goal_has_caps: dict[str, bool] | None = None,
+    warnings: list[dict[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """Synthesise (component, goal) rows by reading deduped findings + caps
     directly. Used for the caldera ``matrix`` shape (which only carries counts)
@@ -922,6 +939,12 @@ def _matrix_rows_from_dedup(
 
     ``goal_has_caps`` may be pre-supplied; otherwise it's derived from
     deduped_capabilities.apd_goal.
+
+    ``warnings`` is an optional aggregator list (T4-E). Findings whose
+    ``apd_goal`` is ``None`` or not in :data:`_GOAL_SHORT` are surfaced via a
+    synthetic ``"(no goal)"`` row and — when ``warnings`` is supplied — a
+    structured ``{section: "apd_matrix", issue: "findings_with_unknown_goal",
+    count: <n>}`` entry. Pre-T4-E these findings were silently dropped.
     """
     all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
 
@@ -934,9 +957,15 @@ def _matrix_rows_from_dedup(
 
     # artifact_label → set of goals with findings under it.
     artifact_goal_findings: dict[str, set[str]] = {}
+    # Findings whose apd_goal is None or not in the canonical goal list go
+    # into the "(no goal)" bucket so they are not silently dropped. The bucket
+    # collects the raw findings (rather than just a counter) so future
+    # extensions (e.g. listing the affected finding IDs) remain cheap.
+    no_goal_bucket: list[dict[str, Any]] = []
     for f in all_findings:
         g = f.get("apd_goal")
-        if not g:
+        if not g or g not in _GOAL_SHORT:
+            no_goal_bucket.append(f)
             continue
         label = _artifact_label(f)
         artifact_goal_findings.setdefault(label, set()).add(g)
@@ -951,10 +980,30 @@ def _matrix_rows_from_dedup(
                 goal_has_caps.get(full_goal, False),
             )
         rows.append({"component": artifact_name, "cells": cells})
+
+    # Surface the no-goal bucket as a synthetic row so the React template can
+    # render it visibly. Every cell is "silent" because we cannot attribute
+    # the finding to a goal column; the row's mere presence flags the
+    # unattributed findings to the report consumer.
+    if no_goal_bucket:
+        rows.append({
+            "component": "(no goal)",
+            "cells": dict.fromkeys(_GOAL_SHORT.values(), "silent"),
+        })
+        if warnings is not None:
+            warnings.append({
+                "section": "apd_matrix",
+                "issue":   "findings_with_unknown_goal",
+                "count":   str(len(no_goal_bucket)),
+            })
     return rows
 
 
-def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
+def apd_matrix(
+    artifacts: RunArtifacts,
+    *,
+    warnings: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     """Return the data.apd_matrix block: goals[], goalLabels{}, rows[{component, cells}].
 
     Tolerates four synthesizer output shapes:
@@ -982,6 +1031,10 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
       - ``'gapped'``  findings present but no capabilities under the goal
       - ``'covered'`` no findings for this component but capabilities exist
       - ``'silent'``  otherwise
+
+    ``warnings`` is an optional aggregator list (T4-E). When supplied it is
+    threaded into :func:`_matrix_rows_from_dedup` so unknown-goal findings
+    surface as structured warnings instead of being silently dropped.
     """
     goals = list(_GOAL_LABEL_SHORT.keys())
     rows: list[dict[str, Any]] = []
@@ -1092,7 +1145,11 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
             g = c.get("apd_goal")
             if g and g not in goal_has_caps_d:
                 goal_has_caps_d[g] = True
-        rows = _matrix_rows_from_dedup(artifacts, goal_has_caps=goal_has_caps_d)
+        rows = _matrix_rows_from_dedup(
+            artifacts,
+            goal_has_caps=goal_has_caps_d,
+            warnings=warnings,
+        )
 
     return {
         "goals":      goals,
@@ -1632,7 +1689,7 @@ def build_apd_data(
          lambda: attack_exposure_rows(artifacts),
          []),
         ("apd_matrix",
-         lambda: apd_matrix(artifacts),
+         lambda: apd_matrix(artifacts, warnings=warnings),
          {"goals": [], "goalLabels": {}, "rows": []}),
         ("attack_paths",
          lambda: attack_paths_data(artifacts),
