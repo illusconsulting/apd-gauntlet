@@ -105,6 +105,25 @@ def meta_block(
     """Return the data.meta block for the HTML template."""
     artifact_count, artifact_types = _count_artifact_types(run_dir)
     subject = artifacts.subject or artifacts.run_id
+    # Defensive sizing: any of the three collections may be a misshapen object
+    # supplied by an adversarial fixture (see test_tier2_isolation). Per the
+    # build_apd_data contract, the meta layer must not raise for per-section
+    # data faults — those are isolated downstream. Default to "not empty" when
+    # we cannot measure so the empty-run banner does not falsely trigger.
+    def _safe_len(obj: Any) -> int:
+        try:
+            return len(obj)
+        except Exception:  # noqa: BLE001 — defensive against any container fault
+            return -1
+    findings_len = _safe_len(artifacts.deduped_findings)
+    attack_paths_len = _safe_len(artifacts.attack_path_findings)
+    caps_len = _safe_len(artifacts.deduped_capabilities)
+    if findings_len < 0 or attack_paths_len < 0 or caps_len < 0:
+        is_empty_run = False
+    else:
+        is_empty_run = (
+            (findings_len + attack_paths_len == 0) and (caps_len == 0)
+        )
     return {
         "framework_version": artifacts.framework_version,
         "domain_pack": {
@@ -122,6 +141,8 @@ def meta_block(
         "artifact_types": artifact_types,
         "crown_jewels": _resolve_crown_jewels(artifacts),
         "attacker_positions": _resolve_attacker_positions(artifacts),
+        "is_empty_run": is_empty_run,
+        "reference_db_versions": _taxonomy.reference_db_versions(),
     }
 
 

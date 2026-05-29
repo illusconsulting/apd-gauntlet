@@ -37,6 +37,29 @@ window.APD_DATA = {
       "supply_chain_attacker",
       "internal_lateral_attacker"
     ],
+    "is_empty_run": false,
+    "reference_db_versions": {
+      "nist": {
+        "fetched_at": "2026-05-29",
+        "source": "https://github.com/usnistgov/oscal-content/raw/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog-min.json",
+        "count": 1196
+      },
+      "attack": {
+        "fetched_at": "2026-05-29",
+        "source": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
+        "count": 858
+      },
+      "cwe": {
+        "fetched_at": null,
+        "source": null,
+        "count": 969
+      },
+      "d3fend": {
+        "fetched_at": null,
+        "source": null,
+        "count": 149
+      }
+    },
     "section_errors": {}
   },
   "summary": {

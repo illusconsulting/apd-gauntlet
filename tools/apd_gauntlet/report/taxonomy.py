@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import pathlib
 from functools import lru_cache
+from typing import Any
 
 _PKG_DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 _DATA = _PKG_DATA
@@ -134,4 +135,35 @@ def d3fend_titles() -> dict[str, str]:
                 else (v.get("name") or did) if isinstance(v, dict)
                 else did
             )
+    return out
+
+
+def reference_db_versions() -> dict[str, dict[str, Any]]:
+    """Return {family: {fetched_at, count, source}} for each shipped reference DB.
+
+    Used by transform.meta_block to surface freshness state to the report
+    so the UI can warn when a catalog is stale (>180 days) or empty (load
+    failure).
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for family, fn, path_name in (
+        ("nist",   nist_control_titles,     "nist-controls.json"),
+        ("attack", attack_technique_titles, "mitre-attack-techniques.json"),
+        ("cwe",    cwe_titles,              "cwe.json"),
+        ("d3fend", d3fend_titles,           "d3fend.json"),
+    ):
+        path = _DATA / path_name
+        meta: dict[str, Any] = {}
+        if path.is_file():
+            try:
+                with path.open(encoding="utf-8") as fh:
+                    doc = json.load(fh)
+                meta = doc.get("_meta") or {}
+            except (json.JSONDecodeError, OSError):
+                pass
+        out[family] = {
+            "fetched_at": meta.get("fetched_at"),
+            "source":     meta.get("source"),
+            "count":      len(fn()),
+        }
     return out
