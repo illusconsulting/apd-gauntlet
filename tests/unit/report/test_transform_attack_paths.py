@@ -303,14 +303,14 @@ def test_mermaid_sanitizes_adversarial_labels() -> None:
         "nodes": [
             {"node_id": "n1", "name": "<script>alert(1)</script>", "node_type": "service"},
             {"node_id": "n2", "name": "Valkey\nINJECT", "node_type": "data_store"},
-            {"node_id": "../etc", "name": "bad id", "node_type": "service"},
+            {"node_id": "bad id with space", "name": "bad id", "node_type": "service"},
         ],
         "edges": [{"from": "n1", "to": "n2"}],
     }
     src = _build_mermaid(graph)
     assert "<script>" not in src
     assert "alert" not in src.lower() or "alert" in "(unnamed)"  # only if accidentally allowed
-    assert "\n  ../etc" not in src  # bad id must have been remapped
+    assert "\n  bad id with space" not in src  # bad id must have been remapped
     assert "n1" in src and "n2" in src
 
 

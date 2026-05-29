@@ -15,29 +15,29 @@ def test_safe_node_id_passes_through_valid_id():
 
 
 def test_safe_node_id_hashes_invalid_id():
-    out = _safe_node_id("not-valid:has-colon")
+    out = _safe_node_id("not valid has space")
     assert out.startswith("n_")
     assert len(out) == 10  # 'n_' + 8 hex chars
 
 
 def test_safe_node_id_deterministic_for_same_raw():
     """Same raw + seed → same synthetic id (essential for id_remap correctness)."""
-    a = _safe_node_id("foo:bar", fallback_seed="asset_graph")
-    b = _safe_node_id("foo:bar", fallback_seed="asset_graph")
+    a = _safe_node_id("foo bar", fallback_seed="asset_graph")
+    b = _safe_node_id("foo bar", fallback_seed="asset_graph")
     assert a == b
 
 
 def test_safe_node_id_distinguishes_seeds():
     """Same raw under different seeds → different synthetic ids."""
-    a = _safe_node_id("foo:bar", fallback_seed="asset_graph")
-    b = _safe_node_id("foo:bar", fallback_seed="path_focused")
+    a = _safe_node_id("foo bar", fallback_seed="asset_graph")
+    b = _safe_node_id("foo bar", fallback_seed="path_focused")
     assert a != b
 
 
 def test_safe_node_id_distinguishes_invalid_raw_ids():
     """Two different invalid raw ids must NOT collide on the synthetic."""
-    a = _safe_node_id("foo:bar")
-    b = _safe_node_id("baz:qux")
+    a = _safe_node_id("foo bar")
+    b = _safe_node_id("baz qux")
     assert a != b
 
 
@@ -51,10 +51,10 @@ def test_build_mermaid_handles_multiple_invalid_node_ids():
     (regression for the pre-T3-B fallback-counter collision)."""
     graph = {
         "nodes": [
-            {"node_id": "host:web-1", "name": "web-1", "node_type": "service"},
-            {"node_id": "host:db-1",  "name": "db-1",  "node_type": "data_store"},
+            {"node_id": "host web 1", "name": "web-1", "node_type": "service"},
+            {"node_id": "host db 1",  "name": "db-1",  "node_type": "data_store"},
         ],
-        "edges": [{"from": "host:web-1", "to": "host:db-1", "edge_type": "trusts"}],
+        "edges": [{"from": "host web 1", "to": "host db 1", "edge_type": "trusts"}],
     }
     out = _build_mermaid(graph)
     # Two distinct synthetic ids should appear; the edge must reference both.

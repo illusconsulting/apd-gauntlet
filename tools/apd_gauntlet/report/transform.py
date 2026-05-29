@@ -1076,7 +1076,7 @@ def apd_matrix(artifacts: RunArtifacts) -> dict[str, Any]:
     }
 
 
-_NODE_ID_OK = re.compile(r"^[A-Za-z0-9_-]+$")
+_NODE_ID_OK = re.compile(r"^[A-Za-z0-9_\-./:]+$")
 _LABEL_STRIP = re.compile(r"[^A-Za-z0-9 _./:()-]")
 # HTML tag pattern: reject the entire label if angle-bracket tags are present.
 _HTML_TAG = re.compile(r"<[^>]*>")
@@ -1147,8 +1147,9 @@ def _build_mermaid(asset_graph: dict[str, Any]) -> str:
         prefix = {
             "attacker_position": "((", "crown_jewel": "{{", "service": "[",
             "data_store": "[(", "secret_store": "[(",
+            "identity": ">",
         }.get(ntype, "[")
-        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]"}[prefix]
+        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]", ">": "]"}[prefix]
         lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
     for e in edges:
         src = id_remap.get(str(e.get("from", "")))
@@ -1242,8 +1243,9 @@ def _build_mermaid_path_focused(
             "service": "[",
             "data_store": "[(",
             "secret_store": "[(",
+            "identity": ">",
         }.get(ntype, "[")
-        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]"}[prefix]
+        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]", ">": "]"}[prefix]
         lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
 
     # Emit only path edges, annotated with edge_type label.
