@@ -18,6 +18,30 @@ class BundleMissingError(FileNotFoundError):
     """Raised when the precompiled template bundle is absent."""
 
 
+def _normalize_for_json(value: Any, *, path: str = "$") -> Any:
+    """Walk value, convert datetime/date/set to JSON-safe form, raise on
+    unknown types. Replaces the lossy `default=str` shortcut.
+    """
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, (str, int, float)):
+        return value
+    if isinstance(value, (_dt.datetime, _dt.date)):
+        return value.isoformat()
+    if isinstance(value, (set, frozenset)):
+        return sorted(_normalize_for_json(v, path=f"{path}[set]") for v in value)
+    if isinstance(value, tuple):
+        return [_normalize_for_json(v, path=f"{path}[{i}]") for i, v in enumerate(value)]
+    if isinstance(value, list):
+        return [_normalize_for_json(v, path=f"{path}[{i}]") for i, v in enumerate(value)]
+    if isinstance(value, dict):
+        return {
+            str(k): _normalize_for_json(v, path=f"{path}.{k}")
+            for k, v in value.items()
+        }
+    raise TypeError(f"unserializable type at {path}: {type(value).__name__}")
+
+
 def _atomic_write_text(path: pathlib.Path, body: str) -> None:
     """Write `body` to `path` atomically: temp file in same dir + os.replace.
 
@@ -39,8 +63,21 @@ def _atomic_write_text(path: pathlib.Path, body: str) -> None:
 def write_data_js(data: dict[str, Any], path: pathlib.Path) -> None:
     """Write `window.APD_DATA = {...};` to path. JSON body is pretty-printed,
     Unicode preserved (ensure_ascii=False) so diffs are human-readable.
+
+    Hygiene (T3-A):
+      - Payload is walked through `_normalize_for_json` first so unknown
+        types raise loudly instead of being silently `str()`-coerced.
+      - `allow_nan=False` causes NaN / +Inf / -Inf to raise rather than
+        emit non-JSON `NaN`/`Infinity` tokens that browsers reject.
+      - Any literal `</` in the serialized body is rewritten to `<\\/` as
+        defense-in-depth against a stray `</script>` inside string values
+        prematurely closing the embedded script tag.
     """
-    body = json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False, default=str)
+    payload = _normalize_for_json(data)
+    body = json.dumps(
+        payload, indent=2, ensure_ascii=False, sort_keys=False, allow_nan=False
+    )
+    body = body.replace("</", "<\\/")
     _atomic_write_text(path, f"window.APD_DATA = {body};\n")
 
 
