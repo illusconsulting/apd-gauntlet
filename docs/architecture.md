@@ -22,22 +22,24 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The 16 agents
+## The 19 agents
 
-The gauntlet ships 16 agents in v1.4: a core dozen (coordinator, intake, nine specialists, synthesizer) plus four activation-gated optional agents that the orchestrator dispatches only when their preconditions are met.
+The gauntlet ships 19 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), and five activation-gated optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
 
 | Role | Agent | Purpose |
 |---|---|---|
-| Coordinator | `apd-orchestrator` | Phases the run, dispatches specialists, invokes the validator and synthesizer |
+| Coordinator | `.claude/workflows/apd-gauntlet.js` (the `apd-gauntlet` runner) | Phases the run, dispatches specialists via receipts, runs the decomposed synthesis + report audit |
 | Intake | `apd-intake` | Inventories artifacts, builds a PHI/PII data taxonomy, identifies evidence gaps, produces the context brief |
 | Specialist × 9 | `apd-confidentiality`, `apd-integrity`, `apd-availability`, `apd-distributed`, `apd-resilient`, `apd-ephemeral`, `apd-authenticity`, `apd-non-repudiation`, `apd-immutability` | Each analyzes input artifacts through one lens; emits findings and capabilities |
-| Synthesizer | `apd-synthesizer` | Reads all nine specialist outputs; clusters via merge/link/separate; produces the advisory report and rollups |
+| Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
+| Synthesis (fallback) | `apd-synthesizer` | One-shot fallback when the decomposed path fails: clusters via merge/link/separate and produces the report and rollups directly |
 | Optional intake (v1.1+) | `apd-code-recon` | Produces the code-grounded companion to the intake brief from codebase-memory-mcp call/symbol graphs |
 | Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a supplied threat model into a normalized graph |
 | Optional synthesis (v1.3+) | `apd-threat-model-evaluator` | Emits coverage-gap, contradiction, and silence findings against the dedup'd specialist findings |
 | Optional synthesis (v1.4+) | `apd-attack-path-analyzer` | Enumerates BloodHound-style attack paths from declared attacker positions to declared crown jewels over a partial graph; recommends D3FEND counters on bottleneck edges that expose ATT&CK techniques |
+| Optional post-synthesis (v1.5+) | `apd-domain-auditor` | Captures domain-pack improvement opportunities into an advisory `domain-improvements.yaml` (non-blocking) |
 
-Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). The four optional agents are activation-gated: their preconditions are declared in `.apd-run.yaml` or the active domain pack, and the orchestrator skips them silently (or blocks, where the discipline rule demands it) when those preconditions are unmet.
+Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). The five activation-gated optional agents (code-recon, threat-model-recon, threat-model-evaluator, attack-path-analyzer, domain-auditor) declare their preconditions in `.apd-run.yaml` or the active domain pack, and the runner skips them silently (or blocks, where the discipline rule demands it) when those preconditions are unmet.
 
 ## Tier topology
 
@@ -67,9 +69,13 @@ Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file wit
 
 ### Tier-4 (synthesis)
 
-- apd-synthesizer
+- apd-cluster-adjudicator
+- apd-report-writer
+- apd-report-auditor
+- apd-synthesizer (fallback)
 - apd-threat-model-evaluator (optional, v1.3+)
 - apd-attack-path-analyzer (optional, v1.4+)
+- apd-domain-auditor (optional, v1.5+)
 
 ## The five skills
 
@@ -81,13 +87,13 @@ Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file wit
 | `apd-control-mappings` | NIST 800-53r5 mapping families per goal; MITRE ATT&CK mapping discipline |
 | `apd-domain` | **Generated** at runtime from the active domain pack — contains the severity rubric, consequential actions, common patterns |
 
-The first four ship under [.claude/skills/](../.claude/skills/). `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack>` (the orchestrator runs this in Phase 0).
+The first four ship under [.claude/skills/](../.claude/skills/). `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0).
 
 ## Run lifecycle
 
 ```
-Phase 0  Setup       → orchestrator creates runs/<id>/{00-context,10-trust,20-scale,30-audit,40-synth}
-                       and runs `apd-gauntlet build-domain-skill <pack>`
+Phase 0  Setup       → runner creates runs/<id>/{00-context,10-trust,20-scale,30-audit,40-synth}
+                       and runs `apd-gauntlet build-domain-skill <pack...>`
 Phase 1  Intake      → apd-intake produces context-brief.md (frontmatter + typed artifact index + PHI inventory)
 Phase 2  Tier 1 (∥)  → confidentiality / integrity / availability emit findings.yaml + capabilities.yaml
                        then `apd-gauntlet validate <run>` over tier-1 outputs
@@ -95,13 +101,13 @@ Phase 3  Tier 2 (∥)  → distributed / resilient / ephemeral (read tier 1 outp
 Phase 4  Tier 3 (∥)  → authenticity / non-repudiation / immutability (read tier 1+2); validate
 Phase 5  Synthesis   → synthesizer clusters (merge/link/separate), reconciles severities,
                        rolls up NIST/ATT&CK/APD coverage, produces advisory-report.md
-Phase 6  Closeout    → orchestrator returns summary; advisory report has frontmatter (framework_version,
+Phase 6  Closeout    → runner returns summary; advisory report has frontmatter (framework_version,
                        domain_pack, run_id, specialists_skipped)
 ```
 
 ### Phase 1.5 — Code reconnaissance (optional, v1.1+)
 
-When `.apd-run.yaml: code_recon` is `enabled` or `auto` and the codebase-memory-mcp (CBM) tools are reachable, the orchestrator dispatches the optional `apd-code-recon` agent between Phase 1 (Intake) and Phase 2 (Trustworthiness tier). The agent uses CBM's symbol graph and call-graph tracing to produce a code-grounded companion to the intake brief — `code-architecture-brief.md` for human reviewers and `code-evidence-index.yaml` for specialist citations.
+When `.apd-run.yaml: code_recon` is `enabled` or `auto` and the codebase-memory-mcp (CBM) tools are reachable, the runner dispatches the optional `apd-code-recon` agent between Phase 1 (Intake) and Phase 2 (Trustworthiness tier). The agent uses CBM's symbol graph and call-graph tracing to produce a code-grounded companion to the intake brief — `code-architecture-brief.md` for human reviewers and `code-evidence-index.yaml` for specialist citations.
 
 Phase 1.5 is **optional** by design: gauntlet runs without CBM still work end-to-end. Specialists treat code-evidence-index entries as ordinary `evidence[].artifact` references; the validator recognizes the filename automatically. See [ADR 0007](adrs/0007-optional-code-reconnaissance-via-cbm.md) for rationale.
 
@@ -207,4 +213,4 @@ See [Attack-path analysis](attack-path-analysis.md) for the operator guide to th
 
 ## Domain packs
 
-Severity calibration, consequential-action surface, immutability classes, data taxonomy, and per-goal common patterns are domain-specific. They live in `domains/<name>/` packs. The PBM pack ships in v1.0. The orchestrator builds `.claude/skills/apd-domain/SKILL.md` from the active pack in Phase 0. See [adapting-to-other-domains.md](adapting-to-other-domains.md) and [ADR-0003](adrs/0003-pluggable-domain-packs.md).
+Severity calibration, consequential-action surface, immutability classes, data taxonomy, and per-goal common patterns are domain-specific. They live in `domains/<name>/` packs. The PBM pack ships in v1.0. The runner builds `.claude/skills/apd-domain/SKILL.md` from the active pack(s) in Phase 0. See [adapting-to-other-domains.md](adapting-to-other-domains.md) and [ADR-0003](adrs/0003-pluggable-domain-packs.md).

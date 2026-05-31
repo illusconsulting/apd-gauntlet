@@ -23,7 +23,7 @@ Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / A
 | A tech plan + supporting artifacts | An advisory report (`40-synthesis/advisory-report.md`) and an interactive HTML view |
 | A threat model (optional — Threat Dragon, MS TMT, STRIDE, LINDDUN, attack trees) | A coverage/contradiction/silence report against your TM |
 | Crown jewels + attacker positions (optional, v1.4+) | A BloodHound-style attack-path graph with a D3FEND defensive overlay on bottleneck edges |
-| A domain pack (PBM ships in v1; api-security, identity-security, security-tooling ship in v1.5) | Calibrated severity, consequential-action surface, immutability classes, and common-pattern hints tuned for that domain |
+| A domain pack (PBM ships in v1; api-security, identity-security, security-tooling, agentic-ai ship in v1.5) | Calibrated severity, consequential-action surface, immutability classes, and common-pattern hints tuned for that domain |
 
 ---
 
@@ -39,7 +39,7 @@ Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / A
 
 ```bash
 pip install apd-gauntlet
-apd-gauntlet --version    # should print 1.5.0 or higher
+apd-gauntlet --version    # prints the installed version, confirming the CLI is on your PATH
 ```
 
 That installs both the Python CLI and the Claude Code agent + skill bundle.
@@ -91,13 +91,13 @@ This creates `runs/apd-YYYYMMDD-my-feature/` with the expected subdirectory layo
 
 ### 4. Run the gauntlet
 
-In Claude Code, from the repo root:
+In Claude Code, from the repo root, run the `apd-gauntlet` workflow runner against the scaffolded run directory:
 
 ```text
-> Run apd-orchestrator on runs/apd-YYYYMMDD-my-feature/
+> Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
 ```
 
-The orchestrator invokes intake, dispatches the nine specialist agents by tier, and runs the synthesizer. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
+The runner (`.claude/workflows/apd-gauntlet.js`) phases the run end-to-end: it builds the `apd-domain` skill from the active pack(s), runs intake, dispatches the nine specialist agents by tier, then runs the decomposed synthesis and the gated report audit. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
 
 For the full operator workflow including code reconnaissance, threat-model evaluation, and attack-path analysis, see **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)**.
 
@@ -126,12 +126,13 @@ The HTML report at `<run>/40-synthesis/report-html/index.html` is preloaded — 
 
 ## Customize for your domain
 
-The framework is domain-neutral; the **calibration** is domain-specific. Four packs ship today:
+The framework is domain-neutral; the **calibration** is domain-specific. Five packs ship today:
 
 - **`pbm`** — Pharmacy Benefit Management (the reference pack)
 - **`api-security`** — OWASP API Top 10 anchored
 - **`identity-security`** — NIST 800-63B + OAuth/OIDC/SAML + GDPR
 - **`security-tooling`** — NIST 800-115 + ATT&CK + CFAA/ROE (two-axis severity)
+- **`agentic-ai`** — autonomous LLM-agent systems (OWASP LLM Top 10; ATLAS/MAESTRO grounding)
 
 Author a new pack with `apd-gauntlet build-domain-skill <pack-name>` and the structure documented in **[docs/adapting-to-other-domains.md](docs/adapting-to-other-domains.md)**. A pack defines:
 

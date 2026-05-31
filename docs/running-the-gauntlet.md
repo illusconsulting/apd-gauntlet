@@ -1,6 +1,6 @@
 # Running the Gauntlet
 
-Operator guide. How to set up a run, invoke the orchestrator, and interpret the outputs.
+Operator guide. How to set up a run, run the gauntlet, and interpret the outputs.
 
 ## Prerequisites
 
@@ -16,19 +16,24 @@ pip install apd-gauntlet
 apd-gauntlet --version
 ```
 
-The CLI exposes the following subcommands:
+The CLI exposes the following operator subcommands:
 
 ```
-apd-gauntlet validate <run-dir>             # three-pass validation
-apd-gauntlet init-run <run-id> ...          # scaffold a run directory
-apd-gauntlet build-domain-skill <pack>      # generate the apd-domain skill
-apd-gauntlet summarize <run-dir>            # finding/capability statistics
-apd-gauntlet lint-agents                    # validate agent file frontmatter
-apd-gauntlet check-ids <yaml-file>          # verify deterministic IDs
-apd-gauntlet validate-domain <pack>         # validate a domain pack
-apd-gauntlet refresh-mitre                  # refresh the cached MITRE crosswalk
-apd-gauntlet analyze-attack-paths <run-dir> # v1.4+: run the attack-path analyzer
+apd-gauntlet validate <run-dir>                  # three-pass validation
+apd-gauntlet init-run <run-id> --inputs DIR --domain pbm [--domain api-security] ...
+apd-gauntlet build-domain-skill <pack...>        # compile one or more packs into the apd-domain skill
+apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
+apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
+apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
+apd-gauntlet summarize <run-dir>                 # finding/capability statistics
+apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
+apd-gauntlet lint-agents                         # validate agent file frontmatter
+apd-gauntlet analyze-attack-paths <run-dir>      # v1.4+: run the attack-path analyzer
+apd-gauntlet build-report <run-dir>              # (re)generate the HTML advisory report
+apd-gauntlet refresh-mitre                       # refresh the cached MITRE crosswalk
 ```
+
+`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
 
 ## Step 1: Scaffold the run
 
@@ -41,6 +46,24 @@ apd-gauntlet init-run apd-20260601-claim-event-bus \
 ```
 
 This creates `runs/apd-20260601-claim-event-bus/` with subdirectories for each phase output, copies your artifacts into `inputs/`, and records the active domain.
+
+To review a change against more than one domain pack, repeat the `--domain` flag:
+
+```bash
+apd-gauntlet init-run apd-20260601-claim-event-bus \
+  --inputs ~/my-project/tech-plans/claim-event-bus/ \
+  --domain pbm --domain api-security
+```
+
+The scaffolded `.apd-run.yaml` records every selected pack as a `domains:` list:
+
+```yaml
+domains:
+  - pbm
+  - api-security
+```
+
+In a multi-domain run, the change is reviewed across all selected packs at once: `build-domain-skill` merges them into one `apd-domain` skill (union/dedup of crown jewels, attacker positions, and trust boundaries; concatenated per-pack pattern catalogs), and every specialist loads the merged calibration.
 
 ## Code reconnaissance (optional)
 
@@ -150,7 +173,7 @@ a `disposition: blocked` finding rather than a silent skip.
 
 Invoke the analyzer in two ways:
 
-- **Inline as part of the run.** When the orchestrator reaches Phase 5
+- **Inline as part of the run.** When the runner reaches Phase 5
   (Synthesis), it dispatches `apd-attack-path-analyzer` if the activation
   preconditions are satisfied. No extra operator action is required.
 - **Stand-alone, post-hoc.** After a run completes, re-run the analyzer
@@ -184,24 +207,32 @@ operator guide, including the discipline rules (no invented nodes or
 edges, D3FEND must counter ATT&CK, bounded enumeration with explicit
 truncation).
 
-## Step 2: Invoke the orchestrator in Claude Code
+## Step 2: Run the gauntlet
 
-In Claude Code, invoke the `apd-orchestrator` agent against the run directory:
+The run must already be scaffolded (Step 1's `init-run`). In Claude Code, from the
+repo root, run the `apd-gauntlet` workflow runner against the run directory:
 
 ```
-> Run apd-orchestrator on runs/apd-20260601-claim-event-bus/
+> Run the apd-gauntlet workflow on runs/apd-20260601-claim-event-bus/
 ```
 
-The orchestrator phases the run end-to-end. It:
+The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
+run end-to-end and branches only on the receipts its dispatched agents return.
+It:
 
-1. Builds the `apd-domain` skill from the active pack.
-2. Validates the domain pack.
-3. Dispatches `apd-intake`.
-4. Dispatches the three tier-1 specialists in parallel and validates their output.
-5. Dispatches the three tier-2 specialists and validates.
-6. Dispatches the three tier-3 specialists and validates.
-7. Dispatches `apd-synthesizer`.
-8. Reports the final summary.
+1. Builds the `apd-domain` skill from the active pack(s) and validates them.
+2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
+   agents when their preconditions are met).
+3. Dispatches the three tier-1 specialists, then tier-2, then tier-3, validating
+   each tier's output before proceeding.
+4. Runs the decomposed synthesis (cluster → adjudicate → apply → rollup),
+   dispatches the optional attack-path analyzer when activated, builds the
+   advisory report and HTML bundle, then runs the gated report audit.
+5. Returns the final summary at closeout.
+
+The runner is resumable: re-running it against the same directory replays
+completed steps from cache, and each agent re-checks whether its outputs already
+exist and validate, so a partially completed run picks up where it left off.
 
 ## Step 3: Read the advisory report
 
@@ -222,16 +253,19 @@ The YAML files in `40-synthesis/` are the canonical data; the report is composed
 
 ## Scope hints
 
-Pass scope hints when invoking the orchestrator:
+Pass scope hints when you start the runner:
 
 | Hint | Effect |
 |---|---|
 | `"Emphasize PHI exposure"` | Pass-through framing for the executive summary; no agent changes |
-| `"Skip Distributed"` | Omit a specialist; orchestrator emits a stub file at the expected path so downstream tiers don't break |
+| `"Skip Distributed"` | Omit a specialist; the runner emits a stub file at the expected path so downstream tiers don't break |
 | `"Focus on the Kafka design"` | Pass component focus to every specialist |
-| `"domain=saas"` | Use a non-default domain pack |
 
-Skipping multiple specialists degrades the advisory report. The orchestrator warns before proceeding.
+Domain packs are not a runtime hint: choose them at `init-run` time with the
+repeatable `--domain` flag (which records the `domains:` list in `.apd-run.yaml`),
+not in the prompt that starts the run.
+
+Skipping multiple specialists degrades the advisory report. The runner warns before proceeding.
 
 ## Interpreting findings
 
@@ -273,7 +307,7 @@ apd-gauntlet init-run apd-20260615-claim-event-bus-v2 \
   --domain pbm
 ```
 
-Then invoke `apd-orchestrator` against the new directory.
+Then run the `apd-gauntlet` workflow against the new directory.
 
 ## Troubleshooting
 
@@ -297,7 +331,7 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 
 ### Specialist hit two retries and was dropped
 
-The orchestrator allows up to two retries per agent when validation fails. If a specialist still fails after two retries, the orchestrator surfaces the failure and proceeds without that agent's output for the affected record. This is rare; investigate the agent's input (sometimes the tech plan section it's being asked about is genuinely undecidable).
+The runner allows up to two retries per agent when validation fails. If a specialist still fails after two retries, the runner surfaces the failure and proceeds without that agent's output for the affected record. This is rare; investigate the agent's input (sometimes the tech plan section it's being asked about is genuinely undecidable).
 
 ## See also
 

@@ -1,19 +1,30 @@
 # Adapting to Other Domains
 
-The APD Gauntlet ships with one domain pack: PBM (Pharmacy Benefit Management). The framework itself is domain-neutral — only the *calibration* (severity rubric, what counts as a consequential action, which data classes must be immutable, common finding patterns) is domain-specific.
+The APD Gauntlet framework is domain-neutral. The nine APD goals, the finding and capability schemas, the evidence-discipline rules, and the validator behavior never change. What changes per domain is the *calibration*: the severity rubric, the consequential-action surface, the immutability classes, the data taxonomy, the crown jewels and attacker positions that drive attack-path analysis, and the per-goal pattern catalogs.
 
-This guide describes how to author a new domain pack.
+This guide is a complete reference for authoring a domain pack. It dissects the shipped `agentic-ai` pack (autonomous LLM-agent systems) as the running worked example, and keeps the reusable PBM multi-regulator retention-pinning pattern. When you are ready to evolve a pack from real runs, see [improving-domain-packs.md](improving-domain-packs.md).
 
-## What a domain pack contains
+## 1. How a pack influences a run
 
-A pack is a directory under `domains/<name>/` with this structure:
+A domain pack is compiled by `apd-gauntlet build-domain-skill` into a single `.claude/skills/apd-domain/SKILL.md` skill that every specialist loads at the start of a run. Through that skill the pack does four things:
 
-```
+- **Calibrates severity.** Each specialist cites the active pack's `severity-rubric.md` clause in a finding's `detail`, so the rubric thresholds decide what is critical versus high versus medium for this domain.
+- **Defines the consequential-action surface.** `consequential-actions.md` enumerates the audit-worthy actions the Non-Repudiation lens checks for, and `immutability-classes.md` names the data classes the Immutability lens expects to be write-once.
+- **Supplies crown jewels and attacker positions.** The `crown_jewels`, `attacker_positions`, and `default_trust_boundaries` blocks in `domain.yaml` activate the `apd-attack-path-analyzer`: they become the default enumeration sinks, the default source set, and the trust-topology hints when `.apd-run.yaml` does not override them.
+- **Seeds the per-goal pattern catalogs.** The nine `common-patterns/<goal>.md` files calibrate the analytical style, the severity assignment, and the NIST/ATT&CK mapping habits a specialist applies in each lens.
+
+Everything else — the lens definitions, the boundary calls between adjacent goals, the three analytical disciplines — stays identical across domains. The pack is calibration, not a rewrite of the framework.
+
+## 2. Anatomy: the 14 files and the `domain.yaml` schema
+
+A pack is a directory under `domains/<name>/` containing exactly 14 files — `domain.yaml`, the four calibration files, and the nine per-goal pattern files:
+
+```text
 domains/<name>/
-├── domain.yaml                  # metadata: name, version, framework_compat, includes
+├── domain.yaml                  # metadata + crown jewels / attacker positions / trust boundaries
 ├── severity-rubric.md           # critical/high/medium/low thresholds for this domain
-├── consequential-actions.md     # what counts as an audit-worthy action (for Non-Repudiation)
-├── immutability-classes.md      # what data classes must not change (for Immutability)
+├── consequential-actions.md     # audit-worthy actions (for Non-Repudiation)
+├── immutability-classes.md      # data classes that must not change (for Immutability)
 ├── data-taxonomy.md             # field-level data classification with regulatory citations
 └── common-patterns/
     ├── confidentiality.md
@@ -27,26 +38,28 @@ domains/<name>/
     └── immutability.md
 ```
 
-The validator and the build-domain-skill command consume `domain.yaml`. The runtime `apd-domain` skill is assembled from the listed `includes` files.
+### The `domain.yaml` schema
 
-## Step-by-step: authoring a new pack
+`domain.yaml` is validated against `schemas/domain.schema.json`. The required fields are:
 
-### 1. Copy the PBM pack as a starting point
+- `name` — `^[a-z][a-z0-9-]*$` (lowercase, the directory name).
+- `display_name` — at least 3 characters.
+- `version` — semver `^[0-9]+\.[0-9]+\.[0-9]+$`.
+- `framework_compat` — a semver range string (at least 5 characters); the validator refuses to build the skill if the active framework version falls outside it.
+- `description` — at least 20 characters.
+- `includes` — at least one path, each with no leading `/` and no `..`; the runtime skill is assembled from these files.
+- `regulatory_anchors` — a list of strings.
 
-```bash
-cp -r domains/pbm domains/saas
-```
+The three attack-path blocks are optional. Each is a list of `{<key>, description}` objects where the key is `pattern` (for `crown_jewels`), `position` (for `attacker_positions`), or `boundary` (for `default_trust_boundaries`), and `description` is at least 10 characters. A pack that omits all three remains framework-compatible; the analyzer simply has no defaults to enumerate over unless the run supplies them.
 
-### 2. Edit `domain.yaml`
-
-Change `name`, `display_name`, `version`, `description`, and `regulatory_anchors`:
+### The `agentic-ai` `domain.yaml`
 
 ```yaml
-name: saas
-display_name: "Software-as-a-Service"
-version: 0.1.0
+name: agentic-ai
+display_name: "Agentic AI (Autonomous LLM Agents)"
+version: 1.0.0
 framework_compat: ">=1.0.0,<2.0.0"
-description: "SaaS-specialized severity rubric and pattern library. Anchored to SOC 2, ISO 27001, and GDPR."
+description: "Security-architecture calibration for autonomous LLM-agent systems — tool-use agents, multi-agent topologies, autonomous task loops, and code-generation-and-execution — with self-improving / self-modifying systems treated as a first-class sub-surface. Anchored to the EU AI Act, NIST AI RMF (AI 100-1), ISO/IEC 42001, NIST SP 800-53r5, and grounded in the OWASP LLM Top 10 (2025), MITRE ATLAS, and CSA MAESTRO."
 includes:
   - severity-rubric.md
   - consequential-actions.md
@@ -62,157 +75,120 @@ includes:
   - common-patterns/non-repudiation.md
   - common-patterns/immutability.md
 regulatory_anchors:
-  - "SOC 2"
-  - "ISO 27001"
-  - GDPR
+  - "EU AI Act"
+  - "NIST AI RMF (AI 100-1)"
+  - "ISO/IEC 42001"
+  - "NIST SP 800-53r5"
 ```
 
-The `framework_compat` field is a semver range; the validator refuses to build the skill if the active framework version is outside it.
-
-### 3. Rewrite `severity-rubric.md`
-
-The PBM rubric anchors to HIPAA breach-notification thresholds (>500 members = critical), CMS Part D PDE integrity, URAC accreditation, and SOC 2. A SaaS rubric would anchor differently:
-
-- **Critical**: GDPR-relevant data exfiltration affecting >X data subjects; tenant data crossing tenant boundaries; auth bypass; total service outage exceeding SLA.
-- **High**: customer data exposure beyond minimum-necessary; degraded multi-tenancy isolation short of bypass; auth weakness; sustained partial outage.
-- **Medium**, **Low**, **Informational**: as the framework convention suggests.
-
-Cite the regulatory anchors precisely. Specialists cite the matching clause in finding `detail` fields, so clauses must be specific enough to reference.
-
-### 4. Rewrite `consequential-actions.md`
-
-What actions in your domain are audit-worthy? For SaaS:
-
-- Tenant data access (read, export)
-- Tenant administrative changes (config, user roles, billing)
-- Authentication events
-- Authorization decisions granting cross-tenant or admin access
-- Data export operations
-- Any change to security posture (allowlists, IDP config)
-
-### 5. Rewrite `immutability-classes.md`
-
-What data must not change after writing? For SaaS:
-
-- Audit log entries (SOC 2 audit trail)
-- Customer billing records (financial reconcilability)
-- Backups (ransomware resilience)
-- Configuration history
-- Customer-facing terms and consent records
-
-### 6. Rewrite `data-taxonomy.md`
-
-What field-level data classifications apply? For SaaS:
-
-- PII per GDPR Article 4 (email, names, IP addresses, user IDs, etc.)
-- Authentication credentials
-- Payment data (PCI-DSS-relevant)
-- Tenant configuration
-
-### 7. Rewrite `common-patterns/<goal>.md` for all nine goals
-
-Each file has two sections: "Common finding patterns" and "Common capability patterns." Adapt the PBM examples to your domain. The framework conventions (NIST mappings, severity calibration anchors, ATT&CK rationales) stay the same; only the *examples* and *severity rationales* change.
-
-### 7a. Declare attack-path analyzer defaults (v1.4+)
-
-The v1.4 `apd-attack-path-analyzer` (see [docs/attack-path-analysis.md](attack-path-analysis.md)) is activation-gated on three new optional fields in `domain.yaml`:
-
-| Field | What it is | What the analyzer does with it |
-|---|---|---|
-| `crown_jewels` | List of `{pattern, description}` entries naming the assets or pipelines the analyzer should treat as enumeration sinks. The `pattern` is matched against asset names and data classifications in the intake's asset inventory (the analyzer strips a trailing `_pipeline` suffix when matching data classifications). | Becomes the default sink set when `.apd-run.yaml` does not override it. |
-| `attacker_positions` | List of `{position, description}` entries naming the source nodes for enumeration — the "where the attacker starts" set. | Becomes the default source set when `.apd-run.yaml` does not override it. |
-| `default_trust_boundaries` | Optional list of `{name, description}` entries naming trust boundaries the analyzer should expect to see in the intake's `asset-inventory.yaml`. Used by intake validation to warn when a known boundary is missing from a run. | Hints at the trust topology the domain treats as canonical (e.g., "internet edge", "PHI store boundary"). |
-
-All three are optional. A domain pack that omits all three remains v1.4-compatible — the analyzer simply skips silently for runs in that domain unless the operator declares the values in `.apd-run.yaml`.
-
-#### Worked example: `cms-medicare-claims-billing`
-
-A fictional CMS Medicare Part B claims-billing domain pack would declare:
+The pack declares six crown jewels under `crown_jewels`, each a `{pattern, description}` object:
 
 ```yaml
-# domains/cms-medicare-claims-billing/domain.yaml (excerpt)
-name: cms-medicare-claims-billing
-display_name: "CMS Medicare Part B Claims Billing"
-version: 0.1.0
-framework_compat: ">=1.4.0,<2.0.0"
-
 crown_jewels:
-  - pattern: beneficiary_phi_store
-    description: "Medicare beneficiary PHI store — HIPAA breach-notification thresholds plus CMS data-use agreement obligations."
-  - pattern: claim_submission_pipeline
-    description: "Part B claim submission pipeline to CMS — submission integrity drives provider reimbursement and is regulator-anchored under 42 CFR Part 424."
-  - pattern: era_reconciliation_pipeline
-    description: "Electronic Remittance Advice reconciliation — payment-posting integrity material to provider revenue cycle."
-
-attacker_positions:
-  - position: external_internet
-    description: "Untrusted external internet client — default external surface for any internet-facing CMS-edge endpoint."
-  - position: compromised_provider_credential
-    description: "Attacker holding a valid provider-submitter credential through phishing, credential stuffing, or insider abuse at a billing partner."
-  - position: compromised_clearinghouse_integration
-    description: "Attacker who has compromised a third-party clearinghouse's integration credentials."
-  - position: insider_with_billing_role
-    description: "An insider with a legitimate billing-ops role acting outside their minimum-necessary scope (e.g., bulk PHI export, cross-beneficiary claim queries)."
-
-default_trust_boundaries:
-  - name: internet_edge
-    description: "External internet to provider-portal DMZ — TLS-terminating load balancer is the boundary."
-  - name: phi_store_boundary
-    description: "App-tier subnet to PHI persistence layer — KMS-mediated access required."
-  - name: cms_integration_boundary
-    description: "Outbound boundary to the CMS submission gateway — mutual-TLS pinned to CMS-issued certificates."
+  - pattern: tool_execution_capability
+    description: "The agent's authority to invoke side-effecting tools and execute generated code (shell, file, network, API-mutate). Compromise turns the agent into a remote-code-execution proxy wielding the agent's full privilege."
+  - pattern: model_provider_credentials
+    description: "Model-provider API keys and tool/service credentials the agent uses to authorize its own calls. Exposure yields billing fraud and lateral access to every provider and tool the keys unlock."
+  - pattern: training_and_eval_data
+    description: "Training/fine-tune data and the held-out evaluation ground truth that defines the optimization signal. Leakage collapses eval validity; tampering corrupts what the agent learns and rewards."
+  - pattern: agent_memory_store
+    description: "The agent's persistent memory, conversation context, and vector/embedding store. Holds user PII and prior tool outputs; a poisoning and read-bleed target across sessions and tenants."
+  - pattern: self_improvement_loop
+    description: "The generate-execute-score-promote loop and the agent code it produces across generations. A single compromised generation can persist and amplify a backdoor across the lineage."
+  - pattern: orchestration_control_plane
+    description: "The orchestrator that schedules agents, routes inter-agent messages, and holds system prompts, tool manifests, and guardrail config. Takeover lets an attacker act as the system at scale."
 ```
 
-When a run under this domain pack omits `crown_jewels`/`attacker_positions` from `.apd-run.yaml`, the analyzer enumerates 3 jewels × 4 positions = 12 (attacker, jewel) pairs against the assembled partial graph. A run that wants to tighten the scope (e.g., focus only on the external-internet to beneficiary-PHI path) supplies an override in `.apd-run.yaml` that fully replaces the domain defaults.
+It declares six `attacker_positions` (`untrusted_content_source`, `malicious_task_author`, `malicious_tool_or_plugin`, `compromised_model_provider`, `cotenant_or_sandbox_neighbor`, `malicious_peer_agent`) and six `default_trust_boundaries` (`untrusted_content_to_agent_reasoning`, `agent_to_execution_sandbox`, `agent_to_model_provider`, `agent_to_secret_store`, `generation_n_to_n_plus_1`, `agent_to_agent_channel`), each with the same `{<key>, description}` shape.
 
-### 8. Validate the pack
+## 3. Step-by-step authoring (dissecting agentic-ai)
+
+### 3.1 Copy a starting pack
 
 ```bash
-apd-gauntlet validate-domain saas
+cp -r domains/pbm domains/agentic-ai
 ```
 
-This validates `domain.yaml` against `schemas/domain.schema.json` and verifies all `includes` files exist.
+Start from an existing pack so all 14 files and the `includes` list exist, then rewrite each.
 
-### 9. Test by building the skill
+### 3.2 Edit `domain.yaml`
+
+Set `name`, `display_name`, `version`, `framework_compat`, `description`, and `regulatory_anchors`. The `agentic-ai` pack anchors to the EU AI Act, NIST AI RMF (AI 100-1), ISO/IEC 42001, and NIST SP 800-53r5 (see the block in section 2). Then declare the crown jewels, attacker positions, and trust boundaries — the six-of-each agentic example above is the model.
+
+### 3.3 Rewrite `severity-rubric.md` (the four agentic modifiers)
+
+The rubric anchors severity to domain impact. The `agentic-ai` rubric calibrates impact using four agentic modifiers — **autonomy** (acted without human confirmation), **reversibility**, **blast radius** (single session versus cross-tenant or cross-generation persistence), and **data sensitivity** — and raises severity when an outcome is autonomous, irreversible, persists across sessions or generations, or crosses a tenant or provider boundary. For example, its **Critical** band includes attacker-controlled code or tool execution against production from a prompt-injected or poisoned agent, exfiltration of model-provider API keys or held-out evaluation ground truth, a self-improvement loop propagating a backdoor across generations, and takeover of the orchestration control plane. The rubric also notes that OWASP LLM06 (Excessive Agency) is cross-cutting: it decomposes across goals (read-scope under Confidentiality, side-effecting write authorization under Integrity, just-in-time permission lifetime under Ephemeral, blast-radius isolation under Resilient) rather than living in a separate confinement goal. Cite the regulatory anchors precisely; specialists reference the matching clause in finding `detail` fields, so clauses must be specific enough to reference.
+
+### 3.4 Rewrite the three support files
+
+- **`consequential-actions.md`** — the audit-worthy actions for Non-Repudiation. For agentic systems these are tool invocations, code execution, generation-promotion events, and inter-agent message routing.
+- **`immutability-classes.md`** — the data classes that must not change after writing. For agentic systems these include prior-generation agent code, recorded eval scores, and provenance lineage.
+- **`data-taxonomy.md`** — the field-level data classification with regulatory citations (agent memory and PII, model-provider credentials, training and held-out eval data).
+
+### 3.5 Rewrite the nine `common-patterns/<goal>.md` files (the canonical format)
+
+Each goal file has a "Common finding patterns" section and a "Common capability patterns" section. The canonical finding-pattern format — verified against `domains/agentic-ai/common-patterns/integrity.md` — is a bold `**Pattern: …**` line followed by a dash-bulleted block carrying these keys:
+
+- `Severity` — the severity band and the rubric rationale (which agentic modifiers load).
+- `NIST` — the relevant SP 800-53r5 control IDs (e.g. `SI-10, SI-15, SC-7, AC-4`).
+- `Related concerns` — the adjacent goals the pattern touches.
+- `Detail` — prose that grounds the threat in OWASP LLM, MITRE ATLAS, and CSA MAESTRO language and names the structural control.
+
+A blocked/uncertainty pattern instead carries a `Disposition` line and a `prerequisite_evidence` line. The capability patterns are bold `**Pattern: …**` lines with an inline `Maturity:` ladder. For example, the first integrity finding pattern in the pack reads (abridged):
+
+```text
+**Pattern: Untrusted context (tool output, fetched web/RAG content, a peer
+agent's message, task input) flows into the model's instruction channel with
+no isolation, spotlighting, or quarantine — indirect prompt injection has an
+open lane.**
+
+- Severity: high to critical (critical when the injected lane can reach a
+  privileged write or code-exec sink…)
+- NIST: SI-10, SI-15, SC-7, AC-4
+- Related concerns: confidentiality…, agency-write-authz=Integrity…
+- Detail: …the threat is ATLAS LLM Prompt Injection (AML.T0051)… MAESTRO L2
+  Data Operations… the structural fix is to spotlight/quarantine untrusted
+  spans and treat them as data, never as instructions.
+```
+
+#### The lesson: taxonomy mappings live in findings, not in pattern bullets
+
+Taxonomy mappings — CWE, MITRE ATT&CK/ATLAS technique IDs, OWASP-LLM categories — are emitted by the specialists **in the findings they produce**, not written as structured bullet rows in the pattern markdown. The `common-patterns/<goal>.md` markdown carries the four calibration keys (`Severity`, `NIST`, `Related concerns`, `Detail`) and grounds OWASP-LLM / ATLAS / MAESTRO references **in prose inside the `Detail` field** to calibrate how a specialist should think. A specialist then maps the specific technique to the specific finding it raises, on that finding's record, where the evidence pointer makes the mapping defensible. Do not add a CWE bullet or an ATT&CK-IDs bullet to the pattern file; that calibrates nothing and duplicates what the finding already carries.
+
+### 3.6 Validate, build, and run
+
+Once the 14 files are written, validate the pack:
 
 ```bash
-apd-gauntlet build-domain-skill saas --framework-version 1.0.0
+apd-gauntlet validate-domain agentic-ai
 ```
 
-This writes `.claude/skills/apd-domain/SKILL.md` from your pack. Check that the generated skill contains all expected sections.
-
-### 10. Author a sample run
-
-Add a new directory under `examples/` demonstrating the new domain. Authoring is the longest task; the existing `examples/apd-20260601-claim-event-bus/` is a model. The sample run must validate cleanly:
+This loads `domain.yaml`, validates it against `schemas/domain.schema.json`, and verifies every `includes` file resolves. `validate-domain` takes positional, space-separated pack names, so you can validate several packs at once. Then compile the skill:
 
 ```bash
-apd-gauntlet validate examples/your-new-example/expected/
+apd-gauntlet build-domain-skill agentic-ai --framework-version 1.0.0
 ```
 
-Wire it into `tests/test_examples.py` as an integration test.
+This writes `.claude/skills/apd-domain/SKILL.md` from the pack. Confirm the generated skill carries all the expected sections, then author a sample run under `examples/` and validate it (`apd-gauntlet validate examples/<your-example>/expected/`), wiring it into `tests/test_examples.py`.
 
-## ATT&CK / D3FEND mapping discipline
+## 4. Multi-domain mechanics
 
-Each `common-patterns/<goal>.md` file references MITRE ATT&CK techniques to help downstream specialists recognize the adversary behavior a pattern resists or detects. Across the shipped packs, two structural conventions have emerged. The PBM pack carries a dedicated `## ATT&CK + D3FEND defensive mapping` section in every common-patterns goal file, *as well as* inline ATT&CK references on individual patterns. The three newer packs (`api-security`, `identity-security`, `security-tooling`) only use inline references on individual patterns — no dedicated goal-level mapping section.
+A single run can examine a solution across more than one pack at once. The run-config key is `domains:` — a YAML list — and `build-domain-skill` accepts an ordered set of positional pack names, merging them into one `apd-domain` skill. The merge engine (see `docs/superpowers/specs/2026-05-30-multi-domain-runs-design.md`) is per-component:
 
-Both approaches are valid. Choose one and apply it consistently within your pack — don't mix conventions across goals.
+- **Surface union, deduped by key.** `crown_jewels`, `attacker_positions`, and `default_trust_boundaries` are concatenated across packs and deduped by key (`pattern` / `position` / `boundary`); each retained item records the contributing pack(s). When two packs define the same key with materially different descriptions, both are retained, attributed.
+- **Calibration prose, per pack under provenance headers.** Each pack's `severity-rubric.md`, `consequential-actions.md`, `immutability-classes.md`, and `data-taxonomy.md` is emitted under a `## Domain: <pack> — Source: <file>` header, so every rubric and surface is present and labeled by origin.
+- **Patterns, per goal, unioned.** For each of the nine goals, the contributing packs' `common-patterns/<goal>.md` files are concatenated under the same provenance headers.
+- **`metadata.packs` frontmatter.** The compiled skill records `metadata.packs: [{name, version}, …]` in declared order; the workflow rebuilds the skill whenever the selected pack set changes (the staleness guard compares `metadata.packs` to the run's `domains`).
 
-The dedicated section gives downstream specialists a goal-level mapping summary they can reference without reading every pattern, which helps when an intake names a control or detection family rather than a specific scenario. The inline-only approach keeps each pattern self-contained — readers see the technique IDs next to the prose that motivates them — but requires the reader to enumerate techniques across patterns to build a goal-level view.
+Severity reconciliation is **union + max + provenance**: a specialist cites the governing pack and clause, takes the max severity when more than one pack's clause matches, and a harm that matches no clause in any selected pack becomes a domain-improvement-opportunity candidate. For how packs are selected at run time (`init-run --domain pbm --domain api-security` and the resulting `domains:` block in `.apd-run.yaml`), see [running-the-gauntlet.md](running-the-gauntlet.md).
 
-For future packs, the recommended default is inline-only — it matches the three newer packs and keeps the per-pattern prose unambiguously the source of truth. The PBM pack carries both because Effort 4 of the `pbm-pack-larger-efforts` plan specifically required a dedicated mapping section; that requirement was scoped to PBM and does not extend to other packs.
+## 5. Taxonomy and mapping discipline
 
-## Submitting the pack
+Two structural conventions for MITRE ATT&CK references have emerged across the shipped packs. The PBM pack carries a dedicated `## ATT&CK + D3FEND defensive mapping` section in every common-patterns goal file *as well as* inline ATT&CK references on individual patterns. The three newer packs (`api-security`, `identity-security`, `security-tooling`) use inline references only. Both are valid; choose one and apply it consistently within a pack — do not mix conventions across goals. For new packs the recommended default is inline-only: it matches the newer packs and keeps the per-pattern prose the unambiguous source of truth.
 
-Open a PR with:
+For agentic packs specifically, the threat frameworks are grounded **as prose in the `Detail` field**, not as taxonomy bullets: OWASP LLM Top 10 categories (e.g. LLM01 Prompt Injection), MITRE ATLAS technique IDs (e.g. AML.T0051), and CSA MAESTRO layers (e.g. L2 Data Operations) appear inside the pattern's `Detail` narrative to calibrate the specialist's mapping habits. Treating ATLAS as a first-class taxonomy and MAESTRO as a first-class methodology — emitted in structured finding fields rather than prose — is a possible future framework effort; today they are calibration prose. The actual CWE/ATT&CK/ATLAS/OWASP-LLM mapping is emitted on the finding the specialist raises, per the lesson in section 3.5.
 
-- `domains/<your-pack>/` complete.
-- `examples/<your-sample-run>/` with curated expected outputs.
-- An updated `tests/test_examples.py` referencing the new sample.
-- Use the [domain_pack_proposal](.github/ISSUE_TEMPLATE/domain_pack_proposal.yml) issue template to open a discussion first.
-
-CI runs `apd-gauntlet validate-domain <pack>` automatically on every PR touching a `domains/` directory.
-
-## Reusable pattern: multi-regulator retention pinning
+## 6. Reusable pattern: multi-regulator retention pinning
 
 When a single data class is governed by more than one regulator (or by a regulator plus a contract floor), `immutability-classes.md` should not pick one and ignore the others. Instead, declare retention by *pinning to the longest applicable floor* and enumerate every floor that contributes. The canonical phrasing used in `domains/pbm/immutability-classes.md` is:
 
@@ -220,7 +196,7 @@ When a single data class is governed by more than one regulator (or by a regulat
 
 Use this pattern whenever a data class is covered by overlapping obligations — for example, HIPAA plus CMS Part D plus a network-pharmacy contract; or GDPR plus a sector-specific national retention law plus a customer master agreement; or PCI-DSS plus a card-network operating regulation plus a merchant contract. The trigger is "more than one source can independently demand a retention floor on this class," not "we have lots of regulators."
 
-Specify each floor concretely. A regulatory floor needs a CFR or USC (or non-US-equivalent) section citation so the synthesizer and downstream auditors can verify the duration without re-deriving it. A contract floor needs a reference to the master-agreement type whose retention clause is the source (e.g., "the manufacturer rebate contract term plus 3 years for dispute"). A signed-artifact floor — used when the artifact's signature must remain verifiable for as long as the signed artifact itself is retained anywhere — needs a reference to the retention obligation on the signed artifact, not a fixed duration.
+Specify each floor concretely. A regulatory floor needs a CFR or USC (or non-US-equivalent) section citation so the synthesizer and downstream auditors can verify the duration without re-deriving it. A contract floor needs a reference to the master-agreement type whose retention clause is the source. A signed-artifact floor — used when the artifact's signature must remain verifiable for as long as the signed artifact itself is retained anywhere — needs a reference to the retention obligation on the signed artifact, not a fixed duration.
 
 The synthesizer's posture when the declared floors disagree: the **longest floor wins** for the actual retention configuration, and the others remain operative as audit-defensibility evidence. Specialists do not file a contradiction finding when the floors differ in duration — that is the *expected* shape of multi-regulator overlap. Specialists do file a finding when (a) only one floor is named and the data class plainly falls under another regulator the pack lists, or (b) the configured retention is shorter than the longest declared floor.
 
@@ -230,25 +206,32 @@ The cryptographic key lifecycle class in `domains/pbm/immutability-classes.md` c
 
 - **(a) HIPAA 6-year** per 45 CFR §164.316(b)(2)(i) — covers the key records as HIPAA security-policy documentation.
 - **(b) CMS Part D 10-year PDE retention** per 42 CFR §423.505(d) — required because PDE submissions are signed with these keys and CMS audit defensibility depends on proving which key signed which PDE.
-- **(c) Any signed-artifact retention floor that outlives both** — covers cases where a long-lived signed artifact (e.g., a multi-year rebate contract attestation) still references a key, so the key record must survive as long as the artifact does.
+- **(c) Any signed-artifact retention floor that outlives both** — covers cases where a long-lived signed artifact (e.g. a multi-year rebate contract attestation) still references a key, so the key record must survive as long as the artifact does.
 
-The configured floor is 10 years from CMS Part D, *unless* a covered signed artifact extends past that — in which case the artifact's retention obligation pulls the key record floor with it. The HIPAA 6-year clause is not redundant: it is the floor the PBM cites to HHS OCR if the CMS retention is ever shortened by Part D regulatory change, and it is the floor an HHS investigator references when reviewing security-policy documentation. All three remain operative as audit-defensibility evidence even though only the longest controls the storage configuration.
+The configured floor is 10 years from CMS Part D, *unless* a covered signed artifact extends past that. The HIPAA 6-year clause is not redundant: it is the floor the PBM cites to HHS OCR if the CMS retention is ever shortened, and the floor an HHS investigator references when reviewing security-policy documentation. All three remain operative as audit-defensibility evidence even though only the longest controls the storage configuration.
 
-## Evolving a pack from gauntlet runs
+## 7. Evolving a pack from runs
 
-Once a pack is in use, every gauntlet run captures the places it is still
-incomplete into `runs/<id>/40-synthesis/domain-improvements.yaml` and offers a
-deterministic command to turn chosen gaps into a reviewable patch. See
-[improving-domain-packs.md](improving-domain-packs.md) for the read → draft →
-review → `git apply` → re-validate workflow. The capture is advisory and
-non-blocking; you always own the apply and the commit.
+Once a pack is in use, every gauntlet run captures the places it is still incomplete into `runs/<id>/40-synthesis/domain-improvements.yaml` and offers a deterministic command to turn chosen gaps into a reviewable patch. See [improving-domain-packs.md](improving-domain-packs.md) for the read → draft → review → `git apply` → re-validate workflow. The capture is advisory and non-blocking; you always own the apply and the commit.
 
-## What stays the same across domains
+## 8. Submitting the pack
 
-- Lens definitions (apd-framework skill).
+Open a PR with a complete pack. The checklist:
+
+- **All 14 files present** — `domain.yaml`, the four calibration files, and the nine `common-patterns/<goal>.md` files.
+- **`apd-gauntlet validate-domain <pack>` clean** — `domain.yaml` validates against `schemas/domain.schema.json` and every `includes` file resolves.
+- **`apd-gauntlet build-domain-skill <pack> --framework-version <v>` clean** — the pack compiles into a rebuildable `apd-domain` skill.
+- **Taxonomy mappings are in findings, not markdown** — the pattern files carry `Severity` / `NIST` / `Related concerns` / `Detail` and ground OWASP-LLM/ATLAS/MAESTRO in prose; CWE/ATT&CK technique IDs are emitted on the findings the specialists raise.
+- **A sample run validates** — add a curated `examples/<your-sample-run>/` whose expected outputs pass `apd-gauntlet validate examples/<your-sample-run>/expected/`, and wire it into `tests/test_examples.py`.
+
+Use the [domain_pack_proposal](../.github/ISSUE_TEMPLATE/domain_pack_proposal.yml) issue template to open a discussion first. CI runs `apd-gauntlet validate-domain <pack>` automatically on every PR touching a `domains/` directory.
+
+## 9. What stays the same across domains
+
+- Lens definitions (the `apd-framework` skill) and the nine APD goals.
 - Boundary calls between adjacent goals.
-- Three analytical disciplines (evidence-pointer, block-on-ambiguity, stay-in-your-lens).
-- Schema contracts.
-- Validator behavior.
+- The three analytical disciplines (evidence-pointer, block-on-ambiguity, stay-in-your-lens).
+- The finding and capability schema contracts.
+- Validator behavior and the NIST/ATT&CK/D3FEND mapping guidance.
 
-Only the calibration files in `domains/<name>/` change. The framework's analytical structure is domain-agnostic by design — that's what makes the pack model workable.
+Only the calibration files in `domains/<name>/` change. The framework's analytical structure is domain-agnostic by design — that is what makes the pack model workable.
