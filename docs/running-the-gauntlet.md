@@ -216,6 +216,9 @@ repo root, run the `apd-gauntlet` workflow runner against the run directory:
 > Run the apd-gauntlet workflow on runs/apd-20260601-claim-event-bus/
 ```
 
+The specialists run as subagents of your Claude Code session, so this is an
+interactive, in-session operation — it is not meant to be driven headlessly.
+
 The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
 run end-to-end and branches only on the receipts its dispatched agents return.
 It:

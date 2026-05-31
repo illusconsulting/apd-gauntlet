@@ -7,6 +7,12 @@
 // `apd-gauntlet <cmd> <runDir>`; llmStep() dispatches a repo agent resolved from
 // .claude/agents/. The script branches only on the values those agents return.
 //
+// INTERACTIVE / FOREGROUND. The dispatched specialist agents run as Claude Code
+// subagents of the session that launches the run, so the gauntlet is meant to be
+// run from a live session — an operator prompts Claude to run it (see
+// docs/running-the-gauntlet.md). Driving it headlessly via the background
+// Workflow tool can interrupt the specialist dispatches; run it in-session.
+//
 // RESUME (design §6, two layers):
 //  - Same-session: Workflow({scriptPath, resumeFromRunId}) replays every
 //    completed agent() call from the harness cache. The only script-side
