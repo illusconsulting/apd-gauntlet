@@ -1,10 +1,12 @@
 """Smoke tests for the apd-gauntlet CLI entry point."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from unittest.mock import patch
 
 import yaml
+from apd_gauntlet import __version__
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
 
@@ -20,7 +22,17 @@ def test_cli_version():
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
-    assert "1.4.0" in result.output
+    assert __version__ in result.output
+
+
+def test_version_matches_pyproject():
+    """Guard against the __version__ vs pyproject drift that this commit fixes."""
+    pyproject = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text()
+    match = re.search(r'(?m)^version = "([^"]+)"', pyproject)
+    assert match is not None, "no version found in pyproject.toml"
+    assert match.group(1) == __version__, (
+        f"__version__={__version__} != pyproject version={match.group(1)}"
+    )
 
 
 def test_cli_refresh_cwe_invokes_refresh():
