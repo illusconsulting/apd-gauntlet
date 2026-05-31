@@ -19,13 +19,13 @@ def test_scaffold_run_emits_valid_run_config(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-001", inputs, "pbm", root)
+    run_dir = scaffold_run("run-001", inputs, ["pbm"], root)
 
     config_path = run_dir / ".apd-run.yaml"
     assert config_path.exists()
     data = yaml.safe_load(config_path.read_text())
     assert data["run_id"] == "run-001"
-    assert data["domain"] == "pbm"
+    assert data["domains"] == ["pbm"]
     assert data["framework_version"] == "1.1.0"
     assert data["code_recon"] == "auto"
 
@@ -38,7 +38,7 @@ def test_scaffold_run_rejects_traversal_run_id(tmp_path):
     inputs = tmp_path / "in"
     inputs.mkdir()
     with pytest.raises(ValueError, match="invalid run_id"):
-        scaffold_run("../etc/passwd", inputs, "pbm", tmp_path / "runs")
+        scaffold_run("../etc/passwd", inputs, ["pbm"], tmp_path / "runs")
 
 
 def test_init_run_writes_taxonomies_to_config(tmp_path):
@@ -48,7 +48,7 @@ def test_init_run_writes_taxonomies_to_config(tmp_path):
     root = tmp_path / "runs"
     taxonomies = ["cwe", "mitre_attack", "d3fend", "owasp_api_top10"]
 
-    run_dir = scaffold_run("run-002", inputs, "pbm", root, taxonomies=taxonomies)
+    run_dir = scaffold_run("run-002", inputs, ["pbm"], root, taxonomies=taxonomies)
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert cfg["taxonomies"] == taxonomies
@@ -64,7 +64,7 @@ def test_init_run_without_taxonomies_omits_field(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-003", inputs, "pbm", root)
+    run_dir = scaffold_run("run-003", inputs, ["pbm"], root)
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert "taxonomies" not in cfg
@@ -76,7 +76,7 @@ def test_init_run_empty_taxonomies_omits_field(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-004", inputs, "pbm", root, taxonomies=[])
+    run_dir = scaffold_run("run-004", inputs, ["pbm"], root, taxonomies=[])
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert "taxonomies" not in cfg
@@ -88,7 +88,7 @@ def test_scaffold_run_includes_threat_model_when_provided(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-005", inputs, "pbm", root, threat_model="threat-model.md")
+    run_dir = scaffold_run("run-005", inputs, ["pbm"], root, threat_model="threat-model.md")
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert cfg["threat_model"] == "threat-model.md"
@@ -104,7 +104,7 @@ def test_scaffold_run_includes_methodology_hint_when_provided(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-006", inputs, "pbm", root, methodology_hint="stride")
+    run_dir = scaffold_run("run-006", inputs, ["pbm"], root, methodology_hint="stride")
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert cfg["methodology_hint"] == "stride"
@@ -120,7 +120,7 @@ def test_scaffold_run_omits_threat_model_when_absent(tmp_path):
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-007", inputs, "pbm", root)
+    run_dir = scaffold_run("run-007", inputs, ["pbm"], root)
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert "threat_model" not in cfg
@@ -132,7 +132,7 @@ def test_scaffold_run_omits_methodology_hint_when_only_threat_model_provided(tmp
     (inputs / "tech_plan.md").write_text("# Plan\n")
     root = tmp_path / "runs"
 
-    run_dir = scaffold_run("run-008", inputs, "pbm", root, threat_model="threat-model.md")
+    run_dir = scaffold_run("run-008", inputs, ["pbm"], root, threat_model="threat-model.md")
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
     assert "methodology_hint" not in cfg

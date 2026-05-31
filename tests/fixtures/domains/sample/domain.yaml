@@ -7,3 +7,8 @@ includes:
   - severity-rubric.md
   - common-patterns/confidentiality.md
 regulatory_anchors: []
+crown_jewels:
+  - pattern: shared_audit_log
+    description: "Audit log shared across sample domains."
+  - pattern: sample_phi_store
+    description: "PHI store specific to the sample domain."

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradictions-doc.schema.json",
+  "title": "APD Gauntlet Contradictions Document",
+  "type": "object",
+  "required": ["contradictions"],
+  "additionalProperties": false,
+  "properties": {
+    "contradictions": {
+      "type": "array",
+      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradiction.schema.json" }
+    },
+    "notes": { "type": "string" }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/rejected-records.schema.json",
+  "title": "APD Gauntlet Rejected Records",
+  "description": "Records excluded from clustering (validation failures) and stale-capability maturity downgrades, with a reason per record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "rejected"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by": { "type": "string", "enum": ["synthesizer"] },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reason", "category"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 10 },
+          "category": { "type": "string", "enum": ["failed_validation", "stale_capability_downgrade"] },
+          "from_maturity": { "type": "string", "enum": ["designed", "implemented", "tested", "operationalized"] },
+          "to_maturity": { "type": "string", "enum": ["designed", "implemented", "tested", "operationalized"] }
+        }
+      }
+    }
+  }
+}

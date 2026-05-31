@@ -52,13 +52,38 @@ def main() -> None:
 )
 @click.option("--strict", is_flag=True, help="Treat warnings as errors.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output for CI consumption.")
-def validate(run_dir, schema_only, strict, as_json) -> None:  # type: ignore[no-untyped-def]
-    schema_rep = run_schema_pass(run_dir)
+@click.option(
+    "--errors-only",
+    is_flag=True,
+    help="Print only ERROR lines; suppress warnings and the scan/clean summary line.",
+)
+@click.option(
+    "--tier",
+    default=None,
+    help=(
+        "Validate only this run subdir (e.g. 10-trustworthiness); "
+        "skips the cross-file pass and 00-context/40-synthesis rollup checks."
+    ),
+)
+def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None:  # type: ignore[no-untyped-def]
+    target = run_dir / tier if tier else run_dir
+    if tier and not target.is_dir():
+        raise click.ClickException(f"--tier subdir not found: {target}")
+
+    schema_rep = run_schema_pass(target)
     if schema_only:
         merged = schema_rep
+    elif tier:
+        semantic_rep = run_semantic_pass(target)
+        merged = ValidationReport(
+            errors=schema_rep.errors + semantic_rep.errors,
+            warnings=schema_rep.warnings + semantic_rep.warnings,
+            files_seen=max(schema_rep.files_seen, semantic_rep.files_seen),
+            records_seen=schema_rep.records_seen,
+        )
     else:
-        semantic_rep = run_semantic_pass(run_dir)
-        cross_file_rep = run_cross_file_pass(run_dir)
+        semantic_rep = run_semantic_pass(target)
+        cross_file_rep = run_cross_file_pass(target)
         merged = ValidationReport(
             errors=schema_rep.errors + semantic_rep.errors + cross_file_rep.errors,
             warnings=schema_rep.warnings + semantic_rep.warnings + cross_file_rep.warnings,
@@ -89,13 +114,16 @@ def validate(run_dir, schema_only, strict, as_json) -> None:  # type: ignore[no-
                 indent=2,
             )
         )
+    elif errors_only:
+        if merged.errors:
+            click.echo("\n".join(f"ERROR   {v.render()}" for v in merged.errors))
     else:
         click.echo(merged.render())
     raise SystemExit(0 if merged.is_clean else 1)
 
 
 @main.command("build-domain-skill")
-@click.argument("domain_name")
+@click.argument("domain_names", nargs=-1, required=True)
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
@@ -107,9 +135,9 @@ def validate(run_dir, schema_only, strict, as_json) -> None:  # type: ignore[no-
     default=pathlib.Path(".claude/skills/apd-domain"),
 )
 @click.option("--framework-version", default=__version__)
-def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> None:  # type: ignore[no-untyped-def]
+def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version) -> None:  # type: ignore[no-untyped-def]
     try:
-        path = build_domain_skill(domain_name, domains_dir, out, framework_version)
+        path = build_domain_skill(list(domain_names), domains_dir, out, framework_version)
     except (FileNotFoundError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1) from None
@@ -123,7 +151,9 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> 
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
     required=True,
 )
-@click.option("--domain", default="pbm", show_default=True)
+@click.option("--domain", "domains", multiple=True, default=("pbm",), show_default=True,
+              help=("Domain pack for the run; repeat the flag for multiple"
+                    " (e.g. --domain pbm --domain api-security)."))
 @click.option(
     "--root",
     type=click.Path(file_okay=False, path_type=pathlib.Path),
@@ -152,14 +182,14 @@ def build_domain_skill_cmd(domain_name, domains_dir, out, framework_version) -> 
     default=None,
     help="Methodology hint for threat model parsing.",
 )
-def init_run_cmd(run_id, inputs, domain, root, taxonomies, threat_model, methodology_hint) -> None:  # type: ignore[no-untyped-def]
+def init_run_cmd(run_id, inputs, domains, root, taxonomies, threat_model, methodology_hint) -> None:  # type: ignore[no-untyped-def]
     parsed = (
         [t.strip() for t in taxonomies.split(",") if t.strip()] if taxonomies else None
     )
     target = scaffold_run(
         run_id,
         inputs,
-        domain,
+        list(domains),
         root,
         taxonomies=parsed,
         threat_model=threat_model,
@@ -169,43 +199,43 @@ def init_run_cmd(run_id, inputs, domain, root, taxonomies, threat_model, methodo
 
 
 @main.command("validate-domain")
-@click.argument("domain_name")
+@click.argument("domain_names", nargs=-1, required=True)
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
     default=pathlib.Path("domains"),
 )
-def validate_domain_cmd(domain_name, domains_dir) -> None:  # type: ignore[no-untyped-def]
+def validate_domain_cmd(domain_names, domains_dir) -> None:  # type: ignore[no-untyped-def]
     from jsonschema import Draft202012Validator
 
     schema_path = (
         pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "domain.schema.json"
     )
     schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
-    pack_dir = domains_dir / domain_name
-    meta_path = pack_dir / "domain.yaml"
-    if not meta_path.exists():
-        click.echo(f"Error: domain pack '{domain_name}' not found at {pack_dir}", err=True)
-        raise SystemExit(1)
     import yaml as _yaml
 
-    meta = _yaml.safe_load(meta_path.read_text(encoding="utf-8"))
-    errors = list(Draft202012Validator(schema).iter_errors(meta))
-    if errors:
-        for e in errors:
-            click.echo(f"Schema error: {e.message}", err=True)
-        raise SystemExit(1)
-    missing = []
-    for include_glob in meta.get("includes", []):
-        matches = list(pack_dir.glob(include_glob))
-        if not matches:
-            missing.append(include_glob)
-    if missing:
-        for m in missing:
-            click.echo(f"Missing include: {m}", err=True)
-        raise SystemExit(1)
-    n = len(meta.get("includes", []))
-    click.echo(f"Domain pack '{domain_name}' OK: schema valid, {n} include patterns all resolved.")
+    for domain_name in domain_names:
+        pack_dir = domains_dir / domain_name
+        meta_path = pack_dir / "domain.yaml"
+        if not meta_path.exists():
+            click.echo(f"Error: domain pack '{domain_name}' not found at {pack_dir}", err=True)
+            raise SystemExit(1)
+        meta = _yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+        errors = list(Draft202012Validator(schema).iter_errors(meta))
+        if errors:
+            for e in errors:
+                click.echo(f"Schema error in '{domain_name}': {e.message}", err=True)
+            raise SystemExit(1)
+        missing = [g for g in meta.get("includes", []) if not list(pack_dir.glob(g))]
+        if missing:
+            for m in missing:
+                click.echo(f"Missing include in '{domain_name}': {m}", err=True)
+            raise SystemExit(1)
+        n = len(meta.get("includes", []))
+        click.echo(
+            f"Domain pack '{domain_name}' OK: schema valid, "
+            f"{n} include patterns all resolved."
+        )
 
 
 @main.command("validate-run-config")
@@ -914,6 +944,86 @@ def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untype
         click.echo(f"warning: section '{name}' failed: {err}", err=True)
     if not quiet:
         click.echo(f"HTML report at {target}")
+
+
+@main.command("cluster-candidates")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--max-group-size",
+    default=8,
+    show_default=True,
+    help="Maximum members per candidate group; larger clusters are split.",
+)
+def cluster_candidates_cmd(run_dir: Path, max_group_size: int) -> None:
+    """5a: mechanically detect cluster candidates; emit cluster-candidates.yaml."""
+    from .synthesis.cluster import build_candidates
+
+    synth = run_dir / "40-synthesis"
+    synth.mkdir(parents=True, exist_ok=True)
+    run_cfg_path = run_dir / ".apd-run.yaml"
+    try:
+        run_cfg: dict[str, Any] = (
+            yaml.safe_load(run_cfg_path.read_text(encoding="utf-8"))
+            if run_cfg_path.exists()
+            else {}
+        ) or {}
+    except yaml.YAMLError as exc:
+        raise click.UsageError(f".apd-run.yaml is not valid YAML: {exc}") from exc
+    cap = int(run_cfg.get("max_candidate_group_size", max_group_size))
+    result = build_candidates(run_dir, max_group_size=cap)
+    doc = {"schema_version": 1, "generated_by": "apd-gauntlet", "groups": result.groups}
+    (synth / "cluster-candidates.yaml").write_text(
+        yaml.safe_dump(doc, sort_keys=False), encoding="utf-8"
+    )
+    click.echo(f"cluster-candidates: wrote {len(result.groups)} candidate groups")
+
+
+@main.command("apply-clusters")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def apply_clusters_cmd(run_dir: Path) -> None:
+    """5c: apply cluster-decisions.yaml; emit deduped + severity-disagreements + rejected."""
+    from .synthesis.apply import AdjudicationMissing, apply_clusters
+
+    try:
+        result = apply_clusters(run_dir)
+    except AdjudicationMissing as exc:
+        click.echo(f"apply-clusters: blocked - {exc}", err=True)
+        raise SystemExit(2) from None
+    click.echo(
+        f"apply-clusters: wrote {len(result.findings)} findings, "
+        f"{len(result.capabilities)} capabilities, "
+        f"{len(result.contradictions)} contradictions, "
+        f"{len(result.rejected)} rejected"
+    )
+
+
+@main.command("rollup")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def rollup_cmd(run_dir: Path) -> None:
+    """5d: aggregate deduped records into the canonical coverage YAMLs."""
+    from .synthesis.rollup import build_rollups
+
+    result = build_rollups(run_dir)
+    taxonomies = sum(x is not None for x in (result.cwe, result.owasp, result.d3fend))
+    click.echo(
+        f"rollup: wrote {len(result.nist)} controls, {len(result.attack)} techniques, "
+        f"{len(result.matrix)} components, {taxonomies} extra coverage files"
+    )
+
+
+@main.command("audit-report")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def audit_report_cmd(run_dir: Path) -> None:
+    """5g: structurally cross-check data.js against the authoritative YAMLs."""
+    from .synthesis.audit import audit_report
+
+    result = audit_report(run_dir)
+    failed = [c["name"] for c in result.checks if c["status"] == "fail"]
+    click.echo(f"audit-report: {result.status} ({len(result.checks)} checks, {len(failed)} failed)")
+    for name in failed:
+        click.echo(f"  FAIL: {name}", err=True)
+    if result.status == "fail":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

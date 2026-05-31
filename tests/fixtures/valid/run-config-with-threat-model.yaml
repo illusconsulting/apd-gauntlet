@@ -1,5 +1,6 @@
 run_id: pbm-claim-event-bus-20260526
-domain: pbm
+domains:
+  - pbm
 framework_version: 1.3.0
 threat_model: artifacts/threat-model.tm7
 methodology_hint: stride

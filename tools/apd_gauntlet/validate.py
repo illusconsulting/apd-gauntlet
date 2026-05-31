@@ -111,6 +111,25 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "defense-graph.yaml":          "defense-graph.schema.json",
     # D: HTML report input
     "report-data.yaml":            "report-data.schema.json",
+    # Plan 2 — synthesis decomposition artifacts.
+    "cluster-candidates.yaml":     "cluster-candidates.schema.json",
+    "cluster-decisions.yaml":      "cluster-decisions.schema.json",
+    "rejected-records.yaml":       "rejected-records.schema.json",
+    "report-audit.yaml":           "report-audit.schema.json",
+    # Plan 3 — the three coverage rollups, now wired globally against their
+    # array-shaped *-doc wrapper schemas. The legacy runs/ were regenerated to
+    # the array shape via `apd-gauntlet rollup` (Plan 3 Task B), so this no
+    # longer breaks validate on the committed runs. The matrix doc schema is
+    # named coverage-matrix-doc.schema.json (NOT apd-coverage-matrix-doc); all
+    # three map to the DOC wrappers (array-of-$ref), never the per-row schemas.
+    "nist-coverage.yaml":          "nist-coverage-doc.schema.json",
+    "attack-exposure.yaml":        "attack-exposure-doc.schema.json",
+    "apd-coverage-matrix.yaml":    "coverage-matrix-doc.schema.json",
+    # Plan 2 (I5) — apply-clusters annex outputs, previously unwired so a
+    # malformed annex slipped past validate --schema-only. Wrap the existing
+    # per-row severity-disagreement / contradiction schemas.
+    "severity-disagreements.yaml": "severity-disagreements-doc.schema.json",
+    "contradictions.yaml":         "contradictions-doc.schema.json",
 }
 
 # Whole-document rollup files in 00-context/ that get schema-validated by the

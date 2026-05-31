@@ -27,7 +27,7 @@ def _validate_run_id(run_id: str) -> None:
 def scaffold_run(
     run_id: str,
     inputs_src: pathlib.Path,
-    domain: str,
+    domains: list[str],
     root: pathlib.Path,
     taxonomies: list[str] | None = None,
     threat_model: str | None = None,
@@ -43,9 +43,10 @@ def scaffold_run(
             shutil.copytree(item, target, dirs_exist_ok=True)
         else:
             shutil.copy2(item, target)
+    domains_block = "domains:\n" + "".join(f"  - {d}\n" for d in domains)
     config_text = (
         f"run_id: {run_id}\n"
-        f"domain: {domain}\n"
+        f"{domains_block}"
         f"framework_version: 1.1.0\n"
         f"code_recon: auto\n"
         "# code_recon: enabled  # hard-fail if CBM not reachable\n"

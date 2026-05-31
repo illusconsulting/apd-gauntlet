@@ -1,5 +1,6 @@
 run_id: apd-20260601-claim-event-bus
-domain: pbm
+domains:
+  - pbm
 framework_version: 1.4.0
 taxonomies:
   - cwe

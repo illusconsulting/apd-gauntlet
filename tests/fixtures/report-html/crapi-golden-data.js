@@ -10,7 +10,7 @@ window.APD_DATA = {
     "specialists_skipped": [],
     "subject": "OWASP crAPI v1.1.5",
     "subject_tagline": "automotive B2C demonstration platform (Apache-2.0)",
-    "date": "2026-05-29",
+    "date": "2026-05-30",
     "artifact_count": 9,
     "artifact_types": [
       "md×8",
@@ -3686,17 +3686,17 @@ window.APD_DATA = {
       "family": "AU",
       "title": "Audit & Accountability",
       "covered": 0,
-      "gapped": 20,
+      "gapped": 19,
       "both": 2,
-      "notable": "AU-12, AU-3, AU-11 cited"
+      "notable": "AU-3, AU-3(1), AU-10 gapped"
     },
     {
       "family": "SC",
       "title": "System & Communications Protection",
       "covered": 0,
-      "gapped": 10,
+      "gapped": 9,
       "both": 11,
-      "notable": "SC-5, SC-7, SC-12 cited"
+      "notable": "SC-12(1), SC-12(2), SC-23(3) gapped"
     },
     {
       "family": "AC",
@@ -3704,15 +3704,15 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 14,
       "both": 3,
-      "notable": "AC-3, AC-6, AC-4 cited"
+      "notable": "AC-3(7), AC-6, AC-2 gapped"
     },
     {
       "family": "IA",
       "title": "Identification & Authentication",
       "covered": 0,
-      "gapped": 10,
+      "gapped": 9,
       "both": 3,
-      "notable": "IA-5, IA-2, IA-5(1) cited"
+      "notable": "IA-2(1), IA-2(8), IA-5(1) gapped"
     },
     {
       "family": "CM",
@@ -3720,7 +3720,7 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 10,
       "both": 1,
-      "notable": "CM-2, CM-3, CM-5 cited"
+      "notable": "CM-5, CM-7, CM-7(5) gapped"
     },
     {
       "family": "CP",
@@ -3728,7 +3728,7 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 8,
       "both": 3,
-      "notable": "CP-13, CP-12, CP-2 cited"
+      "notable": "CP-2, CP-2(3), CP-9 gapped"
     },
     {
       "family": "SI",
@@ -3736,7 +3736,7 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 8,
       "both": 3,
-      "notable": "SI-10, SI-13, SI-7 cited"
+      "notable": "SI-15, SI-7(1), SI-10(5) gapped"
     },
     {
       "family": "SR",
@@ -3744,7 +3744,7 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 4,
       "both": 0,
-      "notable": "SR-4, SR-11, SR-4(3) cited"
+      "notable": "SR-4, SR-4(3), SR-4(4) gapped"
     },
     {
       "family": "SA",
@@ -3752,7 +3752,15 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 2,
       "both": 0,
-      "notable": "SA-10, SA-15(7) cited"
+      "notable": "SA-15(7), SA-10 gapped"
+    },
+    {
+      "family": "IR",
+      "title": "Incident Response",
+      "covered": 0,
+      "gapped": 1,
+      "both": 0,
+      "notable": "IR-4 gapped"
     },
     {
       "family": "MP",
@@ -3760,18 +3768,16 @@ window.APD_DATA = {
       "covered": 0,
       "gapped": 1,
       "both": 0,
-      "notable": "MP-4 cited"
+      "notable": "MP-4 gapped"
     }
   ],
   "attack_exposure": [
     {
       "id": "T1190",
       "name": "Exploit Public-Facing Application",
-      "findings": 6,
-      "mitigations": [
-        "intg-cap-4212a616"
-      ],
-      "coverage": "partial",
+      "findings": 5,
+      "mitigations": [],
+      "coverage": "uncovered",
       "note": ""
     },
     {
@@ -3786,32 +3792,33 @@ window.APD_DATA = {
       "id": "T1213",
       "name": "Data from Information Repositories",
       "findings": 4,
-      "mitigations": [],
-      "coverage": "uncovered",
-      "note": ""
-    },
-    {
-      "id": "T1552.001",
-      "name": "Credentials in Files",
-      "findings": 4,
-      "mitigations": [],
-      "coverage": "uncovered",
-      "note": ""
-    },
-    {
-      "id": "T1110.001",
-      "name": "Password Guessing",
-      "findings": 2,
       "mitigations": [
-        "intg-cap-c6f2bf49",
-        "avail-cap-5af461f2"
+        "auth-cap-125067f9"
       ],
       "coverage": "partial",
       "note": ""
     },
     {
-      "id": "T1550.001",
-      "name": "Application Access Token",
+      "id": "T1552",
+      "name": "Unsecured Credentials",
+      "findings": 4,
+      "mitigations": [
+        "auth-cap-125067f9"
+      ],
+      "coverage": "partial",
+      "note": ""
+    },
+    {
+      "id": "T1110",
+      "name": "Brute Force",
+      "findings": 2,
+      "mitigations": [],
+      "coverage": "uncovered",
+      "note": ""
+    },
+    {
+      "id": "T1550",
+      "name": "Use Alternate Authentication Material",
       "findings": 2,
       "mitigations": [],
       "coverage": "uncovered",
@@ -3821,13 +3828,15 @@ window.APD_DATA = {
       "id": "T1070",
       "name": "Indicator Removal",
       "findings": 1,
-      "mitigations": [],
-      "coverage": "uncovered",
+      "mitigations": [
+        "auth-cap-125067f9"
+      ],
+      "coverage": "partial",
       "note": ""
     },
     {
-      "id": "T1195.002",
-      "name": "Software Supply Chain",
+      "id": "T1195",
+      "name": "Supply Chain Compromise",
       "findings": 1,
       "mitigations": [],
       "coverage": "uncovered",
@@ -3842,26 +3851,26 @@ window.APD_DATA = {
       "note": ""
     },
     {
-      "id": "T1499.003",
-      "name": "Application Exhaustion Flood",
-      "findings": 1,
-      "mitigations": [
-        "avail-cap-26d2f293"
-      ],
-      "coverage": "partial",
-      "note": ""
-    },
-    {
-      "id": "T1557",
-      "name": "Adversary-in-the-Middle",
+      "id": "T1499",
+      "name": "Endpoint Denial of Service",
       "findings": 1,
       "mitigations": [],
       "coverage": "uncovered",
       "note": ""
     },
     {
-      "id": "T1562.008",
-      "name": "Disable or Modify Cloud Logs",
+      "id": "T1557",
+      "name": "Adversary-in-the-Middle",
+      "findings": 1,
+      "mitigations": [
+        "auth-cap-125067f9"
+      ],
+      "coverage": "partial",
+      "note": ""
+    },
+    {
+      "id": "T1562",
+      "name": "Impair Defenses",
       "findings": 1,
       "mitigations": [],
       "coverage": "uncovered",
@@ -3871,10 +3880,8 @@ window.APD_DATA = {
       "id": "T1606",
       "name": "Forge Web Credentials",
       "findings": 1,
-      "mitigations": [
-        "auth-cap-125067f9"
-      ],
-      "coverage": "partial",
+      "mitigations": [],
+      "coverage": "uncovered",
       "note": ""
     }
   ],
@@ -3903,73 +3910,213 @@ window.APD_DATA = {
     },
     "rows": [
       {
+        "component": "API_USER/API_PASSWORD (chatbot admin credential)",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "JWT_SECRET env var",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
         "component": "adrs/0001-microservice-split-by-language.md",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "both",
+          "dist": "gapped",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "adrs/0002-jwt-with-rsa-and-jwks.md",
         "cells": {
           "conf": "covered",
           "intg": "covered",
-          "avail": "both",
-          "dist": "both",
-          "resil": "covered",
-          "ephem": "covered",
+          "avail": "silent",
+          "dist": "covered",
+          "resil": "silent",
+          "ephem": "silent",
           "auth": "covered",
-          "nonrep": "covered",
-          "immut": "covered"
+          "nonrep": "silent",
+          "immut": "silent"
         }
       },
       {
         "component": "adrs/0003-mailhog-for-otp-delivery.md",
         "cells": {
-          "conf": "both",
-          "intg": "covered",
-          "avail": "both",
-          "dist": "covered",
-          "resil": "covered",
-          "ephem": "covered",
-          "auth": "covered",
-          "nonrep": "both",
-          "immut": "covered"
+          "conf": "gapped",
+          "intg": "silent",
+          "avail": "gapped",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "gapped",
+          "immut": "silent"
         }
       },
       {
         "component": "adrs/0004-dual-datastore-postgres-and-mongo.md",
         "cells": {
-          "conf": "covered",
-          "intg": "both",
-          "avail": "covered",
-          "dist": "covered",
+          "conf": "silent",
+          "intg": "gapped",
+          "avail": "silent",
+          "dist": "silent",
           "resil": "covered",
-          "ephem": "covered",
-          "auth": "covered",
-          "nonrep": "covered",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
           "immut": "covered"
         }
       },
       {
         "component": "agents.md",
         "cells": {
-          "conf": "covered",
-          "intg": "covered",
-          "avail": "both",
-          "dist": "both",
-          "resil": "covered",
-          "ephem": "covered",
-          "auth": "covered",
-          "nonrep": "covered",
-          "immut": "covered"
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "gapped",
+          "dist": "gapped",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "api.mypremiumdealership.com",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
         }
       },
       {
         "component": "architecture-index.md",
         "cells": {
           "conf": "both",
-          "intg": "both",
-          "avail": "both",
-          "dist": "both",
+          "intg": "gapped",
+          "avail": "gapped",
+          "dist": "gapped",
           "resil": "covered",
-          "ephem": "covered",
-          "auth": "covered",
-          "nonrep": "covered",
-          "immut": "covered"
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "chromadb",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "crapi-chatbot",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "crapi-community",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "crapi-identity",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "crapi-web",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "crapi-workshop",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
         }
       },
       {
@@ -3977,41 +4124,97 @@ window.APD_DATA = {
         "cells": {
           "conf": "covered",
           "intg": "both",
-          "avail": "covered",
-          "dist": "covered",
-          "resil": "covered",
-          "ephem": "covered",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
           "auth": "covered",
-          "nonrep": "covered",
-          "immut": "covered"
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "mailhog",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "mongodb",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
+        }
+      },
+      {
+        "component": "postgresdb",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
         }
       },
       {
         "component": "prior-audit.md",
         "cells": {
-          "conf": "covered",
-          "intg": "covered",
-          "avail": "covered",
-          "dist": "both",
-          "resil": "covered",
-          "ephem": "covered",
-          "auth": "covered",
-          "nonrep": "covered",
-          "immut": "both"
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "gapped",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "gapped"
         }
       },
       {
         "component": "runbook.md",
         "cells": {
-          "conf": "covered",
+          "conf": "silent",
           "intg": "covered",
           "avail": "both",
-          "dist": "covered",
-          "resil": "both",
-          "ephem": "both",
-          "auth": "covered",
+          "dist": "silent",
+          "resil": "gapped",
+          "ephem": "gapped",
+          "auth": "silent",
           "nonrep": "both",
-          "immut": "both"
+          "immut": "gapped"
+        }
+      },
+      {
+        "component": "services/identity/jwks.json (private key)",
+        "cells": {
+          "conf": "silent",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
         }
       },
       {
@@ -4021,25 +4224,25 @@ window.APD_DATA = {
           "intg": "both",
           "avail": "both",
           "dist": "both",
-          "resil": "both",
+          "resil": "gapped",
           "ephem": "both",
-          "auth": "both",
-          "nonrep": "covered",
-          "immut": "both"
+          "auth": "gapped",
+          "nonrep": "silent",
+          "immut": "gapped"
         }
       },
       {
         "component": "threat-model.md",
         "cells": {
-          "conf": "covered",
-          "intg": "both",
-          "avail": "both",
-          "dist": "covered",
-          "resil": "covered",
-          "ephem": "both",
-          "auth": "covered",
-          "nonrep": "covered",
-          "immut": "covered"
+          "conf": "silent",
+          "intg": "gapped",
+          "avail": "gapped",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "gapped",
+          "auth": "silent",
+          "nonrep": "silent",
+          "immut": "silent"
         }
       }
     ]
@@ -4189,10 +4392,6 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "Information Flow Enforcement"
     },
-    "AC-4(8)": {
-      "family": "NIST 800-53r5",
-      "title": "Information Flow Enforcement | Security and Privacy Policy Filters"
-    },
     "AC-5": {
       "family": "NIST 800-53r5",
       "title": "Separation of Duties"
@@ -4232,10 +4431,6 @@ window.APD_DATA = {
     "AU-10": {
       "family": "NIST 800-53r5",
       "title": "Non-repudiation"
-    },
-    "AU-10(1)": {
-      "family": "NIST 800-53r5",
-      "title": "Non-repudiation | Association of Identities"
     },
     "AU-11": {
       "family": "NIST 800-53r5",
@@ -4429,10 +4624,6 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "Device Identification and Authentication"
     },
-    "IA-3(1)": {
-      "family": "NIST 800-53r5",
-      "title": "Device Identification and Authentication | Cryptographic Bidirectional Authentication"
-    },
     "IA-5": {
       "family": "NIST 800-53r5",
       "title": "Authenticator Management"
@@ -4493,10 +4684,6 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "Cryptographic Protection"
     },
-    "SC-16": {
-      "family": "NIST 800-53r5",
-      "title": "Transmission of Security and Privacy Attributes"
-    },
     "SC-17": {
       "family": "NIST 800-53r5",
       "title": "Public Key Infrastructure Certificates"
@@ -4525,10 +4712,6 @@ window.APD_DATA = {
       "family": "NIST 800-53r5",
       "title": "Distributed Processing and Storage"
     },
-    "SC-36(1)": {
-      "family": "NIST 800-53r5",
-      "title": "Distributed Processing and Storage | Polling Techniques"
-    },
     "SC-5": {
       "family": "NIST 800-53r5",
       "title": "Denial-of-service Protection"
@@ -4536,10 +4719,6 @@ window.APD_DATA = {
     "SC-5(1)": {
       "family": "NIST 800-53r5",
       "title": "Denial-of-service Protection | Restrict Ability to Attack Other Systems"
-    },
-    "SC-5(2)": {
-      "family": "NIST 800-53r5",
-      "title": "Denial-of-service Protection | Capacity, Bandwidth, and Redundancy"
     },
     "SC-6": {
       "family": "NIST 800-53r5",
@@ -4637,10 +4816,6 @@ window.APD_DATA = {
       "family": "MITRE ATT&CK",
       "title": "Brute Force"
     },
-    "T1110.001": {
-      "family": "MITRE ATT&CK",
-      "title": "Brute Force: Password Guessing"
-    },
     "T1190": {
       "family": "MITRE ATT&CK",
       "title": "Exploit Public-Facing Application"
@@ -4648,10 +4823,6 @@ window.APD_DATA = {
     "T1195": {
       "family": "MITRE ATT&CK",
       "title": "Supply Chain Compromise"
-    },
-    "T1195.002": {
-      "family": "MITRE ATT&CK",
-      "title": "Supply Chain Compromise: Compromise Software Supply Chain"
     },
     "T1213": {
       "family": "MITRE ATT&CK",
@@ -4665,25 +4836,13 @@ window.APD_DATA = {
       "family": "MITRE ATT&CK",
       "title": "Endpoint Denial of Service"
     },
-    "T1499.003": {
-      "family": "MITRE ATT&CK",
-      "title": "Endpoint Denial of Service: Application Exhaustion Flood"
-    },
     "T1550": {
       "family": "MITRE ATT&CK",
       "title": "Use Alternate Authentication Material"
     },
-    "T1550.001": {
-      "family": "MITRE ATT&CK",
-      "title": "Use Alternate Authentication Material: Application Access Token"
-    },
     "T1552": {
       "family": "MITRE ATT&CK",
       "title": "Unsecured Credentials"
-    },
-    "T1552.001": {
-      "family": "MITRE ATT&CK",
-      "title": "Unsecured Credentials: Credentials In Files"
     },
     "T1557": {
       "family": "MITRE ATT&CK",
@@ -4692,10 +4851,6 @@ window.APD_DATA = {
     "T1562": {
       "family": "MITRE ATT&CK",
       "title": "Impair Defenses"
-    },
-    "T1562.008": {
-      "family": "MITRE ATT&CK",
-      "title": "Impair Defenses: Disable or Modify Cloud Logs"
     },
     "T1606": {
       "family": "MITRE ATT&CK",

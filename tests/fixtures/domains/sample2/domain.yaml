@@ -1,0 +1,17 @@
+name: sample2
+display_name: "Second Sample Test Domain"
+version: 0.2.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Second minimal domain pack used only in multi-domain merge tests."
+includes:
+  - severity-rubric.md
+  - common-patterns/confidentiality.md
+regulatory_anchors: []
+crown_jewels:
+  - pattern: shared_audit_log
+    description: "Audit log shared across sample domains."
+  - pattern: sample2_secret_store
+    description: "Secret store specific to the sample2 domain."
+attacker_positions:
+  - position: external_attacker
+    description: "Untrusted external attacker reaching sample2 surfaces."

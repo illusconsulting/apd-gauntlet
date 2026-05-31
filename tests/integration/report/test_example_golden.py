@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import difflib
 import pathlib
+import re
 
 import pytest
 from apd_gauntlet.report.build import build_report
@@ -18,6 +19,15 @@ from apd_gauntlet.report.build import build_report
 REPO = pathlib.Path(__file__).resolve().parents[3]
 FIXTURE_RUN = REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"
 GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "crapi-golden-data.js"
+
+# The report's "date" field falls back to the wall-clock build date when the run
+# declares none (loader.py date fallback chain), so a frozen golden would drift
+# every calendar day. Normalize it before the byte-comparison.
+_DATE_RE = re.compile(r'("date":\s*)"\d{4}-\d{2}-\d{2}"')
+
+
+def _normalize(text: str) -> str:
+    return _DATE_RE.sub(r'\1"<DATE>"', text)
 
 pytestmark = pytest.mark.skipif(
     not (REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "index.html").exists(),
@@ -27,8 +37,8 @@ pytestmark = pytest.mark.skipif(
 
 def test_data_js_matches_golden(tmp_path: pathlib.Path) -> None:
     out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
-    actual = (out / "data.js").read_text()
-    expected = GOLDEN.read_text()
+    actual = _normalize((out / "data.js").read_text())
+    expected = _normalize(GOLDEN.read_text())
     if actual != expected:
         diff = "\n".join(difflib.unified_diff(
             expected.splitlines(), actual.splitlines(),

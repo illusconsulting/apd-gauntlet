@@ -1,180 +1,152 @@
-schema_version: 1
-run_id: apd-20260527-caldera-adversary-emulation
-generated_by: apd-synthesizer
-generated_at: 2026-05-27T13:00:00Z
-
-stats:
-  total_unique_mitre_techniques_cited: 18
-  techniques_by_tactic:
-    "TA0001 Initial Access": 4
-    "TA0003 Persistence": 3
-    "TA0004 Privilege Escalation": 2
-    "TA0005 Defense Evasion": 4
-    "TA0006 Credential Access": 4
-    "TA0008 Lateral Movement": 1
-    "TA0009 Collection": 1
-    "TA0010 Exfiltration": 0
-    "TA0011 Command and Control": 1
-    "TA0040 Impact": 5
-
-technique_to_findings:
-  T1036:
-    description: "Masquerading"
-    tactic: TA0005
-    findings: [auth-0e31c9b1]
-  T1070:
-    description: "Indicator Removal"
-    tactic: TA0005
-    findings: [nonrep-d8bf1096, nonrep-79ed516c, immut-b0fd1144]
-  T1078:
-    description: "Valid Accounts"
-    tactic: TA0004
-    findings: [conf-01d02036, conf-88726ba8, intg-f6c14927, auth-31296050]
-  T1090:
-    description: "Proxy"
-    tactic: TA0011
-    findings: [auth-c1c1d0cb]
-    sub_techniques: [T1090.003]
-  T1098:
-    description: "Account Manipulation"
-    tactic: TA0003
-    findings: [ephem-608839d8]
-  T1110:
-    description: "Brute Force"
-    tactic: TA0006
-    findings: [auth-1c9a7b78]
-    sub_techniques: [T1110.003]
-  T1190:
-    description: "Exploit Public-Facing Application"
-    tactic: TA0001
-    findings: [intg-899da63b, intg-3575082e]
-  T1195:
-    description: "Supply Chain Compromise"
-    tactic: TA0001
-    findings: [intg-81c06dfa, auth-ec69906a]
-    sub_techniques: [T1195.001, T1195.002]
-  T1213:
-    description: "Data from Information Repositories"
-    tactic: TA0009
-    findings: [nonrep-1f49427b]
-  T1498:
-    description: "Network Denial of Service"
-    tactic: TA0040
-    findings: [avail-e4b13596]
-  T1499:
-    description: "Endpoint Denial of Service"
-    tactic: TA0040
-    findings: [avail-623b8e59, resil-ca256373]
-    sub_techniques: [T1499.003, T1499.004]
-  T1505:
-    description: "Server Software Component"
-    tactic: TA0003
-    findings: [intg-81c06dfa, nonrep-5f137373]
-  T1550:
-    description: "Use Alternate Authentication Material"
-    tactic: TA0008
-    findings: [ephem-cc497fed]
-    sub_techniques: [T1550.004]
-  T1552:
-    description: "Unsecured Credentials"
-    tactic: TA0006
-    findings: [conf-e223c03d, conf-aabbd48f]
-    sub_techniques: [T1552.001]
-  T1557:
-    description: "Adversary-in-the-Middle"
-    tactic: TA0006
-    findings: [conf-056edb0c, intg-f6c14927, auth-c1c1d0cb]
-  T1565:
-    description: "Data Manipulation"
-    tactic: TA0040
-    findings: [intg-5152e7ba, intg-712b4709, immut-de3cc948]
-    sub_techniques: [T1565.001, T1565.003]
-  T1611:
-    description: "Escape to Host"
-    tactic: TA0004
-    findings: [dist-dbaf5c57]
-
-d3fend_capabilities:
-  - id: D3-CP
-    name: "Certificate Pinning"
-    rationale_for_recommendation: "Counters T1090, T1557 on the implant-to-listener channel; recommended by auth-c1c1d0cb and intg-f6c14927 in tandem."
-    referenced_in_findings: [auth-c1c1d0cb, conf-056edb0c]
-  - id: D3-MA
-    name: "Message Authentication"
-    rationale_for_recommendation: "Counters T1557 + T1078 at the command layer; recommended by intg-f6c14927, nonrep-d8bf1096 for audit signing."
-    referenced_in_findings: [intg-f6c14927, intg-5152e7ba]
-  - id: D3-EAL
-    name: "Executable Allowlisting"
-    rationale_for_recommendation: "Counters T1195.002 at the plugin loader; recommended by intg-81c06dfa / auth-ec69906a."
-    referenced_in_findings: [intg-81c06dfa, auth-ec69906a]
-  - id: D3-SBV
-    name: "System Behavior Validation"
-    rationale_for_recommendation: "Counters T1070 at the audit layer; recommended by nonrep-d8bf1096 and immut-b0fd1144."
-    referenced_in_findings: [nonrep-d8bf1096]
-  - id: D3-HSM
-    name: "Hardware Security Module"
-    rationale_for_recommendation: "Wraps the signing-key and KEK material recommended by conf-aabbd48f and audit-log signing."
-    referenced_in_findings: [conf-aabbd48f, auth-ec69906a]
-
-owasp_api_top10_mappings:
-  "API1:2023":
-    description: "Broken Object Level Authorization"
-    findings: [conf-88726ba8, intg-899da63b]
-  "API2:2023":
-    description: "Broken Authentication"
-    findings: [conf-e223c03d, conf-01d02036, ephem-608839d8, auth-1c9a7b78, auth-31296050]
-  "API3:2023":
-    description: "Broken Object Property Level Authorization"
-    findings: [conf-88726ba8]
-  "API5:2023":
-    description: "Broken Function Level Authorization"
-    findings: [intg-899da63b, auth-5911ace7]
-  "API8:2023":
-    description: "Security Misconfiguration"
-    findings: [conf-056edb0c]
-
-owasp_top10_mappings:
-  "A02:2021":
-    description: "Cryptographic Failures"
-    findings: [conf-056edb0c]
-  "A07:2021":
-    description: "Identification and Authentication Failures"
-    findings: [conf-e223c03d, conf-01d02036, ephem-cc497fed, auth-1c9a7b78]
-
-cwe_mappings:
-  CWE-20: [conf-bcbd4cb9, intg-3575082e]
-  CWE-117: [immut-b0fd1144, immut-df8094e4]
-  CWE-262: [ephem-608839d8]
-  CWE-284: [auth-31296050]
-  CWE-285: [conf-88726ba8, intg-899da63b]
-  CWE-287: [auth-0e31c9b1]
-  CWE-290: [auth-0e31c9b1]
-  CWE-295: [auth-c1c1d0cb]
-  CWE-296: [auth-c1c1d0cb]
-  CWE-308: [auth-1c9a7b78]
-  CWE-311: [conf-aabbd48f, conf-056edb0c]
-  CWE-319: [conf-056edb0c]
-  CWE-321: [conf-e223c03d, conf-aabbd48f]
-  CWE-345: [intg-f6c14927, intg-5152e7ba, intg-712b4709, auth-ec69906a]
-  CWE-347: [intg-f6c14927]
-  CWE-353: [intg-5152e7ba, immut-de3cc948]
-  CWE-359: [ephem-d6c8d458]
-  CWE-384: [ephem-cc497fed]
-  CWE-400: [avail-623b8e59, avail-e4b13596]
-  CWE-410: [avail-623b8e59, resil-ca256373]
-  CWE-494: [intg-81c06dfa]
-  CWE-502: [intg-3575082e]
-  CWE-613: [ephem-cc497fed]
-  CWE-639: [conf-88726ba8]
-  CWE-668: [dist-dbaf5c57]
-  CWE-732: [intg-899da63b, auth-31296050]
-  CWE-770: [avail-e4b13596, avail-8d19a4b5, resil-83950e96]
-  CWE-778: [nonrep-d8bf1096, nonrep-79ed516c, nonrep-1f49427b, nonrep-5f137373, nonrep-58511e00, immut-b0fd1144]
-  CWE-779: [nonrep-d8bf1096]
-  CWE-798: [conf-e223c03d, conf-01d02036, ephem-608839d8]
-  CWE-829: [intg-81c06dfa]
-  CWE-862: [auth-5911ace7]
-  CWE-915: [intg-81c06dfa]
-  CWE-1071: [immut-88339a4a]
-  CWE-1188: [avail-5399f916, dist-85515eec, immut-de3cc948]
-  CWE-1390: [auth-1c9a7b78]
+techniques:
+- id: T1552
+  sub_technique: T1552.001
+  tactic: TA0006
+  name: Unsecured Credentials
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - conf-aabbd48f
+  - conf-e223c03d
+  mitigated_by_capabilities: []
+- id: T1078
+  sub_technique: null
+  tactic: TA0001
+  name: Valid Accounts
+  exposure_finding_count: 4
+  exposure_finding_ids:
+  - auth-31296050
+  - conf-01d02036
+  - conf-88726ba8
+  - intg-f6c14927
+  mitigated_by_capabilities: []
+- id: T1557
+  sub_technique: null
+  tactic: TA0006
+  name: Adversary-in-the-Middle
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - auth-c1c1d0cb
+  - conf-056edb0c
+  - intg-f6c14927
+  mitigated_by_capabilities: []
+- id: T1195
+  sub_technique: T1195.002
+  tactic: TA0001
+  name: Supply Chain Compromise
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - auth-ec69906a
+  - intg-81c06dfa
+  mitigated_by_capabilities: []
+- id: T1505
+  sub_technique: null
+  tactic: TA0003
+  name: Server Software Component
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - immut-df8094e4
+  - intg-81c06dfa
+  - nonrep-5f137373
+  mitigated_by_capabilities: []
+- id: T1190
+  sub_technique: null
+  tactic: TA0001
+  name: Exploit Public-Facing Application
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - intg-3575082e
+  - intg-899da63b
+  mitigated_by_capabilities: []
+- id: T1565
+  sub_technique: T1565.001
+  tactic: TA0040
+  name: Data Manipulation
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - immut-de3cc948
+  - intg-5152e7ba
+  - intg-712b4709
+  mitigated_by_capabilities: []
+- id: T1499
+  sub_technique: T1499.004
+  tactic: TA0040
+  name: Endpoint Denial of Service
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - avail-623b8e59
+  - resil-ca256373
+  mitigated_by_capabilities: []
+- id: T1498
+  sub_technique: null
+  tactic: TA0040
+  name: Network Denial of Service
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - avail-e4b13596
+  mitigated_by_capabilities: []
+- id: T1611
+  sub_technique: null
+  tactic: TA0004
+  name: Escape to Host
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - dist-dbaf5c57
+  mitigated_by_capabilities: []
+- id: T1098
+  sub_technique: null
+  tactic: TA0003
+  name: Account Manipulation
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - ephem-608839d8
+  mitigated_by_capabilities: []
+- id: T1550
+  sub_technique: T1550.004
+  tactic: TA0008
+  name: Use Alternate Authentication Material
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - ephem-cc497fed
+  mitigated_by_capabilities: []
+- id: T1110
+  sub_technique: T1110.003
+  tactic: TA0006
+  name: Brute Force
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-1c9a7b78
+  mitigated_by_capabilities: []
+- id: T1036
+  sub_technique: null
+  tactic: TA0005
+  name: Masquerading
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-0e31c9b1
+  mitigated_by_capabilities: []
+- id: T1090
+  sub_technique: T1090.003
+  tactic: TA0011
+  name: Proxy
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-c1c1d0cb
+  mitigated_by_capabilities: []
+- id: T1070
+  sub_technique: null
+  tactic: TA0005
+  name: Indicator Removal
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - immut-b0fd1144
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  mitigated_by_capabilities: []
+- id: T1213
+  sub_technique: null
+  tactic: TA0009
+  name: Data from Information Repositories
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - nonrep-1f49427b
+  mitigated_by_capabilities: []

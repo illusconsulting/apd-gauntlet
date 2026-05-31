@@ -1,6 +1,7 @@
 run_id: apd-20260527-caldera-adversary-emulation
 subject: "Apache Caldera (MITRE adversary emulation framework, Apache-2.0) — current main branch"
-domain: security-tooling
+domains:
+  - security-tooling
 framework_version: 1.5.0
 code_recon: disabled
 taxonomies:

@@ -161,24 +161,33 @@ def _load_all_records(
 
 
 def _load_domain(run_dir: Path, run_cfg: dict[str, Any]) -> dict[str, Any]:
-    # Accept both `domain: <str>` (per current run-config schema) and the
-    # legacy `domain: {id: <str>}` shape — the builder is forgiving here so
-    # plan changes don't ripple through fixtures.
-    raw_domain = run_cfg.get("domain")
-    if isinstance(raw_domain, dict):
-        dom_id = raw_domain.get("id") or "pbm"
-    elif isinstance(raw_domain, str) and raw_domain:
-        dom_id = raw_domain
-    else:
-        dom_id = "pbm"
-    candidates = [
-        run_dir / "domains" / f"{dom_id}.yaml",
-        run_dir / "domains" / dom_id / "domain.yaml",
-    ]
-    for c in candidates:
-        if c.exists():
-            return _load_yaml(c)
-    return {}
+    # Resolve the selected domain pack ids from the run-config `domains` list
+    # (current multi-domain schema). When several packs are selected, union their
+    # crown_jewels / attacker_positions defaults (deduped by key, in declared order).
+    raw = run_cfg.get("domains")
+    dom_ids = [str(d) for d in raw] if isinstance(raw, list) and raw else ["pbm"]
+
+    merged: dict[str, Any] = {"crown_jewels": [], "attacker_positions": []}
+    names: list[str] = []
+    for dom_id in dom_ids:
+        candidates = [
+            run_dir / "domains" / f"{dom_id}.yaml",
+            run_dir / "domains" / dom_id / "domain.yaml",
+        ]
+        loaded = next((_load_yaml(c) for c in candidates if c.exists()), None)
+        if loaded is None:
+            continue
+        names.append(str(loaded.get("name", dom_id)))
+        for field, key in (("crown_jewels", "pattern"), ("attacker_positions", "position")):
+            seen = {e[key] for e in merged[field] if isinstance(e, dict) and key in e}
+            for item in loaded.get(field, []) or []:
+                if isinstance(item, dict) and item.get(key) not in seen:
+                    merged[field].append(item)
+                    seen.add(item.get(key))
+    if not names:
+        return {}
+    merged["name"] = "+".join(names)
+    return merged
 
 
 # --------------------------------------------------------------------------- #

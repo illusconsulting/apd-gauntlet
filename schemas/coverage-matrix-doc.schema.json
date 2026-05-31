@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix-doc.schema.json",
+  "title": "APD Gauntlet Coverage Matrix Document",
+  "type": "object",
+  "required": ["components"],
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "type": "array",
+      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix.schema.json" }
+    }
+  }
+}

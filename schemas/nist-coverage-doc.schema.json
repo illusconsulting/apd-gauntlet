@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/nist-coverage-doc.schema.json",
+  "title": "APD Gauntlet NIST Coverage Document",
+  "type": "object",
+  "required": ["controls"],
+  "additionalProperties": false,
+  "properties": {
+    "controls": {
+      "type": "array",
+      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/nist-coverage.schema.json" }
+    }
+  }
+}

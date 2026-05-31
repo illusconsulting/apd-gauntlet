@@ -124,6 +124,27 @@ def test_builder_raises_on_case_insensitive_node_name_collision(
         build_graph(run)
 
 
+def test_load_domain_unions_multidomain_defaults(tmp_path: Path) -> None:
+    from apd_gauntlet.attack_path.build import _load_domain
+    for name, jewel in (("alpha", "alpha_store"), ("beta", "beta_store")):
+        d = tmp_path / "domains" / name
+        d.mkdir(parents=True)
+        (d / "domain.yaml").write_text(
+            f"name: {name}\n"
+            "crown_jewels:\n"
+            f"  - pattern: {jewel}\n    description: x\n"
+            "  - pattern: shared_store\n    description: shared\n"
+            "attacker_positions:\n"
+            f"  - position: {name}_attacker\n    description: y\n"
+        )
+    dom = _load_domain(tmp_path, {"domains": ["alpha", "beta"]})
+    assert [j["pattern"] for j in dom["crown_jewels"]] == [
+        "alpha_store", "shared_store", "beta_store"
+    ]
+    assert [p["position"] for p in dom["attacker_positions"]] == ["alpha_attacker", "beta_attacker"]
+    assert dom["name"] == "alpha+beta"
+
+
 def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
     tmp_path: Path,
 ) -> None:

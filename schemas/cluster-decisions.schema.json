@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-decisions.schema.json",
+  "title": "APD Gauntlet Cluster Decisions",
+  "description": "Disposition + merged prose emitted by the apd-cluster-adjudicator (5b). Consumed by apply-clusters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "decisions"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by": { "type": "string", "enum": ["apd-cluster-adjudicator"] },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["group_id", "disposition"],
+        "properties": {
+          "group_id": { "type": "string", "minLength": 1 },
+          "disposition": { "type": "string", "enum": ["merge", "link", "separate"] },
+          "merged_title": { "type": "string", "minLength": 10 },
+          "merged_summary": { "type": "string", "minLength": 10 },
+          "merged_detail": { "type": "string", "minLength": 20 },
+          "merged_recommendation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["posture", "summary"],
+            "properties": {
+              "posture": { "type": "string", "enum": ["required", "recommended", "consider"] },
+              "summary": { "type": "string", "minLength": 10 },
+              "detail": { "type": "string", "minLength": 20 }
+            }
+          },
+          "lens_perspectives": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["summary", "detail"],
+              "properties": {
+                "summary": { "type": "string" },
+                "detail": { "type": "string" }
+              }
+            }
+          },
+          "chosen_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+          "severity_rationale": { "type": "string", "minLength": 10 },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["from", "to"],
+              "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding_id", "capability_id", "classification", "finding_assertion", "capability_assertion", "evidence_comparison", "recommended_resolution"],
+        "properties": {
+          "finding_id": { "type": "string" },
+          "capability_id": { "type": "string" },
+          "classification": { "type": "string", "enum": ["compatible", "contradicted", "stale"] },
+          "finding_assertion": { "type": "string", "minLength": 10 },
+          "capability_assertion": { "type": "string", "minLength": 10 },
+          "evidence_comparison": { "type": "string", "minLength": 30 },
+          "recommended_resolution": { "type": "string", "minLength": 20 }
+        }
+      }
+    },
+    "_members": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

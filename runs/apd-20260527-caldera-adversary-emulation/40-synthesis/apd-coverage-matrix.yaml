@@ -1,106 +1,658 @@
-schema_version: 1
-run_id: apd-20260527-caldera-adversary-emulation
-generated_by: apd-synthesizer
-generated_at: 2026-05-27T13:00:00Z
-
-description: |
-  9 APD goals x N taxonomies coverage rollup. Rows are APD goals;
-  columns are taxonomies (nist_800_53r5, mitre_attack, d3fend,
-  owasp_api_top10, owasp_top10, cwe). Cell value = count of findings
-  in (goal, taxonomy) pair. Empty cells indicate either no findings
-  for that goal or no mappings for that goal under that taxonomy.
-
-matrix:
-  confidentiality:
-    findings_total: 7
-    capabilities_total: 3
-    nist_800_53r5: 7
-    mitre_attack: 4
-    d3fend: 0
-    owasp_api_top10: 3
-    owasp_top10: 2
-    cwe: 6
-  integrity:
-    findings_total: 6
-    capabilities_total: 3
-    nist_800_53r5: 6
-    mitre_attack: 6
-    d3fend: 0
-    owasp_api_top10: 2
-    owasp_top10: 0
-    cwe: 8
-  availability:
-    findings_total: 5
-    capabilities_total: 2
-    nist_800_53r5: 5
-    mitre_attack: 2
-    d3fend: 0
-    owasp_api_top10: 0
-    owasp_top10: 0
-    cwe: 4
-  distributed:
-    findings_total: 5
-    capabilities_total: 1
-    nist_800_53r5: 5
-    mitre_attack: 1
-    d3fend: 0
-    owasp_api_top10: 0
-    owasp_top10: 0
-    cwe: 2
-  resilient:
-    findings_total: 4
-    capabilities_total: 1
-    nist_800_53r5: 4
-    mitre_attack: 1
-    d3fend: 0
-    owasp_api_top10: 0
-    owasp_top10: 0
-    cwe: 1
-  ephemeral:
-    findings_total: 5
-    capabilities_total: 2
-    nist_800_53r5: 5
-    mitre_attack: 3
-    d3fend: 0
-    owasp_api_top10: 1
-    owasp_top10: 1
-    cwe: 4
-  authenticity:
-    findings_total: 6
-    capabilities_total: 2
-    nist_800_53r5: 6
-    mitre_attack: 5
-    d3fend: 0
-    owasp_api_top10: 2
-    owasp_top10: 1
-    cwe: 7
-  non_repudiation:
-    findings_total: 6
-    capabilities_total: 1
-    nist_800_53r5: 6
-    mitre_attack: 4
-    d3fend: 0
-    owasp_api_top10: 0
-    owasp_top10: 0
-    cwe: 6
-  immutability:
-    findings_total: 5
-    capabilities_total: 1
-    nist_800_53r5: 5
-    mitre_attack: 2
-    d3fend: 0
-    owasp_api_top10: 0
-    owasp_top10: 0
-    cwe: 5
-
-totals:
-  findings_total: 49
-  capabilities_total: 16
-  unique_findings: 41
-  unique_capabilities: 12
-
-notes:
-  - "Some findings count in multiple cells (multi-mapping); totals reflect mapping counts, not finding counts."
-  - "D3FEND mappings live on capabilities, not findings (per apd-control-mappings skill). Caldera's confirmed capabilities are insufficiently grounded for D3FEND mapping; the d3fend column is therefore 0 across the matrix and D3-* references appear as recommendation-side guidance in findings (see attack-exposure.yaml d3fend_capabilities block)."
-  - "All 9 APD goals exercised — meets quality-bar requirement."
-  - "owasp_llm_top10 not declared in run-config; matrix has no LLM column."
+components:
+- name: adrs/0001-asyncio-single-process-server.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - avail-623b8e59
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-ca256373
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: adrs/0003-agent-callback-encryption-by-protocol.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-83950e96
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-c1c1d0cb
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: agent-implant-registry
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: agents.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-d6c8d458
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: attack-artifact-store
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: c2-signing-key-material
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: customer-engagement-data
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: engagement-audit-log
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: invariants.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-88726ba8
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-608839d8
+      - ephem-cc497fed
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings:
+      - auth-31296050
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: operator-credential-store
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: plugin-module-registry
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: result-data-store
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: runbook.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - avail-c583c332
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-f57932c6
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings:
+      - nonrep-1f49427b
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: target-inventory
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: tech_plan.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-01d02036
+      - conf-056edb0c
+      - conf-6414f95a
+      - conf-aabbd48f
+      - conf-bcbd4cb9
+      - conf-e223c03d
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings:
+      - intg-3575082e
+      - intg-5152e7ba
+      - intg-712b4709
+      - intg-81c06dfa
+      - intg-899da63b
+      - intg-f6c14927
+      capabilities: []
+      posture: gapped
+    availability:
+      findings:
+      - avail-5399f916
+      - avail-8d19a4b5
+      - avail-e4b13596
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings:
+      - dist-018ec97e
+      - dist-68e9d200
+      - dist-85515eec
+      - dist-a464c95f
+      - dist-dbaf5c57
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings:
+      - resil-ca36d2ac
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings:
+      - ephem-1065948c
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings:
+      - auth-0e31c9b1
+      - auth-1c9a7b78
+      - auth-5911ace7
+      - auth-ec69906a
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings:
+      - nonrep-19e51298
+      - nonrep-58511e00
+      - nonrep-5f137373
+      - nonrep-79ed516c
+      - nonrep-d8bf1096
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings:
+      - immut-6352dd54
+      - immut-88339a4a
+      - immut-b0fd1144
+      - immut-de3cc948
+      - immut-df8094e4
+      capabilities: []
+      posture: gapped
+- name: threat-model.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-06509c27
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent

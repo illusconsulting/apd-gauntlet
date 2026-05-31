@@ -1,6 +1,7 @@
 run_id: apd-20260527-crapi-owasp-api-top10
 subject: "OWASP crAPI v1.1.5 — automotive B2C demonstration platform (Apache-2.0)"
-domain: api-security
+domains:
+  - api-security
 framework_version: 1.5.0
 code_recon: disabled  # crAPI repo is at /tmp/crAPI; not indexed in the project's CBM graph
 # code_recon: enabled  # hard-fail if CBM not reachable

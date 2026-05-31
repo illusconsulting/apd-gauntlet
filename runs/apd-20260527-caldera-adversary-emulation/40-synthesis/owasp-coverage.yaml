@@ -1,0 +1,96 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- taxonomy: owasp_top10
+  category_id: A07:2021
+  name: Identification and Authentication Failures
+  finding_count: 4
+  finding_ids:
+  - auth-1c9a7b78
+  - conf-01d02036
+  - conf-e223c03d
+  - ephem-cc497fed
+  surfaces:
+  - "'Carried \u2014 Default-credential posture'"
+  - INV-AUTH-003
+  - INV-AUTH-004
+  - "\xA74 'Authentication & sessions'"
+  silent: false
+- taxonomy: owasp_top10
+  category_id: A02:2021
+  name: Cryptographic Failures
+  finding_count: 1
+  finding_ids:
+  - conf-056edb0c
+  surfaces:
+  - ADR-0003 body
+  - "\xA73 'Trust boundaries' #1"
+  - "\xA77 'Agent communication'"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API2:2023
+  name: Broken Authentication
+  finding_count: 5
+  finding_ids:
+  - auth-1c9a7b78
+  - auth-31296050
+  - conf-01d02036
+  - conf-e223c03d
+  - ephem-608839d8
+  surfaces:
+  - "'Carried \u2014 Default-credential posture'"
+  - INV-AUTH-002
+  - INV-AUTH-004
+  - INV-AUTH-005
+  - R-2
+  - "\xA74 'Authentication & sessions'"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API1:2023
+  name: Broken Object Level Authorization
+  finding_count: 2
+  finding_ids:
+  - conf-88726ba8
+  - intg-899da63b
+  surfaces:
+  - INV-AUTHZ-002
+  - "\xA71 'System purpose'"
+  - "\xA711 'Known security posture'"
+  - "\xA74 'Authentication & sessions'"
+  - "\xA77 (GAP marker)"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API3:2023
+  name: Broken Object Property Level Authorization
+  finding_count: 1
+  finding_ids:
+  - conf-88726ba8
+  surfaces:
+  - INV-AUTHZ-002
+  - "\xA74 'Authentication & sessions'"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API8:2023
+  name: Security Misconfiguration
+  finding_count: 1
+  finding_ids:
+  - conf-056edb0c
+  surfaces:
+  - ADR-0003 body
+  - "\xA73 'Trust boundaries' #1"
+  - "\xA77 'Agent communication'"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API5:2023
+  name: Broken Function Level Authorization
+  finding_count: 2
+  finding_ids:
+  - auth-5911ace7
+  - intg-899da63b
+  surfaces:
+  - E-2
+  - "\xA71 'System purpose'"
+  - "\xA710 'API surfaces'"
+  - "\xA711 'Known security posture'"
+  - "\xA77 (GAP marker)"
+  silent: false

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure-doc.schema.json",
+  "title": "APD Gauntlet ATT&CK Exposure Document",
+  "type": "object",
+  "required": ["techniques"],
+  "additionalProperties": false,
+  "properties": {
+    "techniques": {
+      "type": "array",
+      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure.schema.json" }
+    }
+  }
+}

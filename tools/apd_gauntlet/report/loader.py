@@ -10,11 +10,12 @@ trigger `MissingArtifactError` when absent. Optional artifacts (attack-paths,
 threat-model coverage, `report-data.yaml`) return `None` so the caller can
 substitute algorithmic fallbacks.
 
-Fixture-shape notes (apd-20260527-crapi-owasp-api-top10 and earlier runs):
-  - `.apd-run.yaml` uses `domain: <name>` (a bare string) rather than the
-    planned `domain_pack: {name: ..., version: ...}` block.  The loader
-    accepts both forms: it checks `run_cfg["domain_pack"]` first, then falls
-    back to `run_cfg["domain"]`.
+Fixture-shape notes (apd-20260527-crapi-owasp-api-top10 and later runs):
+  - `.apd-run.yaml` uses a `domains: [<name>, ...]` list (current schema)
+    rather than the planned `domain_pack: {name: ..., version: ...}` block.
+    The loader is forgiving: it checks `run_cfg["domain_pack"]` first, then a
+    legacy bare `run_cfg["domain"]`, then the first entry of the
+    `run_cfg["domains"]` list.
   - `domain_pack_version` is absent from `.apd-run.yaml`; the loader reads it
     from the frontmatter of `deduped-findings.yaml` (`domain_pack.version`).
   - There is no `subject:` key in `.apd-run.yaml`; the loader falls back to
@@ -48,8 +49,9 @@ Source-of-truth + fallback chain for each manifest field:
     string is treated downstream (transform.meta_block) as a warning case
     and substituted with ``"unknown"``.
   - ``domain_pack_name`` — ``run_cfg.domain_pack.name`` if dict-shaped;
-    accepts ``run_cfg.domain_pack`` as a bare string; falls back to
-    ``run_cfg.domain`` (legacy fixture shape).
+    accepts ``run_cfg.domain_pack`` as a bare string; falls back to a legacy
+    ``run_cfg.domain`` string, then to the first entry of ``run_cfg.domains``
+    (current multi-domain list shape).
   - ``domain_pack_version`` — ``run_cfg.domain_pack.version``; falls back to
     ``run_cfg.domain_pack_version``; then to
     ``deduped-findings.yaml._meta.domain_pack_version``; then to
@@ -236,17 +238,25 @@ def _hash(path: pathlib.Path) -> str:
 def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
     """Extract domain pack name from run config.
 
-    Accepts two shapes:
+    Accepts three shapes:
       - ``domain_pack: {name: pbm, version: 1.0.0}``  (planned schema)
-      - ``domain: pbm``  (current fixture shape — bare string)
+      - ``domain: pbm``  (legacy fixture shape — bare string)
+      - ``domains: [pbm, ...]``  (current multi-domain list; first entry used)
     """
     domain_pack = run_cfg.get("domain_pack")
     if isinstance(domain_pack, dict):
         return str(domain_pack.get("name", ""))
     if isinstance(domain_pack, str):
         return domain_pack
-    # Fall back to the bare `domain:` key used by current runs.
-    return str(run_cfg.get("domain", ""))
+    # Fall back to the bare `domain:` key used by legacy fixtures.
+    legacy = run_cfg.get("domain", "")
+    if legacy:
+        return str(legacy)
+    # Current shape: `domains:` list — use the first entry as the pack name.
+    domains = run_cfg.get("domains")
+    if isinstance(domains, list) and domains:
+        return str(domains[0])
+    return ""
 
 
 def _extract_domain_pack_version(

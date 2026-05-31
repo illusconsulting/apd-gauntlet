@@ -33,7 +33,7 @@ A single markdown file at `00-context/context-brief.md`, structured per the temp
 7. Evidence gaps
 8. Per-goal relevance table
 
-### `00-context/asset-inventory.yaml` (NEW in v1.4 — required when crown_jewels declared)
+### `00-context/asset-inventory.yaml` (NEW in v1.4 — ALWAYS emitted; required input for rollup + HTML report)
 
 Machine-readable inventory of the assets, identities, and trust boundaries
 identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
@@ -69,11 +69,8 @@ no supplied artifact mentions. When an asset is described ambiguously, set
 `confidence: low`; the attack-path analyzer treats low-confidence nodes as
 bounded contributors to path feasibility, not as authoritative graph entries.
 
-**Activation:** Emit `00-context/asset-inventory.yaml` whenever the run-config's
-`crown_jewels` list is non-empty OR the active domain pack declares any
-`crown_jewels`. For backward compatibility with v1.1 / v1.2 / v1.3 runs that
-declare neither, the inventory is optional and not emitted. The
-`apd-attack-path-analyzer` agent skips silently in that case.
+**Activation:** ALWAYS emit `00-context/asset-inventory.yaml`. When the run-config's
+`crown_jewels` list is non-empty OR the `## Domain attack-path defaults (merged across packs)` section of the `.claude/skills/apd-domain/SKILL.md` skill declares any `crown_jewels`, populate it fully from the artifacts. When neither declares crown jewels (or no assets are inventoriable from the artifacts), emit a schema-valid EMPTY inventory — `{schema_version: 1, generated_by: intake, assets: [], identities: [], trust_boundaries: []}`. The downstream `rollup` and the HTML-report `build-report` both read this file as a REQUIRED input, so it must always be present and schema-valid. The `apd-attack-path-analyzer` agent still skips path enumeration when no crown jewels are declared — it simply reads a present (possibly empty) inventory.
 
 The markdown trust-boundary section in the context-brief (step 5 below) remains
 unchanged — that section is for human review, while the YAML
@@ -225,4 +222,27 @@ If the inputs are inconsistent — for example, a tech plan describing component
 5. Evidence gaps are specific enough to populate `prerequisite_evidence` fields in specialist findings.
 6. Relevance table covers every artifact.
 7. No section contains "TBD" or "unclear" without an associated entry in evidence gaps.
-8. If the run-config or active domain pack declares any `crown_jewels`, `00-context/asset-inventory.yaml` has been written and parses as YAML without error.
+8. `00-context/asset-inventory.yaml` has ALWAYS been written and parses as YAML without error — populated from the artifacts when the run-config's `crown_jewels` list is non-empty OR the `## Domain attack-path defaults (merged across packs)` section of the `apd-domain` skill declares any `crown_jewels`, otherwise the schema-valid empty inventory `{schema_version: 1, generated_by: intake, assets: [], identities: [], trust_boundaries: []}`. The rollup and HTML-report build require this file.
+
+## Final message (receipt only)
+
+Your final message back to the run driver is a **receipt, not prose**. Do NOT
+restate findings, capabilities, or analysis — those live in the files you wrote.
+Return only a compact object conforming to `schemas/agent-receipt.schema.json`:
+
+```yaml
+agent: <your name>
+status: ok | blocked | error
+outputs:
+  - path: <relative path you wrote>
+    schema_valid: true
+counts:
+  findings_by_severity: { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+  capabilities_by_maturity: { designed: 0, implemented: 0, tested: 0, operationalized: 0 }
+  blocked: 0
+errors: []   # populate only on status: error
+```
+
+Omit `counts` keys that do not apply to your agent (e.g. recon agents that emit
+no findings). The driver retains only this receipt; keeping it small is what
+keeps the run within context.

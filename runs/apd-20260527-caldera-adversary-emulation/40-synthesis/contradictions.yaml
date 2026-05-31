@@ -1,11 +1,11 @@
-schema_version: 1
-run_id: apd-20260527-caldera-adversary-emulation
-generated_by: apd-synthesizer
-generated_at: 2026-05-27T13:00:00Z
-
 contradictions: []
 
-note: |
+notes: |
+  schema_version: 1
+  run_id: apd-20260527-caldera-adversary-emulation
+  generated_by: apd-synthesizer
+  generated_at: 2026-05-27T13:00:00Z
+
   No cross-specialist contradictions detected. The Caldera input set
   is internally consistent on its security posture: the upstream
   position (trusted-environment deployment, plugin-trust assumed,

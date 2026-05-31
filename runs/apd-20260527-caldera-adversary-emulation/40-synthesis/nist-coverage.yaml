@@ -1,430 +1,1104 @@
-schema_version: 1
-run_id: apd-20260527-caldera-adversary-emulation
-generated_by: apd-synthesizer
-generated_at: 2026-05-27T13:00:00Z
-
-stats:
-  total_unique_nist_controls_cited: 56
-  by_family:
-    AC: 11   # Access Control
-    AU: 13   # Audit and Accountability
-    CM: 6    # Configuration Management
-    CP: 7    # Contingency Planning
-    IA: 9    # Identification and Authentication
-    MP: 2    # Media Protection
-    SA: 1    # System and Services Acquisition
-    SC: 12   # System and Communications Protection
-    SI: 7    # System and Information Integrity
-    SR: 4    # Supply Chain Risk Management
-
-control_to_findings:
-  # Access Control family
-  AC-2:
-    - ephem-608839d8
-    - ephem-cc497fed
-    - ephem-06509c27
-    - auth-31296050
-  "AC-2(2)":
-    - ephem-d6c8d458
-  "AC-2(3)":
-    - ephem-608839d8
-  AC-3:
-    - conf-01d02036
-    - conf-88726ba8
-    - intg-899da63b
-    - nonrep-58511e00
-    - ephem-06509c27
-    - auth-cap-c186207a
-  "AC-3(7)":
-    - conf-88726ba8
-    - auth-5911ace7
-  AC-4:
-    - conf-88726ba8
-    - conf-056edb0c
-    - intg-899da63b
-    - dist-68e9d200
-  "AC-4(8)":
-    - intg-899da63b
-    - conf-bcbd4cb9
-    - intg-cap-61ba338f
-  AC-6:
-    - conf-88726ba8
-    - auth-cap-c186207a
-  "AC-6(1)":
-    - conf-88726ba8
-  "AC-6(5)":
-    - conf-aabbd48f
-    - dist-dbaf5c57
-    - dist-018ec97e
-  "AC-6(9)":
-    - nonrep-1f49427b
-  AC-12:
-    - ephem-cc497fed
-    - ephem-06509c27
-    - conf-cap-9f572979
-    - ephem-cap-053c3f98
-  "AC-12(1)":
-    - ephem-cc497fed
-    - conf-cap-9f572979
-  AC-16:
-    - intg-899da63b
-    - nonrep-58511e00
-
-  # Audit family
-  AU-2:
-    - intg-712b4709
-    - nonrep-d8bf1096
-    - nonrep-79ed516c
-    - nonrep-1f49427b
-    - nonrep-5f137373
-    - nonrep-58511e00
-  AU-3:
-    - nonrep-d8bf1096
-    - nonrep-79ed516c
-    - nonrep-1f49427b
-    - nonrep-58511e00
-    - nonrep-cap-f135a692
-  "AU-3(1)":
-    - nonrep-d8bf1096
-    - auth-31296050
-    - nonrep-cap-f135a692
-  "AU-3(3)":
-    - nonrep-d8bf1096
-  AU-6:
-    - nonrep-d8bf1096
-    - nonrep-1f49427b
-  AU-8:
-    - nonrep-d8bf1096
-    - nonrep-19e51298
-  "AU-8(1)":
-    - nonrep-19e51298
-  AU-9:
-    - intg-5152e7ba
-    - nonrep-d8bf1096
-    - nonrep-1f49427b
-  "AU-9(2)":
-    - nonrep-d8bf1096
-    - immut-b0fd1144
-    - immut-de3cc948
-  "AU-9(3)":
-    - nonrep-d8bf1096
-    - intg-5152e7ba
-    - immut-b0fd1144
-    - immut-de3cc948
-  "AU-9(4)":
-    - nonrep-d8bf1096
-    - immut-b0fd1144
-  AU-10:
-    - nonrep-d8bf1096
-    - nonrep-79ed516c
-    - nonrep-58511e00
-    - nonrep-cap-f135a692
-  "AU-10(1)":
-    - nonrep-79ed516c
-  "AU-10(2)":
-    - nonrep-79ed516c
-  AU-11:
-    - immut-b0fd1144
-    - immut-df8094e4
-    - immut-de3cc948
-    - immut-6352dd54
-    - ephem-d6c8d458
-  "AU-11(1)":
-    - immut-b0fd1144
-    - immut-6352dd54
-  AU-12:
-    - nonrep-d8bf1096
-    - nonrep-79ed516c
-    - nonrep-5f137373
-    - nonrep-58511e00
-    - avail-e4b13596
-    - auth-5911ace7
-  "AU-12(1)":
-    - nonrep-d8bf1096
-  "AU-12(3)":
-    - nonrep-d8bf1096
-    - nonrep-79ed516c
-
-  # CM family
-  CM-2:
-    - dist-85515eec
-    - immut-df8094e4
-    - immut-88339a4a
-  "CM-2(2)":
-    - immut-df8094e4
-    - immut-88339a4a
-  "CM-2(3)":
-    - immut-df8094e4
-    - immut-88339a4a
-  CM-3:
-    - intg-712b4709
-    - immut-df8094e4
-    - immut-88339a4a
-    - nonrep-5f137373
-  "CM-3(1)":
-    - intg-712b4709
-    - nonrep-5f137373
-  CM-5:
-    - intg-81c06dfa
-  CM-6:
-    - immut-88339a4a
-  CM-7:
-    - intg-899da63b
-    - dist-018ec97e
-  "CM-7(5)":
-    - ephem-1065948c
-
-  # CP family
-  CP-2:
-    - avail-c583c332
-    - avail-5399f916
-    - avail-623b8e59
-  "CP-2(3)":
-    - avail-c583c332
-    - avail-5399f916
-    - avail-623b8e59
-  CP-7:
-    - avail-5399f916
-    - dist-85515eec
-    - dist-a464c95f
-  CP-9:
-    - avail-5399f916
-    - conf-6414f95a
-    - immut-cap-dfe5518d
-  "CP-9(1)":
-    - avail-5399f916
-    - conf-6414f95a
-  "CP-9(8)":
-    - avail-5399f916
-    - conf-6414f95a
-  CP-10:
-    - avail-5399f916
-    - avail-cap-b6a750af
-    - immut-cap-dfe5518d
-    - resil-cap-d1dd2fd1
-  "CP-10(2)":
-    - avail-5399f916
-    - resil-cap-d1dd2fd1
-  CP-13:
-    - avail-623b8e59
-    - resil-ca256373
-    - resil-83950e96
-
-  # IA family
-  IA-2:
-    - conf-01d02036
-    - auth-1c9a7b78
-    - auth-31296050
-    - auth-5911ace7
-    - auth-cap-c186207a
-  "IA-2(1)":
-    - conf-01d02036
-    - auth-1c9a7b78
-    - auth-31296050
-  "IA-2(2)":
-    - auth-1c9a7b78
-  "IA-2(6)":
-    - auth-1c9a7b78
-  "IA-2(8)":
-    - auth-1c9a7b78
-  IA-3:
-    - intg-f6c14927
-    - auth-0e31c9b1
-    - auth-c1c1d0cb
-  "IA-3(1)":
-    - intg-f6c14927
-    - auth-0e31c9b1
-    - auth-c1c1d0cb
-  IA-5:
-    - conf-e223c03d
-    - conf-01d02036
-    - ephem-608839d8
-    - ephem-cc497fed
-    - ephem-06509c27
-    - ephem-1065948c
-    - auth-1c9a7b78
-    - auth-31296050
-    - ephem-cap-c2af080d
-  "IA-5(1)":
-    - conf-e223c03d
-    - conf-01d02036
-    - ephem-608839d8
-    - ephem-cap-c2af080d
-  "IA-5(2)":
-    - auth-0e31c9b1
-    - auth-ec69906a
-  "IA-5(7)":
-    - conf-01d02036
-    - ephem-608839d8
-  "IA-5(13)":
-    - ephem-608839d8
-  IA-8:
-    - auth-cap-17c17dd2
-  "IA-8(1)":
-    - auth-cap-17c17dd2
-  IA-9:
-    - auth-0e31c9b1
-
-  # MP family
-  MP-4:
-    - intg-5152e7ba
-    - immut-de3cc948
-    - conf-6414f95a
-
-  # SA family
-  SA-15:
-    - ephem-1065948c
-  "SA-15(7)":
-    - ephem-1065948c
-
-  # SC family
-  SC-5:
-    - avail-623b8e59
-    - avail-e4b13596
-    - avail-8d19a4b5
-    - resil-ca256373
-    - resil-83950e96
-    - resil-ca36d2ac
-    - avail-cap-1e1a88ee
-  "SC-5(1)":
-    - avail-623b8e59
-    - avail-e4b13596
-    - resil-ca256373
-  SC-6:
-    - avail-e4b13596
-    - avail-8d19a4b5
-    - resil-ca36d2ac
-    - avail-cap-1e1a88ee
-  SC-7:
-    - dist-dbaf5c57
-    - dist-85515eec
-    - dist-68e9d200
-    - dist-cap-5006e4c2
-  "SC-7(5)":
-    - dist-85515eec
-  "SC-7(13)":
-    - dist-dbaf5c57
-  "SC-7(21)":
-    - dist-dbaf5c57
-  SC-8:
-    - conf-056edb0c
-    - conf-cap-0d91e0de
-  "SC-8(1)":
-    - conf-056edb0c
-    - conf-cap-0d91e0de
-  SC-10:
-    - ephem-cc497fed
-    - ephem-cap-053c3f98
-  SC-12:
-    - conf-e223c03d
-    - conf-aabbd48f
-    - auth-c1c1d0cb
-  "SC-12(1)":
-    - conf-e223c03d
-  "SC-12(2)":
-    - conf-e223c03d
-    - conf-aabbd48f
-  SC-13:
-    - conf-e223c03d
-    - conf-056edb0c
-    - conf-cap-ce39d07c
-    - conf-cap-0d91e0de
-  SC-16:
-    - intg-cap-27c5021a
-    - conf-bcbd4cb9
-  SC-17:
-    - auth-0e31c9b1
-    - auth-c1c1d0cb
-  SC-22:
-    - dist-a464c95f
-  SC-23:
-    - intg-f6c14927
-  "SC-23(3)":
-    - auth-c1c1d0cb
-    - conf-056edb0c
-    - intg-f6c14927
-    - conf-cap-9f572979
-  SC-24:
-    - resil-f57932c6
-  SC-28:
-    - conf-aabbd48f
-    - conf-6414f95a
-    - dist-68e9d200
-    - conf-cap-ce39d07c
-  "SC-28(1)":
-    - conf-e223c03d
-    - conf-aabbd48f
-    - conf-cap-ce39d07c
-  SC-36:
-    - avail-5399f916
-    - dist-85515eec
-    - dist-68e9d200
-    - dist-a464c95f
-  SC-39:
-    - dist-dbaf5c57
-    - dist-018ec97e
-    - dist-cap-5006e4c2
-    - avail-623b8e59
-
-  # SI family
-  SI-4:
-    - avail-cap-b6a750af
-    - intg-cap-c933c8e0
-  SI-7:
-    - intg-81c06dfa
-    - intg-f6c14927
-    - intg-5152e7ba
-    - intg-712b4709
-    - intg-3575082e
-  "SI-7(1)":
-    - intg-81c06dfa
-  "SI-7(2)":
-    - intg-712b4709
-  "SI-7(6)":
-    - intg-5152e7ba
-  "SI-7(8)":
-    - immut-b0fd1144
-    - immut-de3cc948
-  "SI-7(15)":
-    - intg-81c06dfa
-    - intg-3575082e
-  SI-10:
-    - intg-899da63b
-    - intg-3575082e
-    - conf-bcbd4cb9
-    - intg-cap-27c5021a
-    - intg-cap-61ba338f
-  SI-12:
-    - immut-6352dd54
-    - ephem-d6c8d458
-  SI-13:
-    - avail-c583c332
-    - avail-8d19a4b5
-    - resil-ca256373
-    - resil-83950e96
-    - resil-f57932c6
-    - resil-ca36d2ac
-    - avail-623b8e59
-  "SI-13(1)":
-    - resil-ca256373
-    - resil-f57932c6
-  "SI-13(4)":
-    - resil-ca256373
-  SI-15:
-    - conf-bcbd4cb9
-
-  # SR family
-  SR-4:
-    - intg-81c06dfa
-    - auth-ec69906a
-    - nonrep-5f137373
-  "SR-4(3)":
-    - intg-81c06dfa
-    - auth-ec69906a
-  "SR-4(4)":
-    - auth-ec69906a
-  SR-10:
-    - auth-ec69906a
-  SR-11:
-    - intg-81c06dfa
-    - auth-ec69906a
+controls:
+- id: SC-12
+  family: SC
+  title: Cryptographic Key Establishment and Management
+  finding_count: 3
+  finding_ids:
+  - auth-c1c1d0cb
+  - conf-aabbd48f
+  - conf-e223c03d
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-12(1)
+  family: SC
+  title: Cryptographic Key Establishment and Management | Availability
+  finding_count: 1
+  finding_ids:
+  - conf-e223c03d
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-12(2)
+  family: SC
+  title: Cryptographic Key Establishment and Management | Symmetric Keys
+  finding_count: 2
+  finding_ids:
+  - conf-aabbd48f
+  - conf-e223c03d
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-13
+  family: SC
+  title: Cryptographic Protection
+  finding_count: 2
+  finding_ids:
+  - conf-056edb0c
+  - conf-e223c03d
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-28(1)
+  family: SC
+  title: Protection of Information at Rest | Cryptographic Protection
+  finding_count: 2
+  finding_ids:
+  - conf-aabbd48f
+  - conf-e223c03d
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5
+  family: IA
+  title: Authenticator Management
+  finding_count: 8
+  finding_ids:
+  - auth-1c9a7b78
+  - auth-31296050
+  - conf-01d02036
+  - conf-e223c03d
+  - ephem-06509c27
+  - ephem-1065948c
+  - ephem-608839d8
+  - ephem-cc497fed
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(1)
+  family: IA
+  title: Authenticator Management | Password-based Authentication
+  finding_count: 3
+  finding_ids:
+  - conf-01d02036
+  - conf-e223c03d
+  - ephem-608839d8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(7)
+  family: IA
+  title: Authenticator Management | No Embedded Unencrypted Static Authenticators
+  finding_count: 2
+  finding_ids:
+  - conf-01d02036
+  - ephem-608839d8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-3
+  family: AC
+  title: Access Enforcement
+  finding_count: 6
+  finding_ids:
+  - auth-5911ace7
+  - conf-01d02036
+  - conf-88726ba8
+  - ephem-06509c27
+  - intg-899da63b
+  - nonrep-58511e00
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2
+  family: IA
+  title: Identification and Authentication (Organizational Users)
+  finding_count: 4
+  finding_ids:
+  - auth-1c9a7b78
+  - auth-31296050
+  - auth-5911ace7
+  - conf-01d02036
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2(1)
+  family: IA
+  title: Identification and Authentication (Organizational Users) | Multi-factor Authentication
+    to Privileged Accounts
+  finding_count: 3
+  finding_ids:
+  - auth-1c9a7b78
+  - auth-31296050
+  - conf-01d02036
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-28
+  family: SC
+  title: Protection of Information at Rest
+  finding_count: 3
+  finding_ids:
+  - conf-6414f95a
+  - conf-aabbd48f
+  - dist-68e9d200
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-6(5)
+  family: AC
+  title: Least Privilege | Privileged Accounts
+  finding_count: 4
+  finding_ids:
+  - conf-88726ba8
+  - conf-aabbd48f
+  - dist-018ec97e
+  - dist-dbaf5c57
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: MP-4
+  family: MP
+  title: Media Storage
+  finding_count: 4
+  finding_ids:
+  - conf-6414f95a
+  - conf-aabbd48f
+  - immut-de3cc948
+  - intg-5152e7ba
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-3(7)
+  family: AC
+  title: Access Enforcement | Role-based Access Control
+  finding_count: 2
+  finding_ids:
+  - auth-5911ace7
+  - conf-88726ba8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-6(1)
+  family: AC
+  title: Least Privilege | Authorize Access to Security Functions
+  finding_count: 1
+  finding_ids:
+  - conf-88726ba8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-4
+  family: AC
+  title: Information Flow Enforcement
+  finding_count: 3
+  finding_ids:
+  - conf-88726ba8
+  - dist-68e9d200
+  - intg-899da63b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-8
+  family: SC
+  title: Transmission Confidentiality and Integrity
+  finding_count: 1
+  finding_ids:
+  - conf-056edb0c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-8(1)
+  family: SC
+  title: Transmission Confidentiality and Integrity | Cryptographic Protection
+  finding_count: 1
+  finding_ids:
+  - conf-056edb0c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-23(3)
+  family: SC
+  title: Session Authenticity | Unique System-generated Session Identifiers
+  finding_count: 3
+  finding_ids:
+  - auth-c1c1d0cb
+  - conf-056edb0c
+  - intg-f6c14927
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-9
+  family: CP
+  title: System Backup
+  finding_count: 2
+  finding_ids:
+  - avail-5399f916
+  - conf-6414f95a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-9(1)
+  family: CP
+  title: System Backup | Testing for Reliability and Integrity
+  finding_count: 2
+  finding_ids:
+  - avail-5399f916
+  - conf-6414f95a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-9(8)
+  family: CP
+  title: System Backup | Cryptographic Protection
+  finding_count: 2
+  finding_ids:
+  - avail-5399f916
+  - conf-6414f95a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-10
+  family: SI
+  title: Information Input Validation
+  finding_count: 3
+  finding_ids:
+  - conf-bcbd4cb9
+  - intg-3575082e
+  - intg-899da63b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-15
+  family: SI
+  title: Information Output Filtering
+  finding_count: 1
+  finding_ids:
+  - conf-bcbd4cb9
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-16
+  family: SC
+  title: Transmission of Security and Privacy Attributes
+  finding_count: 1
+  finding_ids:
+  - conf-bcbd4cb9
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-4(8)
+  family: AC
+  title: Information Flow Enforcement | Security and Privacy Policy Filters
+  finding_count: 2
+  finding_ids:
+  - conf-bcbd4cb9
+  - intg-899da63b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7
+  family: SI
+  title: Software, Firmware, and Information Integrity
+  finding_count: 5
+  finding_ids:
+  - intg-3575082e
+  - intg-5152e7ba
+  - intg-712b4709
+  - intg-81c06dfa
+  - intg-f6c14927
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7(1)
+  family: SI
+  title: Software, Firmware, and Information Integrity | Integrity Checks
+  finding_count: 1
+  finding_ids:
+  - intg-81c06dfa
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7(15)
+  family: SI
+  title: Software, Firmware, and Information Integrity | Code Authentication
+  finding_count: 2
+  finding_ids:
+  - intg-3575082e
+  - intg-81c06dfa
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SR-4
+  family: SR
+  title: Provenance
+  finding_count: 4
+  finding_ids:
+  - auth-ec69906a
+  - immut-df8094e4
+  - intg-81c06dfa
+  - nonrep-5f137373
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SR-4(3)
+  family: SR
+  title: Provenance | Validate as Genuine and Not Altered
+  finding_count: 2
+  finding_ids:
+  - auth-ec69906a
+  - intg-81c06dfa
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SR-11
+  family: SR
+  title: Component Authenticity
+  finding_count: 2
+  finding_ids:
+  - auth-ec69906a
+  - intg-81c06dfa
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-5
+  family: CM
+  title: Access Restrictions for Change
+  finding_count: 1
+  finding_ids:
+  - intg-81c06dfa
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-7
+  family: CM
+  title: Least Functionality
+  finding_count: 2
+  finding_ids:
+  - dist-018ec97e
+  - intg-899da63b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-16
+  family: AC
+  title: Security and Privacy Attributes
+  finding_count: 2
+  finding_ids:
+  - intg-899da63b
+  - nonrep-58511e00
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-23
+  family: SC
+  title: Session Authenticity
+  finding_count: 1
+  finding_ids:
+  - intg-f6c14927
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-3
+  family: IA
+  title: Device Identification and Authentication
+  finding_count: 3
+  finding_ids:
+  - auth-0e31c9b1
+  - auth-c1c1d0cb
+  - intg-f6c14927
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-3(1)
+  family: IA
+  title: Device Identification and Authentication | Cryptographic Bidirectional Authentication
+  finding_count: 3
+  finding_ids:
+  - auth-0e31c9b1
+  - auth-c1c1d0cb
+  - intg-f6c14927
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7(6)
+  family: SI
+  title: Software, Firmware, and Information Integrity | Cryptographic Protection
+  finding_count: 1
+  finding_ids:
+  - intg-5152e7ba
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-9
+  family: AU
+  title: Protection of Audit Information
+  finding_count: 3
+  finding_ids:
+  - intg-5152e7ba
+  - nonrep-1f49427b
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-9(3)
+  family: AU
+  title: Protection of Audit Information | Cryptographic Protection
+  finding_count: 4
+  finding_ids:
+  - immut-b0fd1144
+  - immut-de3cc948
+  - intg-5152e7ba
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7(2)
+  family: SI
+  title: Software, Firmware, and Information Integrity | Automated Notifications of
+    Integrity Violations
+  finding_count: 1
+  finding_ids:
+  - intg-712b4709
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-3
+  family: CM
+  title: Configuration Change Control
+  finding_count: 4
+  finding_ids:
+  - immut-88339a4a
+  - immut-df8094e4
+  - intg-712b4709
+  - nonrep-5f137373
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-3(1)
+  family: CM
+  title: Configuration Change Control | Automated Documentation, Notification, and
+    Prohibition of Changes
+  finding_count: 2
+  finding_ids:
+  - intg-712b4709
+  - nonrep-5f137373
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-2
+  family: AU
+  title: Event Logging
+  finding_count: 6
+  finding_ids:
+  - intg-712b4709
+  - nonrep-1f49427b
+  - nonrep-58511e00
+  - nonrep-5f137373
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-2
+  family: CP
+  title: Contingency Plan
+  finding_count: 3
+  finding_ids:
+  - avail-5399f916
+  - avail-623b8e59
+  - avail-c583c332
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-2(3)
+  family: CP
+  title: Contingency Plan | Resume Mission and Business Functions
+  finding_count: 2
+  finding_ids:
+  - avail-623b8e59
+  - avail-c583c332
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-13
+  family: SI
+  title: Predictable Failure Prevention
+  finding_count: 6
+  finding_ids:
+  - avail-8d19a4b5
+  - avail-c583c332
+  - resil-83950e96
+  - resil-ca256373
+  - resil-ca36d2ac
+  - resil-f57932c6
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-5
+  family: SC
+  title: Denial-of-service Protection
+  finding_count: 6
+  finding_ids:
+  - avail-623b8e59
+  - avail-8d19a4b5
+  - avail-e4b13596
+  - resil-83950e96
+  - resil-ca256373
+  - resil-ca36d2ac
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-5(1)
+  family: SC
+  title: Denial-of-service Protection | Restrict Ability to Attack Other Systems
+  finding_count: 2
+  finding_ids:
+  - avail-623b8e59
+  - avail-e4b13596
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-39
+  family: SC
+  title: Process Isolation
+  finding_count: 3
+  finding_ids:
+  - avail-623b8e59
+  - dist-018ec97e
+  - dist-dbaf5c57
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-6
+  family: SC
+  title: Resource Availability
+  finding_count: 3
+  finding_ids:
+  - avail-8d19a4b5
+  - avail-e4b13596
+  - resil-ca36d2ac
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-12
+  family: AU
+  title: Audit Record Generation
+  finding_count: 6
+  finding_ids:
+  - auth-5911ace7
+  - avail-e4b13596
+  - nonrep-58511e00
+  - nonrep-5f137373
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-10
+  family: CP
+  title: System Recovery and Reconstitution
+  finding_count: 1
+  finding_ids:
+  - avail-5399f916
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-10(2)
+  family: CP
+  title: System Recovery and Reconstitution | Transaction Recovery
+  finding_count: 1
+  finding_ids:
+  - avail-5399f916
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-7
+  family: CP
+  title: Alternate Processing Site
+  finding_count: 3
+  finding_ids:
+  - avail-5399f916
+  - dist-85515eec
+  - dist-a464c95f
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-36
+  family: SC
+  title: Distributed Processing and Storage
+  finding_count: 2
+  finding_ids:
+  - dist-85515eec
+  - dist-a464c95f
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-7
+  family: SC
+  title: Boundary Protection
+  finding_count: 3
+  finding_ids:
+  - dist-68e9d200
+  - dist-85515eec
+  - dist-dbaf5c57
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-7(5)
+  family: SC
+  title: "Boundary Protection | Deny by Default \u2014 Allow by Exception"
+  finding_count: 1
+  finding_ids:
+  - dist-85515eec
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-2
+  family: CM
+  title: Baseline Configuration
+  finding_count: 3
+  finding_ids:
+  - dist-85515eec
+  - immut-88339a4a
+  - immut-df8094e4
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-7(13)
+  family: SC
+  title: Boundary Protection | Isolation of Security Tools, Mechanisms, and Support
+    Components
+  finding_count: 1
+  finding_ids:
+  - dist-dbaf5c57
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-7(21)
+  family: SC
+  title: Boundary Protection | Isolation of System Components
+  finding_count: 1
+  finding_ids:
+  - dist-dbaf5c57
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-22
+  family: SC
+  title: Architecture and Provisioning for Name/Address Resolution Service
+  finding_count: 1
+  finding_ids:
+  - dist-a464c95f
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-13(1)
+  family: SI
+  title: Predictable Failure Prevention | Transferring Component Responsibilities
+  finding_count: 2
+  finding_ids:
+  - resil-ca256373
+  - resil-f57932c6
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-13(4)
+  family: SI
+  title: Predictable Failure Prevention | Standby Component Installation and Notification
+  finding_count: 1
+  finding_ids:
+  - resil-ca256373
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CP-13
+  family: CP
+  title: Alternative Security Mechanisms
+  finding_count: 2
+  finding_ids:
+  - resil-83950e96
+  - resil-ca256373
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-24
+  family: SC
+  title: Fail in Known State
+  finding_count: 1
+  finding_ids:
+  - resil-f57932c6
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(13)
+  family: IA
+  title: Authenticator Management | Expiration of Cached Authenticators
+  finding_count: 1
+  finding_ids:
+  - ephem-608839d8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-2
+  family: AC
+  title: Account Management
+  finding_count: 3
+  finding_ids:
+  - auth-31296050
+  - ephem-06509c27
+  - ephem-608839d8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-2(3)
+  family: AC
+  title: Account Management | Disable Accounts
+  finding_count: 1
+  finding_ids:
+  - ephem-608839d8
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-12
+  family: AC
+  title: Session Termination
+  finding_count: 2
+  finding_ids:
+  - ephem-06509c27
+  - ephem-cc497fed
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-12(1)
+  family: AC
+  title: Session Termination | User-initiated Logouts
+  finding_count: 1
+  finding_ids:
+  - ephem-cc497fed
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-10
+  family: SC
+  title: Network Disconnect
+  finding_count: 1
+  finding_ids:
+  - ephem-cc497fed
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-12
+  family: SI
+  title: Information Management and Retention
+  finding_count: 2
+  finding_ids:
+  - ephem-d6c8d458
+  - immut-6352dd54
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-11
+  family: AU
+  title: Audit Record Retention
+  finding_count: 5
+  finding_ids:
+  - ephem-d6c8d458
+  - immut-6352dd54
+  - immut-b0fd1144
+  - immut-de3cc948
+  - immut-df8094e4
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-2(2)
+  family: AC
+  title: Account Management | Automated Temporary and Emergency Account Management
+  finding_count: 1
+  finding_ids:
+  - ephem-d6c8d458
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SA-15
+  family: SA
+  title: Development Process, Standards, and Tools
+  finding_count: 1
+  finding_ids:
+  - ephem-1065948c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SA-15(7)
+  family: SA
+  title: Development Process, Standards, and Tools | Automated Vulnerability Analysis
+  finding_count: 1
+  finding_ids:
+  - ephem-1065948c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-7(5)
+  family: CM
+  title: "Least Functionality | Authorized Software \u2014 Allow-by-exception"
+  finding_count: 1
+  finding_ids:
+  - ephem-1065948c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2(2)
+  family: IA
+  title: Identification and Authentication (Organizational Users) | Multi-factor Authentication
+    to Non-privileged Accounts
+  finding_count: 1
+  finding_ids:
+  - auth-1c9a7b78
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2(6)
+  family: IA
+  title: "Identification and Authentication (Organizational Users) | Access to Accounts\
+    \ \u2014separate Device"
+  finding_count: 1
+  finding_ids:
+  - auth-1c9a7b78
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2(8)
+  family: IA
+  title: "Identification and Authentication (Organizational Users) | Access to Accounts\
+    \ \u2014 Replay Resistant"
+  finding_count: 1
+  finding_ids:
+  - auth-1c9a7b78
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-9
+  family: IA
+  title: Service Identification and Authentication
+  finding_count: 1
+  finding_ids:
+  - auth-0e31c9b1
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(2)
+  family: IA
+  title: Authenticator Management | Public Key-based Authentication
+  finding_count: 2
+  finding_ids:
+  - auth-0e31c9b1
+  - auth-ec69906a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-17
+  family: SC
+  title: Public Key Infrastructure Certificates
+  finding_count: 2
+  finding_ids:
+  - auth-0e31c9b1
+  - auth-c1c1d0cb
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SR-4(4)
+  family: SR
+  title: "Provenance | Supply Chain Integrity \u2014 Pedigree"
+  finding_count: 1
+  finding_ids:
+  - auth-ec69906a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SR-10
+  family: SR
+  title: Inspection of Systems or Components
+  finding_count: 1
+  finding_ids:
+  - auth-ec69906a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-3
+  family: AU
+  title: Content of Audit Records
+  finding_count: 5
+  finding_ids:
+  - auth-31296050
+  - nonrep-1f49427b
+  - nonrep-58511e00
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-3(1)
+  family: AU
+  title: Content of Audit Records | Additional Audit Information
+  finding_count: 2
+  finding_ids:
+  - auth-31296050
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-3(3)
+  family: AU
+  title: Content of Audit Records | Limit Personally Identifiable Information Elements
+  finding_count: 1
+  finding_ids:
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-6
+  family: AU
+  title: Audit Record Review, Analysis, and Reporting
+  finding_count: 2
+  finding_ids:
+  - nonrep-1f49427b
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-8
+  family: AU
+  title: Time Stamps
+  finding_count: 2
+  finding_ids:
+  - nonrep-19e51298
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-9(2)
+  family: AU
+  title: Protection of Audit Information | Store on Separate Physical Systems or Components
+  finding_count: 3
+  finding_ids:
+  - immut-b0fd1144
+  - immut-de3cc948
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-10
+  family: AU
+  title: Non-repudiation
+  finding_count: 3
+  finding_ids:
+  - nonrep-58511e00
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-12(1)
+  family: AU
+  title: Audit Record Generation | System-wide and Time-correlated Audit Trail
+  finding_count: 1
+  finding_ids:
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-12(3)
+  family: AU
+  title: Audit Record Generation | Changes by Authorized Individuals
+  finding_count: 2
+  finding_ids:
+  - nonrep-79ed516c
+  - nonrep-d8bf1096
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-10(1)
+  family: AU
+  title: Non-repudiation | Association of Identities
+  finding_count: 1
+  finding_ids:
+  - nonrep-79ed516c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-10(2)
+  family: AU
+  title: Non-repudiation | Validate Binding of Information Producer Identity
+  finding_count: 1
+  finding_ids:
+  - nonrep-79ed516c
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-6(9)
+  family: AC
+  title: Least Privilege | Log Use of Privileged Functions
+  finding_count: 1
+  finding_ids:
+  - nonrep-1f49427b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-8(1)
+  family: AU
+  title: Time Stamps | Synchronization with Authoritative Time Source
+  finding_count: 1
+  finding_ids:
+  - nonrep-19e51298
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-9(4)
+  family: AU
+  title: Protection of Audit Information | Access by Subset of Privileged Users
+  finding_count: 1
+  finding_ids:
+  - immut-b0fd1144
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-11(1)
+  family: AU
+  title: Audit Record Retention | Long-term Retrieval Capability
+  finding_count: 2
+  finding_ids:
+  - immut-6352dd54
+  - immut-b0fd1144
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7(8)
+  family: SI
+  title: Software, Firmware, and Information Integrity | Auditing Capability for Significant
+    Events
+  finding_count: 2
+  finding_ids:
+  - immut-b0fd1144
+  - immut-de3cc948
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-2(2)
+  family: CM
+  title: Baseline Configuration | Automation Support for Accuracy and Currency
+  finding_count: 2
+  finding_ids:
+  - immut-88339a4a
+  - immut-df8094e4
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-2(3)
+  family: CM
+  title: Baseline Configuration | Retention of Previous Configurations
+  finding_count: 2
+  finding_ids:
+  - immut-88339a4a
+  - immut-df8094e4
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: CM-6
+  family: CM
+  title: Configuration Settings
+  finding_count: 1
+  finding_ids:
+  - immut-88339a4a
+  capability_count: 0
+  capability_ids: []
+  posture: gapped

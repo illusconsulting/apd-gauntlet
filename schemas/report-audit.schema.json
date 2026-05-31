@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/report-audit.schema.json",
+  "title": "APD Gauntlet Report Audit",
+  "description": "Compact structural audit emitted by the audit-report command (5g). Read by the apd-report-auditor (never data.js itself).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "status", "checks", "counts", "drift"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by": { "type": "string", "enum": ["apd-gauntlet"] },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "detail"],
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["pass", "fail"] },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deduped_findings_yaml": { "type": "integer" },
+        "apath_findings_yaml": { "type": "integer" },
+        "findings_data_js": { "type": "integer" },
+        "capabilities_yaml": { "type": "integer" },
+        "capabilities_data_js": { "type": "integer" },
+        "nist_controls_yaml": { "type": "integer" },
+        "nist_ids_in_taxonomy": { "type": "integer" },
+        "attack_techniques_yaml": { "type": "integer" },
+        "attack_techniques_data_js": { "type": "integer" }
+      }
+    },
+    "drift": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "manifest_hash", "current_hash"],
+        "properties": {
+          "file": { "type": "string" },
+          "manifest_hash": { "type": "string" },
+          "current_hash": { "type": "string" }
+        }
+      }
+    }
+  }
+}

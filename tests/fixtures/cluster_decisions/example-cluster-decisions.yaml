@@ -1,0 +1,23 @@
+schema_version: 1
+generated_by: apd-cluster-adjudicator
+decisions:
+  - group_id: cluster-cand-0001
+    disposition: merge
+    merged_title: "Audit log is unsigned and stored in a mutable table with no WORM enforcement"
+    merged_summary: "The audit_log table lacks both cryptographic signing and storage-layer immutability, meaning records can be altered or deleted by privileged users without detection."
+    merged_detail: "Non-Repudiation and Immutability agents both identified this risk from complementary angles. The Non-Repudiation lens focuses on the inability to prove audit entries were not tampered with after the fact. The Immutability lens focuses on the absence of storage-layer WORM protection that would physically prevent modification. Together, these gaps mean the audit log cannot serve as reliable evidence in a HIPAA breach investigation or regulatory audit."
+    merged_recommendation:
+      posture: required
+      summary: "Implement HMAC signing on all audit entries and migrate to WORM-protected storage."
+      detail: "Sign each audit entry with a KMS-derived HMAC at write time. Migrate audit log storage to S3 with Object Lock in Compliance mode. Remove DBA-level DELETE permissions on the audit_log table as an interim control. Verify integrity on a scheduled basis via batch HMAC verification."
+    lens_perspectives:
+      non_repudiation:
+        summary: "Unsigned audit entries cannot prove non-tampering."
+        detail: "Without HMAC or digital signatures on audit entries, there is no cryptographic proof that a log record has not been modified after the fact. An insider can alter records to cover unauthorized PHI access."
+      immutability:
+        summary: "No storage-layer write-once protection prevents record deletion."
+        detail: "Application-level append-only discipline can be bypassed by any user with direct database access. WORM enforcement at the storage layer would prevent even DBAs from altering audit records."
+    chosen_severity: critical
+    severity_rationale: "Synthesizer elevates to critical because the combination of unsigned entries and mutable storage means the audit log cannot serve as evidence in HIPAA breach investigations, triggering regulatory breach-notification exposure beyond what either agent assessed in isolation."
+_members:
+  cluster-cand-0001: ["nonrep-62124087", "immut-e09e4945"]

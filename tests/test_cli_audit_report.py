@@ -1,0 +1,136 @@
+"""audit-report: structural data.js<->YAML cross-check; exit 1 on FAIL."""
+from __future__ import annotations
+
+import pathlib
+import shutil
+
+import yaml
+from apd_gauntlet.cli import main
+from apd_gauntlet.synthesis.audit import audit_report, parse_data_js
+from click.testing import CliRunner
+
+REPO = pathlib.Path(__file__).parent.parent
+EXAMPLE = REPO / "examples" / "apd-20260601-claim-event-bus" / "expected"
+
+
+def _copy_example(tmp_path):
+    dst = tmp_path / "run"
+    shutil.copytree(EXAMPLE, dst)
+    return dst
+
+
+def test_parse_data_js_roundtrips_window_assignment(tmp_path):
+    data_js = EXAMPLE / "40-synthesis" / "report-html" / "data.js"
+    d = parse_data_js(data_js)
+    assert "findings" in d and "meta" in d
+    # 15 deduped + 75 apath = 90 findings in the rendered data.
+    assert len(d["findings"]) == 90
+
+
+def test_audit_passes_on_committed_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    assert result.status == "pass", [c for c in result.checks if c["status"] == "fail"]
+    assert any(c["name"] == "id_coverage_findings" for c in result.checks)
+
+
+def test_audit_writes_compact_report_audit_yaml(tmp_path):
+    dst = _copy_example(tmp_path)
+    audit_report(dst)
+    out = dst / "40-synthesis" / "report-audit.yaml"
+    doc = yaml.safe_load(out.read_text())
+    assert doc["generated_by"] == "apd-gauntlet"
+    assert doc["status"] in ("pass", "fail")
+    # Compact: never embeds the full data.js (no 'findings' array).
+    assert "findings" not in doc
+
+
+def test_audit_fails_on_stale_data_js(tmp_path):
+    dst = _copy_example(tmp_path)
+    # Corrupt data.js so the recompute<->parsed diff and id-coverage fail.
+    data_js = dst / "40-synthesis" / "report-html" / "data.js"
+    text = data_js.read_text().replace('"conf-7aa376c5"', '"conf-DELETED0"', 1)
+    data_js.write_text(text)
+    result = audit_report(dst)
+    assert result.status == "fail"
+
+
+def test_cli_audit_report_exit_code(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = CliRunner().invoke(main, ["audit-report", str(dst)])
+    assert result.exit_code == 0, result.output
+    # Now break it: stale data.js -> exit 1.
+    data_js = dst / "40-synthesis" / "report-html" / "data.js"
+    data_js.write_text(data_js.read_text().replace('"conf-7aa376c5"', '"conf-DELETED0"', 1))
+    result2 = CliRunner().invoke(main, ["audit-report", str(dst)])
+    assert result2.exit_code == 1, result2.output
+
+
+def test_audit_fails_gracefully_on_unparseable_data_js(tmp_path):
+    dst = _copy_example(tmp_path)
+    # Overwrite data.js with unparseable body — must not raise, must record FAIL check.
+    data_js = dst / "40-synthesis" / "report-html" / "data.js"
+    data_js.write_text("window.APD_DATA = {not json,,,};", encoding="utf-8")
+    result = audit_report(dst)
+    assert result.status == "fail", "expected fail on unparseable data.js"
+    failing = [c for c in result.checks if c["status"] == "fail"]
+    assert any(c["name"] == "data_js_parse" for c in failing), \
+        f"no data_js_parse check found; checks={result.checks}"
+    out = dst / "40-synthesis" / "report-audit.yaml"
+    assert out.is_file(), "report-audit.yaml must be written even on parse failure"
+    # CLI must exit 1 on this run.
+    cli_result = CliRunner().invoke(main, ["audit-report", str(dst)])
+    assert cli_result.exit_code == 1, cli_result.output
+
+
+def test_nist_rollup_parity_passes_on_committed_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    parity = [c for c in result.checks if c["name"] == "nist_rollup_parity"]
+    assert parity, "nist_rollup_parity check must be emitted"
+    assert parity[0]["status"] == "pass", parity[0]["detail"]
+
+
+def test_nist_rollup_parity_fails_when_data_js_diverges(tmp_path):
+    dst = _copy_example(tmp_path)
+    # Diverge a data.js nist_rollup family count from the recompute. The committed
+    # data.js is pretty-printed (json.dumps indent=2), so a single-line text
+    # needle like '"family": "IA", "title"' has ZERO matches and cannot be used.
+    # Instead: parse the dict, mutate one family's "covered", then re-serialize
+    # the SAME way emit.write_data_js does (window.APD_DATA = json.dumps(indent=2,
+    # ensure_ascii=False, sort_keys=False, allow_nan=False) + the '</' -> '<\\/'
+    # escaping + ';\\n'). Calling write_data_js directly is the canonical mirror.
+    from apd_gauntlet.report.emit import write_data_js
+
+    data_js = dst / "40-synthesis" / "report-html" / "data.js"
+    parsed = parse_data_js(data_js)
+    assert parsed.get("nist_rollup"), "example data.js must carry nist_rollup rows"
+    parsed["nist_rollup"][0]["covered"] = int(parsed["nist_rollup"][0].get("covered", 0)) + 9999
+    write_data_js(parsed, data_js)
+    # Round-trip sanity: the mutation persisted and re-parses cleanly.
+    assert parse_data_js(data_js)["nist_rollup"][0]["covered"] >= 9999
+    result = audit_report(dst)
+    parity = [c for c in result.checks if c["name"] == "nist_rollup_parity"]
+    assert parity and parity[0]["status"] == "fail", parity
+    assert result.status == "fail"
+    # CLI exits 1.
+    cli_result = CliRunner().invoke(main, ["audit-report", str(dst)])
+    assert cli_result.exit_code == 1, cli_result.output
+
+
+def test_nist_rollup_parity_soft_on_transform_exception(tmp_path, monkeypatch):
+    dst = _copy_example(tmp_path)
+    # Force the recompute to raise; the parity check must record a NON-blocking soft entry.
+    import apd_gauntlet.synthesis.audit as audit_mod
+
+    def _boom(*a, **k):
+        raise RuntimeError("synthetic transform failure")
+
+    # Patch the rollup recompute path used by the new parity check.
+    monkeypatch.setattr(audit_mod, "_recompute_nist_rollup", _boom, raising=True)
+    result = audit_report(dst)
+    parity = [c for c in result.checks if c["name"] == "nist_rollup_parity"]
+    assert parity, "parity check must still be emitted on transform failure"
+    # Soft: the parity check itself reports pass (non-blocking) and notes the exception.
+    assert parity[0]["status"] == "pass"
+    assert "exception" in parity[0]["detail"].lower() or "skipped" in parity[0]["detail"].lower()

@@ -1,0 +1,149 @@
+schema_version: 1
+generated_by: synthesizer
+defensive_entries: []
+counter_coverage:
+- attack_technique: T1040
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - conf-6dd9d98a
+  - conf-e08662e7
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1070
+  exposed_by_finding_count: 3
+  exposed_by_finding_ids:
+  - immut-d98cdc96
+  - nonrep-6ff98de3
+  - nonrep-c3d8f98d
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1078
+  exposed_by_finding_count: 3
+  exposed_by_finding_ids:
+  - auth-4793933a
+  - ephem-6af8665b
+  - intg-7fb03642
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1098
+  exposed_by_finding_count: 3
+  exposed_by_finding_ids:
+  - immut-df287568
+  - intg-0a313721
+  - intg-568208e5
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1110
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - avail-3a9189a2
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1199
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - auth-c80d79e6
+  - intg-0a313721
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1212
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-7174bf6f
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1485
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - avail-cfd2b6e8
+  - dist-b8b7603b
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1499
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - dist-9b598237
+  - resil-4d9c7873
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1528
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - nonrep-c772c9f2
+  - resil-0e6a988b
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1530
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-68ab158e
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1550
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - resil-0e6a988b
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1552
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - conf-477ff8a1
+  - ephem-07f6fad6
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1556
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - auth-190b06f7
+  - auth-4793933a
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1557
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - auth-f667a1e6
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1565
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - immut-d98cdc96
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1606
+  exposed_by_finding_count: 6
+  exposed_by_finding_ids:
+  - conf-477ff8a1
+  - ephem-0fb143ce
+  - immut-1dc13874
+  - intg-3f9318c2
+  - intg-96d4de40
+  - intg-e1d79aee
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1621
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - auth-190b06f7
+  - avail-3a9189a2
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false

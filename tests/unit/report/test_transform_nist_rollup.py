@@ -3,8 +3,14 @@ from __future__ import annotations
 import pathlib
 from unittest.mock import MagicMock
 
+import yaml
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import nist_rollup_rows
+
+LEGACY_NIST = (
+    pathlib.Path(__file__).resolve().parents[3]
+    / "tests" / "fixtures" / "legacy-coverage-shapes" / "40-synthesis" / "nist-coverage.yaml"
+)
 
 
 def test_rollup_one_row_per_family(example_run: pathlib.Path) -> None:
@@ -43,11 +49,14 @@ def test_rollup_notable_is_string(example_run: pathlib.Path) -> None:
         assert isinstance(r["notable"], str)
 
 
-def test_rollup_new_shape_counts_are_nonzero(example_run: pathlib.Path) -> None:
-    """crAPI fixture uses coverage_by_family shape; derived counts must be positive."""
-    artifacts = load_run(example_run)
-    assert artifacts.nist_coverage.get("coverage_by_family") is not None, \
-        "Fixture should use the coverage_by_family shape"
+def test_rollup_new_shape_counts_are_nonzero() -> None:
+    """Loader tolerance: the FROZEN legacy coverage_by_family doc cross-walks to nonzero rows."""
+    legacy = yaml.safe_load(LEGACY_NIST.read_text(encoding="utf-8"))
+    assert legacy.get("coverage_by_family") is not None, \
+        "Frozen fixture should use the legacy coverage_by_family shape"
+    artifacts = MagicMock()
+    artifacts.nist_coverage = legacy
+    artifacts.deduped_capabilities = []
     rows = nist_rollup_rows(artifacts)
     total = sum(r["covered"] + r["gapped"] + r["both"] for r in rows)
     assert total > 0, "Expected non-zero control counts from coverage_by_family cross-walk"

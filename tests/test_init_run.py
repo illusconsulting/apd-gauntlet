@@ -25,3 +25,14 @@ def test_init_run_creates_expected_directories(tmp_path):
         assert (run_dir / sub).is_dir()
     assert (run_dir / "inputs" / "tech_plan.md").exists()
     assert (run_dir / ".apd-run.yaml").exists()
+
+
+def test_scaffold_run_writes_domains_list(tmp_path):
+    from apd_gauntlet.init_run import scaffold_run
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / "plan.md").write_text("x")
+    run_dir = scaffold_run("r1", inputs, ["pbm", "api-security"], tmp_path / "runs")
+    cfg = (run_dir / ".apd-run.yaml").read_text()
+    assert "domains:\n  - pbm\n  - api-security\n" in cfg
+    assert "domain: " not in cfg

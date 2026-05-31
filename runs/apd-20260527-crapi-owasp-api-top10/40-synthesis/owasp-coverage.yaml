@@ -1,0 +1,251 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- taxonomy: owasp_api_top10
+  category_id: API1:2023
+  name: Broken Object Level Authorization
+  finding_count: 3
+  finding_ids:
+  - conf-5369e807
+  - conf-d760cafe
+  - conf-fb05be4e
+  surfaces:
+  - "\xA79 BOLA #1"
+  - "\xA79 BOLA #2"
+  - "\xA7api.mypremiumdealership.com"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API3:2023
+  name: Broken Object Property Level Authorization
+  finding_count: 7
+  finding_ids:
+  - conf-c237e01d
+  - conf-fb05be4e
+  - conf-fffef009
+  - intg-62ebf664
+  - intg-6d98c520
+  - intg-a6b6d147
+  - intg-e7ebcc95
+  surfaces:
+  - "\xA72 T-4"
+  - "\xA74 Authentication and sessions"
+  - "\xA76 E-3"
+  - "\xA79 BOLA #1"
+  - "\xA79 EDE #4 and #5"
+  - "\xA79 Mass Assignment #10"
+  - "\xA79 Mass Assignment #8/#9"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API2:2023
+  name: Broken Authentication
+  finding_count: 16
+  finding_ids:
+  - auth-0925a719
+  - auth-b57f022f
+  - auth-c990b0ff
+  - avail-e96ad7ff
+  - conf-8f7c8c8d
+  - conf-b7aaa1e7
+  - dist-0a56c5f0
+  - ephem-30d38360
+  - ephem-3ad94819
+  - ephem-6020f861
+  - ephem-96d3befb
+  - ephem-a39a1f7b
+  - merged-c829ffc8
+  - merged-d2e871f5
+  - nonrep-fa2c351c
+  - resil-776fc650
+  surfaces:
+  - Consequences
+  - "\xA71 S-5"
+  - "\xA710 Respond to user account takeover"
+  - "\xA74 Authentication"
+  - "\xA74 Authentication and sessions"
+  - "\xA74 Authentication endpoints"
+  - "\xA74 Authentication, /v3/check-otp"
+  - "\xA75 Data model"
+  - "\xA75 Rotate the JWT signing key"
+  - "\xA77 OTP delivery"
+  - "\xA78 Chatbot endpoints"
+  - "\xA79 JWT vulnerabilities #15"
+  - "\xA79 LLM #16/17/18"
+  - "\xA7crapi-chatbot Role"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API8:2023
+  name: Security Misconfiguration
+  finding_count: 27
+  finding_ids:
+  - auth-04fcfb9a
+  - auth-5b90d6c3
+  - avail-8ad04f0e
+  - conf-5f25ca4e
+  - conf-8f7c8c8d
+  - conf-bd613330
+  - conf-d760cafe
+  - conf-fffef009
+  - dist-0a56c5f0
+  - dist-bc4789b6
+  - ephem-22c2358c
+  - ephem-2c1c7ecf
+  - ephem-30d38360
+  - ephem-a39a1f7b
+  - ephem-edcc17b4
+  - immut-49cb874c
+  - immut-79a844dd
+  - immut-a6c69999
+  - immut-b74ae78a
+  - immut-c97f668f
+  - intg-2aeb03f1
+  - intg-8d97cd9f
+  - intg-b7417f91
+  - merged-44bdb663
+  - merged-c829ffc8
+  - merged-d2e871f5
+  - nonrep-b9ba65ab
+  surfaces:
+  - Consequences
+  - Decision
+  - "\xA71 S-5"
+  - "\xA710 Out-of-scope"
+  - "\xA72 Deployment topologies"
+  - "\xA72 Services"
+  - "\xA72 Services table"
+  - "\xA73 boundary #2"
+  - "\xA74 Authentication"
+  - "\xA74 Authentication and sessions"
+  - "\xA75 Rotate the JWT signing key"
+  - "\xA76 Persistence and storage"
+  - "\xA76 Rotate datastore credentials"
+  - "\xA78"
+  - "\xA79 Implicit posture facts"
+  - "\xA79 JWT vulnerabilities #15"
+  - "\xA79 LLM #16/17/18"
+  - "\xA79 NoSQL Injection #12"
+  - "\xA79 Respond to balance went wrong"
+  - "\xA79 SQL Injection #13"
+  - "\xA7Operational gaps"
+  - "\xA7Source"
+  - "\xA7api.mypremiumdealership.com"
+  - "\xA7crapi-chatbot Role"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API7:2023
+  name: Server Side Request Forgery
+  finding_count: 1
+  finding_ids:
+  - merged-514507e6
+  surfaces:
+  - "\xA79 No Rate Limit #6"
+  - "\xA79 SSRF #11"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API4:2023
+  name: Unrestricted Resource Consumption
+  finding_count: 17
+  finding_ids:
+  - avail-004444b5
+  - avail-470902f0
+  - avail-4f60016d
+  - avail-898bfad0
+  - avail-b01847b0
+  - avail-c1ffcf8e
+  - avail-e96ad7ff
+  - avail-fb795bfb
+  - dist-04709717
+  - dist-1f123cef
+  - dist-5e588812
+  - dist-c5b2799b
+  - merged-514507e6
+  - resil-01a11294
+  - resil-5738d03e
+  - resil-9e865b2e
+  - resil-c7975476
+  surfaces:
+  - Consequences
+  - "\xA72 Health checks"
+  - "\xA73 boundary #3"
+  - "\xA73 boundary #5"
+  - "\xA74 Authentication, /v3/check-otp"
+  - "\xA75 D-3"
+  - "\xA76 Persistence and storage"
+  - "\xA78 Workshop surface"
+  - "\xA79 No Rate Limit #6"
+  - "\xA79 SSRF #11"
+  - "\xA7Intended runtime"
+  - "\xA7Who operates crAPI"
+  - "\xA7crapi-web"
+  - "\xA7mailhog Datastores touched"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API6:2023
+  name: Unrestricted Access to Sensitive Business Flows
+  finding_count: 4
+  finding_ids:
+  - intg-6d98c520
+  - intg-ab3edc7a
+  - intg-b097f9a8
+  - intg-e7ebcc95
+  surfaces:
+  - Consequences
+  - INV-INPUT-003
+  - "\xA72 T-4"
+  - "\xA79 Mass Assignment #8/#9"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API10:2023
+  name: Unsafe Consumption of APIs
+  finding_count: 9
+  finding_ids:
+  - avail-fb795bfb
+  - dist-5e588812
+  - intg-2aeb03f1
+  - intg-ab3edc7a
+  - intg-b097f9a8
+  - intg-b7417f91
+  - resil-01a11294
+  - resil-373918f9
+  - resil-c7975476
+  surfaces:
+  - Consequences
+  - INV-INPUT-003
+  - "\xA73 boundary #3"
+  - "\xA73 boundary #5"
+  - "\xA79 NoSQL Injection #12"
+  - "\xA79 SQL Injection #13"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API5:2023
+  name: Broken Function Level Authorization
+  finding_count: 3
+  finding_ids:
+  - auth-4ef8b512
+  - intg-a6b6d147
+  - merged-d2e871f5
+  surfaces:
+  - "\xA76 E-3"
+  - "\xA79 BFLA #7"
+  - "\xA79 LLM #16/17/18"
+  - "\xA7crapi-chatbot Role"
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API9:2023
+  name: Improper Inventory Management
+  finding_count: 8
+  finding_ids:
+  - immut-49cb874c
+  - immut-e50364e4
+  - nonrep-304b32af
+  - nonrep-7fad26d8
+  - nonrep-9faa010e
+  - nonrep-af88acb6
+  - nonrep-c32e3967
+  - nonrep-fa2c351c
+  surfaces:
+  - Consequences
+  - "\xA710 Respond to user account takeover"
+  - "\xA75 Rotate the JWT signing key"
+  - "\xA78"
+  - "\xA78 Inspect audit data"
+  silent: false

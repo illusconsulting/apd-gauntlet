@@ -34,7 +34,8 @@ marked `extraction_confidence: low` and cannot drive contradiction findings
 
 ```yaml
 run_id: apd-20260601-claim-event-bus
-domain: pbm
+domains:
+  - pbm
 taxonomies: [cwe, mitre_attack, d3fend, owasp_api_top10]
 threat_model: inputs/threat-model.json
 methodology_hint: stride          # optional — auto-detected if absent

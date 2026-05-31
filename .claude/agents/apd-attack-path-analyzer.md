@@ -6,7 +6,7 @@ description: |
   enumerates bounded attack paths from declared attacker positions to declared
   crown jewels, identifies bottleneck edges, and overlays MITRE D3FEND
   defensive techniques. Activates when at least one crown jewel is declared
-  (domain pack default or run-config override). Emits apath-* findings
+  (domain pack(s) default or run-config override). Emits apath-* findings
   (risk, uncertainty, gap, blocked flavors) plus 40-synthesis/asset-graph.yaml,
   attack-paths.yaml, defense-graph.yaml, and attack-path-report.md. Does not
   modify specialist records — runs after apd-synthesizer.
@@ -27,13 +27,12 @@ Tier-4 agent. Runs AFTER `apd-synthesizer` has produced dedup'd findings and
 capabilities. Activation-gated:
 
 - Activates when BOTH `crown_jewels[]` AND `attacker_positions[]` are
-  resolvable — from either the run-config or the active domain pack (the
-  run-config wins when both declare the same field)
+  resolvable — from either the run-config or the `apd-domain` skill's merged `Domain attack-path defaults` section (the union across all selected packs; run-config wins on any field declared by both)
 - Skips silently when `crown_jewels` OR `attacker_positions` are absent (or
-  both) from both the run-config and the domain pack — the operator opted
+  both) from both the run-config and the domain pack(s) — the operator opted
   out of attack-path analysis for this run
 - Block-on-empty-override: if the operator declared `crown_jewels: []`
-  (explicit empty list, overriding the domain pack), the analyzer emits a
+  (explicit empty list, overriding the domain pack(s)), the analyzer emits a
   single `disposition: blocked` finding and stops. The same rule applies to
   an explicit `attacker_positions: []` override
 
@@ -54,7 +53,7 @@ capabilities. Activation-gated:
   capability can produce one `mitigated_by_capability` edge)
 - `.apd-run.yaml` (`crown_jewels[]`, `attacker_positions[]`,
   `attack_path_analysis.{max_hop, max_paths_per_pair, bottleneck_threshold}`)
-- The active domain pack (defaults for the same fields)
+- The `apd-domain` skill's merged `Domain attack-path defaults` section (the union across all selected packs; supplies defaults for the fields above)
 
 ## Outputs
 
@@ -69,7 +68,7 @@ capabilities. Activation-gated:
 ## How this agent works
 
 1. **Pre-flight.** Verify `crown_jewels` and `attacker_positions` are
-   resolvable from run-config or domain pack. If neither side declares
+   resolvable from run-config or domain pack(s). If neither side declares
    targets, skip silently. If the operator declared `crown_jewels: []`
    (empty override), emit a `disposition: blocked` finding and stop.
 2. **Build the graph.** Run `apd-gauntlet analyze-attack-paths <run_dir>`.
@@ -148,3 +147,26 @@ capabilities. Activation-gated:
 - Threat-model parsing or methodology coverage — that is
   `apd-threat-model-recon` (tier-0) and `apd-threat-model-evaluator`
   (tier-4); their outputs are INPUTS to this agent.
+
+## Final message (receipt only)
+
+Your final message back to the run driver is a **receipt, not prose**. Do NOT
+restate findings, capabilities, or analysis — those live in the files you wrote.
+Return only a compact object conforming to `schemas/agent-receipt.schema.json`:
+
+```yaml
+agent: <your name>
+status: ok | blocked | error
+outputs:
+  - path: <relative path you wrote>
+    schema_valid: true
+counts:
+  findings_by_severity: { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+  capabilities_by_maturity: { designed: 0, implemented: 0, tested: 0, operationalized: 0 }
+  blocked: 0
+errors: []   # populate only on status: error
+```
+
+Omit `counts` keys that do not apply to your agent (e.g. recon agents that emit
+no findings). The driver retains only this receipt; keeping it small is what
+keeps the run within context.

@@ -32,7 +32,7 @@ def test_invalid_run_config_fails():
 def test_all_code_recon_values_accepted(code_recon_value):
     data = {
         "run_id": "valid-run-id",
-        "domain": "pbm",
+        "domains": ["pbm"],
         "framework_version": "1.1.0",
         "code_recon": code_recon_value,
     }
@@ -45,7 +45,7 @@ def test_code_recon_optional_defaults_handled_by_validator():
     'auto' when the field is absent. Test that omitting the field is legal."""
     data = {
         "run_id": "valid-run-id",
-        "domain": "pbm",
+        "domains": ["pbm"],
         "framework_version": "1.1.0",
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
@@ -129,9 +129,36 @@ def test_run_config_rejects_max_paths_per_pair_above_cap():
     """max_paths_per_pair=500 should violate maximum=200."""
     data = {
         "run_id": "test-run",
-        "domain": "pbm",
+        "domains": ["pbm"],
         "framework_version": "1.4.0",
         "attack_path_analysis": {"max_paths_per_pair": 500},
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors, "max_paths_per_pair=500 should violate maximum=200"
+
+
+def test_run_config_requires_domains_list():
+    """domains is required and must be a non-empty array."""
+    data = {"run_id": "r", "framework_version": "1.1.0"}
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert any("domains" in e.message for e in errors)
+
+
+def test_run_config_accepts_multiple_domains():
+    """domains may contain more than one pack name."""
+    data = {"run_id": "r", "domains": ["pbm", "api-security"], "framework_version": "1.1.0"}
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+def test_run_config_rejects_empty_domains():
+    data = {"run_id": "r", "domains": [], "framework_version": "1.1.0"}
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "empty domains must violate minItems:1"
+
+
+def test_run_config_rejects_legacy_domain_key():
+    """Hard cutover: the singular `domain` key is no longer a known property."""
+    data = {"run_id": "r", "domain": "pbm", "framework_version": "1.1.0"}
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "legacy singular `domain` must be rejected (additionalProperties:false)"

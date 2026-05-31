@@ -19,7 +19,8 @@ Every node in the asset graph must cite one of:
 - An asset/identity/trust-boundary record in `00-context/asset-inventory.yaml`
 - A normalized threat-model entry whose `asset` field is the node name
 - A code-evidence-index entry naming the service/component
-- A domain-pack `crown_jewels[]` or `attacker_positions[]` declaration
+- A `crown_jewels[]` / `attacker_positions[]` entry in the `apd-domain` skill's
+  merged `Domain attack-path defaults` section (contributed by any selected pack)
 - A run-config `crown_jewels[]` or `attacker_positions[]` override
 
 If a node has no citation, it does not exist. Do not add it because "it
@@ -63,7 +64,7 @@ Every edge must cite one of:
 
 No declared targets → analyzer emits a single `disposition: blocked` finding
 and does not enumerate. Do not guess. The block-finding must list
-`prerequisite_evidence: ["domain pack or run-config must declare
+`prerequisite_evidence: ["run-config or apd-domain skill must declare
 crown_jewels[]"]`.
 
 ### 6. D3FEND must counter ATT&CK

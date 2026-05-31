@@ -1,0 +1,293 @@
+"""Structural contract test for the workflow runner .claude/workflows/apd-gauntlet.js.
+
+The runner is plain JS for the Workflow primitive; it cannot run under plain
+node and CI has no Node step. We pin its contract by reading it AS TEXT
+(mirrors tests/test_orchestrator_topology.py): meta block + phase pins +
+agentType resolution against .claude/agents/ + CLI-command resolution against
+the live Click registry + RECEIPT-field fidelity against the schema + the
+audit loop-cap literal + the synthesizer-fallback and typed-signal pins.
+"""
+from __future__ import annotations
+
+import json
+import pathlib
+import re
+
+from apd_gauntlet.cli import main as cli
+
+REPO = pathlib.Path(__file__).resolve().parent.parent
+RUNNER = REPO / ".claude" / "workflows" / "apd-gauntlet.js"
+AGENTS_DIR = REPO / ".claude" / "agents"
+RECEIPT_SCHEMA = REPO / "schemas" / "agent-receipt.schema.json"
+
+# Expanded §4/§7 phase pins (5a..5g surfaced). meta.phases lists every phase
+# name. But the runner emits the three TIER phases DYNAMICALLY (runTier(name)
+# calls phase(name) internally), so a literal `phase('tier-1')` never appears in
+# the source — those three are pinned via the runTier(...) call tokens instead.
+# Every OTHER phase is emitted by a direct `phase('X')` literal in the body.
+EXPECTED_PHASES = [
+    "setup", "intake", "code-recon", "tm-recon",
+    "tier-1", "tier-2", "tier-3",
+    "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
+    "synthesis-rollup", "synthesis-fallback",
+    "synthesis-report", "synthesis-build", "synthesis-audit",
+    "tmeval", "apath", "closeout",
+]
+
+# Phases emitted by a DIRECT `phase('X')` literal (checked as call literals).
+DIRECT_PHASE_LITERALS = [
+    "setup", "intake", "code-recon", "tm-recon",
+    "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
+    "synthesis-rollup", "synthesis-fallback",
+    "synthesis-report", "synthesis-build", "synthesis-audit",
+    "tmeval", "apath", "closeout",
+]
+
+# Tier phases emitted DYNAMICALLY via runTier(name){ phase(name) } — checked via
+# the runTier('tier-N', ...) call tokens, NOT via a `phase('tier-N')` literal.
+TIER_PHASES_VIA_RUNTIER = ["tier-1", "tier-2", "tier-3"]
+
+
+def _text() -> str:
+    return RUNNER.read_text(encoding="utf-8")
+
+
+def test_runner_file_exists() -> None:
+    assert RUNNER.is_file(), f"missing runner at {RUNNER}"
+
+
+def test_meta_block_is_pure_literal_first_export() -> None:
+    text = _text()
+    assert "export const meta = {" in text
+    assert "name: 'apd-gauntlet'" in text
+    assert "description:" in text
+    assert "phases:" in text
+
+
+def test_every_expected_phase_present_in_meta_phases() -> None:
+    text = _text()
+    # Bounded extraction of the phases:[...] array (meta is a pure literal).
+    m = re.search(r"phases:\s*\[(.*?)\]", text, re.DOTALL)
+    assert m, "phases:[...] array not found in meta"
+    phases_blob = m.group(1)
+    found = set(re.findall(r"'([^']+)'", phases_blob))
+    for p in EXPECTED_PHASES:
+        assert p in found, f"phase {p!r} missing from meta.phases"
+
+
+def test_direct_phase_literals_invoked_in_body() -> None:
+    """Every non-tier phase is emitted by a literal phase('X') call in the body."""
+    text = _text()
+    for p in DIRECT_PHASE_LITERALS:
+        assert f"phase('{p}')" in text, f"phase('{p}') not invoked in body"
+
+
+def test_tier_phases_invoked_via_runtier() -> None:
+    """tier-1/2/3 are emitted dynamically by runTier(name){ phase(name) }, so they
+    appear as runTier('tier-N', ...) call tokens, not as phase('tier-N') literals."""
+    text = _text()
+    for p in TIER_PHASES_VIA_RUNTIER:
+        assert f"runTier('{p}'" in text, f"runTier('{p}', ...) call not found"
+        # And confirm they are NOT (mistakenly) also emitted as direct literals,
+        # which would mean the runner double-emits the phase.
+        assert f"phase('{p}')" not in text, (
+            f"tier phase {p} should be emitted via runTier(name), not a phase('{p}') literal"
+        )
+
+
+def test_every_meta_phase_is_emitted_one_way_or_the_other() -> None:
+    """Union of the direct-literal set and the runTier tier set == meta.phases."""
+    assert set(DIRECT_PHASE_LITERALS) | set(TIER_PHASES_VIA_RUNTIER) == set(EXPECTED_PHASES)
+
+
+def _referenced_agent_types(text: str) -> set[str]:
+    """All agentTypes the runner dispatches, from BOTH dispatch forms:
+      - `llmStep('apd-foo', ...)`   — agent is the FIRST POSITIONAL arg
+      - `agent(prompt, {agentType: 'apd-foo', ...})` — raw agentType opts key
+    The dynamic lens dispatch is `llmStep('apd-' + lens, ...)`, which yields the
+    fragment 'apd-' (a bare prefix); drop it and pin the concrete lens set
+    separately so 'apd-' is never treated as a real agentType.
+    """
+    refs = set(re.findall(r"llmStep\('([^']+)'", text))
+    refs |= set(re.findall(r"agentType:\s*'([^']+)'", text))
+    refs.discard("apd-")  # the 'apd-' + lens concat fragment, not a real agent
+    return refs
+
+
+def test_every_agenttype_resolves_to_an_agent_file() -> None:
+    text = _text()
+    referenced = _referenced_agent_types(text)
+    # The dynamic 'apd-' + lens concat must also resolve; pin the lens set.
+    lenses = ["confidentiality", "integrity", "availability",
+              "distributed", "resilient", "ephemeral",
+              "authenticity", "non-repudiation", "immutability"]
+    referenced |= {"apd-" + lens for lens in lenses}
+    for at in referenced:
+        assert (AGENTS_DIR / f"{at}.md").is_file(), f"agentType {at} has no .claude/agents/{at}.md"
+
+
+def test_orchestrator_is_not_an_agenttype() -> None:
+    text = _text()
+    referenced = _referenced_agent_types(text)
+    assert "apd-orchestrator" not in referenced, "orchestrator is retired; never dispatch it"
+
+
+def test_expected_agent_set_is_referenced() -> None:
+    text = _text()
+    referenced = _referenced_agent_types(text)
+    # The fixed (non-lens) dispatches the runner must name. apd-intake /
+    # apd-code-recon / apd-threat-model-recon / apd-cluster-adjudicator /
+    # apd-report-writer / apd-threat-model-evaluator / apd-attack-path-analyzer
+    # go through llmStep('apd-...'); apd-report-auditor (schema-less) and
+    # apd-synthesizer (fallback) go through raw agent(..., {agentType:'...'}).
+    for at in ("apd-intake", "apd-code-recon", "apd-threat-model-recon",
+               "apd-cluster-adjudicator", "apd-report-writer", "apd-report-auditor",
+               "apd-threat-model-evaluator", "apd-attack-path-analyzer", "apd-synthesizer"):
+        assert at in referenced, f"{at} not dispatched by the runner"
+
+
+def test_every_cli_command_is_registered() -> None:
+    text = _text()
+    registered = set(cli.commands.keys())
+    # The runner executes CLI commands ONLY via pyStep('<cmd>', ...); extract
+    # exactly those command tokens. We deliberately do NOT scrape the broad
+    # `apd-gauntlet <word>` regex: the runner's log()/comment/instruction prose
+    # contains non-command tokens ('apd-gauntlet runner: setup', 'apd-gauntlet
+    # workflow') that are not subcommands, and the recon-agent prose mentions
+    # commands the agents run internally (parse-threat-model, analyze-attack-paths)
+    # which the runner never invokes directly. pyStep('<cmd>') is the true
+    # CLI-dispatch contract.
+    cmds = set(re.findall(r"pyStep\('([a-z][a-z0-9-]+)'", text))
+    assert cmds, "no pyStep('<cmd>') calls found — extraction regex drifted"
+    for c in cmds:
+        assert c in registered, f"pyStep references unregistered command {c!r}"
+
+
+def test_referenced_commands_cover_the_pipeline() -> None:
+    text = _text()
+    # init-run is intentionally ABSENT: per design §4 the run is scaffolded
+    # before the workflow runs (args IS .apd-run.yaml), so setup VALIDATES the
+    # existing scaffold via pyStep('validate', ...) rather than creating it.
+    for c in ("build-domain-skill", "validate-domain", "validate",
+              "cluster-candidates", "apply-clusters", "rollup", "build-report",
+              "audit-report", "summarize"):
+        assert f"pyStep('{c}'" in text, f"pipeline command {c} not invoked via pyStep"
+    assert "pyStep('init-run'" not in text, (
+        "init-run must NOT be dispatched: the run is pre-scaffolded; setup validates it"
+    )
+
+
+def test_receipt_constant_matches_schema_required() -> None:
+    text = _text()
+    schema = json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8"))
+    schema_required = set(schema["required"])
+    # Anchor on `const RECEIPT` so we match the top-level RECEIPT required[] and
+    # not some other (e.g. sub-object) required: array, regardless of ordering.
+    m = re.search(r"const RECEIPT\s*=.*?required:\s*\[([^\]]*)\]", text, re.DOTALL)
+    assert m, "RECEIPT required array not found"
+    js_required = set(re.findall(r"'([^']+)'", m.group(1)))
+    assert js_required == schema_required, (
+        f"RECEIPT required {js_required} != schema required {schema_required}"
+    )
+
+
+def test_audit_loop_cap_literal_present() -> None:
+    text = _text()
+    # The cap is N=2 (3 attempts: initial + 2 remediations). Pin the literal so
+    # it cannot regress silently.
+    assert "i <= 2" in text, "audit loop cap (i <= 2) literal missing"
+
+
+def test_typed_signals_and_fallback_pinned() -> None:
+    text = _text()
+    assert "/exit=2/" in text, "AdjudicationMissing (exit 2) branch missing"
+    assert "synthesizer-fallback" in text, "synthesizer fallback label missing"
+    assert "agentType: 'apd-synthesizer'" in text, "fallback must dispatch apd-synthesizer"
+
+
+def test_skip_sentinel_convention_documented() -> None:
+    text = _text()
+    assert ".skipped" in text, "idempotent-skip sentinel convention missing"
+
+
+# ---------------------------------------------------------------------------
+# plugin.json manifest contract (Task 7)
+# ---------------------------------------------------------------------------
+
+PLUGIN_MANIFEST = REPO / "plugin.json"
+
+
+def test_plugin_manifest_version_is_1_5_0() -> None:
+    """plugin.json must report version 1.5.0 (matches pyproject; closes skew gap)."""
+    manifest = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8"))
+    assert manifest["version"] == "1.5.0", (
+        f"plugin.json version is {manifest['version']!r}; expected '1.5.0'"
+    )
+
+
+def test_plugin_manifest_has_no_workflows_key() -> None:
+    """plugin.json must NOT contain a 'workflows' key (M2: unverified schema key)."""
+    manifest = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8"))
+    assert "workflows" not in manifest, (
+        "plugin.json must not contain a 'workflows' key — "
+        "there is no verified plugin-manifest schema for it and a strict "
+        "additionalProperties:false manifest would reject it"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Gap-1 (phase ordering) + Gap-2 (asset-inventory) fix pins
+# ---------------------------------------------------------------------------
+
+
+def test_tier4_precedes_rollup_build_audit() -> None:
+    """Gap-1 fix: tmeval/apath (tier-4) run BEFORE the coverage rollup and the
+    HTML build/audit, so the rollup, report, and audit all include the apath-*/
+    tmeval-* findings (the old order built + audited the report before they existed)."""
+    text = _text()
+    i_tmeval = text.index("phase('tmeval')")
+    i_apath = text.index("phase('apath')")
+    i_rollup = text.index("phase('synthesis-rollup')")
+    i_build = text.index("phase('synthesis-build')")
+    i_audit = text.index("phase('synthesis-audit')")
+    assert i_tmeval < i_rollup, "tmeval must precede the rollup"
+    assert i_apath < i_rollup, "apath must precede the rollup"
+    assert i_rollup < i_build < i_audit, "order must be rollup -> build -> audit"
+
+
+def test_synthesizer_fallback_defers_coverage_rollups() -> None:
+    """Gap-1 fix: the synthesizer fallback writes the corpus + report-data but NOT
+    the coverage rollups — the deterministic post-apath rollup owns nist/attack/matrix."""
+    text = _text()
+    assert "label: 'synthesizer-fallback'" in text, "synthesizer-fallback dispatch missing"
+    assert "do NOT write the coverage rollups" in text, (
+        "the synthesizer fallback must defer coverage rollups to the post-apath rollup"
+    )
+
+
+def test_intake_always_emits_asset_inventory() -> None:
+    """Gap-2 fix: intake is ALWAYS instructed to emit asset-inventory.yaml (a required
+    input for the rollup + build-report), no longer gated on crown_jewels."""
+    text = _text()
+    m = re.search(r"llmStep\('apd-intake'.*?\}\);", text, re.DOTALL)
+    assert m, "intake llmStep not found"
+    intake = m.group(0)
+    assert "asset-inventory.yaml" in intake, "intake must emit asset-inventory.yaml"
+    assert "Array.isArray(args.crown_jewels)" not in intake, (
+        "intake asset-inventory emission must be unconditional (crown_jewels gate removed)"
+    )
+
+
+def test_runner_uses_domains_list_not_singular() -> None:
+    text = _text()
+    assert "args.domains" in text, "runner must read args.domains"
+    assert re.search(r"args\.domain(?!s)", text) is None, \
+        "runner still references singular args.domain"
+
+
+def test_build_domain_skill_step_always_runs() -> None:
+    """The build-domain-skill setup step must bypass the idempotent-skip guard so the
+    Python command itself decides freshness (pack-set staleness fix)."""
+    text = _text()
+    assert re.search(r"pyStep\('build-domain-skill'[\s\S]{0,400}?alwaysRun:\s*true", text), \
+        "build-domain-skill step must carry alwaysRun: true"

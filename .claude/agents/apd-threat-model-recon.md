@@ -161,3 +161,26 @@ Exit cleanly.
   cannot extract any entries from prose, write an envelope with `entries: []`,
   `methodology: unknown`, `extraction_summary.parser_used: "none — unparseable"`,
   exit cleanly. The evaluator will handle the blocked case.
+
+## Final message (receipt only)
+
+Your final message back to the run driver is a **receipt, not prose**. Do NOT
+restate findings, capabilities, or analysis — those live in the files you wrote.
+Return only a compact object conforming to `schemas/agent-receipt.schema.json`:
+
+```yaml
+agent: <your name>
+status: ok | blocked | error
+outputs:
+  - path: <relative path you wrote>
+    schema_valid: true
+counts:
+  findings_by_severity: { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+  capabilities_by_maturity: { designed: 0, implemented: 0, tested: 0, operationalized: 0 }
+  blocked: 0
+errors: []   # populate only on status: error
+```
+
+Omit `counts` keys that do not apply to your agent (e.g. recon agents that emit
+no findings). The driver retains only this receipt; keeping it small is what
+keeps the run within context.

@@ -1,5 +1,6 @@
 run_id: pbm-attack-path-minimal
-domain: pbm
+domains:
+  - pbm
 framework_version: 1.4.0
 crown_jewels:
   - phi_store

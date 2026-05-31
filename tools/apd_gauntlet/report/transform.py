@@ -11,8 +11,13 @@ import pathlib
 import re
 from typing import Any
 
+from ..synthesis import coverage_logic as _cl
 from . import taxonomy as _taxonomy
 from .loader import RunArtifacts
+
+_normalize_nist_id = _cl.normalize_nist_id
+_normalize_nist_ids = _cl.normalize_nist_ids
+_nist_family_of = _cl.nist_family_of
 
 TIER_GOALS: dict[str, list[str]] = {
     "trustworthiness": ["confidentiality", "integrity", "availability"],
@@ -511,43 +516,6 @@ def _build_cap_attack_index(capabilities: list[dict[str, Any]]) -> dict[str, set
         for tech in _extract_ids_from_mapping(cm.get("mitre_attack"), "technique"):
             index.setdefault(tech, set()).add(cap_id)
     return index
-
-
-def _nist_family_of(control_id: str) -> str:
-    """Return the NIST family prefix of a control id (e.g., 'AC-2(2)' → 'AC')."""
-    return control_id.split("-", 1)[0] if "-" in control_id else control_id
-
-
-_NIST_ID_CANONICAL = re.compile(r"[A-Z]{2,3}-\d+(\([\dA-Z]+\))?")
-
-
-def _normalize_nist_id(raw: str | None) -> str | None:
-    """Normalise a NIST 800-53r5 control id to canonical form.
-
-    Uppercases, strips whitespace, and validates the result has the
-    canonical 'FAM-N' or 'FAM-N(N)' shape. Returns None for input
-    that cannot be normalised so callers can drop the entry rather
-    than emit junk.
-
-    Canonical pattern: 2-3 letter family prefix, dash, digits, optional
-    parenthesised enhancement. Examples: AC-3, AC-2(13), SC-7(5).
-    """
-    if not isinstance(raw, str):
-        return None
-    norm = raw.strip().upper()
-    if not norm:
-        return None
-    if not _NIST_ID_CANONICAL.fullmatch(norm):
-        return None
-    return norm
-
-
-def _normalize_nist_ids(ids: list[str]) -> list[str]:
-    """Apply ``_normalize_nist_id`` to a list of raw ids, dropping invalid entries.
-
-    Preserves order; deduplication is not performed here (call sites that need
-    deduped output already use set semantics)."""
-    return [n for n in (_normalize_nist_id(x) for x in ids) if n]
 
 
 def _family_row(

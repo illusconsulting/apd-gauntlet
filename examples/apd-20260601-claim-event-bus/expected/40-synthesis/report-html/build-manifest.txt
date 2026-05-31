@@ -1,0 +1,13 @@
+generated_at=2026-05-30T05:24:03.283881+00:00
+framework_version=1.4.0
+bundle_hash=909f84c7d6361e25
+.apd-run.yaml=7e63fc78574c78d3
+apd-coverage-matrix.yaml=c5012426592203e0
+asset-graph.yaml=09e8fbbcd233c041
+asset-inventory.yaml=a883ee54f556d79d
+attack-exposure.yaml=e72fc994537452c5
+attack-paths.yaml=5e7cb63bb10eb20a
+deduped-capabilities.yaml=934de0de857d4672
+deduped-findings.yaml=81baec961dc4dad1
+defense-graph.yaml=9c41f48bda034b76
+nist-coverage.yaml=90a2c308ea98f2b9

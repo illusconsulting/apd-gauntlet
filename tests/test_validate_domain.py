@@ -32,3 +32,11 @@ regulatory_anchors: []
                                   "--domains-dir", str(tmp_path / "domains")])
     assert result.exit_code == 1
     assert "missing include" in result.output.lower()
+
+
+def test_validate_domain_accepts_multiple_packs():
+    result = CliRunner().invoke(
+        main, ["validate-domain", "sample", "sample2", "--domains-dir", "tests/fixtures/domains"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "sample" in result.output and "sample2" in result.output

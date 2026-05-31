@@ -4,8 +4,18 @@ from __future__ import annotations
 import pathlib
 from unittest.mock import MagicMock
 
+import yaml
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import apd_matrix
+
+LEGACY_MATRIX = (
+    pathlib.Path(__file__).resolve().parents[3]
+    / "tests" / "fixtures" / "legacy-coverage-shapes" / "40-synthesis" / "apd-coverage-matrix.yaml"
+)
+LEGACY_DEDUPED = (
+    pathlib.Path(__file__).resolve().parents[3]
+    / "tests" / "fixtures" / "legacy-coverage-shapes" / "40-synthesis" / "deduped-findings.yaml"
+)
 
 
 def test_matrix_returns_goals_and_rows(example_run: pathlib.Path) -> None:
@@ -29,16 +39,20 @@ def test_matrix_cells_use_short_posture_keys(example_run: pathlib.Path) -> None:
             assert v in {"covered", "gapped", "both", "silent"}
 
 
-def test_matrix_new_shape_produces_artifact_component_rows(
-    example_run: pathlib.Path,
-) -> None:
-    """crAPI fixture uses goal-keyed coverage; row components should be artifact names."""
-    artifacts = load_run(example_run)
-    assert artifacts.apd_coverage_matrix.get("coverage") is not None, \
-        "Fixture should use the goal-keyed coverage shape"
+def test_matrix_new_shape_produces_artifact_component_rows() -> None:
+    """Loader tolerance: the FROZEN legacy goal-keyed coverage shape yields artifact rows."""
+    legacy = yaml.safe_load(LEGACY_MATRIX.read_text(encoding="utf-8"))
+    assert legacy.get("coverage") is not None, \
+        "Frozen fixture should use the legacy goal-keyed coverage shape"
+    deduped = yaml.safe_load(LEGACY_DEDUPED.read_text(encoding="utf-8"))
+    findings = deduped.get("finding") or []
+    artifacts = MagicMock()
+    artifacts.apd_coverage_matrix = legacy
+    artifacts.deduped_findings = findings
+    artifacts.attack_path_findings = []
     m = apd_matrix(artifacts)
     component_names = {r["component"] for r in m["rows"]}
-    # tech_plan.md is by far the most cited artifact in the fixture.
+    # tech_plan.md is by far the most cited artifact in the frozen crapi fixture.
     assert "tech_plan.md" in component_names
 
 

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/agent-receipt.schema.json",
+  "title": "APD agent receipt",
+  "description": "Compact structured value a dispatched APD agent emits as its FINAL MESSAGE instead of prose. The run driver retains only this — never finding/capability content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agent", "status", "outputs", "counts"],
+  "properties": {
+    "agent": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["ok", "blocked", "error"] },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "schema_valid"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "schema_valid": { "type": "boolean" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "findings_by_severity": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "capabilities_by_maturity": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "blocked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "message"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

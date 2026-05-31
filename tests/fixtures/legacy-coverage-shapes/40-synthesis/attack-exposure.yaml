@@ -1,0 +1,134 @@
+schema_version: 1
+run_id: apd-20260527-crapi-owasp-api-top10
+generated_by: apd-synthesizer
+
+# MITRE ATT&CK technique exposure across dedup'd findings.
+# Each entry: technique_id → {tactic, finding_ids that cite it, mitigations cited by capabilities}
+
+techniques:
+  T1078:
+    name: "Valid Accounts"
+    tactic: TA0004
+    citing_findings: [intg-a6b6d147, auth-4ef8b512, auth-0925a719, merged-d2e871f5]
+    countering_capabilities: []
+    rationale_summary: "Embedded admin credential, BFLA, MFA absence, and mass-assignment-to-role all enable valid-account-driven privilege escalation."
+
+  T1070:
+    name: "Indicator Removal"
+    tactic: TA0005
+    citing_findings: [immut-e50364e4]
+    countering_capabilities: []
+    rationale_summary: "Mutable audit storage enables attacker indicator removal."
+
+  T1110:
+    name: "Brute Force"
+    sub_techniques:
+      "T1110.001":
+        name: "Password Guessing"
+        tactic: TA0006
+        citing_findings: [conf-8f7c8c8d, avail-e96ad7ff]
+        countering_capabilities: [intg-cap-c6f2bf49, avail-cap-5af461f2]
+        rationale_summary: "OTP brute-force on /v3/check-otp (avail-e96ad7ff) and OTP read via Mailhog (conf-8f7c8c8d); v2 rate-limit covers only v2."
+
+  T1190:
+    name: "Exploit Public-Facing Application"
+    tactic: TA0001
+    citing_findings: [intg-e7ebcc95, intg-b7417f91, intg-2aeb03f1, intg-62ebf664, intg-5c659bdb, merged-514507e6]
+    countering_capabilities: [intg-cap-4212a616]
+    rationale_summary: "Mass-assignment, SQL/NoSQL injection, and SSRF all are public-facing-app exploitation primitives."
+
+  T1195:
+    name: "Supply Chain Compromise"
+    sub_techniques:
+      "T1195.002":
+        name: "Software Supply Chain"
+        tactic: TA0001
+        citing_findings: [immut-b74ae78a]
+        countering_capabilities: []
+        rationale_summary: "Absent SBOM and provenance attestation prevent detection of supply-chain compromise."
+
+  T1213:
+    name: "Data from Information Repositories"
+    tactic: TA0009
+    citing_findings: [conf-fb05be4e, conf-5369e807, conf-c237e01d, conf-d760cafe]
+    countering_capabilities: []
+    rationale_summary: "BOLA on vehicles + mechanic-reports, BOPLA on dashboard, and the gateway-service VIN oracle all permit information-repository scale data harvest."
+
+  T1490:
+    name: "Inhibit System Recovery"
+    tactic: TA0040
+    citing_findings: [immut-a6c69999]
+    countering_capabilities: []
+    rationale_summary: "Absence of immutable backups means ransomware-resilience is structurally absent."
+
+  T1499:
+    name: "Endpoint Denial of Service"
+    sub_techniques:
+      "T1499.003":
+        name: "Application Exhaustion Flood"
+        tactic: TA0040
+        citing_findings: [merged-514507e6]
+        countering_capabilities: [avail-cap-26d2f293]
+        rationale_summary: "Unbounded outbound-fetch endpoint enables exhaustion flood via worker pool starvation."
+
+  T1550:
+    name: "Use Alternate Authentication Material"
+    sub_techniques:
+      "T1550.001":
+        name: "Application Access Token"
+        tactic: TA0008
+        citing_findings: [merged-c829ffc8, resil-776fc650]
+        countering_capabilities: []
+        rationale_summary: "Forged JWT and stolen long-lived JWT both function as application access tokens with no revocation channel."
+
+  T1552:
+    name: "Unsecured Credentials"
+    sub_techniques:
+      "T1552.001":
+        name: "Credentials in Files"
+        tactic: TA0006
+        citing_findings: [merged-c829ffc8, merged-44bdb663, ephem-30d38360, merged-d2e871f5]
+        countering_capabilities: []
+        rationale_summary: "Private signing key in repo, datastore creds in compose, JWT_SECRET in env, chatbot admin in env — all credentials-in-files."
+
+  T1557:
+    name: "Adversary-in-the-Middle"
+    tactic: TA0006
+    citing_findings: [auth-5b90d6c3]
+    countering_capabilities: []
+    rationale_summary: "Plaintext in-cluster traffic with header-trust posture allows AitM."
+
+  T1562:
+    name: "Impair Defenses"
+    sub_techniques:
+      "T1562.008":
+        name: "Disable or Modify Cloud Logs"
+        tactic: TA0005
+        citing_findings: [nonrep-7fad26d8]
+        countering_capabilities: []
+        rationale_summary: "Absence of audit means defender has no audit to disable; detection-evasion is the default state."
+
+  T1606:
+    name: "Forge Web Credentials"
+    tactic: TA0006
+    citing_findings: [merged-c829ffc8]
+    countering_capabilities: [auth-cap-125067f9]
+    rationale_summary: "JWT verifier accepts forged tokens via algorithm confusion / alg:none / jku abuse / kid traversal."
+
+# Summary
+total_distinct_techniques: 13
+techniques_with_no_mitigation: 11
+techniques_with_partial_mitigation: 2  # T1110.001, T1606
+techniques_with_full_mitigation: 0
+
+mitigation_coverage_notes: |
+  ATT&CK mitigation coverage is sparse — only 2 of 13 cited techniques
+  have any countering capability. This is consistent with the run's
+  posture: crAPI ships explicitly vulnerable surfaces, and the
+  countering capabilities that exist (rate-limit on /v2/check-otp,
+  JWKS posture) are themselves only partial.
+
+  The D3FEND link on auth-cap-125067f9 (D3-IAA → T1606) is the only
+  D3FEND mapping in the run; it expresses the *intent* of the
+  identity-provenance design, which is structurally defeated by the
+  merged-c829ffc8 finding's defects.

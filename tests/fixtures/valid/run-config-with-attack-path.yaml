@@ -1,5 +1,6 @@
 run_id: pbm-attack-path-20260526
-domain: pbm
+domains:
+  - pbm
 framework_version: 1.4.0
 taxonomies: [cwe, mitre_attack, d3fend]
 crown_jewels:

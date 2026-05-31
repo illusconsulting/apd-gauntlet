@@ -24,7 +24,8 @@ The set of taxonomies in scope for a run is declared in `.apd-run.yaml`:
 
 ```yaml
 run_id: apd-20260601-claim-event-bus
-domain: pbm
+domains:
+  - pbm
 taxonomies:
   - cwe              # default-on (always available)
   - mitre_attack     # default-on

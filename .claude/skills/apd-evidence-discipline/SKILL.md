@@ -79,7 +79,7 @@ The reproduce-before-recommend rule does two things: it forces the agent to conf
 
 ### 5. Recommendation posture is calibrated
 
-- `required` — without this, the system fails a compliance obligation (HIPAA, CMS, URAC, SOC 2 commitment) or carries unacceptable risk per the active domain's severity rubric. Reserve for severity ≥ high.
+- `required` — without this, the system fails a compliance obligation (HIPAA, CMS, URAC, SOC 2 commitment) or carries unacceptable risk per the active domain(s)' severity rubric(s). Reserve for severity ≥ high.
 - `recommended` — material risk reduction with reasonable engineering cost. Used for medium-severity gaps and for high-severity gaps with reasonable compensating controls.
 - `consider` — defense-in-depth or hardening that the architect should weigh against effort. Used for low and informational findings.
 
@@ -89,17 +89,29 @@ Do not inflate posture to signal urgency. The synthesizer reads posture as a loa
 
 ## Severity rubric (domain-loaded)
 
-The severity rubric is domain-specific and lives in the active domain pack at `domains/<active>/severity-rubric.md`. It is bundled into the `apd-domain` skill at run time by `apd-gauntlet build-domain-skill`.
+The severity rubrics are domain-specific and live in the active domain pack(s) at
+`domains/<active>/severity-rubric.md`. They are bundled — one labeled `## Domain:
+<pack>` section per selected pack — into the
+`apd-domain` skill at run time by `apd-gauntlet build-domain-skill`.
 
-You MUST cite the matching rubric clause in the finding's `detail` field. The synthesizer relies on cited clauses to reconcile severity disagreements between agents.
+You MUST cite the matching rubric clause in the finding's `detail`, naming the
+**pack** it came from ("…high severity under the *api-security* rubric clause
+*X*…"). When a single harm matches clauses in more than one selected pack at
+different severities, take the **maximum** (the same "do not average across
+impacts" rule, applied across packs) and cite the governing pack's clause. The
+synthesizer relies on the cited pack+clause to reconcile severity disagreements.
 
-If no domain pack is loaded for a run, agents emit a single high-severity finding "no severity rubric in scope" and halt; this is intentional — the gauntlet has no fallback default.
+If a harm matches **no** clause in **any** selected pack, record it as a
+domain-improvement opportunity candidate (note it in `detail`); do not invent a
+clause. If **zero** packs are loaded for a run, agents emit a single
+high-severity finding "no severity rubric in scope" and halt — there is no
+fallback default.
 
 ---
 
 ## Severity calibration discipline
 
-- **Cite the rubric clause in `detail`.** "This is high severity because it falls under [clause name] per the active domain's severity rubric, specifically [reasoning]."
+- **Cite the rubric clause in `detail`.** "This is high severity because it falls under [clause name] per the *<pack-name>* severity rubric, specifically [reasoning]."
 - **Do not average across multiple impacts.** A finding that has critical PHI exposure AND medium operational risk is critical.
 - **Do not inflate to signal importance.** The synthesizer escalates and reconciles severity disagreements between agents; over-claiming on one agent degrades the cross-agent reconciliation signal.
 - **When in doubt, drop one level.** A high-confidence medium is more useful than a low-confidence high.
@@ -127,7 +139,7 @@ Before emitting any finding or capability, run this checklist:
 2. **Lens.** Is this concern inside my assigned APD goal? If not, add to `related_concerns` instead.
 3. **Evidence.** Do I have a specific locator + verbatim excerpt? If not, either find one or mark `blocked`.
 4. **Block test.** Am I inferring a property is absent because the doc is silent? If yes, mark `blocked` with prerequisite evidence.
-5. **Severity.** Does my chosen severity match a specific clause in the active domain's severity rubric, and can I cite that clause in `detail`?
+5. **Severity.** Does my chosen severity match a specific clause in the relevant pack's severity rubric, and can I cite that clause (with the pack name) in `detail`?
 6. **Recommendation.** Does my recommendation name the specific architectural choice it replaces? If not, rewrite it.
 7. **Posture.** Is `required` reserved for compliance-forcing or PBM-unacceptable? If not, downgrade to `recommended`.
 8. **Maturity.** If this is a capability with `maturity ≥ implemented`, do I have non-tech-plan evidence? If not, downgrade to `designed`.

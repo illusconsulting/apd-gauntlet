@@ -99,17 +99,14 @@ editorial prose blocks the HTML report cannot derive algorithmically:
 Validate with `apd-gauntlet validate <run_dir>` — both schema and cross-file
 passes must pass before you finish.
 
-## Trailing HTML build
+## HTML report (re-wired to the workflow)
 
-After all 40-synthesis files including `report-data.yaml` are written and the
-validator is clean, invoke:
-
-```bash
-apd-gauntlet build-report <run_dir>
-```
-
-This is best-effort — if it fails, log the diagnostic and continue. The HTML
-report is a derived view, not part of the authoritative deliverable.
+The HTML report build is no longer triggered here. As of the token-resilience
+decomposition, the workflow runner invokes the `build-report` command as a
+standalone phase AFTER `report-data.yaml` is written, and the report audit
+loop gates it. When this synthesizer runs as the fallback path, it stops after
+writing the 40-synthesis YAMLs (including `report-data.yaml`); the workflow owns
+the report build and audit.
 
 ## Outputs (v1.2+ additions)
 

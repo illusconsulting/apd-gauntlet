@@ -1,36 +1,33 @@
 techniques:
-  - id: "T1530"
-    sub_technique: null
-    tactic: "TA0010"
-    name: "Data from Cloud Storage"
-    exposure_finding_count: 1
-    exposure_finding_ids: ["conf-7aa376c5"]
-    mitigated_by_capabilities:
-      - capability_id: "conf-cap-d0590471"
-        mitigation_id: "M1041"
-
-  - id: "T1565"
-    sub_technique: null
-    tactic: "TA0040"
-    name: "Data Manipulation"
-    exposure_finding_count: 1
-    exposure_finding_ids: ["intg-42a3ebbd"]
-    mitigated_by_capabilities: []
-
-  - id: "T1621"
-    sub_technique: null
-    tactic: "TA0006"
-    name: "Multi-Factor Authentication Request Generation"
-    exposure_finding_count: 1
-    exposure_finding_ids: ["auth-dbba3dea"]
-    mitigated_by_capabilities:
-      - capability_id: "auth-cap-53d41613"
-        mitigation_id: "M1032"
-
-  - id: "T1562"
-    sub_technique: null
-    tactic: "TA0005"
-    name: "Impair Defenses"
-    exposure_finding_count: 1
-    exposure_finding_ids: ["nonrep-cf99a733"]
-    mitigated_by_capabilities: []
+- id: T1530
+  sub_technique: null
+  tactic: TA0010
+  name: Data from Cloud Storage
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-7aa376c5
+  mitigated_by_capabilities: []
+- id: T1565
+  sub_technique: null
+  tactic: TA0040
+  name: Data Manipulation
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - intg-42a3ebbd
+  mitigated_by_capabilities: []
+- id: T1621
+  sub_technique: null
+  tactic: TA0006
+  name: Multi-Factor Authentication Request Generation
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-dbba3dea
+  mitigated_by_capabilities: []
+- id: T1562
+  sub_technique: null
+  tactic: TA0005
+  name: Impair Defenses
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - nonrep-cf99a733
+  mitigated_by_capabilities: []

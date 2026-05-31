@@ -1,11 +1,10 @@
-_meta:
+contradictions: []
+
+notes: |
   run_id: apd-20260527-authentik-identity-provider
   framework_version: 1.5.0
   synthesis_pass: 1
 
-contradictions: []
-
-notes: |
   No specialist-vs-specialist contradictions detected on this run.
 
   Apparent tensions between specialists that are NOT contradictions:

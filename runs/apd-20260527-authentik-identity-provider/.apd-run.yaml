@@ -1,6 +1,7 @@
 run_id: apd-20260527-authentik-identity-provider
 subject: "authentik 2026.8.0-rc1 (open-source IdP / SSO, MIT) — Django + Go outposts + TypeScript UI"
-domain: identity-security
+domains:
+  - identity-security
 framework_version: 1.5.0
 code_recon: disabled
 taxonomies:

@@ -1,0 +1,40 @@
+schema_version: 1
+generated_by: apd-gauntlet
+status: pass
+checks:
+- name: id_coverage_findings
+  status: pass
+  detail: yaml=90 data.js=90 missing=[]
+- name: id_coverage_capabilities
+  status: pass
+  detail: yaml=10 data.js=10
+- name: id_coverage_nist
+  status: pass
+  detail: controls=36 missing_from_taxonomy=[]
+- name: id_coverage_attack
+  status: pass
+  detail: yaml=4 data.js=4
+- name: count_parity_severity
+  status: pass
+  detail: 'recomputed={''high'': 9, ''medium'': 80, ''critical'': 1} data.js={''critical'':
+    1, ''high'': 9, ''medium'': 80, ''low'': 0, ''info'': 0}'
+- name: count_parity_totals
+  status: pass
+  detail: data.js=90 yaml=90
+- name: data_js_recompute_drift
+  status: pass
+  detail: recompute_findings=90 data.js=90
+- name: section_errors_empty
+  status: pass
+  detail: section_errors=[]
+counts:
+  deduped_findings_yaml: 15
+  apath_findings_yaml: 75
+  findings_data_js: 90
+  capabilities_yaml: 10
+  capabilities_data_js: 10
+  nist_controls_yaml: 36
+  nist_ids_in_taxonomy: 36
+  attack_techniques_yaml: 4
+  attack_techniques_data_js: 4
+drift: []

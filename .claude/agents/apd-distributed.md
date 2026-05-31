@@ -14,7 +14,7 @@ You analyze input artifacts through one lens: **is the system spread across fail
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md`
-5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+5. `.claude/skills/apd-domain/SKILL.md` — active domain(s)' severity rubrics, consequential actions, and common patterns
 6. `00-context/context-brief.md`
 7. **Tier 1 outputs (read-only):**
    - `10-trustworthiness/confidentiality.findings.yaml` and `.capabilities.yaml`
@@ -102,3 +102,41 @@ Pattern templates calibrated to the active domain — including severity calibra
 ## Self-check before emitting
 
 Distributed findings frequently sit adjacent to Availability and Resilient findings. The synthesizer may merge them at synthesis; that is the synthesizer's call, not yours. Your job is to keep your finding inside topology and link to adjacent goals via `related_concerns`.
+
+## Final message (receipt only)
+
+Your final message back to the run driver is a **receipt, not prose**. Do NOT
+restate findings, capabilities, or analysis — those live in the files you wrote.
+Return only a compact object conforming to `schemas/agent-receipt.schema.json`:
+
+```yaml
+agent: <your name>
+status: ok | blocked | error
+outputs:
+  - path: <relative path you wrote>
+    schema_valid: true
+counts:
+  findings_by_severity: { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+  capabilities_by_maturity: { designed: 0, implemented: 0, tested: 0, operationalized: 0 }
+  blocked: 0
+errors: []   # populate only on status: error
+```
+
+Omit `counts` keys that do not apply to your agent (e.g. recon agents that emit
+no findings). The driver retains only this receipt; keeping it small is what
+keeps the run within context.
+
+## Output bounding
+
+To stay within your own context window on a large subject:
+
+- **Honor the relevance table.** Read only the artifacts the intake brief marks
+  `primary` or `secondary` for your lens. Do not read all of `inputs/`.
+- **Soft cap, never silent.** If you would emit more than ~15 findings of a single
+  severity, emit the most material ones and add ONE explicit finding titled
+  "Additional <lens> findings truncated" that states how many were omitted and
+  recommends a re-run with a component focus hint. Silent truncation is forbidden
+  by the evidence-discipline rules — an omission the reviewer cannot see is worse
+  than a visible cap.
+- **Write incrementally.** Prefer appending records to your output file as you
+  confirm them over composing the entire file in context and writing once.

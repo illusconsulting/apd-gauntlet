@@ -1,172 +1,1007 @@
-schema_version: 1
-run_id: apd-20260527-crapi-owasp-api-top10
-generated_by: apd-synthesizer
-
-# 9-goal × N-finding coverage matrix.
-# Rows = APD goals. Columns = severity tiers.
-
-coverage:
-  confidentiality:
-    critical: [merged-c829ffc8]
-    high: [conf-fb05be4e, conf-5369e807, conf-c237e01d, conf-8f7c8c8d, merged-44bdb663, merged-514507e6, conf-d760cafe]
-    medium: [conf-fffef009, conf-bd613330, conf-b7aaa1e7, conf-5f25ca4e]
-    low: []
-    informational: []
-    blocked: [conf-bd613330, conf-b7aaa1e7, conf-5f25ca4e]
-    count_total: 12
-    capabilities: [conf-cap-c354ef8e, conf-cap-0eea8c9d, conf-cap-545144bc, conf-cap-95d55d61, conf-cap-e149eaec]
-
-  integrity:
-    critical: [intg-e7ebcc95, intg-b7417f91, intg-2aeb03f1]
-    high: [intg-6d98c520, intg-62ebf664, intg-a6b6d147, intg-ab3edc7a, merged-d2e871f5]
-    medium: [intg-8d97cd9f, intg-b097f9a8]
-    low: []
-    informational: []
-    blocked: [intg-b097f9a8]
-    uncertainty: [intg-6d98c520]
-    count_total: 10
-    capabilities: [intg-cap-4212a616, intg-cap-d764e156, intg-cap-a070072a, intg-cap-c6f2bf49]
-
-  availability:
-    critical: []
-    high: [avail-e96ad7ff, avail-898bfad0]
-    medium: [avail-c1ffcf8e, avail-fb795bfb, avail-470902f0, avail-b01847b0, avail-004444b5, avail-4f60016d, avail-8ad04f0e]
-    low: []
-    informational: []
-    blocked: [avail-470902f0, avail-8ad04f0e, avail-4f60016d]
-    count_total: 9
-    capabilities: [avail-cap-a85aeb7f, avail-cap-5af461f2, avail-cap-26d2f293]
-
-  distributed:
-    critical: []
-    high: [dist-1f123cef, dist-04709717]
-    medium: [dist-5e588812, dist-bc4789b6, dist-0a56c5f0, dist-c5b2799b]
-    low: []
-    informational: []
-    blocked: [dist-bc4789b6]
-    count_total: 6
-    capabilities: [dist-cap-a2ac68b2, dist-cap-452d749b, dist-cap-90969f60]
-
-  resilient:
-    critical: []
-    high: [resil-c7975476, resil-776fc650]
-    medium: [resil-5738d03e, resil-9e865b2e, resil-01a11294, resil-373918f9, resil-592113d0]
-    low: []
-    informational: []
-    blocked: [resil-01a11294, resil-592113d0]
-    count_total: 7
-    capabilities: [resil-cap-35c0088d, resil-cap-c6fc34e3]
-
-  ephemeral:
-    critical: []
-    high: [ephem-30d38360, ephem-22c2358c, ephem-96d3befb]
-    medium: [ephem-6020f861, ephem-a39a1f7b, ephem-edcc17b4, ephem-2c1c7ecf, ephem-3ad94819]
-    low: []
-    informational: []
-    blocked: [ephem-6020f861]
-    count_total: 8
-    capabilities: [ephem-cap-fd22b084]
-
-  authenticity:
-    critical: [auth-0925a719]
-    high: [auth-4ef8b512, auth-b57f022f, auth-5b90d6c3]
-    medium: [auth-04fcfb9a, auth-c990b0ff]
-    low: []
-    informational: []
-    blocked: [auth-c990b0ff]
-    count_total: 6
-    capabilities: [auth-cap-125067f9, auth-cap-9703a609]
-
-  non_repudiation:
-    critical: []
-    high: [nonrep-7fad26d8, nonrep-fa2c351c, nonrep-304b32af]
-    medium: [nonrep-9faa010e, nonrep-c32e3967, nonrep-b9ba65ab, nonrep-af88acb6]
-    low: []
-    informational: []
-    blocked: [nonrep-9faa010e, nonrep-c32e3967]
-    count_total: 7
-    capabilities: [nonrep-cap-81fb6e54]
-
-  immutability:
-    critical: []
-    high: [immut-e50364e4, immut-a6c69999]
-    medium: [immut-79a844dd, immut-c97f668f, immut-b74ae78a, immut-49cb874c, immut-56949f0a]
-    low: []
-    informational: []
-    blocked: [immut-a6c69999, immut-c97f668f, immut-56949f0a]
-    count_total: 7
-    capabilities: [immut-cap-8e77982d]
-
-# Aggregate
-totals:
-  findings_total: 62
-  capabilities_total: 22
-  by_severity:
-    critical: 5
-    high: 25
-    medium: 32
-    low: 0
-    informational: 0
-  by_disposition:
-    gap: 41
-    risk: 0
-    uncertainty: 1
-    blocked: 20
-  by_tier:
-    trustworthiness: 31
-    scalability: 21
-    auditability: 20  # corrected — 19 audit findings + 1 merged-chatbot tier3-effective
-  cross_tier_merges: 4  # merged-c829ffc8, merged-d2e871f5, merged-514507e6, merged-44bdb663
-
-taxonomy_coverage:
-  cwe:
-    distinct_cwes: 38
-    sample: ["CWE-89", "CWE-94", "CWE-200", "CWE-285", "CWE-321", "CWE-347", "CWE-639", "CWE-770", "CWE-798", "CWE-915", "CWE-918", "CWE-943", "CWE-1188", "CWE-1357"]
-  owasp_api_top10:
-    "API1:2023": [conf-fb05be4e, conf-5369e807, conf-d760cafe]
-    "API2:2023": [merged-c829ffc8, conf-8f7c8c8d, conf-b7aaa1e7, intg-a6b6d147, avail-e96ad7ff, ephem-96d3befb, ephem-a39a1f7b, ephem-3ad94819, ephem-6020f861, auth-0925a719, auth-b57f022f, auth-c990b0ff, dist-0a56c5f0, ephem-30d38360, resil-776fc650, nonrep-fa2c351c, merged-d2e871f5]
-    "API3:2023": [conf-fb05be4e, conf-c237e01d, conf-fffef009, intg-e7ebcc95, intg-6d98c520, intg-62ebf664, intg-a6b6d147]
-    "API4:2023": [merged-514507e6, avail-e96ad7ff, avail-c1ffcf8e, avail-fb795bfb, avail-470902f0, avail-898bfad0, avail-b01847b0, avail-004444b5, avail-4f60016d, dist-1f123cef, dist-04709717, dist-5e588812, dist-c5b2799b, resil-c7975476, resil-5738d03e, resil-9e865b2e, resil-01a11294]
-    "API5:2023": [intg-a6b6d147, auth-4ef8b512, merged-d2e871f5]
-    "API6:2023": [intg-e7ebcc95, intg-6d98c520, intg-ab3edc7a, intg-b097f9a8]
-    "API7:2023": [merged-514507e6]
-    "API8:2023": [conf-8f7c8c8d, conf-d760cafe, conf-bd613330, conf-fffef009, conf-5f25ca4e, intg-b7417f91, intg-2aeb03f1, intg-8d97cd9f, merged-c829ffc8, merged-44bdb663, ephem-22c2358c, ephem-a39a1f7b, ephem-edcc17b4, ephem-2c1c7ecf, auth-04fcfb9a, auth-5b90d6c3, immut-a6c69999, immut-79a844dd, immut-c97f668f, immut-b74ae78a, immut-49cb874c, dist-bc4789b6, avail-8ad04f0e, nonrep-b9ba65ab]
-    "API9:2023": [nonrep-7fad26d8, nonrep-fa2c351c, nonrep-304b32af, nonrep-9faa010e, nonrep-c32e3967, nonrep-af88acb6, immut-e50364e4, immut-49cb874c, immut-b74ae78a, intg-b097f9a8]
-    "API10:2023": [intg-b7417f91, intg-2aeb03f1, intg-ab3edc7a, intg-b097f9a8, avail-fb795bfb, dist-5e588812, resil-c7975476, resil-5738d03e, resil-373918f9, resil-01a11294]
-  owasp_top10:
-    notes: "Not explicitly mapped in findings; crAPI's SPA surface is out of scope per threat-model.md §Scope. The web-ingress configuration findings would map to A05:2021 Security Misconfiguration if expanded."
-  mitre_attack:
-    distinct_techniques: 13
-    coverage_by_tactic:
-      TA0001:  # Initial Access
-        techniques: [T1190, T1195.002]
-      TA0004:  # Privilege Escalation
-        techniques: [T1078]
-      TA0005:  # Defense Evasion
-        techniques: [T1070, T1562.008]
-      TA0006:  # Credential Access
-        techniques: [T1110.001, T1552.001, T1557, T1606]
-      TA0008:  # Lateral Movement
-        techniques: [T1550.001]
-      TA0009:  # Collection
-        techniques: [T1213]
-      TA0040:  # Impact
-        techniques: [T1490, T1499.003]
-  d3fend:
-    mapped_capabilities: [auth-cap-125067f9]
-    distinct_techniques: 1   # D3-IAA
-
-# Coverage hot-spots
-notable_clusters:
-  - cluster: "JWT authentication chain"
-    findings: [merged-c829ffc8, ephem-30d38360, dist-0a56c5f0, resil-776fc650, ephem-96d3befb, auth-b57f022f, conf-fffef009]
-    note: "Seven findings touch the JWT trust chain — verifier weaknesses, key disclosure, lifecycle gaps, lifetime gaps. The single highest-leverage fix area."
-  - cluster: "Audit / Non-Repudiation"
-    findings: [nonrep-7fad26d8, nonrep-fa2c351c, nonrep-304b32af, nonrep-9faa010e, nonrep-c32e3967, nonrep-b9ba65ab, nonrep-af88acb6, immut-e50364e4]
-    note: "Eight findings under nonrep/immut — the audit pipeline is structurally absent."
-  - cluster: "Shared-credential cascade"
-    findings: [merged-44bdb663, ephem-22c2358c, ephem-2c1c7ecf, dist-bc4789b6]
-    note: "Shared admin credential is the topology amplifier behind every datastore-direct attack path."
-  - cluster: "Chatbot privileged-proxy"
-    findings: [merged-d2e871f5, avail-004444b5, ephem-3ad94819]
-    note: "Three findings on the chatbot's privileged-credential surface; the merged finding spans 4 lenses."
+components:
+- name: API_USER/API_PASSWORD (chatbot admin credential)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: JWT_SECRET env var
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: adrs/0001-microservice-split-by-language.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - avail-b01847b0
+      capabilities:
+      - avail-cap-26d2f293
+      posture: gapped_and_covered
+    distributed:
+      findings:
+      - dist-0a56c5f0
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: adrs/0002-jwt-with-rsa-and-jwks.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities:
+      - conf-cap-c354ef8e
+      posture: covered
+    integrity:
+      findings: []
+      capabilities:
+      - intg-cap-d764e156
+      posture: covered
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities:
+      - dist-cap-452d749b
+      posture: covered
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities:
+      - auth-cap-125067f9
+      posture: covered
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: adrs/0003-mailhog-for-otp-delivery.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-8f7c8c8d
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - avail-c1ffcf8e
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings:
+      - nonrep-fa2c351c
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: adrs/0004-dual-datastore-postgres-and-mongo.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings:
+      - intg-b097f9a8
+      capabilities: []
+      posture: gapped
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities:
+      - resil-cap-35c0088d
+      posture: covered
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities:
+      - immut-cap-8e77982d
+      posture: covered
+- name: agents.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - avail-470902f0
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings:
+      - dist-1f123cef
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: api.mypremiumdealership.com
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: architecture-index.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-d760cafe
+      capabilities:
+      - conf-cap-545144bc
+      posture: gapped_and_covered
+    integrity:
+      findings:
+      - merged-d2e871f5
+      capabilities: []
+      posture: gapped
+    availability:
+      findings:
+      - avail-4f60016d
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings:
+      - dist-c5b2799b
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings: []
+      capabilities:
+      - resil-cap-c6fc34e3
+      posture: covered
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: chromadb
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: crapi-chatbot
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: crapi-community
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: crapi-identity
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: crapi-web
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: crapi-workshop
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: invariants.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities:
+      - conf-cap-0eea8c9d
+      - conf-cap-e149eaec
+      posture: covered
+    integrity:
+      findings:
+      - intg-ab3edc7a
+      capabilities:
+      - intg-cap-a070072a
+      posture: gapped_and_covered
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities:
+      - auth-cap-9703a609
+      posture: covered
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mailhog
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mongodb
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: postgresdb
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: prior-audit.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings:
+      - dist-bc4789b6
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings:
+      - immut-c97f668f
+      capabilities: []
+      posture: gapped
+- name: runbook.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities:
+      - intg-cap-4212a616
+      posture: covered
+    availability:
+      findings:
+      - avail-898bfad0
+      capabilities:
+      - avail-cap-a85aeb7f
+      posture: gapped_and_covered
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-592113d0
+      - resil-776fc650
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings:
+      - ephem-22c2358c
+      - ephem-2c1c7ecf
+      - ephem-30d38360
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings:
+      - nonrep-304b32af
+      - nonrep-7fad26d8
+      - nonrep-9faa010e
+      - nonrep-af88acb6
+      - nonrep-b9ba65ab
+      - nonrep-c32e3967
+      capabilities:
+      - nonrep-cap-81fb6e54
+      posture: gapped_and_covered
+    immutability:
+      findings:
+      - immut-49cb874c
+      - immut-e50364e4
+      capabilities: []
+      posture: gapped
+- name: services/identity/jwks.json (private key)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: tech_plan.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-5369e807
+      - conf-5f25ca4e
+      - conf-b7aaa1e7
+      - conf-bd613330
+      - conf-c237e01d
+      - conf-fb05be4e
+      - conf-fffef009
+      - merged-44bdb663
+      - merged-514507e6
+      - merged-c829ffc8
+      capabilities:
+      - conf-cap-95d55d61
+      posture: gapped_and_covered
+    integrity:
+      findings:
+      - intg-2aeb03f1
+      - intg-62ebf664
+      - intg-8d97cd9f
+      - intg-b7417f91
+      - intg-e7ebcc95
+      capabilities:
+      - intg-cap-c6f2bf49
+      posture: gapped_and_covered
+    availability:
+      findings:
+      - avail-8ad04f0e
+      - avail-e96ad7ff
+      - avail-fb795bfb
+      capabilities:
+      - avail-cap-5af461f2
+      posture: gapped_and_covered
+    distributed:
+      findings:
+      - dist-04709717
+      - dist-5e588812
+      capabilities:
+      - dist-cap-90969f60
+      - dist-cap-a2ac68b2
+      posture: gapped_and_covered
+    resilient:
+      findings:
+      - resil-01a11294
+      - resil-373918f9
+      - resil-5738d03e
+      - resil-9e865b2e
+      - resil-c7975476
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings:
+      - ephem-3ad94819
+      - ephem-6020f861
+      - ephem-96d3befb
+      - ephem-edcc17b4
+      capabilities:
+      - ephem-cap-fd22b084
+      posture: gapped_and_covered
+    authenticity:
+      findings:
+      - auth-04fcfb9a
+      - auth-0925a719
+      - auth-4ef8b512
+      - auth-5b90d6c3
+      - auth-b57f022f
+      - auth-c990b0ff
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings:
+      - immut-56949f0a
+      - immut-79a844dd
+      - immut-a6c69999
+      - immut-b74ae78a
+      capabilities: []
+      posture: gapped
+- name: threat-model.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings:
+      - intg-6d98c520
+      - intg-a6b6d147
+      capabilities: []
+      posture: gapped
+    availability:
+      findings:
+      - avail-004444b5
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-a39a1f7b
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent

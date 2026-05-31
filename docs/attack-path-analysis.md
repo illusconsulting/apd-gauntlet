@@ -104,7 +104,8 @@ A run can curate a subset or extend the domain defaults:
 
 ```yaml
 run_id: apd-20260601-claim-event-bus
-domain: pbm
+domains:
+  - pbm
 crown_jewels:
   - phi_store
   - pde_submission_pipeline

@@ -4,8 +4,14 @@ from __future__ import annotations
 import pathlib
 from unittest.mock import MagicMock
 
+import yaml
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import attack_exposure_rows
+
+LEGACY_ATTACK = (
+    pathlib.Path(__file__).resolve().parents[3]
+    / "tests" / "fixtures" / "legacy-coverage-shapes" / "40-synthesis" / "attack-exposure.yaml"
+)
 
 
 def test_rows_one_per_technique(example_run: pathlib.Path) -> None:
@@ -45,11 +51,22 @@ def test_rows_uncovered_when_no_mitigations(example_run: pathlib.Path) -> None:
     assert by_id["T1078"]["coverage"] == "uncovered"
 
 
-def test_rows_partial_when_both_findings_and_mitigations(
-    example_run: pathlib.Path,
-) -> None:
-    """T1110.001 in the crAPI fixture has both findings and mitigations → partial."""
-    artifacts = load_run(example_run)
+def test_rows_partial_when_both_findings_and_mitigations() -> None:
+    """Loader tolerance: the FROZEN legacy techniques-dict doc yields a partial T1110.001 row.
+
+    The hand-authored legacy crapi attack-exposure carried
+    ``countering_capabilities: [intg-cap-c6f2bf49, avail-cap-5af461f2]`` on the
+    T1110.001 sub-technique even though neither source capability declares a
+    ``mitre_attack_mitigations`` block (so the catalog-grounded `apd-gauntlet
+    rollup` array shape correctly emits T1110.001 with empty mitigations — NOT
+    "partial"). Re-pointed to the frozen legacy fixture (same treatment as the
+    other shape-coupled transform tests) to keep the transform's legacy-shape
+    tolerance — including the both-findings-and-mitigations → partial branch —
+    under test.
+    """
+    legacy = yaml.safe_load(LEGACY_ATTACK.read_text(encoding="utf-8"))
+    artifacts = MagicMock()
+    artifacts.attack_exposure = legacy
     rows = attack_exposure_rows(artifacts)
     by_id = {r["id"]: r for r in rows}
     # T1110.001 has citing_findings=[...] and countering_capabilities=[...].

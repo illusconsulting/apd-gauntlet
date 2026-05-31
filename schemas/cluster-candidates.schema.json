@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-candidates.schema.json",
+  "title": "APD Gauntlet Cluster Candidates",
+  "description": "Mechanical candidate groups emitted by the cluster-candidates command (5a). Read by the apd-cluster-adjudicator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "groups"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by": { "type": "string", "enum": ["apd-gauntlet"] },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["group_id", "kind", "signals", "members"],
+        "properties": {
+          "group_id": { "type": "string", "pattern": "^cluster-cand-[0-9a-f]{4,8}$" },
+          "kind": { "type": "string", "enum": ["finding", "capability"] },
+          "signals": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "enum": ["evidence_locator_overlap", "title_similarity", "related_concerns"] }
+          },
+          "members": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "agent", "apd_goal", "severity", "title", "summary", "first_evidence", "related_concerns", "mapping_ids"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "agent": { "type": "string", "minLength": 1 },
+                "apd_goal": { "type": "string", "minLength": 1 },
+                "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+                "title": { "type": "string", "minLength": 10 },
+                "summary": { "type": "string", "minLength": 10 },
+                "first_evidence": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["artifact", "locator", "excerpt"],
+                  "properties": {
+                    "artifact": { "type": "string" },
+                    "locator": { "type": "string" },
+                    "excerpt": { "type": "string" }
+                  }
+                },
+                "related_concerns": { "type": "array", "items": { "type": "string" } },
+                "mapping_ids": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["nist", "attack"],
+                  "properties": {
+                    "nist": { "type": "array", "items": { "type": "string" } },
+                    "attack": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,11 +1,11 @@
-schema_version: 1
-run_id: apd-20260527-caldera-adversary-emulation
-generated_by: apd-synthesizer
-generated_at: 2026-05-27T13:00:00Z
+severity_disagreements: []
 
-disagreements: []
+notes: |
+  schema_version: 1
+  run_id: apd-20260527-caldera-adversary-emulation
+  generated_by: apd-synthesizer
+  generated_at: 2026-05-27T13:00:00Z
 
-note: |
   No severity disagreements. Where multiple specialists reference the
   same architectural concern (e.g., the plugin-supply-chain cluster
   involves integrity, authenticity, ephemeral, distributed, non_repudiation,

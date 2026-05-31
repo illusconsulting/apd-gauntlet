@@ -16,7 +16,7 @@ View these in order:
 2. `.claude/skills/apd-evidence-discipline/SKILL.md` — the five rules and the impact-to-PBM severity rubric
 3. `.claude/skills/apd-finding-schema/SKILL.md` — the YAML contracts you emit
 4. `.claude/skills/apd-control-mappings/SKILL.md` — the Confidentiality NIST and ATT&CK mapping guidance
-5. `.claude/skills/apd-domain/SKILL.md` — active domain's severity rubric, consequential actions, and common patterns
+5. `.claude/skills/apd-domain/SKILL.md` — active domain(s)' severity rubrics, consequential actions, and common patterns
 6. `00-context/context-brief.md` — the intake brief; consult the relevance table for which artifacts are primary sources for your lens
 
 ## Inputs
@@ -111,10 +111,48 @@ Run the evidence-discipline checklist for every record:
 1. Concern is inside the Confidentiality lens (not Authenticity, Ephemeral, Non-Repudiation, or Immutability)
 2. Specific locator + verbatim excerpt for every evidence entry
 3. If artifact silent on the property, marked `blocked` with prerequisite evidence
-4. Severity cites a specific clause of the impact-to-PBM rubric in `detail`
+4. Severity cites a specific clause of the active domain(s)' severity rubric(s), naming the pack, in `detail`
 5. Recommendation names the specific architectural choice being augmented
 6. NIST 800-53r5 mappings populated with appropriate enhancements
 7. ATT&CK technique mappings only when one-sentence rationale is specific
 8. `related_concerns` populated when adjacent-goal material is observed
 9. Title names a specific component and a specific concern
 10. ID computed deterministically per the schema rule
+
+## Final message (receipt only)
+
+Your final message back to the run driver is a **receipt, not prose**. Do NOT
+restate findings, capabilities, or analysis — those live in the files you wrote.
+Return only a compact object conforming to `schemas/agent-receipt.schema.json`:
+
+```yaml
+agent: <your name>
+status: ok | blocked | error
+outputs:
+  - path: <relative path you wrote>
+    schema_valid: true
+counts:
+  findings_by_severity: { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+  capabilities_by_maturity: { designed: 0, implemented: 0, tested: 0, operationalized: 0 }
+  blocked: 0
+errors: []   # populate only on status: error
+```
+
+Omit `counts` keys that do not apply to your agent (e.g. recon agents that emit
+no findings). The driver retains only this receipt; keeping it small is what
+keeps the run within context.
+
+## Output bounding
+
+To stay within your own context window on a large subject:
+
+- **Honor the relevance table.** Read only the artifacts the intake brief marks
+  `primary` or `secondary` for your lens. Do not read all of `inputs/`.
+- **Soft cap, never silent.** If you would emit more than ~15 findings of a single
+  severity, emit the most material ones and add ONE explicit finding titled
+  "Additional <lens> findings truncated" that states how many were omitted and
+  recommends a re-run with a component focus hint. Silent truncation is forbidden
+  by the evidence-discipline rules — an omission the reviewer cannot see is worse
+  than a visible cap.
+- **Write incrementally.** Prefer appending records to your output file as you
+  confirm them over composing the entire file in context and writing once.
