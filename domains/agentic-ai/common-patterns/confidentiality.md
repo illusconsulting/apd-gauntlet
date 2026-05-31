@@ -1,0 +1,69 @@
+# Agentic AI common patterns — Confidentiality
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the agentic-AI rubric, and NIST/ATT&CK mapping habits. The specialist agent's checklist still drives the actual analysis — this file calibrates how confidentiality findings and capabilities should look once written, not what to look for.
+
+## Common finding patterns
+
+**Pattern: Multi-provider model/tool API keys are readable from the agent's own execution surface (process env, .env, config) so a generated or injected read can exfiltrate live credentials.**
+
+- Severity: critical (high autonomy reading its own secret material, large blast-radius across every provider the keys unlock, low reversibility once a key is exfiltrated and used for billing fraud or lateral access)
+- NIST: SC-12, SC-28, IA-5(7), AC-6, SI-10
+- Related concerns: ephemeral (key lifetime, rotation cadence, and revocation-after-leak); integrity (LLM06 excessive agency, the write/tool-authz facet that lets a code-exec agent reach env); authenticity (workload identity presented to the credential broker)
+- Detail: OWASP LLM02 Sensitive Information Disclosure amplified by LLM06 Excessive Agency, with LLM01 Prompt Injection as the steering vector. Maps to ATLAS LLM Prompt Injection (AML.T0051) and LLM Jailbreak (AML.T0054) driving a credential read, and sits at MAESTRO L4 (secret material co-located with the execution sandbox), L3 (the framework's credential broker hands keys to the agent), and L7 (keys span multiple external providers). In hexo-ai/sia the Target Agent is arbitrary generated Python (target_agent.py) running in-process with the same environment that carries the keys, so any generated `os.environ` read — or a key string captured into agent_execution.json or runs/run_id/gen_n/ artifacts — leaks live multi-provider credentials, and the Feedback Agent rewriting the target across generations widens the window for a key-reading mutation to appear and persist.
+
+**Pattern: The held-out evaluation ground truth is readable from the same filesystem/process the agent controls, so the optimization loop can read the labels it is scored against.**
+
+- Severity: critical (the held-out labels are a crown-jewel dataset whose leak silently collapses the eval's validity, high data-sensitivity, and the contamination is propagated irreversibly across every subsequent generation)
+- NIST: AC-3, AC-6, SC-7, SC-2, SI-10
+- Related concerns: integrity (tampering with the score versus reading the labels — distinct attacks; routes there); resilient (read-scope facet of excessive agency as the blast-radius the sandbox must bound); immutability (preservation of the held-out set against later alteration)
+- Detail: OWASP LLM02 Sensitive Information Disclosure amplified by LLM06 Excessive Agency. Grounds in ATLAS ML Model Extraction context (the eval oracle being mined) and the general training/eval-data exfiltration-via-over-privileged-agent technique, at MAESTRO L2 (the held-out label store), L5 (the evaluation harness boundary the agent must not cross), and L3 (sandbox scoping of the agent's filesystem reach). In hexo-ai/sia the private ground truth sits under data/private/ with scoring in evaluate.py; because the Target Agent executes arbitrary Python in the same environment, nothing structurally stops a generated mutation from `os.walk('data/private')`/`open()`-ing the labels or importing evaluate.py internals to recover answers, after which the Feedback Agent propagates the highest-scoring leak-contaminated variant across `--max_gen` generations. The control is read-scoping data/private/ to a separate trust zone the agent process cannot reach.
+
+**Pattern: Prompts, intermediate reasoning, tool I/O, and full execution traces persist sensitive content to run artifacts and logs unencrypted, unmasked, and unscoped — often shipped to a third-party observability SaaS.**
+
+- Severity: high (high-density confidentiality sink whose access scope rarely matches the sensitivity of what flowed through the agent; medium where the trace store is tightly scoped on-host, escalating when artifacts are world-readable or egressed to a SaaS)
+- NIST: AU-9, SC-28, SI-19, AC-3, SI-12
+- Related concerns: non_repudiation (audit-content sensitivity inheritance and access controls on the trace pipeline); ephemeral (artifact retention and teardown); resilient (trace-pipeline availability is routed out, only the read-exposure half is owned here)
+- Detail: OWASP LLM02 Sensitive Information Disclosure with LLM05 Improper Output Handling (sensitive content written verbatim to sinks). Grounds in the ATLAS sensitive-information-disclosure-via-logged-model-I/O technique, at MAESTRO L5 (trace/telemetry pipeline), L2 (artifacts at rest), and L4 (log shipping / SaaS egress). In hexo-ai/sia each run's task execution is logged to agent_execution.json with per-generation artifacts under runs/run_id/gen_n/, capturing whatever the Target Agent read or generated — secrets, benchmark content, task data — verbatim at rest, typically unencrypted and unscoped, so a single-run leak persists across the whole self-improvement lineage. The posture is field-level redaction/masking of trace content plus encryption-at-rest and access-scoping on runs/.
+
+**Pattern: The system/meta-prompt — encoding tool schemas, guardrail text, embedded secrets, and (in self-improving systems) the generative optimization recipe — is extractable or captured verbatim into traces.**
+
+- Severity: high (medium-to-high data-sensitivity as competitive and safety-relevant IP; leakage hands an adversary the map to plan guardrail bypass and further extraction, raising downstream blast-radius)
+- NIST: AC-3, AC-6, SC-28, SI-10
+- Related concerns: authenticity (meta-prompt-extraction as a trust/identity concern leans here for the prompt-boundary); integrity (LLM01 prompt-injection as the extraction technique, its defense surface routes there); non_repudiation (capture into agent_execution.json compounds the audit-content sensitivity)
+- Detail: OWASP LLM07 System Prompt Leakage and LLM02 Sensitive Information Disclosure, with LLM01 Prompt Injection as the extraction vector. Maps to ATLAS LLM Meta-Prompt Extraction (AML.T0056), LLM Prompt Injection (AML.T0051), and LLM Jailbreak (AML.T0054), at MAESTRO L1 (the prompt boundary at the model interface), L3 (where prompts and tool schemas are assembled), and L5 (prompts captured in traces compound the leak). In hexo-ai/sia the Meta-Agent prompt is the recipe that generates target_agent.py and the Feedback Agent's rewrite prompt encodes the optimization strategy; both are first-class IP assets, and extraction — or capture of them into runs/ artifacts and agent_execution.json — exposes the framework's generative IP and any instructions or secrets embedded in those prompts.
+
+**Pattern: Persistent memory, conversation context, and vector embeddings are shared across sessions or tenants without per-owner scoping or owner-keyed encryption, so one principal's sensitive context surfaces in another's session.**
+
+- Severity: high (cross-tenant data-sensitivity and broad blast-radius; embeddings that invert back to source text and over-broad retrieval namespaces make the bleed silent and hard to reverse)
+- NIST: AC-3, AC-4, SC-4, SC-28, MP-6
+- Related concerns: integrity (write-into-store poisoning of shared memory routes there; this file owns read-time exposure); authenticity (a shared message bus across distinct agent identities — who is provably on the bus is Authenticity's; this file owns whether the payload is scoped/masked); distributed (shared-memory replication topology)
+- Detail: OWASP LLM02 Sensitive Information Disclosure with LLM08 Vector & Embedding Weaknesses (cross-namespace retrieval, embedding inversion). Grounds in the ATLAS cross-context-inference / data-leakage-via-shared-stores technique, at MAESTRO L2 (memory and vector store), L7 (inter-agent shared memory and message bus carrying data across agent identities), and L3 (the session-scoping enforcement point). hexo-ai/sia is a single-tenant batch optimizer keyed to one run_id with no multi-tenant session model, so the cross-tenant variant does not manifest there (its within-run artifact persistence is covered by the traces pattern above); the pattern is carried for the broad multi-agent and multi-tenant surface the pack must serve, where a shared blackboard becomes a common-read sink across all participating agents.
+
+**Pattern: Inter-agent bus / message-channel payloads transit in cleartext (or with unspecified TLS), so any observer on the shared transport reads sensitive content moving between agents.**
+
+- Severity: high (in-transit exposure of whatever data agents exchange — task content, retrieved context, tool results — to any in-fabric observer; blast-radius scales with the number of agents on the bus)
+- NIST: SC-8, SC-8(1), SC-13, SC-23
+- Related concerns: authenticity (mutual-auth and who is provably on the bus is Authenticity's; this file owns encrypting the payload); distributed (message-bus topology and broker placement); ephemeral (channel/session-key lifetime)
+- Detail: Resolution R3 — this file OWNS encryption-in-transit of the inter-agent bus payload; Authenticity owns who is on the bus. OWASP LLM02 Sensitive Information Disclosure for the data-exposure half, at MAESTRO L7 (Agent Ecosystem — the inter-agent transport) and L4 (the deployment fabric carrying the bus). The control is a specified TLS floor (1.2 minimum, 1.3 preferred), an enforced cipher policy, and certificate-validation behavior on the inter-agent channel rather than reliance on network-level trust inside the fabric. In a multi-agent hexo-ai/sia-class topology the Meta/Target/Feedback agents exchanging generations and scores over an unencrypted local channel would expose every payload to any co-located observer; the recommendation couples to an Authenticity mutual-auth capability without absorbing it.
+
+**Pattern: Self-produced model weights, fine-tune adapters, or distillation artifacts sit unencrypted at rest or behind an over-privileged agent, or a hosted endpoint permits query-based model stealing.**
+
+- Severity: high (weights encode training data and the dominant compute investment — a crown-jewel asset whose read-out is largely irreversible; medium where no self-owned weights exist and only upstream-provider endpoints are in scope)
+- NIST: SC-28, SC-12, AC-6, SR-3
+- Related concerns: integrity (poisoning/alteration of weights is a distinct attack and routes there — here the asset is read out, not altered); resilient (high-volume query-based stealing as an unbounded-consumption read vector is named here only as the extraction path); ephemeral (artifact retention)
+- Detail: OWASP LLM02 Sensitive Information Disclosure with LLM10 Unbounded Consumption (high-volume query-based stealing of a hosted model). Grounds in ATLAS ML Model Extraction / ML Model Stealing (AML.T0044 / AML.T0035) and exfiltration-via-ML-inference-API, at MAESTRO L1 (the weights/adapters themselves), L4 (weight files at rest and the hosting endpoint), and L2 (training/distillation artifacts). hexo-ai/sia optimizes generated Python against external provider model APIs and trains/hosts no self-owned weights, so it holds no self-produced weight artifact to extract (its residual model-stealing exposure is against upstream providers' endpoints, outside SIA's control surface); the pattern is carried for agentic systems that fine-tune or self-host.
+
+**Pattern: The tech plan asserts "encryption in transit" or "secrets are protected" generically without specifying the TLS floor, cipher policy, certificate-validation behavior, or the at-rest key-management and read-scope boundary for crown-jewel data.**
+
+- Disposition: uncertainty or blocked
+- prerequisite_evidence: "TLS configuration policy for outbound and inter-agent channels (version floor, cipher allowlist, certificate-validation/pinning behavior), plus the at-rest key-management posture (KMS/vault, key separation, DEK ownership) and the filesystem/process read-scope boundary between the agent's execution sandbox and crown-jewel stores (provider keys, data/private/, weight artifacts, trace store)"
+
+## Common capability patterns
+
+**Pattern: Crown-jewel data (provider keys, held-out ground truth, weight artifacts) is read-scoped to a trust zone the agent process cannot reach — separate filesystem namespace, broker, or service the sandbox has no credential for.** Nascent when asserted in the tech plan only; developing with an IaC/sandbox-policy reference; robust with a test proving the agent process cannot read the store plus a runbook for the scope boundary.
+
+**Pattern: Field-level redaction/masking of trace and artifact content with encryption-at-rest and least-privilege access-scoping on the run/observability store.** Capability scope expected — "Confirmed for [agent_execution.json, runs/]; not addressed: [SaaS-egress masking]." Nascent for designed masking, robust when masking is tested against known sensitive fields and the at-rest keys are KMS-managed.
+
+**Pattern: Inter-agent and outbound channels enforce a TLS floor (1.2 minimum, 1.3 preferred) with a cipher allowlist and certificate validation, coupled to (not substituting for) the Authenticity mutual-auth capability.** Nascent when the tech plan asserts "encrypted in transit"; developing with a named TLS policy; robust when the inter-agent bus configuration and certificate-validation behavior are in evidence.
+
+**Pattern: Vector store and persistent memory enforce per-session/per-tenant namespace scoping with owner-keyed encryption and retrieval confined to the requesting principal's namespace.** Nascent for a stated scoping intent; robust with evidence of namespace isolation, owner-keyed DEKs, and a test that a cross-namespace retrieval returns nothing.

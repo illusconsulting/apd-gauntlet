@@ -1,0 +1,63 @@
+name: agentic-ai
+display_name: "Agentic AI (Autonomous LLM Agents)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Security-architecture calibration for autonomous LLM-agent systems — tool-use agents, multi-agent topologies, autonomous task loops, and code-generation-and-execution — with self-improving / self-modifying systems treated as a first-class sub-surface. Anchored to the EU AI Act, NIST AI RMF (AI 100-1), ISO/IEC 42001, NIST SP 800-53r5, and grounded in the OWASP LLM Top 10 (2025), MITRE ATLAS, and CSA MAESTRO."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - "EU AI Act"
+  - "NIST AI RMF (AI 100-1)"
+  - "ISO/IEC 42001"
+  - "NIST SP 800-53r5"
+crown_jewels:
+  - pattern: tool_execution_capability
+    description: "The agent's authority to invoke side-effecting tools and execute generated code (shell, file, network, API-mutate). Compromise turns the agent into a remote-code-execution proxy wielding the agent's full privilege."
+  - pattern: model_provider_credentials
+    description: "Model-provider API keys and tool/service credentials the agent uses to authorize its own calls. Exposure yields billing fraud and lateral access to every provider and tool the keys unlock."
+  - pattern: training_and_eval_data
+    description: "Training/fine-tune data and the held-out evaluation ground truth that defines the optimization signal. Leakage collapses eval validity; tampering corrupts what the agent learns and rewards."
+  - pattern: agent_memory_store
+    description: "The agent's persistent memory, conversation context, and vector/embedding store. Holds user PII and prior tool outputs; a poisoning and read-bleed target across sessions and tenants."
+  - pattern: self_improvement_loop
+    description: "The generate-execute-score-promote loop and the agent code it produces across generations. A single compromised generation can persist and amplify a backdoor across the lineage."
+  - pattern: orchestration_control_plane
+    description: "The orchestrator that schedules agents, routes inter-agent messages, and holds system prompts, tool manifests, and guardrail config. Takeover lets an attacker act as the system at scale."
+attacker_positions:
+  - position: untrusted_content_source
+    description: "Any untrusted input the agent ingests and may act on — user messages, tool/function outputs, retrieved documents, web content. The carrier for direct and indirect prompt injection; the default agentic attacker position."
+  - position: malicious_task_author
+    description: "An actor supplying the agent's task, goal, or benchmark definition. In a self-improving system this controls the optimization target and can steer generations toward unsafe behavior or reward hacking."
+  - position: malicious_tool_or_plugin
+    description: "A compromised or hostile tool, plugin, or MCP server the agent binds to. Returns adversarial outputs, harvests inputs/credentials, or abuses the trust the agent places in tool results."
+  - position: compromised_model_provider
+    description: "A compromised or malicious model/inference provider returning manipulated completions, exfiltrating prompts, or degrading output quality. Models supply-chain trust in the model layer."
+  - position: cotenant_or_sandbox_neighbor
+    description: "A co-tenant or neighboring workload sharing the agent's execution substrate, memory store, or sandbox. Models cross-tenant bleed and sandbox-escape lateral movement."
+  - position: malicious_peer_agent
+    description: "A peer or sub-agent in a multi-agent system attempting impersonation, Sybil identity, goal-manipulation cascade, or collusion against the joint objective."
+default_trust_boundaries:
+  - boundary: untrusted_content_to_agent_reasoning
+    description: "Crossing from untrusted content (user input, tool output, retrieved docs, web) into the agent's reasoning/instruction context. Where injection isolation, spotlighting, and provenance tagging keep data from being treated as instructions."
+  - boundary: agent_to_execution_sandbox
+    description: "Crossing from the agent to the tool/code-execution sandbox. Where capability scoping, syscall/network egress limits, and per-exec ephemerality contain what generated code may do."
+  - boundary: agent_to_model_provider
+    description: "Crossing from the agent to the model/inference provider. Where egress identity, prompt minimization, and response validation enforce confidentiality and integrity of the model channel."
+  - boundary: agent_to_secret_store
+    description: "Crossing from the agent to the secrets/credential store. Where JIT scoping, short-lived credentials, and least-privilege gate which secrets the agent can reach."
+  - boundary: generation_n_to_n_plus_1
+    description: "Crossing from one self-improvement generation to the next. Where provenance signing, promotion gates, and append-only lineage stop a compromised generation propagating silently."
+  - boundary: agent_to_agent_channel
+    description: "Crossing between agents/sub-agents in a multi-agent topology. Where message signing, identity verification, and channel encryption prevent impersonation, tampering, and eavesdropping."
