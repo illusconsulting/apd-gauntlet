@@ -130,6 +130,13 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     # per-row severity-disagreement / contradiction schemas.
     "severity-disagreements.yaml": "severity-disagreements-doc.schema.json",
     "contradictions.yaml":         "contradictions-doc.schema.json",
+    # Subsystem B — domain-improvement capture artifacts. The doc wrapper's
+    # improvements[].items.$ref is the absolute $id of domain-improvement.schema.json,
+    # which build_registry() indexes, so each record validates against the record
+    # schema with no further wiring. Neither file is a *.findings.yaml, so neither
+    # enters _iter_records / the semantic pass / cross-file finding-id resolution.
+    "domain-coverage-delta.yaml":  "domain-coverage-delta-doc.schema.json",
+    "domain-improvements.yaml":    "domain-improvements-doc.schema.json",
 }
 
 # Whole-document rollup files in 00-context/ that get schema-validated by the
@@ -358,6 +365,90 @@ def _validate_report_data_cross_refs(
                 ))
 
 
+def _validate_domain_improvements_cross_refs(
+    run_dir: pathlib.Path,
+    report: ValidationReport,
+) -> None:
+    """Subsystem B (§4.3): resolve every domain-improvement evidence[].ref and
+    recompute each dimpr- id. This is the ONE pass that walks the improvements
+    doc — it is not a *.findings.yaml, so it never enters _iter_records / the
+    semantic pass. Both checks live here.
+    """
+    path = run_dir / "40-synthesis" / "domain-improvements.yaml"
+    if not path.exists():
+        return
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return  # the schema pass already complained
+
+    # Real finding ids in the SETTLED corpus the agent actually reads. Two sources,
+    # unioned:
+    #   (a) _iter_records — globs *.findings.yaml (the per-lens / attack-path /
+    #       (legacy) merged.findings.yaml files), the synthesizer-fallback path.
+    #   (b) 40-synthesis/deduped-findings.yaml (root key 'finding') — the DEDUPED
+    #       corpus. Its filename does NOT match the *.findings.yaml glob, so
+    #       _iter_records never sees it; yet a multi-member cluster minted by
+    #       apply.py gets a 'merged-<sha8>' id that exists ONLY here in a decomposed
+    #       run (the decomposed apply path writes no merged.findings.yaml). The
+    #       auditor legitimately cites such a merged-* id as evidence, so it must
+    #       resolve. Union (b) in so a real merged-* ref is not a false positive.
+    finding_ids: set[str] = set()
+    for _p, kind, rec in _iter_records(run_dir):
+        if "_parse_error" in rec or "id" not in rec:
+            continue
+        if kind == "finding":
+            finding_ids.add(rec["id"])
+    deduped_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
+    if deduped_path.exists():
+        try:
+            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            deduped = {}
+        for rec in deduped.get("finding") or []:
+            if isinstance(rec, dict) and rec.get("id"):
+                finding_ids.add(rec["id"])
+
+    # Real asset/identity/boundary ids in the inventory.
+    inv_path = run_dir / "00-context" / "asset-inventory.yaml"
+    inventory_ids: set[str] = set()
+    if inv_path.exists():
+        try:
+            inv = yaml.safe_load(inv_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            inv = {}
+        for a in inv.get("assets") or []:
+            if isinstance(a, dict) and a.get("asset_id"):
+                inventory_ids.add(a["asset_id"])
+        for i in inv.get("identities") or []:
+            if isinstance(i, dict) and i.get("identity_id"):
+                inventory_ids.add(i["identity_id"])
+        for b in inv.get("trust_boundaries") or []:
+            if isinstance(b, dict) and b.get("boundary_id"):
+                inventory_ids.add(b["boundary_id"])
+
+    for imp in data.get("improvements") or []:
+        if not isinstance(imp, dict):
+            continue
+        rid = imp.get("id")
+        for j, ev in enumerate(imp.get("evidence") or []):
+            kind = ev.get("kind")
+            ref = ev.get("ref")
+            if kind == "finding" and ref not in finding_ids:
+                report.errors.append(Violation(
+                    path, rid,
+                    f"evidence[{j}].ref {ref!r} (kind: finding) not found in run corpus",
+                ))
+            elif kind == "asset_inventory" and ref not in inventory_ids:
+                report.errors.append(Violation(
+                    path, rid,
+                    f"evidence[{j}].ref {ref!r} (kind: asset_inventory) not found in "
+                    "00-context/asset-inventory.yaml",
+                ))
+        for msg in linters.check_domain_improvement_id(imp):
+            report.errors.append(Violation(path, rid, msg))
+
+
 def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 3: cross-file ID and artifact resolution."""
     report = ValidationReport()
@@ -484,5 +575,6 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
                 )
 
     _validate_report_data_cross_refs(run_dir, report)
+    _validate_domain_improvements_cross_refs(run_dir, report)
     report.files_seen = len(seen_files)
     return report

@@ -1,0 +1,12 @@
+id: dimpr-71829304
+improvement_type: missing_crown_jewel
+target_pack: PBM
+target_file: domain.yaml
+source: deterministic
+priority: medium
+evidence:
+  - kind: asset_inventory
+    ref: asset-1a2b3c4d
+rationale: "An upper-case pack name must never reach the draft.py path builder."
+suggested_action: "this record must be rejected at schema time"
+draft_snippet: "- pattern: x\n  description: \"upper-case pack name\""

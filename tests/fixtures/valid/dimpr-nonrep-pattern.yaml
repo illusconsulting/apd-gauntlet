@@ -1,0 +1,15 @@
+id: dimpr-3c4d5e6f
+improvement_type: missing_common_pattern
+apd_goal: non_repudiation
+target_pack: pbm
+target_file: common-patterns/non-repudiation.md
+source: judgment
+priority: low
+evidence:
+  - kind: finding
+    ref: nonrep-11223344
+rationale: "A signed-audit-event pattern recurs but is absent from the non-repudiation pattern library."
+suggested_action: "add a signed audit-event pattern to pbm/common-patterns/non-repudiation.md"
+draft_snippet: |
+  ### Signed, append-only consequential-action events
+  Sign each consequential-action record with a per-tenant key.

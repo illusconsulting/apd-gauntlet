@@ -1,0 +1,12 @@
+id: dimpr-XYZ
+improvement_type: missing_crown_jewel
+target_pack: api-security
+target_file: domain.yaml
+source: deterministic
+priority: high
+evidence:
+  - kind: asset_inventory
+    ref: asset-1a2b3c4d
+rationale: "The run exercised a payment-methods data store no selected pack declares."
+suggested_action: "add a payment_methods_store crown jewel to api-security/domain.yaml"
+draft_snippet: "- pattern: payment_methods_store\n  description: \"x\""

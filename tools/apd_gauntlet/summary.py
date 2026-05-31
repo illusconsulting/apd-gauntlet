@@ -38,6 +38,12 @@ def summarize_run(run_dir: pathlib.Path) -> dict[str, Any]:
         data = yaml.safe_load(severity_disagreements_path.read_text(encoding="utf-8")) or {}
         severity_disagreements = len(data.get("severity_disagreements") or [])
 
+    domain_improvements_path = run_dir / "40-synthesis" / "domain-improvements.yaml"
+    domain_improvements: int | None = None
+    if domain_improvements_path.exists():
+        di = yaml.safe_load(domain_improvements_path.read_text(encoding="utf-8")) or {}
+        domain_improvements = len(di.get("improvements") or [])
+
     return {
         "findings": findings,
         "severity": dict(severity_counts),
@@ -46,6 +52,7 @@ def summarize_run(run_dir: pathlib.Path) -> dict[str, Any]:
         "maturity": dict(maturity_counts),
         "contradictions": contradictions,
         "severity_disagreements": severity_disagreements,
+        "domain_improvements": domain_improvements,
     }
 
 
@@ -60,4 +67,13 @@ def render_summary(stats: dict[str, Any]) -> str:
         lines.append(f"  {m}: {stats['maturity'].get(m, 0)}")
     lines.append(f"Contradictions: {stats['contradictions']}")
     lines.append(f"Severity disagreements: {stats['severity_disagreements']}")
+    n = stats.get("domain_improvements")
+    if n is not None:
+        if n:
+            lines.append(
+                f"{n} domain-improvement opportunities captured; run apd-gauntlet "
+                "draft-domain-improvements <run> to draft pack edits."
+            )
+        else:
+            lines.append("0 domain-improvement opportunities captured.")
     return "\n".join(lines)

@@ -33,6 +33,7 @@ export const meta = {
     'synthesis-cluster', 'synthesis-adjudicate', 'synthesis-apply',
     'synthesis-fallback', 'tmeval', 'apath', 'synthesis-rollup',
     'synthesis-report', 'synthesis-build', 'synthesis-audit',
+    'domain-coverage-delta', 'domain-improvements',
     'closeout',
   ],
 };
@@ -567,6 +568,35 @@ for (let i = 0; i <= 2; i++) {
 // rollup/report/build/audit (see above) so the coverage rollups, the HTML
 // report, and the audit all reflect the tier-4 apath-*/tmeval-* findings.
 // ===========================================================================
+
+// ===========================================================================
+// PHASE 5h — domain-improvement capture (Subsystem B). ADVISORY / NON-BLOCKING.
+// Runs AFTER the 5g audit loop and BEFORE closeout, over the SETTLED corpus.
+// Never gates the run, never touches the HTML report. Empty-but-valid artifact
+// when there are no opportunities. Neither step is wrapped in isErr()/throw.
+// ===========================================================================
+phase('domain-coverage-delta');
+// 5h-i — deterministic coverage-delta pre-pass (Python). Best-effort: a failure
+// here does NOT halt the run; the agent can still harvest judgment opportunities.
+pyStep('domain-coverage-delta', {
+  phase: 'domain-coverage-delta', label: 'domain-coverage-delta',
+  outputs: runDir + '/40-synthesis/domain-coverage-delta.yaml' });
+
+phase('domain-improvements');
+// 5h-ii — apd-domain-auditor (LLM) reads the delta + settled findings + the merged
+// apd-domain skill + asset-inventory; writes domain-improvements.yaml. Advisory:
+// NOT wrapped in isErr()/HALT; a single best-effort dispatch, and the run proceeds
+// to closeout regardless of its status.
+llmStep('apd-domain-auditor',
+  'Capture domain-improvement opportunities for this run. Read ' +
+  '40-synthesis/domain-coverage-delta.yaml + 40-synthesis/deduped-findings.yaml + ' +
+  '.claude/skills/apd-domain/SKILL.md + 00-context/asset-inventory.yaml; emit ' +
+  '40-synthesis/domain-improvements.yaml (an empty-but-valid {schema_version:1, ' +
+  'generated_by:domain-auditor, examined_domains:[...], improvements:[]} when there ' +
+  'are no opportunities). ADVISORY — this never gates the run.',
+  { phase: 'domain-improvements', label: 'domain-auditor',
+    validateScope: runDir + '/40-synthesis',
+    outputs: runDir + '/40-synthesis/domain-improvements.yaml' });
 
 // ===========================================================================
 // PHASE 6 — closeout.

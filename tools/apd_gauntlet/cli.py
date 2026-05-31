@@ -151,9 +151,17 @@ def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version) ->
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
     required=True,
 )
-@click.option("--domain", "domains", multiple=True, default=("pbm",), show_default=True,
-              help=("Domain pack for the run; repeat the flag for multiple"
-                    " (e.g. --domain pbm --domain api-security)."))
+@click.option(
+    "--domain",
+    "domains",
+    multiple=True,
+    default=("pbm",),
+    show_default=True,
+    help=(
+        "Domain pack for the run; repeat the flag for multiple"
+        " (e.g. --domain pbm --domain api-security)."
+    ),
+)
 @click.option(
     "--root",
     type=click.Path(file_okay=False, path_type=pathlib.Path),
@@ -233,8 +241,7 @@ def validate_domain_cmd(domain_names, domains_dir) -> None:  # type: ignore[no-u
             raise SystemExit(1)
         n = len(meta.get("includes", []))
         click.echo(
-            f"Domain pack '{domain_name}' OK: schema valid, "
-            f"{n} include patterns all resolved."
+            f"Domain pack '{domain_name}' OK: schema valid, {n} include patterns all resolved."
         )
 
 
@@ -1009,6 +1016,59 @@ def rollup_cmd(run_dir: Path) -> None:
         f"rollup: wrote {len(result.nist)} controls, {len(result.attack)} techniques, "
         f"{len(result.matrix)} components, {taxonomies} extra coverage files"
     )
+
+
+@main.command("domain-coverage-delta")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--domains-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("domains"),
+)
+def domain_coverage_delta_cmd(run_dir: Path, domains_dir: Path) -> None:
+    """5h-i: deterministic coverage-delta pre-pass; emit domain-coverage-delta.yaml."""
+    from .synthesis.coverage_delta import build_coverage_delta
+
+    path = build_coverage_delta(run_dir, domains_dir)
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    click.echo(f"domain-coverage-delta: wrote {len(doc.get('candidates') or [])} candidates")
+
+
+@main.command("draft-domain-improvements")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--domains-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("domains"),
+)
+@click.option("--out", "out", type=click.Path(path_type=Path), default=None,
+              help="Patch output path. Default: <run_dir>/40-synthesis/domain-improvements.patch")
+@click.option("--id", "ids", multiple=True, help="Only draft these dimpr- ids (repeatable).")
+@click.option("--type", "types", multiple=True, help="Filter by improvement_type (repeatable).")
+@click.option("--target-pack", "packs", multiple=True, help="Filter by target_pack (repeatable).")
+def draft_domain_improvements_cmd(run_dir, domains_dir, out, ids, types, packs) -> None:  # type: ignore[no-untyped-def]
+    """On-demand: insert chosen draft_snippets into a temp copy, gate, emit a diff."""
+    from .synthesis.draft import DraftError, draft_domain_improvements
+
+    out_path = out or (run_dir / "40-synthesis" / "domain-improvements.patch")
+    try:
+        res = draft_domain_improvements(
+            run_dir, domains_dir, out_path, ids=ids, types=types, packs=packs
+        )
+    except DraftError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1) from None
+
+    if not res.drafted and not res.dropped:
+        click.echo("0 opportunities selected; nothing to draft")
+        return
+    click.echo(f"{len(res.drafted)} drafted, {len(res.dropped)} dropped")
+    for dimpr_id, tfile, reason in res.dropped:
+        click.echo(f"  DROPPED {dimpr_id} ({tfile}): {reason}")
+    for dimpr_id, note in res.retargeted:
+        click.echo(f"  RETARGETED {dimpr_id}: {note}")
+    if res.patch_written:
+        click.echo(f"Wrote patch to {out_path}")
 
 
 @main.command("audit-report")

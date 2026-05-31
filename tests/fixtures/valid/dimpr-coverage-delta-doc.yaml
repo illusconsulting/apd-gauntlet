@@ -1,0 +1,22 @@
+schema_version: 1
+generated_by: coverage-delta
+examined_domains:
+  - api-security
+declared_union:
+  crown_jewels:
+    - audit_log_store
+  attacker_positions:
+    - unauthenticated_internet
+  trust_boundaries:
+    - public_internet_to_edge
+candidates:
+  - improvement_type: missing_crown_jewel
+    source: deterministic
+    default_target_pack: api-security
+    priority: high
+    asset_name: payment_methods_store
+    data_classifications:
+      - pci
+    evidence:
+      - kind: asset_inventory
+        ref: asset-1a2b3c4d

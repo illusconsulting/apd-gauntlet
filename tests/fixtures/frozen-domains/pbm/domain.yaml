@@ -1,0 +1,12 @@
+name: pbm
+display_name: "Frozen PBM (test fixture)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Frozen pbm pack used only for draft-domain-improvements golden tests."
+includes:
+  - severity-rubric.md
+  - common-patterns/*.md
+regulatory_anchors: []
+crown_jewels:
+  - pattern: phi_store
+    description: "PHI store for the PBM tier."

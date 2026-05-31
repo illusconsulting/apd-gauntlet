@@ -1,0 +1,9 @@
+schema_version: 1
+generated_by: synthesizer
+examined_domains:
+  - pbm
+declared_union:
+  crown_jewels: []
+  attacker_positions: []
+  trust_boundaries: []
+candidates: []

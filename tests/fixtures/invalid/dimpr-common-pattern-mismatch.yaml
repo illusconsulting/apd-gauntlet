@@ -1,0 +1,13 @@
+id: dimpr-5e6f7081
+improvement_type: missing_common_pattern
+apd_goal: confidentiality
+target_pack: pbm
+target_file: common-patterns/integrity.md
+source: judgment
+priority: low
+evidence:
+  - kind: finding
+    ref: conf-9f8e7d6c
+rationale: "apd_goal confidentiality contradicts the integrity target_file."
+suggested_action: "add a confidentiality pattern to the wrong file (should be rejected)"
+draft_snippet: "### x\ny"

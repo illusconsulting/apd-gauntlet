@@ -234,6 +234,15 @@ The cryptographic key lifecycle class in `domains/pbm/immutability-classes.md` c
 
 The configured floor is 10 years from CMS Part D, *unless* a covered signed artifact extends past that — in which case the artifact's retention obligation pulls the key record floor with it. The HIPAA 6-year clause is not redundant: it is the floor the PBM cites to HHS OCR if the CMS retention is ever shortened by Part D regulatory change, and it is the floor an HHS investigator references when reviewing security-policy documentation. All three remain operative as audit-defensibility evidence even though only the longest controls the storage configuration.
 
+## Evolving a pack from gauntlet runs
+
+Once a pack is in use, every gauntlet run captures the places it is still
+incomplete into `runs/<id>/40-synthesis/domain-improvements.yaml` and offers a
+deterministic command to turn chosen gaps into a reviewable patch. See
+[improving-domain-packs.md](improving-domain-packs.md) for the read → draft →
+review → `git apply` → re-validate workflow. The capture is advisory and
+non-blocking; you always own the apply and the commit.
+
 ## What stays the same across domains
 
 - Lens definitions (apd-framework skill).

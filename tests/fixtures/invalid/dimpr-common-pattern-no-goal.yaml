@@ -1,0 +1,12 @@
+id: dimpr-4d5e6f70
+improvement_type: missing_common_pattern
+target_pack: pbm
+target_file: common-patterns/confidentiality.md
+source: judgment
+priority: low
+evidence:
+  - kind: finding
+    ref: conf-9f8e7d6c
+rationale: "A pattern is absent from the pbm pattern library but apd_goal is omitted."
+suggested_action: "add a confidentiality pattern to pbm/common-patterns/confidentiality.md"
+draft_snippet: "### x\ny"

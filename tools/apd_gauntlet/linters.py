@@ -22,6 +22,45 @@ def compute_id(prefix: str, title: str, first_locator: str) -> str:
     return f"{prefix}-{digest}"
 
 
+def compute_improvement_id(
+    improvement_type: str,
+    target_pack: str,
+    target_file: str,
+    primary_ref: str,
+) -> str:
+    """Deterministic dimpr- id (§4.1). NOT compute_id: the key is the LOWERCASED,
+    '|'-joined 4-tuple improvement_type|target_pack|target_file|evidence[0].ref,
+    sha256[:8], 'dimpr-' prefix. The agent (§7.2 step 5) and the linter below both
+    call this, so the at-capture id and the recomputed id are guaranteed to agree.
+    """
+    key = "|".join([improvement_type, target_pack, target_file, primary_ref]).lower()
+    digest = hashlib.sha256(key.encode()).hexdigest()[:8]
+    return f"dimpr-{digest}"
+
+
+def check_domain_improvement_id(record: dict[str, Any]) -> list[str]:
+    """Recompute the dimpr-<sha8> via compute_improvement_id and flag a mismatch.
+
+    NOT a mirror of check_finding_id (which early-returns unless record['agent']
+    is in _PREFIX_BY_AGENT — improvement records carry no 'agent' field). The
+    primary ref is ALWAYS evidence[0].ref.
+    """
+    evidence = record.get("evidence") or []
+    if not evidence:
+        return []
+    primary_ref = evidence[0].get("ref", "")
+    expected = compute_improvement_id(
+        record.get("improvement_type", ""),
+        record.get("target_pack", ""),
+        record.get("target_file", ""),
+        primary_ref,
+    )
+    actual = record.get("id", "")
+    if actual != expected:
+        return [f"id mismatch: got {actual}, expected {expected} per dimpr- deterministic rule"]
+    return []
+
+
 def check_excerpt_length(record: dict[str, Any]) -> list[str]:
     """Each excerpt must be <= 25 whitespace-separated tokens."""
     errors: list[str] = []

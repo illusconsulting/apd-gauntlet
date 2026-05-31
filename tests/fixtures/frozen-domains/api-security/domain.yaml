@@ -1,0 +1,23 @@
+name: api-security
+display_name: "Frozen API Security (test fixture)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Frozen api-security pack used only for draft-domain-improvements golden tests."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+regulatory_anchors:
+  - "OWASP API Top 10 (2023)"
+crown_jewels:
+  - pattern: audit_log_store
+    description: "Security and consequential-action event log for the API tier."
+attacker_positions:
+  - position: unauthenticated_internet
+    description: "Untrusted external client with no credentials and no prior foothold."
+default_trust_boundaries:
+  - boundary: public_internet_to_edge
+    description: "First crossing from untrusted client to the edge tier."

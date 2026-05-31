@@ -1,0 +1,14 @@
+id: dimpr-1a2b3c4d
+improvement_type: missing_crown_jewel
+target_pack: api-security
+target_file: README.md
+source: deterministic
+priority: high
+evidence:
+  - kind: asset_inventory
+    ref: asset-1a2b3c4d
+rationale: "The run exercised a payment-methods data store that no selected pack declares as a crown jewel."
+suggested_action: "add a payment_methods_store crown jewel to api-security/domain.yaml"
+draft_snippet: |
+  - pattern: payment_methods_store
+    description: "PCI-scope cardholder data store grounded in the run's asset inventory."

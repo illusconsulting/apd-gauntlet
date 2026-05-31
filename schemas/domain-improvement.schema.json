@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json",
+  "title": "APD Gauntlet Domain-Improvement Opportunity",
+  "type": "object",
+  "required": [
+    "id", "improvement_type", "target_pack", "target_file",
+    "source", "priority", "evidence", "rationale",
+    "suggested_action", "draft_snippet"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^dimpr-[0-9a-f]{8}$" },
+    "improvement_type": {
+      "type": "string",
+      "enum": [
+        "missing_crown_jewel",
+        "missing_attacker_position",
+        "missing_trust_boundary",
+        "missing_severity_clause",
+        "missing_consequential_action",
+        "missing_immutability_class",
+        "missing_data_class",
+        "missing_regulatory_anchor",
+        "missing_common_pattern"
+      ]
+    },
+    "target_pack": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "target_file": {
+      "type": "string",
+      "enum": [
+        "domain.yaml",
+        "severity-rubric.md",
+        "consequential-actions.md",
+        "immutability-classes.md",
+        "data-taxonomy.md",
+        "common-patterns/confidentiality.md",
+        "common-patterns/integrity.md",
+        "common-patterns/availability.md",
+        "common-patterns/distributed.md",
+        "common-patterns/resilient.md",
+        "common-patterns/ephemeral.md",
+        "common-patterns/authenticity.md",
+        "common-patterns/non-repudiation.md",
+        "common-patterns/immutability.md"
+      ]
+    },
+    "apd_goal": {
+      "type": "string",
+      "enum": [
+        "confidentiality", "integrity", "availability",
+        "distributed", "resilient", "ephemeral",
+        "authenticity", "non_repudiation", "immutability"
+      ]
+    },
+    "source": { "type": "string", "enum": ["deterministic", "judgment"] },
+    "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["finding", "asset_inventory"] },
+          "ref": { "type": "string", "minLength": 1 },
+          "note": { "type": "string", "minLength": 1, "maxLength": 280 }
+        }
+      }
+    },
+    "rationale": { "type": "string", "minLength": 20 },
+    "suggested_action": { "type": "string", "minLength": 10 },
+    "draft_snippet": { "type": "string", "minLength": 1 },
+    "insertion_hint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "yaml_path": { "type": "string", "minLength": 1 },
+        "markdown_section": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "text"],
+          "properties": {
+            "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+            "text": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "comment": "missing_common_pattern requires apd_goal so the target_file goal is named.",
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" } }, "required": ["improvement_type"] },
+      "then": { "required": ["apd_goal"] }
+    },
+    {
+      "comment": "missing_common_pattern: apd_goal must match the common-patterns/<goal>.md target_file. apd_goal uses underscores (non_repudiation); the filename uses hyphens (non-repudiation.md). Each branch pins one goal const to its hyphenated file const.",
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "confidentiality" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/confidentiality.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "integrity" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/integrity.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "availability" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/availability.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "distributed" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/distributed.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "resilient" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/resilient.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "ephemeral" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/ephemeral.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "authenticity" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/authenticity.md" } } }
+    },
+    {
+      "comment": "non_repudiation (underscore) -> non-repudiation.md (hyphen).",
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "non_repudiation" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/non-repudiation.md" } } }
+    },
+    {
+      "if": { "properties": { "improvement_type": { "const": "missing_common_pattern" }, "apd_goal": { "const": "immutability" } }, "required": ["improvement_type", "apd_goal"] },
+      "then": { "properties": { "target_file": { "const": "common-patterns/immutability.md" } } }
+    }
+  ]
+}

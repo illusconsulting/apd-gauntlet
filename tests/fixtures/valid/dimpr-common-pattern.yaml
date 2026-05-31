@@ -1,0 +1,19 @@
+id: dimpr-2b3c4d5e
+improvement_type: missing_common_pattern
+apd_goal: confidentiality
+target_pack: pbm
+target_file: common-patterns/confidentiality.md
+source: judgment
+priority: medium
+evidence:
+  - kind: finding
+    ref: conf-9f8e7d6c
+rationale: "A recurring field-level-encryption confidentiality pattern is absent from the pbm pattern library."
+suggested_action: "add a field-level encryption pattern to pbm/common-patterns/confidentiality.md"
+draft_snippet: |
+  ### Field-level envelope encryption for PHI columns
+  When PHI lives beside non-PHI in the same table, encrypt at the column level.
+insertion_hint:
+  markdown_section:
+    level: 1
+    text: "Confidentiality patterns"

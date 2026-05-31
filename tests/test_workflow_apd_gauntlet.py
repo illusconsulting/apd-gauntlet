@@ -31,7 +31,8 @@ EXPECTED_PHASES = [
     "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
     "synthesis-rollup", "synthesis-fallback",
     "synthesis-report", "synthesis-build", "synthesis-audit",
-    "tmeval", "apath", "closeout",
+    "tmeval", "apath",
+    "domain-coverage-delta", "domain-improvements", "closeout",
 ]
 
 # Phases emitted by a DIRECT `phase('X')` literal (checked as call literals).
@@ -40,7 +41,8 @@ DIRECT_PHASE_LITERALS = [
     "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
     "synthesis-rollup", "synthesis-fallback",
     "synthesis-report", "synthesis-build", "synthesis-audit",
-    "tmeval", "apath", "closeout",
+    "tmeval", "apath",
+    "domain-coverage-delta", "domain-improvements", "closeout",
 ]
 
 # Tier phases emitted DYNAMICALLY via runTier(name){ phase(name) } — checked via
@@ -291,3 +293,41 @@ def test_build_domain_skill_step_always_runs() -> None:
     text = _text()
     assert re.search(r"pyStep\('build-domain-skill'[\s\S]{0,400}?alwaysRun:\s*true", text), \
         "build-domain-skill step must carry alwaysRun: true"
+
+
+def test_phase_5h_names_in_meta_and_body() -> None:
+    text = _text()
+    for p in ("domain-coverage-delta", "domain-improvements"):
+        assert f"phase('{p}')" in text, f"phase('{p}') not invoked in body"
+
+
+def test_phase_5h_is_after_audit_and_before_closeout() -> None:
+    text = _text()
+    i_audit = text.index("phase('synthesis-audit')")
+    i_delta = text.index("phase('domain-coverage-delta')")
+    i_imp = text.index("phase('domain-improvements')")
+    i_closeout = text.index("phase('closeout')")
+    assert i_audit < i_delta < i_imp < i_closeout
+
+
+def test_domain_auditor_dispatch_is_non_blocking() -> None:
+    """The apd-domain-auditor llmStep must NOT be wrapped in a HALT (throw)."""
+    text = _text()
+    assert "llmStep('apd-domain-auditor'" in text
+    # Bound a window from the domain-improvements phase to closeout and assert no throw.
+    window = text[text.index("phase('domain-improvements')"):text.index("phase('closeout')")]
+    assert "throw" not in window, "Phase 5h must be advisory / non-blocking (no throw)"
+
+
+def test_domain_auditor_resolves_to_agent_file() -> None:
+    text = _text()
+    referenced = _referenced_agent_types(text)
+    assert "apd-domain-auditor" in referenced
+    assert (AGENTS_DIR / "apd-domain-auditor.md").is_file()
+
+
+def test_report_path_unchanged_by_5h() -> None:
+    """B does not touch the report path: the 5g audit loop literal still present."""
+    text = _text()
+    assert "i <= 2" in text  # audit loop cap unchanged
+    assert "report-data" in text  # report path still wired
