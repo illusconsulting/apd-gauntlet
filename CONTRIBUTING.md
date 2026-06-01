@@ -19,8 +19,12 @@ pip install -e ".[dev]"
 pytest                       # full test suite (~95 tests, ~92% coverage)
 ruff check tools/ tests/
 mypy tools/
+# docs lint — mirrors the markdownlint CI job (npx fetches the tool; no local install needed)
+npx --yes markdownlint-cli2 "docs/**/*.md" "!docs/superpowers/plans/**" ".claude/**/*.md" "domains/**/*.md" "README.md" "CONTRIBUTING.md" "CHANGELOG.md" "CODE_OF_CONDUCT.md"
 apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 ```
+
+Run all four gates (`pytest`, `ruff`, `mypy`, `markdownlint`) before pushing — CI enforces every one of them, so a green `pytest` alone is not sufficient.
 
 ## Proposing changes
 
@@ -32,7 +36,7 @@ Every PR must:
 
 - Add tests for new behavior (we follow TDD discipline).
 - Maintain >= 85% line coverage on `tools/apd_gauntlet/`.
-- Pass `ruff check`, `mypy`, and `pytest` cleanly.
+- Pass `ruff check`, `mypy`, `markdownlint`, and `pytest` cleanly.
 - Validate the bundled example via `apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/`.
 
 The CI workflows enforce these gates on every PR.
