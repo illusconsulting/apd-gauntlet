@@ -31,6 +31,42 @@ This skill is the human-readable companion. When they disagree, the JSON Schema 
 
 ---
 
+## Output envelope (canonical)
+
+Each output file uses the **singular** root key whose value is a **list of bare records**:
+
+```yaml
+finding:                      # singular — never the plural 'findings:'
+  - schema_version: 1         # each record carries schema_version
+    id: conf-1a2b3c4d         # best-effort; see "IDs are tooling-canonicalized" below
+    agent: confidentiality
+    # ... rest of the record, BARE (not wrapped) ...
+  - schema_version: 1
+    # ... second record ...
+```
+
+Capabilities files use the singular `capability:` root key the same way.
+
+**IDs are tooling-canonicalized.** `apd-gauntlet canonicalize` recomputes every
+`id` deterministically (`sha8(title|first-evidence-locator)`, with a `-cap-`
+infix for capabilities) and rewrites `cross_references` to match. Author a
+best-effort `id`, but do **not** hand-tune it — tooling is the source of truth.
+
+### Common mistakes (rejected by `validate`)
+
+- **Plural root key** (`findings:` / `capabilities:`) — use the singular root.
+- **Per-record wrapper** — do NOT wrap each record in its own `finding:` /
+  `capability:` key. Records in the list are bare maps.
+- **`context-brief.md` as evidence** — evidence `artifact` values must be **input
+  artifacts** (e.g. `tech_plan.md`, a `.proto`, an IaC file), never the intake
+  brief.
+- **Over-length** — `title` ≤ 200 characters; each evidence `excerpt` ≤ 25
+  whitespace-separated tokens.
+
+> Note: the `finding:`/`capability:` example blocks elsewhere in this skill show a single record under the root key for brevity. The list form above is the canonical multi-record shape; both the single-record and list forms validate, but agents should emit the list form.
+
+---
+
 ## Finding schema
 
 ```yaml
@@ -137,7 +173,7 @@ finding:
 
 **`title`** — must name a component and a concern. "Encryption is weak" is rejected. "PHI fields in Kafka claim-events topic lack envelope encryption" is accepted.
 
-**`evidence`** — at least one entry. Each entry is `{artifact, locator, excerpt}`. Locators must be specific enough to find again (section heading + paragraph, line range, sheet/cell, slide number). Excerpts must be brief — under 25 words — and verbatim from the source.
+**`evidence`** — at least one entry. Each entry is `{artifact, locator, excerpt}`. Locators must be specific enough to find again (section heading + paragraph, line range, sheet/cell, slide number). Excerpts must be brief — ≤ 25 whitespace-separated tokens — and verbatim from the source.
 
 **`control_mappings.nist_800_53r5`** — control IDs with enhancements where applicable (e.g. `SC-8(1)`, not just `SC-8`). At minimum the agent should consider AC, AU, IA, SC, SI, CM families for relevance.
 
@@ -256,7 +292,7 @@ Specialist agents do not emit `lens_perspectives` — it is added only at synthe
 1. Required fields all present
 2. `disposition: blocked` ⇒ `prerequisite_evidence` populated
 3. `confidence: low` ⇒ `prerequisite_evidence` populated OR `disposition: uncertainty`
-4. Every `evidence` entry has artifact + locator + excerpt under 25 words
+4. Every `evidence` entry has artifact + locator + excerpt ≤ 25 whitespace-separated tokens
 5. Every `mitre_attack` entry has a specific one-sentence rationale (no vague verbs)
 6. `recommendation.posture: required` ⇒ severity ≥ high (typically) AND `recommendation.detail` populated
 7. Capability `maturity` ≥ `implemented` ⇒ at least one non-tech-plan evidence entry

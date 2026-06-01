@@ -27,6 +27,7 @@ RECEIPT_SCHEMA = REPO / "schemas" / "agent-receipt.schema.json"
 # Every OTHER phase is emitted by a direct `phase('X')` literal in the body.
 EXPECTED_PHASES = [
     "setup", "intake", "code-recon", "tm-recon",
+    "canonicalize",
     "tier-1", "tier-2", "tier-3",
     "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
     "synthesis-rollup", "synthesis-fallback",
@@ -48,6 +49,12 @@ DIRECT_PHASE_LITERALS = [
 # Tier phases emitted DYNAMICALLY via runTier(name){ phase(name) } — checked via
 # the runTier('tier-N', ...) call tokens, NOT via a `phase('tier-N')` literal.
 TIER_PHASES_VIA_RUNTIER = ["tier-1", "tier-2", "tier-3"]
+
+# Phases that are declared in meta.phases and referenced only via opts.phase in
+# pyStep (not via a direct `phase('X')` literal or a `runTier('X', ...)` call).
+# 'canonicalize' is dispatched 3× inside runTier as pyStep('canonicalize',
+# {phase:'canonicalize', ...}) — the phase group is advisory display only.
+PYSTEP_PHASE_REFS = ["canonicalize"]
 
 
 def _text() -> str:
@@ -98,8 +105,14 @@ def test_tier_phases_invoked_via_runtier() -> None:
 
 
 def test_every_meta_phase_is_emitted_one_way_or_the_other() -> None:
-    """Union of the direct-literal set and the runTier tier set == meta.phases."""
-    assert set(DIRECT_PHASE_LITERALS) | set(TIER_PHASES_VIA_RUNTIER) == set(EXPECTED_PHASES)
+    """Union of the direct-literal set, the runTier tier set, and the pyStep
+    phase-ref set == meta.phases.  'canonicalize' is in PYSTEP_PHASE_REFS because
+    it is dispatched via pyStep('canonicalize', {phase:'canonicalize', ...}) inside
+    runTier rather than via a direct phase() literal or a runTier() call."""
+    assert (
+        set(DIRECT_PHASE_LITERALS) | set(TIER_PHASES_VIA_RUNTIER) | set(PYSTEP_PHASE_REFS)
+        == set(EXPECTED_PHASES)
+    )
 
 
 def _referenced_agent_types(text: str) -> set[str]:
@@ -331,3 +344,38 @@ def test_report_path_unchanged_by_5h() -> None:
     text = _text()
     assert "i <= 2" in text  # audit loop cap unchanged
     assert "report-data" in text  # report path still wired
+
+
+# ---------------------------------------------------------------------------
+# Task 9 — canonicalize-before-tier-gate wiring (C7)
+# ---------------------------------------------------------------------------
+
+
+def test_canonicalize_in_meta_phases() -> None:
+    text = _text()
+    # Use regex extraction (same approach as test_every_expected_phase_present_in_meta_phases)
+    # to robustly locate the phases:[...] array in the meta block.
+    m = re.search(r"phases:\s*\[(.*?)\]", text, re.DOTALL)
+    assert m, "phases:[...] array not found in meta"
+    phases_blob = m.group(1)
+    assert "canonicalize" in phases_blob, "'canonicalize' not found in meta.phases array"
+
+
+def test_canonicalize_pystep_uses_always_run() -> None:
+    text = _text()
+    run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
+    # locate the canonicalize pyStep block and confirm alwaysRun: true is within it
+    idx = run_tier.index("pyStep('canonicalize'")
+    block = run_tier[idx: run_tier.index("})", idx) + 2]
+    assert "alwaysRun: true" in block, block
+
+
+def test_canonicalize_precedes_tier_validate_gate() -> None:
+    text = _text()
+    # inside runTier, the canonicalize pyStep must appear before the tier
+    # validate gate pyStep.
+    run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
+    assert "pyStep('canonicalize'" in run_tier
+    assert run_tier.index("pyStep('canonicalize'") < run_tier.index(
+        "pyStep('validate'"
+    )

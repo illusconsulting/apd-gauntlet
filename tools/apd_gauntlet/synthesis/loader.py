@@ -64,5 +64,8 @@ def load_corpus(
             if not isinstance(rec, dict):
                 click.echo(f"WARNING: {f}: capability[{idx}] is not a dict; skipping", err=True)
                 continue
+            if "id" not in rec:
+                click.echo(f"WARNING: {f}: capability[{idx}] missing 'id'; skipping", err=True)
+                continue
             capabilities.append(rec)
     return findings_by_id, capabilities

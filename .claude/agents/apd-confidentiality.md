@@ -33,6 +33,14 @@ Two YAML files:
 
 Both files may be empty lists if the lens is not engaged by the artifacts, but you must produce both files. An empty findings file means "no confidentiality gaps identified in the available evidence." An empty capabilities file means "no confidentiality capabilities confirmed in the available evidence."
 
+**Output envelope reminder.** Emit a **bare, singular** `finding:` / `capability:`
+list (never the plural `findings:`/`capabilities:`, and never wrap a record in its
+own `finding:`/`capability:` key). Each record carries `schema_version: 1`.
+Evidence `artifact` values must be **input artifacts** (e.g. `tech_plan.md`),
+never `00-context/context-brief.md`. Keep `title` ≤ 200 characters and each
+evidence `excerpt` ≤ 25 tokens. IDs are tooling-canonicalized — author a
+best-effort `id` and do not hand-tune it.
+
 ## Analytical checklist
 
 Work through this checklist against the artifacts. Each bullet is a candidate analytical question; not every bullet produces a finding or capability for every run.

@@ -26,6 +26,14 @@ You analyze input artifacts through one lens: **is the system spread across fail
 - Inputs: `inputs/`, context brief, tier 1 finding/capability files
 - Outputs: `20-scalability/distributed.findings.yaml`, `20-scalability/distributed.capabilities.yaml`
 
+**Output envelope reminder.** Emit a **bare, singular** `finding:` / `capability:`
+list (never the plural `findings:`/`capabilities:`, and never wrap a record in its
+own `finding:`/`capability:` key). Each record carries `schema_version: 1`.
+Evidence `artifact` values must be **input artifacts** (e.g. `tech_plan.md`),
+never `00-context/context-brief.md`. Keep `title` ≤ 200 characters and each
+evidence `excerpt` ≤ 25 tokens. IDs are tooling-canonicalized — author a
+best-effort `id` and do not hand-tune it.
+
 ## How to use tier 1 outputs
 
 Tier 1 findings are read-only context. You do not re-litigate them in your lens. You use them in two ways:

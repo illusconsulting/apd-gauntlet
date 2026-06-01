@@ -33,7 +33,8 @@ from .graph import Edge, Graph, Node, stable_id
 
 
 class BuilderBlocked(Exception):
-    """Raised when required inputs are absent (no crown jewels, no attacker positions)."""
+    """Raised when required inputs are absent (no crown jewels, no attacker positions)
+    or when an ambiguous same-type case-insensitive node-name collision is detected."""
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ def build_graph(run_dir: Path) -> BuildResult:
     sources.append("asset_inventory")
     _add_attacker_positions(g, attacker_position_data, run_cfg, domain_cfg)
     _add_crown_jewels(g, crown_jewel_names, domain_cfg)
+    _wire_realized_crown_jewels(g)  # link assets that realize a same-named crown jewel
 
     _add_inventory_trust_edges(g, inventory)
     _add_finding_edges(g, findings)
@@ -364,22 +366,69 @@ def _add_inventory_trust_edges(g: Graph, inv: dict[str, Any]) -> None:
 def _node_name_index(g: Graph) -> dict[str, str]:
     """Map lower-cased node name -> node_id, for text-based heuristic matching.
 
-    Raises `BuilderBlocked` when two nodes share the same lowercased name —
-    case-insensitive matching downstream (finding/capability/TM edges,
-    DFS in Task C-11) cannot disambiguate them, so the graph is unusable
-    for path enumeration.
+    A crown_jewel and an asset may legitimately share a (case-insensitive) name:
+    the asset *realizes* the crown jewel (e.g. an inventory asset literally named
+    ``phi_store`` realizing the ``phi_store`` crown jewel). That is the same
+    concept, not an ambiguity — resolve it deterministically to the CONCRETE
+    asset node so downstream text matching is unambiguous. Reserve
+    ``BuilderBlocked`` for genuinely ambiguous collisions between two nodes of
+    the SAME type, which downstream matching cannot disambiguate.
     """
     index: dict[str, str] = {}
-    for nid in g._nodes:
-        name = g.get_node(nid).name.lower()
-        if name in index:
-            raise BuilderBlocked(
-                f"duplicate case-insensitive node name {name!r} — "
-                f"at least two nodes share this lowercased name "
-                f"({index[name]!r}, {nid!r})"
-            )
-        index[name] = nid
+    for nid in sorted(g._nodes):  # deterministic resolution order
+        node = g.get_node(nid)
+        name = node.name.lower()
+        if name not in index:
+            index[name] = nid
+            continue
+        existing = g.get_node(index[name])
+        if {existing.node_type, node.node_type} == {"asset", "crown_jewel"}:
+            # asset realizes crown jewel — prefer the concrete asset node.
+            # If the asset is the one that just arrived, switch to it; otherwise
+            # the existing entry is already the asset, so keep it.
+            if node.node_type == "asset":
+                index[name] = nid
+            continue
+        raise BuilderBlocked(
+            f"duplicate case-insensitive node name {name!r} between two "
+            f"{existing.node_type!r}/{node.node_type!r} nodes "
+            f"({index[name]!r}, {nid!r}) — cannot disambiguate"
+        )
     return index
+
+
+def _wire_realized_crown_jewels(g: Graph) -> None:
+    """When an inventory asset shares a crown jewel's (case-insensitive) name,
+    the asset *realizes* that jewel. Wire a ``data_resides_on`` edge asset->jewel
+    so path enumeration can traverse the realization.
+
+    Idempotent: the edge_id is deterministic, and the explicit ``edge_id in g._edges``
+    guard below skips re-adding an edge a prior pass (e.g. _add_crown_jewels via data
+    classifications) already created, so this never triggers add_edge's duplicate-id error.
+
+    Note: two crown jewels sharing a name is unreachable here — a same-type
+    jewel/jewel name collision is blocked upstream by ``_node_name_index``, so
+    ``jewels_by_name`` cannot silently drop a jewel.
+    """
+    jewels_by_name = {n.name.lower(): n for n in g.nodes_by_type("crown_jewel")}
+    for asset in g.nodes_by_type("asset"):
+        jewel = jewels_by_name.get(asset.name.lower())
+        if jewel is None:
+            continue
+        edge_id = stable_id("edge", asset.node_id, jewel.node_id, "data_resides_on")
+        if edge_id in g._edges:
+            continue  # already wired (e.g. by _add_crown_jewels via classification)
+        g.add_edge(
+            Edge(
+                edge_id=edge_id,
+                edge_type="data_resides_on",
+                from_node=asset.node_id,
+                to_node=jewel.node_id,
+                provenance={"source": "asset_inventory", "locator": "name_realizes_crown_jewel"},
+                confidence=asset.confidence,
+                traversal_cost=1,
+            )
+        )
 
 
 def _add_finding_edges(g: Graph, findings: list[dict[str, Any]]) -> None:

@@ -9,7 +9,13 @@ import shutil
 from pathlib import Path
 
 import pytest
-from apd_gauntlet.attack_path.build import BuilderBlocked, build_graph
+from apd_gauntlet.attack_path.build import (
+    BuilderBlocked,
+    _node_name_index,
+    _wire_realized_crown_jewels,
+    build_graph,
+)
+from apd_gauntlet.attack_path.graph import Graph, Node, stable_id
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "attack_path" / "minimal-run"
 
@@ -171,3 +177,53 @@ def test_builder_skips_prior_attack_path_findings_on_recursive_scan(
         assert e.finding_id != "apath-poison", (
             "builder must not ingest 40-synthesis/attack-path.findings.yaml"
         )
+
+
+# ---------------------------------------------------------------------------
+# F5 / C5: crown_jewel <-> asset name collision resolution
+# ---------------------------------------------------------------------------
+
+
+def _g_with_jewel_asset_collision():
+    g = Graph()
+    g.add_node(Node(node_id=stable_id("asset", "phi_store"), node_type="asset",
+                    name="phi_store", provenance={"source": "asset_inventory"},
+                    confidence="high"))
+    g.add_node(Node(node_id=stable_id("jewel", "phi_store"), node_type="crown_jewel",
+                    name="phi_store", provenance={"source": "domain_default"},
+                    confidence="high"))
+    return g
+
+
+def test_node_name_index_resolves_jewel_asset_collision_to_asset():
+    g = _g_with_jewel_asset_collision()
+    index = _node_name_index(g)  # must NOT raise
+    assert index["phi_store"] == stable_id("asset", "phi_store")
+
+
+def test_node_name_index_still_blocks_same_type_collision():
+    g = Graph()
+    g.add_node(Node(node_id=stable_id("asset", "a"), node_type="asset", name="dup",
+                    provenance={"source": "asset_inventory"}, confidence="high"))
+    g.add_node(Node(node_id=stable_id("asset", "b"), node_type="asset", name="DUP",
+                    provenance={"source": "asset_inventory"}, confidence="high"))
+    with pytest.raises(BuilderBlocked):
+        _node_name_index(g)
+
+
+def test_wire_realized_crown_jewels_emits_data_resides_on_edge():
+    g = _g_with_jewel_asset_collision()
+    _wire_realized_crown_jewels(g)
+    edges = [e for e in g._edges.values() if e.edge_type == "data_resides_on"]
+    assert edges, "expected a data_resides_on edge linking the asset to its jewel"
+    e = edges[0]
+    assert e.from_node == stable_id("asset", "phi_store")
+    assert e.to_node == stable_id("jewel", "phi_store")
+
+
+def test_wire_realized_crown_jewels_is_idempotent():
+    g = _g_with_jewel_asset_collision()
+    _wire_realized_crown_jewels(g)
+    _wire_realized_crown_jewels(g)  # second call must not raise on duplicate edge
+    edges = [e for e in g._edges.values() if e.edge_type == "data_resides_on"]
+    assert len(edges) == 1

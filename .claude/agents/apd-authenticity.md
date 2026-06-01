@@ -25,6 +25,14 @@ You analyze input artifacts through one lens: **is the claimed identity — of a
 - Inputs: `inputs/`, context brief, tier 1 and tier 2 outputs
 - Outputs: `30-auditability/authenticity.findings.yaml`, `30-auditability/authenticity.capabilities.yaml`
 
+**Output envelope reminder.** Emit a **bare, singular** `finding:` / `capability:`
+list (never the plural `findings:`/`capabilities:`, and never wrap a record in its
+own `finding:`/`capability:` key). Each record carries `schema_version: 1`.
+Evidence `artifact` values must be **input artifacts** (e.g. `tech_plan.md`),
+never `00-context/context-brief.md`. Keep `title` ≤ 200 characters and each
+evidence `excerpt` ≤ 25 tokens. IDs are tooling-canonicalized — author a
+best-effort `id` and do not hand-tune it.
+
 ## Analytical checklist
 
 ### Identity provenance and root of trust

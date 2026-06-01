@@ -22,6 +22,10 @@ RECORD_KINDS: dict[str, tuple[str, str, str]] = {
     "capability": ("capability.schema.json", "capability", "*.capabilities.yaml"),
 }
 
+# Correct plural root keys. `root_key + "s"` is WRONG for "capability"
+# ("capabilitys"); agents emit "capabilities". Keep this the single source.
+_PLURAL_ROOT: dict[str, str] = {"finding": "findings", "capability": "capabilities"}
+
 
 @dataclass
 class Violation:
@@ -77,8 +81,44 @@ def build_registry() -> Registry:
     return Registry().with_resources(resources)
 
 
+def extract_records(doc: dict[str, Any], root_key: str) -> list[dict[str, Any]]:
+    """Return the bare record dicts from a findings/capabilities document.
+
+    The single shared extraction rule used by canonicalize, ``_iter_records``,
+    ``check-ids``, and the synthesis loader — so they cannot drift. Accepts:
+
+    - the canonical singular root key (``finding`` / ``capability``) whose value
+      is a list of bare records (or a single bare record), AND
+    - the legacy plural root key (``findings`` / ``capabilities``), AND
+    - per-record wrappers of the form ``{<root_key>: {...}}`` (unwrapped here).
+
+    Non-dict items are dropped. This is extraction only; it does not validate.
+    """
+    raw = doc.get(root_key)
+    if raw is None:
+        raw = doc.get(_PLURAL_ROOT.get(root_key, root_key + "s"))
+    items = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+    out: list[dict[str, Any]] = []
+    for item in items:
+        if (
+            isinstance(item, dict)
+            and set(item.keys()) == {root_key}
+            and isinstance(item[root_key], dict)
+        ):
+            item = item[root_key]  # unwrap a per-record {finding: {...}} wrapper
+        if isinstance(item, dict):
+            out.append(item)
+    return out
+
+
 def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, dict[str, Any]]]:
-    """Yield (file_path, kind, record_dict) for every YAML record in the run."""
+    """Yield (file_path, kind, record_dict) for every YAML record in the run.
+
+    Uses the shared ``extract_records`` extraction (singular-or-plural root key,
+    per-record unwrap) so per-record checks run even on non-canonical files —
+    no vacuous pass. The non-canonical envelope itself is flagged separately by
+    ``_check_envelopes``.
+    """
     for kind, (_schema, root_key, glob) in RECORD_KINDS.items():
         for path in sorted(run_dir.rglob(glob)):
             try:
@@ -86,12 +126,54 @@ def _iter_records(run_dir: pathlib.Path) -> Iterable[tuple[pathlib.Path, str, di
             except yaml.YAMLError as e:
                 yield path, kind, {"_parse_error": str(e)}
                 continue
-            payload = data.get(root_key)
-            if isinstance(payload, list):
-                for item in payload:
-                    yield path, kind, item
-            elif isinstance(payload, dict):
-                yield path, kind, payload
+            if not isinstance(data, dict):
+                continue
+            for record in extract_records(data, root_key):
+                yield path, kind, record
+
+
+def _non_canonical_envelope_reason(doc: dict[str, Any], root_key: str) -> str | None:
+    """Return a human reason if doc's envelope is non-canonical, else None."""
+    plural = _PLURAL_ROOT.get(root_key, root_key + "s")
+    if root_key not in doc and plural in doc:
+        return f"plural root key '{plural}'"
+    raw = doc.get(root_key)
+    items = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+    for item in items:
+        if (
+            isinstance(item, dict)
+            and set(item.keys()) == {root_key}
+            and isinstance(item[root_key], dict)
+        ):
+            return f"per-record '{root_key}:' wrapper"
+    return None
+
+
+def _check_envelopes(run_dir: pathlib.Path, report: ValidationReport) -> None:
+    """Hard ERROR when a lens findings/capabilities file uses a plural root key
+    or wraps any record in a per-record ``{<kind>: {...}}`` wrapper. canonicalize
+    is the normalizer; validate refuses to silently accept non-canonical input."""
+    for _kind, (_schema, root_key, glob) in RECORD_KINDS.items():
+        for path in sorted(run_dir.rglob(glob)):
+            try:
+                # NOTE: intentional second parse — run_schema_pass already iterated
+                # records, but the raw doc is discarded; re-reading here keeps the
+                # envelope check independent of the per-record pass.
+                doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError:
+                continue  # parse errors are reported by the schema pass
+            if not isinstance(doc, dict):
+                continue
+            reason = _non_canonical_envelope_reason(doc, root_key)
+            if reason:
+                report.errors.append(
+                    Violation(
+                        path,
+                        None,
+                        f"non-canonical envelope ({reason}): use singular root key "
+                        f"'{root_key}' with bare records (run 'apd-gauntlet canonicalize')",
+                    )
+                )
 
 
 CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
@@ -267,6 +349,7 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
     _validate_code_evidence_index(run_dir, report, registry)
     _validate_context_rollups(run_dir, report, registry, seen_files)
     _validate_synthesis_rollups(run_dir, report, registry, seen_files)
+    _check_envelopes(run_dir, report)
     report.files_seen = len(seen_files)
     return report
 
@@ -340,6 +423,27 @@ def _validate_report_data_cross_refs(
         if "_parse_error" in rec or "id" not in rec:
             continue
         (finding_ids if kind == "finding" else capability_ids).add(rec["id"])
+    # Union in the DEDUPED corpus the report-writer actually ranks from. A
+    # multi-member cluster minted by apply.py gets a 'merged-<sha8>' id that
+    # exists ONLY in 40-synthesis/deduped-{findings,capabilities}.yaml — whose
+    # filenames do NOT match the *.findings.yaml / *.capabilities.yaml globs, so
+    # _iter_records never sees them. The report legitimately headlines such a
+    # merged-* id, so it must resolve (mirrors _validate_domain_improvements_cross_refs).
+    for fname, idset in (
+        ("deduped-findings.yaml", finding_ids),
+        ("deduped-capabilities.yaml", capability_ids),
+    ):
+        deduped_path = run_dir / "40-synthesis" / fname
+        if not deduped_path.exists():
+            continue
+        try:
+            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue  # the schema pass already complained
+        root_key = "finding" if "findings" in fname else "capability"
+        for rec in deduped.get(root_key) or []:
+            if isinstance(rec, dict) and rec.get("id"):
+                idset.add(rec["id"])
 
     for entry in data.get("headline_findings") or []:
         rid = entry.get("id")

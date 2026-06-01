@@ -35,6 +35,7 @@ export const meta = {
   description: 'Deterministic APD gauntlet runner (replaces apd-orchestrator); receipt-only dispatch + decomposed synthesis + gated report audit + synthesizer fallback.',
   phases: [
     'setup', 'intake', 'code-recon', 'tm-recon',
+    'canonicalize',
     'tier-1', 'tier-2', 'tier-3',
     'synthesis-cluster', 'synthesis-adjudicate', 'synthesis-apply',
     'synthesis-fallback', 'tmeval', 'apath', 'synthesis-rollup',
@@ -320,6 +321,17 @@ function runTier(phaseName, tierDir, lenses) {
           validateScope: runDir, validateFlags: '--tier ' + tierDir,
           outputs: tierDir + '/' + lens + '.findings.yaml, ' + tierDir + '/' + lens + '.capabilities.yaml' });
     }
+  });
+  // Canonicalize the whole run (idempotent, structural-only) so the tier gate
+  // below sees canonical envelopes + deterministic ids. alwaysRun bypasses the
+  // JS-side idempotency guard: that guard only runs `validate --schema-only`,
+  // which would NOT catch fabricated ids (a semantic-pass check), so it could
+  // wrongly skip canonicalize and let the tier gate fail. canonicalize is itself
+  // idempotent, so always running it is safe. Runs before EACH tier gate.
+  pyStep('canonicalize', {
+    phase: 'canonicalize', label: 'canonicalize-' + tierDir,
+    outputs: 'canonicalized lens records under ' + runDir,
+    alwaysRun: true,
   });
   // Tier-end gate. --tier SKIPS cross-file Pass 3; the full pre-Phase-5 gate covers that.
   // The CLI joins --tier to the run dir (target = run_dir / tier), so the gate

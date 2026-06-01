@@ -269,15 +269,26 @@ def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def
 def check_ids_cmd(yaml_file) -> None:  # type: ignore[no-untyped-def]
     import yaml as _yaml
 
+    from .validate import extract_records
+
     data = _yaml.safe_load(yaml_file.read_text(encoding="utf-8")) or {}
-    payload = data.get("finding") or data.get("capability")
-    records = payload if isinstance(payload, list) else ([payload] if payload else [])
-    is_capability = "capability" in data and "finding" not in data
+    if not isinstance(data, dict):
+        click.echo(f"{yaml_file}: IDs OK.")
+        return
+    # root_key is the SINGULAR key; extract_records resolves the plural variant
+    # ("findings"/"capabilities") internally. A single file is one kind by the
+    # *.findings.yaml / *.capabilities.yaml naming invariant, so first-match wins.
+    if "finding" in data or "findings" in data:
+        kind, root_key = "finding", "finding"
+    elif "capability" in data or "capabilities" in data:
+        kind, root_key = "capability", "capability"
+    else:
+        click.echo(f"{yaml_file}: IDs OK.")
+        return
+    records = extract_records(data, root_key)
     found_issues = False
     for rec in records:
-        if not isinstance(rec, dict):
-            continue
-        msgs = check_capability_id(rec) if is_capability else check_finding_id(rec)
+        msgs = check_capability_id(rec) if kind == "capability" else check_finding_id(rec)
         for msg in msgs:
             click.echo(f"{yaml_file} [{rec.get('id')}]: {msg}")
             found_issues = True
@@ -951,6 +962,29 @@ def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untype
         click.echo(f"warning: section '{name}' failed: {err}", err=True)
     if not quiet:
         click.echo(f"HTML report at {target}")
+
+
+@main.command("canonicalize")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def canonicalize_cmd(run_dir: Path) -> None:
+    """Structurally canonicalize specialist findings/capabilities in place.
+
+    Idempotent, whole-run: normalizes the record envelope (singular root key,
+    unwraps per-record wrappers, injects schema_version), recomputes every
+    deterministic id (tooling is authoritative), and rewrites cross_references.
+    Structural only — never edits titles, excerpts, or evidence.
+    """
+    from .canonicalize import CanonicalizeCollision, canonicalize_run
+
+    try:
+        result = canonicalize_run(run_dir)
+    except CanonicalizeCollision as exc:
+        click.echo(f"canonicalize: blocked - {exc}", err=True)
+        raise SystemExit(1) from None
+    click.echo(
+        f"canonicalize: {result.records_canonicalized} records recanonicalized, "
+        f"{result.cross_refs_rewritten} cross-refs rewritten"
+    )
 
 
 @main.command("cluster-candidates")

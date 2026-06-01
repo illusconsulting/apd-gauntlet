@@ -22,6 +22,12 @@ def compute_id(prefix: str, title: str, first_locator: str) -> str:
     return f"{prefix}-{digest}"
 
 
+def compute_capability_id(prefix: str, title: str, first_locator: str) -> str:
+    """Deterministic capability id: <prefix>-cap-<sha8(title|locator)>."""
+    digest = hashlib.sha256(f"{title}|{first_locator}".encode()).hexdigest()[:8]
+    return f"{prefix}-cap-{digest}"
+
+
 def compute_improvement_id(
     improvement_type: str,
     target_pack: str,
@@ -99,9 +105,7 @@ def check_capability_id(record: dict[str, Any]) -> list[str]:
     evidence = record.get("evidence") or []
     if not evidence:
         return []
-    payload = f"{title}|{evidence[0].get('locator', '')}".encode()
-    digest = hashlib.sha256(payload).hexdigest()[:8]
-    expected = f"{prefix}-cap-{digest}"
+    expected = compute_capability_id(prefix, title, evidence[0].get("locator", ""))
     actual = record.get("id", "")
     if actual != expected:
         return [f"id mismatch: got {actual}, expected {expected} per deterministic rule"]
