@@ -1,0 +1,31 @@
+finding:
+- schema_version: 1
+  id: resil-d7f2b8e9
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: Single certificate pin with no backup pin or documented rotation bricks clients on rotation
+  summary: The Android config pins one leaf certificate with no backup pin and no rotation procedure, so a routine certificate rotation hard-fails every installed client.
+  detail: Per MASVS-NETWORK-2, certificate pinning is correct only with pin agility. A single pin with no backup and no rotation runbook means the day the production leaf rotates, every client that has not yet updated fails to connect — pinning brittleness turns a routine operational event into a fleet outage. The structural controls are a backup pin (and/or pinning to an intermediate/SPKI), a documented rotation procedure that publishes the next pin before the cert changes, and a soft-fail-to-report path rather than a hard brick on pin mismatch. iOS additionally has no pinning at all, so the two platforms degrade differently.
+  evidence:
+  - artifact: network_security_config.xml
+    locator: domain-config pin-set
+    excerpt: Single pin, no backup pin, no documented rotation
+  - artifact: tech_plan.md
+    locator: §4 Network
+    excerpt: a single pin is configured with no backup pin and no documented rotation procedure
+  control_mappings:
+    nist_800_53r5:
+    - SC-8(1)
+    - SC-17
+    - CP-13
+  recommendation:
+    posture: recommended
+    summary: Add a backup pin and a documented rotation procedure with a soft-fail-to-report path.
+    detail: Configure a backup pin (or pin to a stable intermediate/SPKI), publish the next pin before each certificate rotation, and report pin-validation failures to the backend rather than hard-failing the client, so rotation cannot brick the fleet.
+  related_concerns:
+  - authenticity
+  - availability

@@ -1,0 +1,20 @@
+run_id: apd-20260602-acme-mobile-banking
+domains:
+  - mobile-applications
+framework_version: 1.5.0
+taxonomies:
+  - cwe
+  - mitre_attack
+crown_jewels:
+  - stored_session_and_refresh_tokens
+  - embedded_api_keys_and_secrets
+  - mobile_backend_api_surface
+attacker_positions:
+  - network_mitm
+  - physical_thief_with_stolen_device
+  - rooted_device_attacker_with_frida
+  - reverse_engineer_with_ipa_apk
+attack_path_analysis:
+  max_hop: 5
+  max_paths_per_pair: 20
+  bottleneck_threshold: 3

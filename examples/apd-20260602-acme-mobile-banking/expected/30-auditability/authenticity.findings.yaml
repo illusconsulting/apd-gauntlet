@@ -1,0 +1,62 @@
+finding:
+- schema_version: 1
+  id: auth-a66343a2
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: No hardware attestation — backend cannot prove a genuine app on a genuine device
+  summary: The app has no Play Integrity / App Attest, so the backend has no cryptographic way to distinguish a genuine app on a stock device from a repackaged build on a rooted device.
+  detail: Per MASVS-RESILIENCE-4, hardware attestation is the verifiable answer to client trust that makes runtime detection heuristics (root/Frida checks) moot. With no Play Integrity (Android) or App Attest (iOS) verdict consumed server-side, the backend cannot tell a real install from a repackaged or instrumented one, so every client-trusted signal (and the hardcoded HMAC) collapses against the reverse-engineer and rooted-device positions. CWE-345 (insufficient verification of data authenticity) frames the gap. The structural control is a server-verified attestation verdict consumed as a write-authorization input — the verifiable client identity that the other RESILIENCE heuristics only approximate.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §6 Integrity and platform
+    excerpt: no root/jailbreak detection, no anti-tampering, and no hardware attestation (Play Integrity / App Attest)
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - IA-3
+    - SI-7
+    cwe:
+    - CWE-345
+  recommendation:
+    posture: required
+    summary: Adopt Play Integrity / App Attest and verify the verdict server-side as a write-authorization input.
+    detail: Integrate Play Integrity (Android) and App Attest (iOS), verify the verdict on the backend with freshness/nonce checks, and gate consequential write operations on a passing, fresh attestation rather than on client-side root/tamper heuristics.
+  related_concerns:
+  - integrity
+  - non_repudiation
+  - ephemeral
+- schema_version: 1
+  id: auth-e0cc47fc
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Biometric unlock is a UI gate, not a Keystore/Keychain key release
+  summary: Face ID / fingerprint success merely loads the saved refresh token; no hardware-backed key is bound to the biometric, so a patched client resumes the session without it.
+  detail: 'Per MASVS-AUTH-3, a sensitive operation must be bound to the authenticator, not gated by a UI check. Using LAContext.evaluatePolicy (iOS) and BiometricPrompt (Android) only to decide whether to read the token means the biometric is decorative: a rooted-device attacker or a patched binary skips evaluatePolicy and loads the token directly. CWE-287 / CWE-603 describe the class. The structural control is a biometric-gated key RELEASE — the refresh token (or a per-session key) sealed under a Keychain/Keystore key whose use requires successful biometric authentication, so the secret is cryptographically unavailable without the live factor.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §2 Authentication and session
+    excerpt: the biometric check is a UI gate via LAContext.evaluatePolicy (iOS) and BiometricPrompt (Android)
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - IA-2(1)
+    - SI-7
+    cwe:
+    - CWE-287
+    - CWE-603
+  recommendation:
+    posture: required
+    summary: Bind the token to a biometric-gated hardware key so its release requires a live biometric.
+    detail: Seal the refresh token or a per-session key under a Keychain/Keystore key configured to require biometric authentication for use (setUserAuthenticationRequired / kSecAccessControlBiometryCurrentSet), so a patched client cannot obtain the secret without the live factor.
+  related_concerns:
+  - integrity
+  - ephemeral
+  - confidentiality

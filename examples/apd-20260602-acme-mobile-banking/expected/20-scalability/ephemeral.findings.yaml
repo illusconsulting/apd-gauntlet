@@ -1,0 +1,30 @@
+finding:
+- schema_version: 1
+  id: ephem-260cbeab
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: 90-day refresh token with no server-side revocation and no device-binding
+  summary: The on-device refresh token lives for 90 days, is not bound to the device, and cannot be revoked server-side, so a stolen or extracted token grants long-lived access.
+  detail: Per MASVS-AUTH-2, on-device session material must be short-lived, revocable, and ideally device-bound. A 90-day bearer refresh token with no revocation list and no device-binding means a physical thief, a co-resident app, or a rooted-device attacker who extracts it from SharedPreferences replays it for up to 90 days with no recovery path. CWE-613 (insufficient session expiration) describes the lifetime gap. The structural controls are short-TTL access tokens, rotating refresh tokens with reuse detection, server-side revocation, and device-binding (DPoP / mTLS) keyed to a hardware-backed key; the token-issuance protocol routes to the identity-security pack.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §2 Authentication and session
+    excerpt: there is no server-side revocation list and the token is not bound to the device
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - IA-5(13)
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: required
+    summary: Shorten and rotate the refresh token, add server-side revocation, and bind it to a hardware-backed device key.
+    detail: Reduce the refresh-token lifetime, rotate it on use with reuse detection, maintain a server-side revocation list invalidated on logout and credential change, and bind the token to a non-exportable Keystore/Secure-Enclave key. Route the OAuth token-issuance design to the identity-security pack.
+  related_concerns:
+  - authenticity
+  - confidentiality

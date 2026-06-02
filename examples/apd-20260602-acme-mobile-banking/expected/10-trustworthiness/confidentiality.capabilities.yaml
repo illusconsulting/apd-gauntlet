@@ -1,0 +1,22 @@
+capability:
+- schema_version: 1
+  id: conf-cap-3ad59773
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: HTTPS-only transport with no cleartext exemptions
+  description: All API traffic is HTTPS; the Android Network Security Config does not permit cleartext traffic and iOS App Transport Security does not allow arbitrary loads.
+  maturity: implemented
+  scope: Confirmed for the api.acmebank.com channel on Android (Network Security Config) and iOS (ATS). Scope is transport encryption only; endpoint-identity pinning is partial and tracked separately under Resilient/Authenticity.
+  evidence:
+  - artifact: network_security_config.xml
+    locator: network-security-config domain-config
+    excerpt: 'No cleartextTrafficPermitted override: defaults to false on minSdk 26+'
+  - artifact: Info.plist
+    locator: NSAppTransportSecurity
+    excerpt: <key>NSAllowsArbitraryLoads</key> <false/>
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-13

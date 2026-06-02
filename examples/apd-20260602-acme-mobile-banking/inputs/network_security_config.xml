@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- No cleartextTrafficPermitted override: defaults to false on minSdk 26+. -->
+    <domain-config>
+        <domain includeSubdomains="true">api.acmebank.com</domain>
+        <!-- Single pin, no backup pin, no documented rotation. -->
+        <pin-set>
+            <pin digest="SHA-256">k3y9Z0kPmS3xq2c8b1example+pinvalueAAAAAAAAAA=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

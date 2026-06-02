@@ -1,0 +1,65 @@
+finding:
+- schema_version: 1
+  id: conf-9c065684
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Session and refresh tokens stored in SharedPreferences/NSUserDefaults, not Keystore/Keychain
+  summary: Access and refresh tokens are persisted in plaintext key-value stores readable from a device backup or a stolen/rooted device.
+  detail: Per MASVS-STORAGE-1, sensitive data must be stored in hardware-backed storage. Persisting the access and refresh tokens in SharedPreferences (Android) and NSUserDefaults (iOS) places long-lived bearer credentials in world-of-the-app plaintext that survives in cleartext backups (allowBackup is true) and is recoverable by a physical thief or a co-resident app on a compromised device. The structural control is the Android Keystore/StrongBox and iOS Keychain/Secure Enclave with non-exportable keys; the MASWE storage-leakage area and CWE-312 describe the exposure.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §3 On-device storage
+    excerpt: The access token and refresh token are persisted in SharedPreferences (Android) and NSUserDefaults (iOS) so the session survives app restarts
+  - artifact: AndroidManifest.xml
+    locator: application android:allowBackup
+    excerpt: android:allowBackup="true"
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - IA-5
+    cwe:
+    - CWE-312
+    - CWE-522
+  recommendation:
+    posture: required
+    summary: Move tokens to the platform hardware-backed key store and disable cleartext backup of sensitive data.
+    detail: Store the refresh token (and any cached secret) in the Android Keystore/StrongBox and iOS Keychain/Secure Enclave with non-exportable keys, exclude it from backups via dataExtractionRules / Keychain access controls, and treat the device as untrusted for any long-lived credential.
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: conf-4149d0db
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: Hardcoded HMAC client secret compiled into the binary and shared across all installs
+  summary: A single ACME_CLIENT_HMAC_KEY ships in every app install and is recoverable from any APK/IPA by static analysis, granting backend request-signing for the whole fleet.
+  detail: 'Per the severity rubric, a hardcoded shared secret recoverable from the binary loads the scale-vector and all-users blast-radius modifiers — obfuscation (MASVS-RESILIENCE-2) only delays recovery, it is not a mitigant. MASVS-CRYPTO-2 (key management) and CWE-798 (use of hard-coded credentials) describe the weakness; a reverse-engineer holding the IPA/APK extracts the key and forges the ''genuine Acme app'' request signature for every user. The structural fix is that no secret the backend trusts may live in the client: use per-install/per-device keys provisioned at runtime into the Keystore/Secure Enclave, or move the trust to a server-verified attestation.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §3 On-device storage
+    excerpt: the client signs each API request with an HMAC using a shared secret ACME_CLIENT_HMAC_KEY that is compiled into the app
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(7)
+    - SC-12
+    - SC-28
+    cwe:
+    - CWE-798
+    - CWE-321
+  recommendation:
+    posture: required
+    summary: Remove the shared embedded secret; provision per-device keys at runtime or rely on server-verified attestation.
+    detail: Eliminate the compiled-in HMAC key. Provision a per-install key into the hardware-backed key store at first run, or replace the client-secret trust with Play Integrity / App Attest verified server-side, so that extracting one binary does not yield fleet-wide request forgery.
+  related_concerns:
+  - authenticity
+  - ephemeral

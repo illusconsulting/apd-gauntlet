@@ -1,0 +1,65 @@
+finding:
+- schema_version: 1
+  id: intg-573fc767
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: Daily transfer limit enforced only client-side; backend accepts any amount
+  summary: The app refuses transfers above the member's daily limit, but the backend records whatever amount the client submits — the limit is not a control.
+  detail: 'This is the pack''s central-tension Critical: client-side enforcement of a server-side control is not a control. The client reads dailyLimit and blocks oversized transfers, but a patched or instrumented client (or a direct API call) submits any amount and the backend honors it. Per MASVS-AUTH-1, the authorization/business-rule decision must be enforced server-side; CWE-602 (client-side enforcement of server-side security) and CWE-603 describe the class. The finding of record is the missing server-side limit check; routes to the api-security pack for the endpoint-side enforcement in a multi-domain run.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §5 Transfers and limits
+    excerpt: The backend accepts whatever amount the client submits and records the transfer
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-4
+    - SI-10
+    cwe:
+    - CWE-602
+    - CWE-603
+  recommendation:
+    posture: required
+    summary: Enforce the daily transfer limit on the backend; treat the client check as UX only.
+    detail: Move the daily-limit and all business-rule checks to the backend, validate the amount server-side on every transfer, and keep the client-side check purely as input-friendly UX. Route the server-side enforcement design to the api-security pack.
+  related_concerns:
+  - authenticity
+  - non_repudiation
+- schema_version: 1
+  id: intg-80dbf492
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Unverified acmebank:// deep link drives a pre-filled transfer with no caller verification
+  summary: A custom-scheme deep link opens the transfer screen with attacker-supplied to/amount parameters and no verification of the invoking app or link.
+  detail: Per MASVS-PLATFORM-1, inbound IPC and deep links are an untrusted-input boundary. The acmebank://transfer handler is an exported activity reached by any app or web page, the custom scheme is not an Android App Link (no autoVerify / domain verification), and the parameters drive an in-app action without re-authentication or server re-verification. CWE-939 (improper authorization in handler for custom URL scheme) describes the weakness; the phishing-deep-link attacker position reaches it. The structural controls are App Links / Universal Links domain verification, parameter validation, and a server-side re-authorization of the action the link requests.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §5 Transfers and limits
+    excerpt: The deep link handler performs the pre-filled transfer screen with no verification of which app or link invoked it
+  - artifact: AndroidManifest.xml
+    locator: activity .TransferDeepLinkActivity
+    excerpt: Deep-link handler for transfers. Custom scheme, NOT an autoVerify App Link
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    - AC-3
+    - AC-4
+    cwe:
+    - CWE-939
+    - CWE-749
+  recommendation:
+    posture: required
+    summary: Adopt verified App Links / Universal Links, validate parameters, and re-authorize the action server-side.
+    detail: Replace the unverified custom scheme with autoVerify Android App Links and iOS Universal Links bound to the Acme domain, validate every deep-link parameter, and require re-authentication plus server-side authorization before executing a transfer initiated by a link.
+  related_concerns:
+  - confidentiality
+  - authenticity
+  - availability

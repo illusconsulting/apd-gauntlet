@@ -1,0 +1,31 @@
+finding:
+- schema_version: 1
+  id: nonrep-38caffd0
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Consequential-action audit kept only on the device, which is attacker-erasable
+  summary: Transfers, bill-pay, and profile edits are logged to a local on-device audit log; the backend records only raw HTTP lines without device or app-version attribution.
+  detail: 'On-device-only audit is no audit: a rooted or stolen device can rewrite or delete the local log, so the durable record of a consequential action does not exist. Per the consequential-action surface, transfers, bill-pay, and profile edits must produce a server-anchored, attributable record carrying the actor, device, app version, and (where present) the attestation verdict; CWE-778 (insufficient logging) frames the gap. The backend''s raw HTTP access lines lack the device/app-version/attestation attribution needed to tie an action to a genuine client during a dispute or breach investigation.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §7 Audit and privacy
+    excerpt: Consequential actions (transfers, bill-pay, profile edits) are written to a local on-device audit log
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-9
+    - AU-12
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Record consequential actions server-side with device, app-version, and attestation attribution.
+    detail: Emit a durable, server-anchored audit record for every consequential action carrying actor, device identifier, app version, and attestation verdict; treat the on-device log as corroborating only. Route the audit-content design for the backend to the api-security pack.
+  related_concerns:
+  - authenticity
+  - immutability

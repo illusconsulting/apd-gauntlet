@@ -1,0 +1,87 @@
+name: mobile-applications
+display_name: "Mobile Application Security (OWASP MAS)"
+version: 1.0.0
+framework_compat: ">=1.0.0,<2.0.0"
+description: "Security-architecture calibration for native and hybrid mobile applications (Android + iOS) where trust is split between an adversary-controlled client — a binary in the attacker's hands, on a possibly rooted or jailbroken device — and a backend. Translates OWASP Mobile Application Security testing concerns into design-altitude findings across the nine APD goals, treats the client as partially adversarial, and reframes every client-side measure as defense-in-depth behind a server-side invariant. Anchored to OWASP MASVS 2.1.0, the OWASP MASWE weakness catalog (Beta), the OWASP MASTG 1.7.0 testing guide and MAS Checklist, MITRE ATT&CK Mobile, NIST SP 800-53r5, and NIST SP 800-163r1 (the mobile-app vetting lifecycle — planning, app testing, and app approval/rejection against organization-defined security requirements); privacy obligations anchored to GDPR, the Apple App Store privacy requirements, and Google Play Data Safety. Client-focused by design — compose with the api-security and identity-security packs in a multi-domain run for the backend the app fronts."
+includes:
+  - severity-rubric.md
+  - consequential-actions.md
+  - immutability-classes.md
+  - data-taxonomy.md
+  - common-patterns/confidentiality.md
+  - common-patterns/integrity.md
+  - common-patterns/availability.md
+  - common-patterns/distributed.md
+  - common-patterns/resilient.md
+  - common-patterns/ephemeral.md
+  - common-patterns/authenticity.md
+  - common-patterns/non-repudiation.md
+  - common-patterns/immutability.md
+regulatory_anchors:
+  - "OWASP MASVS 2.1.0"
+  - "OWASP MASWE (Beta)"
+  - "OWASP MASTG 1.7.0"
+  - "OWASP MAS Checklist"
+  - "MITRE ATT&CK Mobile"
+  - "NIST SP 800-53r5"
+  - "NIST SP 800-163 Rev. 1 (Vetting the Security of Mobile Applications)"
+  - GDPR
+  - "Apple App Store Review / App Privacy"
+  - "Google Play Data Safety"
+crown_jewels:
+  - pattern: keystore_secure_enclave_keys
+    description: "Hardware-backed key material in the Android Keystore / StrongBox / iOS Keychain / Secure Enclave, including biometric-gated keys and device-attestation keys. Non-exportability is the protection; a key that escapes hardware backing (software-only fallback, exportable flag, key copied into app memory) becomes a client-extractable secret recoverable from a rooted device."
+  - pattern: stored_session_and_refresh_tokens
+    description: "Access tokens, refresh tokens, OAuth bearer tokens, and session cookies persisted on the device. Long-lived, replayable, and the most common stolen-device or extracted-token pivot into the backend; severity tracks server-side revocability and device-binding."
+  - pattern: embedded_api_keys_and_secrets
+    description: "API keys, signing secrets, symmetric keys, and backend credentials compiled into the application binary or its resources. Recoverable from any IPA/APK by static analysis; one secret shared across the entire install base is a fleet-wide crown jewel that obfuscation only delays."
+  - pattern: biometric_gated_secrets
+    description: "Secrets and keys whose release is gated on local biometric or device-credential authentication. The crown jewel is the key-release event bound to the hardware authenticator, not the biometric UI prompt; a UI-only gate protects nothing on a patched or instrumented client."
+  - pattern: cached_pii_phi_on_device
+    description: "PII and PHI cached on the device — profile data, health records, messages, documents, offline data stores. Subject to GDPR and app-store data-safety obligations; exposed via device backup, physical theft, or co-resident-app reads of unprotected storage."
+  - pattern: attestation_tokens_and_jwts
+    description: "Play Integrity / App Attest verdicts, device-attestation JWTs, and the device-bound assertions the backend consumes as a trust signal. Forgery, replay, or a stale verdict defeats the only cryptographic proof that a request came from a genuine app on a genuine device."
+  - pattern: app_signing_identity
+    description: "The app-signing certificate and private key plus the build provenance that proves a binary is the genuine, untampered app published by the developer. Compromise enables a trusted repackaged or backdoored build to be distributed or side-loaded."
+  - pattern: js_bridge_native_surface
+    description: "The native capability surface a WebView JavaScript bridge exposes — file access, storage, device APIs, native method invocation. The boundary where untrusted web content can reach native privilege if origin allowlisting and bridge minimization are absent."
+  - pattern: deep_link_and_ipc_entry_points
+    description: "Exported components, custom URL schemes, Android App Links / iOS Universal Links, intents, content providers, and other IPC endpoints. The unauthenticated inbound attack surface that co-resident apps and crafted links reach to drive in-app actions or data reads."
+  - pattern: sdk_collected_data_and_consent_records
+    description: "Data collected by in-process third-party SDKs (analytics, advertising, crash reporting) and the consent and permission records that authorize that collection. Simultaneously the privacy fact base and a covert in-process exfiltration channel running with the app's full privilege."
+  - pattern: mobile_backend_api_surface
+    description: "The backend endpoints the app calls — the actual location of every authentication, authorization, and business-rule decision. The client is a UI; this is where server-side invariants must live. Shared with the api-security and identity-security packs in multi-domain runs."
+attacker_positions:
+  - position: co_resident_malicious_app
+    description: "A malicious app installed on the same device abusing shared or world-readable storage, unprotected exported components, custom-scheme hijacking, clipboard access, or accessibility/overlay services to read this app's data or coerce its actions."
+  - position: physical_thief_with_stolen_device
+    description: "An attacker in physical possession of a lost, stolen, or seized device — or its backup — reading on-device storage, tokens, and cached PII/PHI from a locked, unlocked, or lock-screen-bypassed device. The data-at-rest threat model."
+  - position: rooted_device_attacker_with_frida
+    description: "An attacker on a rooted or jailbroken device using Frida or other dynamic instrumentation to hook the running app, bypass local checks, dump keys from memory, and disable client-side controls. The position that proves client-side enforcement is not a control."
+  - position: network_mitm
+    description: "An on-path adversary — hostile Wi-Fi, rogue access point, user-installed MitM CA, or a downgraded/stripped TLS session — intercepting or modifying app-to-backend traffic. The transport-security and certificate-pinning threat model."
+  - position: reverse_engineer_with_ipa_apk
+    description: "An attacker holding the distributed binary, performing static analysis to recover embedded secrets, business logic, the endpoint inventory, and weak cryptography. The reverse-engineering, hardcoded-secret, and anti-static-analysis threat model."
+  - position: malicious_in_process_sdk
+    description: "A compromised, malicious, or over-permissioned third-party SDK running in-process with the app's full privilege — exfiltrating data, harvesting tokens, or backdooring behavior across the install base. The supply-chain-inside-the-app position."
+  - position: phishing_deep_link_or_ipc_caller
+    description: "An attacker crafting a malicious deep link, intent, push payload, or IPC call to drive an unauthenticated state change, data read, or action in the target app. The inbound-untrusted-input position behind PLATFORM and CODE input-validation findings."
+  - position: compromised_backend_or_response
+    description: "A compromised backend, a MitM-substituted server response, or a hostile API the client consumes, returning adversarial payloads the client renders, parses, or acts on. The untrusted-server-response position the client must validate, not trust."
+default_trust_boundaries:
+  - boundary: device_to_os_platform
+    description: "The app's reliance on OS integrity — a non-rooted, non-jailbroken, current and patched platform whose sandbox and security features can be trusted. Crossing this boundary is where root/jailbreak, debugger, and emulator assumptions break and where hardware attestation reasserts a verifiable floor."
+  - boundary: app_sandbox_to_other_apps
+    description: "The OS app-sandbox boundary between this app and co-resident apps — exported components, shared or world-readable storage, custom URL schemes, IPC, and the clipboard. Where co-resident-app reads and intent hijacking are contained."
+  - boundary: client_to_backend_api
+    description: "The app-to-backend network crossing. Where TLS, certificate pinning, token presentation, and — critically — server-side enforcement of every authorization and business rule live. The client must be treated as untrusted on this boundary."
+  - boundary: app_to_third_party_sdk
+    description: "The in-process boundary to bundled third-party SDKs running with the app's full privilege. Where SDK capability scoping, data-access limits, and provenance/SBOM verification contain a malicious or vulnerable dependency."
+  - boundary: app_to_webview_js_bridge
+    description: "The boundary between native code and content loaded in a WebView, including the JavaScript bridge. Where origin allowlisting, bridge-capability minimization, and untrusted-content isolation keep web content from reaching native privilege."
+  - boundary: app_to_platform_keystore_tee
+    description: "The boundary between app-process memory and the hardware-backed key store / TEE / Secure Enclave / StrongBox. Where key non-exportability, biometric-gated key release, and key attestation keep key material out of the app's reachable memory."
+  - boundary: deep_link_ipc_entry_boundary
+    description: "The inbound boundary where deep links, App Links / Universal Links, custom schemes, intents, and IPC enter app logic. Where caller-identity verification (App Links domain verification), parameter validation, and instruction-versus-data discipline are enforced."
+  - boundary: device_to_attestation_authority
+    description: "The boundary between the app/device and the attestation authority (Play Integrity / App Attest) plus the backend that verifies the verdict. Where the cryptographic proof of a genuine app on a genuine device is established and consumed as a server-side trust input."
