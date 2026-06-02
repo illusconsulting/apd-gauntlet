@@ -11,6 +11,7 @@ This taxonomy is consulted by Confidentiality, Integrity, Authenticity, and Non-
 - `biometric_gated_secret` (the key-release event bound to a biometric/device-credential authenticator — sensitive as the *release*, not the prompt)
 - `embedded_api_key`, `hardcoded_secret`, `embedded_signing_key` (compiled into the binary; recoverable from any IPA/APK — flag any secret shared across the install base)
 - `pinning_public_key_set` (the pinned cert/public-key/SPKI set; less secret than a private key but integrity-critical — a wrong or unrotatable pin is its own finding)
+- `js_app_bundle` (the hybrid React Native / Flutter / Capacitor application bundle shipping app logic; not a secret store but a reverse-engineering surface — treat any key, endpoint, or trusted logic baked into the bundle or its OTA payload as binary-recoverable, never confidential)
 
 ## Session and authentication state
 
@@ -36,7 +37,7 @@ This taxonomy is consulted by Confidentiality, Integrity, Authenticity, and Non-
 
 - `deep_link_parameters`, `custom_scheme_params`, `universal_app_link_params`
 - `intent_extras`, `ipc_payload`, `content_provider_query`
-- `push_payload`, `webview_bridge_payload`, `imported_file`, `untrusted_server_response`
+- `push_payload`, `webview_bridge_payload`, `imported_file`, `untrusted_server_response`, `ota_update_payload`
 
 The intake MUST enumerate these so Integrity findings on input validation have a concrete field set to reason about; their sensitivity is that the app trusts them by default.
 

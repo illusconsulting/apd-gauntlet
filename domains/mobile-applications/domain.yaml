@@ -2,7 +2,7 @@ name: mobile-applications
 display_name: "Mobile Application Security (OWASP MAS)"
 version: 1.0.0
 framework_compat: ">=1.0.0,<2.0.0"
-description: "Security-architecture calibration for native and hybrid mobile applications (Android + iOS) where trust is split between an adversary-controlled client — a binary in the attacker's hands, on a possibly rooted or jailbroken device — and a backend. Translates OWASP Mobile Application Security testing concerns into design-altitude findings across the nine APD goals, treats the client as partially adversarial, and reframes every client-side measure as defense-in-depth behind a server-side invariant. Anchored to OWASP MASVS 2.1.0, the OWASP MASWE weakness catalog (Beta), the OWASP MASTG 1.7.0 testing guide and MAS Checklist, MITRE ATT&CK Mobile, NIST SP 800-53r5, and NIST SP 800-163r1 (the mobile-app vetting lifecycle — planning, app testing, and app approval/rejection against organization-defined security requirements); privacy obligations anchored to GDPR, the Apple App Store privacy requirements, and Google Play Data Safety. Client-focused by design — compose with the api-security and identity-security packs in a multi-domain run for the backend the app fronts."
+description: "Security-architecture calibration for native and hybrid mobile applications (Android + iOS; including React Native, Flutter, and Capacitor/Cordova hybrid apps whose JavaScript/Dart bundle ships application logic and may be hot-updated over the air outside store review) where trust is split between an adversary-controlled client — a binary in the attacker's hands, on a possibly rooted or jailbroken device — and a backend. Translates OWASP Mobile Application Security testing concerns into design-altitude findings across the nine APD goals, treats the client as partially adversarial, and reframes every client-side measure as defense-in-depth behind a server-side invariant. Anchored to OWASP MASVS 2.1.0, the OWASP MASWE weakness catalog (Beta), the OWASP MASTG 1.7.0 testing guide and MAS Checklist, MITRE ATT&CK Mobile, NIST SP 800-53r5, and NIST SP 800-163r1 (the mobile-app vetting lifecycle — planning, app testing, and app approval/rejection against organization-defined security requirements); privacy obligations anchored to GDPR, the Apple App Store privacy requirements, and Google Play Data Safety. Client-focused by design — compose with the api-security and identity-security packs in a multi-domain run for the backend the app fronts."
 includes:
   - severity-rubric.md
   - consequential-actions.md
@@ -43,6 +43,8 @@ crown_jewels:
     description: "Play Integrity / App Attest verdicts, device-attestation JWTs, and the device-bound assertions the backend consumes as a trust signal. Forgery, replay, or a stale verdict defeats the only cryptographic proof that a request came from a genuine app on a genuine device."
   - pattern: app_signing_identity
     description: "The app-signing certificate and private key plus the build provenance that proves a binary is the genuine, untampered app published by the developer. Compromise enables a trusted repackaged or backdoored build to be distributed or side-loaded."
+  - pattern: js_app_bundle_and_ota_channel
+    description: "For hybrid apps (React Native, Flutter, Capacitor/Cordova) the JavaScript/Dart application bundle that ships app logic, plus any over-the-air code-push channel (CodePush, EAS Update) that hot-updates it outside store review. A reverse-engineering surface like the native binary, and a code-injection surface across the install base if an OTA update is applied without verified signing."
   - pattern: js_bridge_native_surface
     description: "The native capability surface a WebView JavaScript bridge exposes — file access, storage, device APIs, native method invocation. The boundary where untrusted web content can reach native privilege if origin allowlisting and bridge minimization are absent."
   - pattern: deep_link_and_ipc_entry_points
@@ -64,6 +66,8 @@ attacker_positions:
     description: "An attacker holding the distributed binary, performing static analysis to recover embedded secrets, business logic, the endpoint inventory, and weak cryptography. The reverse-engineering, hardcoded-secret, and anti-static-analysis threat model."
   - position: malicious_in_process_sdk
     description: "A compromised, malicious, or over-permissioned third-party SDK running in-process with the app's full privilege — exfiltrating data, harvesting tokens, or backdooring behavior across the install base. The supply-chain-inside-the-app position."
+  - position: malicious_ota_update
+    description: "An attacker pushing a malicious or tampered over-the-air code-push bundle — via a compromised OTA/code-push endpoint, a stolen bundle-signing key, or a MitM on the update fetch — to inject app logic across the install base outside store review. The hybrid-app code-update supply-chain position."
   - position: phishing_deep_link_or_ipc_caller
     description: "An attacker crafting a malicious deep link, intent, push payload, or IPC call to drive an unauthenticated state change, data read, or action in the target app. The inbound-untrusted-input position behind PLATFORM and CODE input-validation findings."
   - position: compromised_backend_or_response
@@ -77,6 +81,8 @@ default_trust_boundaries:
     description: "The app-to-backend network crossing. Where TLS, certificate pinning, token presentation, and — critically — server-side enforcement of every authorization and business rule live. The client must be treated as untrusted on this boundary."
   - boundary: app_to_third_party_sdk
     description: "The in-process boundary to bundled third-party SDKs running with the app's full privilege. Where SDK capability scoping, data-access limits, and provenance/SBOM verification contain a malicious or vulnerable dependency."
+  - boundary: app_to_ota_update_channel
+    description: "The boundary where a hybrid app fetches and applies an over-the-air JavaScript/bundle update (CodePush, EAS Update). Where bundle-signature verification, update provenance, and a server-enforced minimum-bundle-version gate keep an unsigned, tampered, or downgraded bundle from executing."
   - boundary: app_to_webview_js_bridge
     description: "The boundary between native code and content loaded in a WebView, including the JavaScript bridge. Where origin allowlisting, bridge-capability minimization, and untrusted-content isolation keep web content from reaching native privilege."
   - boundary: app_to_platform_keystore_tee
