@@ -11,9 +11,28 @@ from apd_gauntlet.refresh_mitre import (
     MOBILE_URL,
     fetch_and_project,
     fetch_mitre_bundle,
+    merge_mobile_mitigations,
     merge_mobile_technique_titles,
     project_technique_titles,
 )
+
+FAKE_MOBILE_MIT_BUNDLE = {
+    "objects": [
+        {"id": "course-of-action--mob1", "type": "course-of-action",
+         "external_references": [{"source_name": "mitre-attack", "external_id": "M1005"}]},
+        # M1013 is the one mitigation id shared with the Enterprise set — must union.
+        {"id": "course-of-action--mob2", "type": "course-of-action",
+         "external_references": [{"source_name": "mitre-attack", "external_id": "M1013"}]},
+        {"id": "attack-pattern--t1", "type": "attack-pattern",
+         "external_references": [{"source_name": "mitre-attack", "external_id": "T1634"}]},
+        {"id": "attack-pattern--t2", "type": "attack-pattern",
+         "external_references": [{"source_name": "mitre-attack", "external_id": "T1417"}]},
+        {"type": "relationship", "relationship_type": "mitigates",
+         "source_ref": "course-of-action--mob1", "target_ref": "attack-pattern--t1"},
+        {"type": "relationship", "relationship_type": "mitigates",
+         "source_ref": "course-of-action--mob2", "target_ref": "attack-pattern--t2"},
+    ],
+}
 
 FAKE_MOBILE_BUNDLE = {
     "objects": [
@@ -162,3 +181,43 @@ def test_fetch_mitre_bundle_rejects_oversize_response_post_read(
         mock.return_value.__exit__.return_value = False
         with pytest.raises(ValueError, match="exceeds maximum"):
             fetch_mitre_bundle()
+
+
+def test_merge_mobile_mitigations_additive_union_idempotent(tmp_path) -> None:
+    mit = tmp_path / "mitre-mitigations.json"
+    mit.write_text(
+        json.dumps(
+            {
+                "version": "x",
+                "source_url": "enterprise",
+                "source_sha256": "abc",
+                # M1013 is shared with Mobile (same mitigation) -> must union;
+                # M1041 is Enterprise-only here -> must be left untouched.
+                "mitigations": {"M1013": ["T1078"], "M1041": ["T1530"]},
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    body = json.dumps(FAKE_MOBILE_MIT_BUNDLE).encode()
+    with patch("apd_gauntlet.refresh_mitre.fetch_mitre_bundle", return_value=body) as fetch:
+        stats = merge_mobile_mitigations(mit, fetched_at="2026-06-02")
+    fetch.assert_called_once_with(MOBILE_URL)
+    d = json.loads(mit.read_text())
+    m = d["mitigations"]
+    # Mobile-only mitigation added.
+    assert m["M1005"] == ["T1634"]
+    # Shared M1013 unioned (Enterprise T1078 preserved + Mobile T1417 added, sorted).
+    assert m["M1013"] == ["T1078", "T1417"]
+    # Enterprise-only mitigation untouched.
+    assert m["M1041"] == ["T1530"]
+    assert stats["added_mitigations"] == 1  # only M1005 is a new id
+    assert stats["added_pairs"] == 2  # M1005:+1, M1013:+1
+    assert d["mobile_source_url"] == MOBILE_URL
+    assert d["mobile_fetched_at"] == "2026-06-02"
+    # Idempotent: a second merge adds nothing.
+    with patch("apd_gauntlet.refresh_mitre.fetch_mitre_bundle", return_value=body):
+        stats2 = merge_mobile_mitigations(mit, fetched_at="2026-06-02")
+    assert stats2["added_mitigations"] == 0
+    assert stats2["added_pairs"] == 0

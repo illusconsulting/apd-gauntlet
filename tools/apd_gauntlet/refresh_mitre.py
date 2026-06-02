@@ -190,3 +190,59 @@ def merge_mobile_technique_titles(
         encoding="utf-8",
     )
     return {"added": added, "total": len(techniques)}
+
+
+def merge_mobile_mitigations(
+    mitigations_path: pathlib.Path,
+    *,
+    fetched_at: str | None = None,
+) -> dict[str, int]:
+    """Additively merge ATT&CK Mobile mitigation→technique mappings into the
+    bundled crosswalk (``mitre-mitigations.json``).
+
+    Mobile mitigation ids are disjoint from the Enterprise set except M1013
+    (Application Developer Guidance), which is the same mitigation in both
+    matrices, so a per-id union of technique lists is sound. Idempotent. Returns
+    ``{"added_mitigations": n, "added_pairs": p, "total_mitigations": m}``.
+
+    Re-serialized with the bundled crosswalk's options (``indent=2,
+    sort_keys=True``) so the diff is the unioned/added entries plus the
+    ``mobile_source_*`` provenance keys.
+    """
+    import datetime
+
+    raw = fetch_mitre_bundle(MOBILE_URL)
+    bundle = json.loads(raw.decode("utf-8"))
+    by_id = {obj.get("id"): obj for obj in bundle.get("objects", []) if obj.get("id")}
+    mobile_map: dict[str, set[str]] = {}
+    for obj in bundle.get("objects", []):
+        if obj.get("type") != "relationship" or obj.get("relationship_type") != "mitigates":
+            continue
+        mit = _attack_external_id(by_id.get(obj.get("source_ref")) or {})
+        tech = _attack_external_id(by_id.get(obj.get("target_ref")) or {})
+        if mit and tech:
+            mobile_map.setdefault(mit, set()).add(tech)
+
+    existing = json.loads(mitigations_path.read_text(encoding="utf-8"))
+    mitigations: dict[str, list[str]] = existing.setdefault("mitigations", {})
+    added_ids = 0
+    added_pairs = 0
+    for mid in sorted(mobile_map):
+        current = set(mitigations.get(mid, []))
+        if mid not in mitigations:
+            added_ids += 1
+        merged = current | mobile_map[mid]
+        added_pairs += len(merged) - len(current)
+        mitigations[mid] = sorted(merged)
+
+    existing["mobile_source_url"] = MOBILE_URL
+    existing["mobile_source_sha256"] = hashlib.sha256(raw).hexdigest()
+    existing["mobile_fetched_at"] = fetched_at or datetime.date.today().isoformat()
+    mitigations_path.write_text(
+        json.dumps(existing, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return {
+        "added_mitigations": added_ids,
+        "added_pairs": added_pairs,
+        "total_mitigations": len(mitigations),
+    }

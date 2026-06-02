@@ -362,31 +362,46 @@ def refresh_mitre_cmd(out, dry_run) -> None:  # type: ignore[no-untyped-def]
     show_default=False,
 )
 @click.option(
+    "--mitigations-out",
+    type=click.Path(dir_okay=False, path_type=pathlib.Path),
+    default=pathlib.Path(__file__).resolve().parent / "data" / "mitre-mitigations.json",
+    show_default=False,
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     help="Fetch the Mobile bundle and report its byte size without writing.",
 )
-def refresh_mitre_mobile_cmd(techniques_out, dry_run) -> None:  # type: ignore[no-untyped-def]
-    """Additively merge ATT&CK Mobile technique titles into the bundled catalog.
+def refresh_mitre_mobile_cmd(techniques_out, mitigations_out, dry_run) -> None:  # type: ignore[no-untyped-def]
+    """Additively merge the ATT&CK Mobile matrix into the bundled catalogs.
 
-    Enterprise entries are preserved; only Mobile technique ids not already
-    present are added, so Mobile-pack findings render technique names instead of
-    bare ids. Idempotent.
+    Adds Mobile technique titles (so Mobile-pack findings render names, not bare
+    ids) and Mobile mitigation→technique mappings. Enterprise entries are
+    preserved; only Mobile ids not already present are added (the lone shared id,
+    M1013, is unioned). Idempotent.
     """
-    from .refresh_mitre import MOBILE_URL, fetch_mitre_bundle, merge_mobile_technique_titles
+    from .refresh_mitre import (
+        MOBILE_URL,
+        fetch_mitre_bundle,
+        merge_mobile_mitigations,
+        merge_mobile_technique_titles,
+    )
 
     if dry_run:
         click.echo("Fetching MITRE ATT&CK Mobile bundle (dry-run)...")
         body = fetch_mitre_bundle(MOBILE_URL)
         click.echo(
-            f"Would merge Mobile titles into {techniques_out} ({len(body)} bytes fetched)."
+            f"Would merge Mobile titles into {techniques_out} and mitigations into "
+            f"{mitigations_out} ({len(body)} bytes fetched)."
         )
         return
-    click.echo("Fetching MITRE ATT&CK Mobile bundle and merging titles...")
-    stats = merge_mobile_technique_titles(techniques_out)
+    click.echo("Fetching MITRE ATT&CK Mobile bundle and merging titles + mitigations...")
+    t = merge_mobile_technique_titles(techniques_out)
+    m = merge_mobile_mitigations(mitigations_out)
     click.echo(
-        f"Merged Mobile ATT&CK titles into {techniques_out}: "
-        f"+{stats['added']} added ({stats['total']} total)."
+        f"Merged Mobile ATT&CK into bundled catalogs: titles +{t['added']} "
+        f"({t['total']} total); mitigations +{m['added_mitigations']} ids / "
+        f"+{m['added_pairs']} pairs ({m['total_mitigations']} total)."
     )
 
 
