@@ -72,6 +72,8 @@ function App() {
         </div>
       </header>
 
+      <DiagnosticsBanner data={data} />
+
       {/* Tab nav */}
       <nav className="tabnav">
         <div className="tabnav__inner">

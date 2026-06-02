@@ -74,6 +74,15 @@
         "scalability":     { "type": "string", "minLength": 10 },
         "auditability":    { "type": "string", "minLength": 10 }
       }
+    },
+    "domain_pack_caveat": {
+      "type": "object",
+      "required": ["body"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "body":  { "type": "string", "minLength": 10 }
+      }
     }
   }
 }

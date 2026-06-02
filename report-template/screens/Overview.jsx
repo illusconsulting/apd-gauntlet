@@ -153,6 +153,7 @@ function Overview({ data, onOpenFinding, onNavigate }) {
             <dt>Synthesizer</dt><dd className="mono">v{data.meta.synthesizer_version}</dd>
             <dt>Artifacts</dt><dd>{data.meta.artifact_count} ({data.meta.artifact_types.join(", ")})</dd>
             <dt>Specialists</dt><dd>9 / 9</dd>
+            <dt>Skipped</dt><dd>{(data.meta.specialists_skipped && data.meta.specialists_skipped.length) ? data.meta.specialists_skipped.join(", ") : "none"}</dd>
           </dl>
         </div>
 

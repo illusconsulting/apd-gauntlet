@@ -38,7 +38,9 @@ function Annexes({ data, onOpenFinding }) {
             </div>
             <div className="contradiction__col">
               <div className="contradiction__label">Capability asserts</div>
-              <CopyPill value={c.capability.id} />
+              {(c.capability.ids || [c.capability.id]).map((cid) => (
+                <CopyPill key={cid} value={cid} />
+              ))}
               <div className="contradiction__assertion">"{c.capability.assertion}"</div>
             </div>
             <div className="contradiction__resolution">

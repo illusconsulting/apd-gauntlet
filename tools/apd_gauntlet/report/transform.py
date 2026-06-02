@@ -103,6 +103,29 @@ def _count_artifact_types(run_dir: pathlib.Path | None) -> tuple[int, list[str]]
     return len(entries), types
 
 
+# Optional / activation-gated specialists and the run artifact that marks whether
+# each ran. When the marker is absent the specialist was skipped (e.g. code_recon
+# disabled, or no threat model supplied). The nine lens specialists always run, so
+# they are not represented here.
+_OPTIONAL_SPECIALIST_MARKERS: list[tuple[str, str]] = [
+    ("code-recon", "00-context/code-evidence-index.yaml"),
+    ("threat-model-recon", "00-context/threat-model-normalized.yaml"),
+    ("attack-path-analyzer", "40-synthesis/attack-paths.yaml"),
+]
+
+
+def _specialists_skipped(run_dir: pathlib.Path | None) -> list[str]:
+    """Return the optional/activation-gated specialists whose output artifact is
+    absent (i.e. they were skipped). Empty when ``run_dir`` is unknown."""
+    if run_dir is None:
+        return []
+    return [
+        name
+        for name, rel in _OPTIONAL_SPECIALIST_MARKERS
+        if not (run_dir / rel).is_file()
+    ]
+
+
 def meta_block(
     artifacts: RunArtifacts,
     run_dir: pathlib.Path | None = None,
@@ -148,9 +171,10 @@ def meta_block(
             "version": artifacts.domain_pack_version,
         },
         "run_id": artifacts.run_id,
-        # NOTE: future enhancement — pull from advisory-report frontmatter
-        "synthesizer_version": "1.0.0",
-        "specialists_skipped": [],
+        # The synthesizer ships with the framework, so its version IS the run's
+        # framework version (rather than a stale hardcoded literal).
+        "synthesizer_version": framework_version,
+        "specialists_skipped": _specialists_skipped(run_dir),
         "subject": subject.split(" — ")[0] if " — " in subject else subject,
         "subject_tagline": subject.split(" — ", 1)[1] if " — " in subject else "",
         "date": artifacts.date,
@@ -1736,6 +1760,12 @@ def build_apd_data(
         for pt_name, pt_value in passthrough_after.get(name, ()):
             out[pt_name] = pt_value
 
+    # Optional editorial passthrough: a domain-pack scope caveat the report-writer
+    # may supply (e.g. a profile/coverage note for a newer or multi-domain pack).
+    # Added only when present so runs without it carry no empty key.
+    caveat = supplement.get("domain_pack_caveat")
+    if caveat:
+        out["domain_pack_caveat"] = caveat
     out["meta"]["section_errors"] = section_errors
     out["meta"]["warnings"] = warnings
     return out

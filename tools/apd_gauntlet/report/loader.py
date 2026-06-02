@@ -252,10 +252,11 @@ def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
     legacy = run_cfg.get("domain", "")
     if legacy:
         return str(legacy)
-    # Current shape: `domains:` list — use the first entry as the pack name.
+    # Current shape: `domains:` list — join all selected packs so a multi-domain
+    # run names every contributing pack (a single-domain run is unchanged).
     domains = run_cfg.get("domains")
     if isinstance(domains, list) and domains:
-        return str(domains[0])
+        return " + ".join(str(d) for d in domains)
     return ""
 
 
