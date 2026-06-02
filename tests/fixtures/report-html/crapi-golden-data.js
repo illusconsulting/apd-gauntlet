@@ -47,7 +47,7 @@ window.APD_DATA = {
       "attack": {
         "fetched_at": "2026-05-29",
         "source": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
-        "count": 858
+        "count": 1034
       },
       "cwe": {
         "fetched_at": null,
