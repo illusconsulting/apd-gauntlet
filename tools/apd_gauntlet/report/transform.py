@@ -289,6 +289,21 @@ def capability_grid(artifacts: RunArtifacts) -> list[dict[str, Any]]:
 _SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4, "info": 4}
 _CONF_ORDER = {"high": 0, "medium": 1, "low": 2}
 
+# The report template's canonical token for the informational tier is "info":
+# its CSS classes (.sev--info / .finding-row--info), its findings-screen severity
+# sort map, and summary_rollup's bySeverity.info all key on "info". The finding
+# schema's canonical value is the full word "informational"; emit the template
+# token on the per-finding display payload so informational findings sort, style,
+# and filter correctly instead of falling through to an unstyled, NaN-sorted row.
+# All other severities pass through unchanged.
+_SEVERITY_DISPLAY = {"informational": "info"}
+
+
+def _display_severity(severity: str | None) -> str:
+    """Normalize a finding's severity to the report template's display token."""
+    sev = severity or "informational"
+    return _SEVERITY_DISPLAY.get(sev, sev)
+
 
 def _algorithmic_headline_ranks(findings: list[dict[str, Any]]) -> dict[str, int]:
     """Pick the top-10 findings by (severity, confidence, id). Returns id→rank."""
@@ -353,7 +368,7 @@ def findings_array(
             "title":        f.get("title", ""),
             "goal":         f.get("apd_goal"),
             "tier":         f.get("apd_tier"),
-            "severity":     f.get("severity", "informational"),
+            "severity":     _display_severity(f.get("severity")),
             "confidence":   f.get("confidence", "low"),
             "disposition":  f.get("disposition", "gap"),
             "summary":      f.get("summary", ""),
