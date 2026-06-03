@@ -161,6 +161,34 @@ If either of these tabs is blank with no explanation, that is a template
 rendering bug — check that `build-report` was run against the current
 `report-template/` bundle.
 
+## APD framework reference (Annexes §11)
+
+The Annexes tab ends with a static **§11 — APD framework reference** card titled
+"Three pillars, nine goals". It is always present (it does not depend on run data)
+and explains the framework's **three pillars and nine goals** for readers new to
+APD — software engineers, information-systems and cybersecurity auditors, and
+risk-management professionals.
+
+Each goal is shown with its lens question, a plain-language explanation and a
+concrete example, and its primary NIST SP 800-53 Rev 5 control families. A
+consolidated **Sources** block lists the standards the framework draws on (NIST
+800-53r5, NIST CSF 2.0, NIST SP 800-160 Vol. 2, NIST SP 800-204, NIST SP 800-63B,
+ISO/IEC 27001:2022, OWASP ASVS / Top 10 / API / LLM, The Open Group Open FAIR,
+CSA Cloud Controls Matrix, MITRE ATT&CK / D3FEND / ATLAS, CWE, and others).
+
+The card is deliberate about **what the gauntlet enforces versus what it cites for
+context**: only NIST 800-53r5 is mapped on every finding and capability; MITRE
+ATT&CK, CWE, and D3FEND are available on every run under a high-confidence
+mapping discipline; OWASP Top 10 / API / LLM and MITRE ATLAS are opt-in per run;
+and the remaining bodies are educational cross-references, not compliance
+measurements.
+
+The content is static JSX in `report-template/screens/Annexes.jsx` (labels are
+pulled from the framework constants in `components.jsx`), so it does not interact
+with the report completeness gate. As with any template change, edits require
+rebuilding the bundle (`python tools/build_report_template.py`) and committing the
+regenerated `app.js` and `.source-hash`.
+
 ## Contributing template changes
 
 The JSX source lives in `report-template/`. After editing any JSX or CSS,

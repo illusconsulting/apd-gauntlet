@@ -1,6 +1,157 @@
-/* eslint-disable */
-// Annexes screen — contradictions + severity disagreements (and link back to strengths)
+# APD Framework Reference Annex (§11) Implementation Plan
 
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add an always-present, educational **§11 "APD Framework — three pillars, nine goals"** card to the bottom of the HTML report's Annexes tab, explaining APD's 3 pillars and 9 goals in plain language with honest citations.
+
+**Architecture:** A static JSX section appended to `report-template/screens/Annexes.jsx`. Pillar/goal **labels** come from the existing framework constants (`TIER_LABELS`, `TIER_GOALS`, `GOAL_LABELS`, exposed as window globals by `components.jsx`); the explanatory **prose**, examples, and NIST anchors are static maps defined at the top of `Annexes.jsx`. No data-pipeline change, no new CSS, zero completeness-gate interaction. The precompiled bundle is rebuilt with `python tools/build_report_template.py` and committed alongside the source.
+
+**Tech Stack:** React/JSX (esbuild-precompiled bundle), existing report CSS design tokens, Python/pytest for the regression pins, Node 26 + npm for the mandatory bundle rebuild.
+
+**Authoritative content source:** the approved spec `docs/superpowers/specs/2026-06-03-apd-annex-framework-reference-design.md` §4. The prose embedded in this plan is that content verbatim — use it exactly.
+
+---
+
+## File Structure
+
+- **`report-template/screens/Annexes.jsx`** (modify) — add the static content maps + the §11 `<section>` at the end of the `Annexes` function. Sole responsibility: render the Annexes tab (existing contradictions/disagreements/caveat + the new framework reference).
+- **`tools/apd_gauntlet/data/report-template/app.js`** + **`.source-hash`** (regenerated build artifacts) — produced by `python tools/build_report_template.py`; committed with the JSX so the freshness gate passes.
+- **`tests/unit/report/test_annex_framework_reference.py`** (create) — static-source pin asserting the §11 content + constant-driven structure can't silently regress.
+- **`docs/html-report.md`** (modify) — short subsection documenting the new §11 reference.
+- **`tests/unit/report/test_annex_framework_reference.py`** also carries a one-line doc-presence assertion (kept in the same module to avoid a second test file).
+
+**Established idioms to follow (verified in the existing file):**
+- Components/constants are referenced as **bare globals** (e.g. the existing code uses `CopyPill`, `SeverityPill`, `React.Fragment` bare; `components.jsx` does `Object.assign(window, { GOAL_LABELS, TIER_LABELS, TIER_GOALS, ... })`). So `TIER_LABELS`, `TIER_GOALS`, `GOAL_LABELS` are referenced bare in `Annexes.jsx`.
+- Sections are `<section className="annex">` with a `<header className="annex__head">` containing a `.section-eyebrow` + an `<h3>` + a `.pill`.
+- Long-form prose uses inline style `{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }`.
+- The callout pattern for explanatory prose is `className="empty-state--info"` (defined at `report-template/screens.css:891`).
+- ID-style mono badges use `className="pill pill--id"` (`report-template/styles.css:434`).
+- File begins with `/* eslint-disable */` — no lint gate on the JSX.
+
+---
+
+## Task 1: §11 framework-reference section in Annexes.jsx (+ rebuild + pin test)
+
+**Files:**
+- Modify: `report-template/screens/Annexes.jsx`
+- Regenerate + commit: `tools/apd_gauntlet/data/report-template/app.js`, `tools/apd_gauntlet/data/report-template/.source-hash`
+- Test: `tests/unit/report/test_annex_framework_reference.py`
+
+- [ ] **Step 1: Write the failing pin test**
+
+Create `tests/unit/report/test_annex_framework_reference.py`:
+
+```python
+"""Static-source pin for the §11 APD framework-reference annex.
+
+The §11 section is static JSX in report-template/screens/Annexes.jsx; the
+bundle-freshness gate (test_tier3_bundle_freshness) separately guarantees the
+shipped app.js matches this source, so pinning the source is sufficient to
+prove the educational content cannot silently regress.
+"""
+from __future__ import annotations
+
+import pathlib
+
+REPO = pathlib.Path(__file__).resolve().parents[3]
+ANNEXES = REPO / "report-template" / "screens" / "Annexes.jsx"
+HTML_DOC = REPO / "docs" / "html-report.md"
+
+
+def _src() -> str:
+    return ANNEXES.read_text(encoding="utf-8")
+
+
+def test_section_heading_and_numbering_present() -> None:
+    src = _src()
+    assert "§ 11 — APD framework reference" in src
+    assert "Three pillars, nine goals" in src
+
+
+def test_structure_is_constant_driven() -> None:
+    # Labels must come from the framework constants, not re-typed strings,
+    # so the annex can never drift from the framework definition.
+    src = _src()
+    assert "TIER_GOALS" in src
+    assert "TIER_LABELS" in src
+    assert "GOAL_LABELS" in src
+    assert "APD_TIER_ORDER" in src
+
+
+def test_all_nine_goal_details_present() -> None:
+    src = _src()
+    for goal_key in (
+        "confidentiality", "integrity", "availability",
+        "distributed", "resilient", "ephemeral",
+        "authenticity", "non_repudiation", "immutability",
+    ):
+        assert f"{goal_key}:" in src, f"missing goal detail entry: {goal_key}"
+    # Every goal block shows its lens question.
+    assert src.count("lens:") == 9
+
+
+def test_per_goal_nist_family_anchors_present() -> None:
+    src = _src()
+    for anchor in (
+        "NIST 800-53r5 · SC, AC, MP",   # confidentiality
+        "NIST 800-53r5 · SI, SC, CM",   # integrity
+        "NIST 800-53r5 · CP, SC, SI",   # availability
+        "NIST 800-53r5 · SC, CP, CM",   # distributed
+        "NIST 800-53r5 · SI, CP, SC",   # resilient
+        "NIST 800-53r5 · IA, AC, SA",   # ephemeral
+        "NIST 800-53r5 · IA, SC, SR",   # authenticity
+        "NIST 800-53r5 · AU-10, IA",    # non-repudiation
+        "NIST 800-53r5 · AU, CM, MP",   # immutability
+    ):
+        assert anchor in src, f"missing NIST anchor: {anchor}"
+
+
+def test_acronym_caveat_present() -> None:
+    # APD must NOT be asserted as a documented expansion.
+    src = _src()
+    assert "informal editorial gloss" in src
+    assert "not the framework's documented expansion" in src
+
+
+def test_sources_and_enforcement_note_present() -> None:
+    src = _src()
+    # Distinctive Sources bodies (the user-named bodies + a couple unique ones).
+    for body in (
+        "NIST Cybersecurity Framework (CSF) 2.0",
+        "ISO/IEC 27001:2022",
+        "OWASP ASVS",
+        "The Open Group Open FAIR",
+        "CSA Cloud Controls Matrix",
+        "IHE ATNA",
+    ):
+        assert body in src, f"missing Sources body: {body}"
+    # The honest enforcement note, with the default-on vs opt-in nuance.
+    assert "What the gauntlet actually enforces" in src
+    assert "opt-in per run" in src
+    assert "not a statement that the gauntlet measures the system's compliance" in src
+
+
+def test_report_cross_reference_line_present() -> None:
+    src = _src()
+    assert "drive the Findings filters" in src
+    assert "Coverage → APD matrix" in src
+
+
+def test_html_report_doc_mentions_framework_annex() -> None:
+    doc = HTML_DOC.read_text(encoding="utf-8")
+    assert "three pillars" in doc.lower() and "nine goals" in doc.lower()
+```
+
+- [ ] **Step 2: Run the pin test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/unit/report/test_annex_framework_reference.py -q`
+Expected: FAIL — most assertions fail because the §11 content is not yet in `Annexes.jsx` (and the doc test fails until Task 2). This confirms the test has teeth.
+
+- [ ] **Step 3: Add the static content maps to `Annexes.jsx`**
+
+In `report-template/screens/Annexes.jsx`, immediately after the leading comment lines (after line 2, `// Annexes screen …`) and **before** `function Annexes(...)`, insert these module-level constants verbatim:
+
+```jsx
 // §11 framework-reference content. Pillar/goal LABELS come from the framework
 // constants (TIER_LABELS / TIER_GOALS / GOAL_LABELS in components.jsx); the
 // prose below is the static educational content (spec §4). Verb prefixes are
@@ -84,122 +235,13 @@ const APD_GOAL_DETAIL = {
     nist: "NIST 800-53r5 · AU, CM, MP",
   },
 };
+```
 
-function Annexes({ data, onOpenFinding }) {
-  return (
-    <div>
-      <div className="section-eyebrow">§ 5 + § 10 — Annexes</div>
-      <h2 className="section-title">Contradictions &amp; severity disagreements</h2>
+- [ ] **Step 4: Render the §11 section inside `Annexes`**
 
-      <section className="annex">
-        <header className="annex__head">
-          <div>
-            <div className="section-eyebrow" style={{ margin: 0 }}>§ 5 — Contradiction annex</div>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>Finding ⇄ Capability conflicts</h3>
-          </div>
-          <span className="pill">{data.contradictions.length} surfaced</span>
-        </header>
-        {data.contradictions.length > 0 && (
-          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
-            Cases where a finding asserts a property is absent and a capability confirms it is present, or vice versa. In all three cases here, the recommended disposition is <strong>scope clarification of the capability</strong>, not capability downgrade — these indicate language that could be over-read by a reviewer outside the architectural context.
-          </p>
-        )}
-        {data.contradictions.length === 0 && (
-          <p className="empty-state">
-            {data.contradictions_notes
-              ? data.contradictions_notes
-              : "No contradictions surfaced."}
-          </p>
-        )}
+In `report-template/screens/Annexes.jsx`, inside the `Annexes` function's returned `<div>`, insert the following `<section>` **immediately before the closing `</div>`** (i.e., after the `{data.domain_pack_caveat && ( … )}` block, currently around line 117):
 
-        {data.contradictions.map((c) => (
-          <div key={c.id} className="contradiction">
-            <div className="contradiction__id"><CopyPill value={c.id} /></div>
-            <div className="contradiction__col">
-              <div className="contradiction__label">Finding asserts</div>
-              <CopyPill value={c.finding.id} />
-              <div className="contradiction__assertion">"{c.finding.assertion}"</div>
-            </div>
-            <div className="contradiction__col">
-              <div className="contradiction__label">Capability asserts</div>
-              {(c.capability.ids || [c.capability.id]).map((cid) => (
-                <CopyPill key={cid} value={cid} />
-              ))}
-              <div className="contradiction__assertion">"{c.capability.assertion}"</div>
-            </div>
-            <div className="contradiction__resolution">
-              <div className="contradiction__label" style={{ marginBottom: 4 }}>Comparison &amp; resolution</div>
-              <div>{c.comparison}</div>
-              <div style={{ marginTop: "var(--space-2)", color: "var(--ink)" }}><strong>→</strong> {c.resolution}</div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <section className="annex">
-        <header className="annex__head">
-          <div>
-            <div className="section-eyebrow" style={{ margin: 0 }}>§ 10 — Severity disagreement annex</div>
-            <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>Within-cluster lens disagreements</h3>
-          </div>
-          <span className="pill">{data.severity_disagreements.length} clusters</span>
-        </header>
-        {data.severity_disagreements.length > 0 && (
-          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
-            Records where two agents agreed on the concern but disagreed on severity. The merged finding takes the higher severity per the synthesis rule; the disagreement is preserved here for transparency.
-          </p>
-        )}
-        {data.severity_disagreements.length === 0 && (
-          <p className="empty-state">
-            {data.severity_disagreements_notes
-              ? data.severity_disagreements_notes
-              : "No severity disagreements surfaced."}
-          </p>
-        )}
-
-        {data.severity_disagreements.map((d) => (
-          <div key={d.id} className="sev-disagreement">
-            <header className="sev-disagreement__head">
-              <span
-                className="pill pill--id pill--clickable"
-                onClick={() => onOpenFinding(d.id)}
-                style={{ fontSize: "var(--text-sm)" }}
-              >{d.id} →</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
-                chosen → <SeverityPill value={d.chosen} />
-              </span>
-            </header>
-            <dl className="sev-disagreement__lenses">
-              {d.agents.map((a) => (
-                <React.Fragment key={a.lens}>
-                  <dt>{a.lens}</dt>
-                  <dd><SeverityPill value={a.severity} /></dd>
-                </React.Fragment>
-              ))}
-            </dl>
-            <div className="sev-disagreement__rationale">"{d.rationale}"</div>
-          </div>
-        ))}
-      </section>
-
-      {/* Domain-pack calibration caveat */}
-      {data.domain_pack_caveat && (
-        <section className="annex">
-          <header className="annex__head">
-            <div>
-              <div className="section-eyebrow" style={{ margin: 0 }}>Domain-pack calibration caveat</div>
-              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-xl)", marginTop: 4 }}>{data.domain_pack_caveat.title || "Domain-pack scope"}</h3>
-            </div>
-            <span className="pill" style={{ borderColor: "var(--sev-medium)", color: "var(--sev-medium)" }}>
-              quick-path tradeoff
-            </span>
-          </header>
-          <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }}>
-            {data.domain_pack_caveat.body}
-          </p>
-        </section>
-      )}
-
+```jsx
       {/* §11 — APD framework reference (static, always present) */}
       <section className="annex">
         <header className="annex__head">
@@ -277,8 +319,166 @@ function Annexes({ data, onOpenFinding }) {
           </p>
         </div>
       </section>
-    </div>
-  );
-}
+```
 
-window.Annexes = Annexes;
+- [ ] **Step 5: Rebuild the precompiled bundle**
+
+Run: `python tools/build_report_template.py`
+Expected: it runs `node build.mjs` in `report-template/.build/` and regenerates `tools/apd_gauntlet/data/report-template/app.js` plus `.source-hash`. Confirm the bundle changed:
+
+Run: `git status --short tools/apd_gauntlet/data/report-template/`
+Expected: `app.js` and `.source-hash` show as modified (`M`).
+
+If `node`/`npm` are missing the script prints a skip message and exits non-zero — in that case STOP and report BLOCKED (the freshness gate will fail without a fresh bundle). Node 26 + npm are expected to be present.
+
+- [ ] **Step 6: Run the pin test + the freshness gate to verify green**
+
+Run: `.venv/bin/python -m pytest tests/unit/report/test_annex_framework_reference.py tests/unit/report/test_tier3_bundle_freshness.py -q`
+Expected: the §11 source pins PASS (the doc test still FAILS until Task 2 — that single failure is expected here), and the bundle-freshness test PASSES (bundle matches source).
+
+> Note: `test_html_report_doc_mentions_framework_annex` will fail until Task 2 lands the doc note. That is the only acceptable failure at this step.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add report-template/screens/Annexes.jsx \
+        tools/apd_gauntlet/data/report-template/app.js \
+        tools/apd_gauntlet/data/report-template/.source-hash \
+        tests/unit/report/test_annex_framework_reference.py
+git commit -m "$(cat <<'EOF'
+feat(report): add §11 APD framework reference annex (3 pillars, 9 goals)
+
+Static, always-present educational section at the bottom of the Annexes tab:
+each of the nine goals with its lens question, a plain-language explanation and
+concrete example, and its primary NIST 800-53r5 families; a consolidated Sources
+list; and an honest enforcement note (NIST required / ATT&CK·CWE·D3FEND default-on
+high-confidence / OWASP·ATLAS opt-in / others educational). Labels come from the
+framework constants so the structure can't drift. Bundle rebuilt.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Task 2: Document the §11 reference in `docs/html-report.md`
+
+**Files:**
+- Modify: `docs/html-report.md`
+- Test: `tests/unit/report/test_annex_framework_reference.py` (the `test_html_report_doc_mentions_framework_annex` assertion already written in Task 1 — it goes green here)
+
+- [ ] **Step 1: Confirm the doc assertion currently fails**
+
+Run: `.venv/bin/python -m pytest "tests/unit/report/test_annex_framework_reference.py::test_html_report_doc_mentions_framework_annex" -q`
+Expected: FAIL (the doc does not yet mention the framework annex).
+
+- [ ] **Step 2: Add the doc subsection**
+
+In `docs/html-report.md`, the bundle description near the top says the report "contains six tabs (Overview, Findings, Capabilities, Coverage, Attack paths, Annexes)". Find the section that describes the Annexes tab content (search for "Annexes — " or the "Empty-state interpretation" section that discusses Annexes). Add a new `##`-level subsection **after** the "Empty-state interpretation" section and **before** "Contributing template changes":
+
+```markdown
+## APD framework reference (Annexes §11)
+
+The Annexes tab ends with a static **§11 — APD framework reference** card titled
+"Three pillars, nine goals". It is always present (it does not depend on run data)
+and explains the framework's **three pillars and nine goals** for readers new to
+APD — software engineers, information-systems and cybersecurity auditors, and
+risk-management professionals.
+
+Each goal is shown with its lens question, a plain-language explanation and a
+concrete example, and its primary NIST SP 800-53 Rev 5 control families. A
+consolidated **Sources** block lists the standards the framework draws on (NIST
+800-53r5, NIST CSF 2.0, NIST SP 800-160 Vol. 2, NIST SP 800-204, NIST SP 800-63B,
+ISO/IEC 27001:2022, OWASP ASVS / Top 10 / API / LLM, The Open Group Open FAIR,
+CSA Cloud Controls Matrix, MITRE ATT&CK / D3FEND / ATLAS, CWE, and others).
+
+The card is deliberate about **what the gauntlet enforces versus what it cites for
+context**: only NIST 800-53r5 is mapped on every finding and capability; MITRE
+ATT&CK, CWE, and D3FEND are available on every run under a high-confidence
+mapping discipline; OWASP Top 10 / API / LLM and MITRE ATLAS are opt-in per run;
+and the remaining bodies are educational cross-references, not compliance
+measurements.
+
+The content is static JSX in `report-template/screens/Annexes.jsx` (labels are
+pulled from the framework constants in `components.jsx`), so it does not interact
+with the report completeness gate. As with any template change, edits require
+rebuilding the bundle (`python tools/build_report_template.py`) and committing the
+regenerated `app.js` and `.source-hash`.
+```
+
+- [ ] **Step 3: Verify markdownlint is clean on the doc**
+
+Run: `npx -y markdownlint-cli2 docs/html-report.md`
+Expected: `Summary: 0 error(s)`. Fix any MD012 (consecutive blank lines), MD047 (single trailing newline), MD032 (lists surrounded by blanks), or MD013 (line length, only if the repo enforces it — match the surrounding lines' width) before proceeding.
+
+- [ ] **Step 4: Verify the doc test now passes (and the whole pin module is green)**
+
+Run: `.venv/bin/python -m pytest tests/unit/report/test_annex_framework_reference.py -q`
+Expected: ALL pass (including `test_html_report_doc_mentions_framework_annex`).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add docs/html-report.md
+git commit -m "$(cat <<'EOF'
+docs(html-report): document the §11 APD framework reference annex
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Task 3: Cross-cutting verification gate (no commit)
+
+**Files:** none (verification-only).
+
+- [ ] **Step 1: Full Python test suite**
+
+Run: `.venv/bin/python -m pytest -q`
+Expected: all tests pass — including the new `tests/unit/report/test_annex_framework_reference.py`, the bundle-freshness gate (`test_tier3_bundle_freshness.py`), and the golden/integration report tests.
+
+- [ ] **Step 2: ruff + mypy (the test file is the only new Python)**
+
+Run: `.venv/bin/python -m ruff check tests/unit/report/test_annex_framework_reference.py && .venv/bin/python -m mypy tools/apd_gauntlet/`
+Expected: `All checks passed!` and `Success: no issues found`.
+
+- [ ] **Step 3: Bundle freshness check (the CI gate)**
+
+Run: `python tools/check_report_template_freshness.py`
+Expected: exit 0 — the committed `.source-hash` agrees with `compute_source_hash()` over `report-template/`. (If it fails, the bundle was not rebuilt/committed in Task 1 Step 5 — go back and rebuild.)
+
+- [ ] **Step 4: markdownlint over the touched markdown**
+
+Run: `npx -y markdownlint-cli2 docs/html-report.md`
+Expected: `Summary: 0 error(s)`.
+
+- [ ] **Step 5: Build a real run's report and eyeball §11**
+
+Run: `python -m apd_gauntlet.cli build-report runs/apd-20260527-crapi-owasp-api-top10`
+Expected: exit 0; `runs/apd-20260527-crapi-owasp-api-top10/40-synthesis/report-html/index.html` opens with an Annexes tab whose last card is "§ 11 — APD framework reference / Three pillars, nine goals", rendering all three pillars and all nine goals plus the Sources block. (This is a manual visual confirmation; the build exiting 0 is the automated gate. Do not commit anything generated under `runs/*/report-html/` — it is gitignored.)
+
+- [ ] **Step 6: Confirm clean tree**
+
+Run: `git status --short`
+Expected: no unexpected modifications beyond gitignored run artifacts. If anything under `tools/apd_gauntlet/data/report-template/` is modified here, the bundle drifted — rebuild and amend Task 1's commit.
+
+---
+
+## Self-Review
+
+**1. Spec coverage** (against `docs/superpowers/specs/2026-06-03-apd-annex-framework-reference-design.md`):
+- §3 U1 (the §11 JSX card) → Task 1 Steps 3–4. ✓
+- §3 U2 (bundle rebuild artifacts) → Task 1 Step 5 + commit Step 7. ✓
+- §3 U3 (regression pin) → Task 1 Step 1 test + Task 3 Step 1. ✓
+- §3 U4 (docs note) → Task 2. ✓
+- §4 content (3 pillar intros + 9 goal explainers with verbatim lens + plain explanation + example + NIST anchor + closing line + Sources + enforcement note) → embedded verbatim in Task 1 Steps 3–4. ✓
+- §5 completeness-gate (no interaction) → confirmed by Task 3 Step 1 full suite (no gate change made). ✓
+- §6 testing (pin, freshness, full regression, markdownlint, shipped-run build) → Task 1 Step 6 + Task 2 Step 3 + Task 3. ✓
+- §7 risks (freshness rebuild, Node, don't re-type strings, accuracy, no over-claim, numbering §11) → handled: constants-driven structure (Step 3 comment + `test_structure_is_constant_driven`), rebuild (Step 5), §11 numbering, verbatim content from spec. ✓
+
+**2. Placeholder scan:** No "TBD"/"add error handling"/"similar to". Every code step shows full code; every run step shows the command and expected output. ✓
+
+**3. Type/name consistency:** Constant names (`APD_TIER_ORDER`, `APD_PILLAR_VERB`, `APD_PILLAR_TAG`, `APD_PILLAR_INTRO`, `APD_GOAL_DETAIL`) and goal keys (`confidentiality` … `non_repudiation` … `immutability`) match between the maps (Step 3), the render (Step 4), and the pin test (Step 1). The NIST anchor strings in the test match the `nist:` values in the maps exactly. Tier keys (`trustworthiness`/`scalability`/`auditability`) match `TIER_GOALS`/`TIER_LABELS` in `components.jsx`. ✓

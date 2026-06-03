@@ -105,6 +105,7 @@ recon still runs **only when a TM is supplied**, now writing to the sibling file
 **skeleton** of normalized-TM entries — one per (surface, applicable-STRIDE
 category) cell — to a scaffold file `00-context/threat-model-skeleton.yaml`.
 Each skeleton entry:
+
 - `asset` = the inventory surface's canonical name/key (so the evaluator's
   string-identity surface matching binds);
 - `framework_refs.stride_letter` = the cell's category;
@@ -169,6 +170,7 @@ accepted reduced-fidelity, consistent with the methodologies skill.)
 ### C3 — Schema changes
 
 **`schemas/threat-model-normalized.schema.json`:**
+
 - Widen `generated_by` enum: `["threat_model_recon", "threat_model_author"]`.
 - Add an **optional** entry-level `prerequisite_evidence`:
   `{ "type": "array", "items": { "type": "string" } }` (the structured
@@ -179,6 +181,7 @@ accepted reduced-fidelity, consistent with the methodologies skill.)
   authored TMs set it to the inventory path so `minLength≥1` holds.)
 
 **`schemas/threat-model-coverage.schema.json`:**
+
 - Add an optional `supplied_vs_authored` object:
   `{ baseline_only_threats: [...], supplied_only_threats: [...], shared: [...] }`
   (each a list of `{entry_id, asset, threat, stride_letter}`).
@@ -191,6 +194,7 @@ accepted reduced-fidelity, consistent with the methodologies skill.)
 
 Add `## Authoring discipline` with numbered hard rules (modeled on
 `apd-attack-path-discipline`):
+
 1. **Never invent surfaces** — every authored `asset`/flow traces to one of four
    grounding sources (intake artifact, `asset-inventory.yaml` record,
    `code-evidence-index.yaml` entry, domain-pack default); echo the
@@ -217,6 +221,7 @@ in lockstep with `tools/apd_gauntlet/threat_model/mappings.py`).
 ### C5 — Workflow integration
 
 **Files:** modify `.claude/workflows/apd-gauntlet.js`.
+
 - Add a `threat-model-author` phase (always-on) in the current tm-recon slot,
   after intake/code-recon and before tier-1; add the phase name to `meta.phases[]`
   (the array the structural test pins). Dispatch the author via `llmStep(...)`
@@ -233,11 +238,12 @@ in lockstep with `tools/apd_gauntlet/threat_model/mappings.py`).
 
 **Files:** modify `.claude/agents/apd-threat-model-evaluator.md` (and the
 deterministic coverage-rollup it drives, if any, under `tools/apd_gauntlet/`).
+
 - **Anti-tautology carve-out:** when the canonical TM is `generated_by:
   threat_model_author` and NO supplied sibling exists, do NOT run the intrinsic
   coverage-gap / silence passes against authored entries. Baseline-only grading =
   the **contradiction pass** (author-asserted `mitigation` vs specialist reality)
-  + the **specialist-corroboration gate** (an authored threat is "material" only
+  - the **specialist-corroboration gate** (an authored threat is "material" only
   if an independent specialist finding flags the same surface+goal).
 - **Comparator (supplied present):** diff `threat-model-supplied-normalized.yaml`
   against the authored baseline → emit a new omission finding flavor
@@ -356,8 +362,8 @@ of one file. The evaluator's anti-tautology carve-out keys on
 `generated_by == threat_model_author` + sibling-absence, consistent across C6/C8.
 `source_artifact` tension resolved in C3.
 
-**Scope.** Single feature (TM authoring) — one agent + one CLI + one skill section
-+ schema/workflow/evaluator/consumer edits + ADR + docs. DFD-at-source and
+**Scope.** Single feature (TM authoring) — one agent + one CLI + one skill section +
+schema/workflow/evaluator/consumer edits + ADR + docs. DFD-at-source and
 severity-findings are explicitly deferred. Focused enough for one implementation
 plan.
 
