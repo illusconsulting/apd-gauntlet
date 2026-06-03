@@ -296,7 +296,7 @@ function FindingDetail({ finding, embedded = false }) {
           </section>
         )}
 
-        {(f.mappings?.nist?.length || f.mappings?.attack?.length || f.mappings?.cwe?.length || f.mappings?.owasp_api?.length || f.mappings?.owasp?.length) > 0 && (
+        {(f.mappings?.nist?.length || f.mappings?.attack?.length || f.mappings?.cwe?.length || f.mappings?.owasp_api?.length || f.mappings?.owasp?.length || f.mappings?.atlas?.length) > 0 && (
           <section className="finding-detail__block">
             <div className="finding-detail__block-head"><span>Control mappings</span></div>
             {f.mappings?.nist?.length > 0 && (
@@ -313,6 +313,9 @@ function FindingDetail({ finding, embedded = false }) {
             )}
             {f.mappings?.owasp?.length > 0 && (
               <dl className="mapping-group"><dt>OWASP Top 10</dt><dd><TagRow ids={f.mappings.owasp} /></dd></dl>
+            )}
+            {f.mappings?.atlas?.length > 0 && (
+              <dl className="mapping-group"><dt>MITRE ATLAS</dt><dd><TagRow ids={f.mappings.atlas} /></dd></dl>
             )}
           </section>
         )}

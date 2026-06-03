@@ -96,6 +96,10 @@
         "owasp_llm_top10": {
           "type": "array",
           "items": { "type": "string", "pattern": "^LLM(0[1-9]|10)$" }
+        },
+        "atlas": {
+          "type": "array",
+          "items": { "$ref": "_defs.schema.json#/$defs/atlas_technique_id" }
         }
       }
     },

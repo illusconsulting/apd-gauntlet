@@ -214,3 +214,56 @@ def test_d3fend_rollup_merges_duplicate_techniques(tmp_path):
     assert len(t1530_rows) == 1, f"expected 1 row for T1530, got {len(t1530_rows)}"
     assert t1530_rows[0]["exposed_by_finding_count"] == 2
     assert sorted(t1530_rows[0]["exposed_by_finding_ids"]) == ["conf-f1111111", "conf-f2222222"]
+
+
+def test_atlas_coverage_emitted_only_when_declared(tmp_path):
+    """atlas-coverage.yaml is written iff the run declares mitre_atlas; the rows
+    group by atlas_id, resolve names from the bundled catalog, and validate."""
+    findings_yaml = (
+        "finding:\n"
+        "  - schema_version: 1\n"
+        "    id: intg-a1111111\n"
+        "    apd_goal: integrity\n"
+        "    disposition: gap\n"
+        "    evidence:\n"
+        "      - artifact: plan.md\n"
+        "        locator: '§3'\n"
+        "    control_mappings:\n"
+        "      atlas: [AML.T0051, AML.T0051.000]\n"
+        "  - schema_version: 1\n"
+        "    id: intg-a2222222\n"
+        "    apd_goal: integrity\n"
+        "    disposition: gap\n"
+        "    evidence:\n"
+        "      - artifact: plan.md\n"
+        "        locator: '§4'\n"
+        "    control_mappings:\n"
+        "      atlas: [AML.T0051]\n"
+    )
+    caps_yaml = "capability: []\n"
+
+    # 1) Not declared → file absent.
+    undeclared = _build_minimal_run(
+        tmp_path / "u", "run_id: t\ndomain: agentic-ai\n", findings_yaml, caps_yaml
+    )
+    CliRunner().invoke(main, ["rollup", str(undeclared)])
+    assert not (undeclared / "40-synthesis" / "atlas-coverage.yaml").exists()
+
+    # 2) Declared → file present, valid, grouped by atlas_id with resolved names.
+    declared = _build_minimal_run(
+        tmp_path / "d",
+        "run_id: t\ndomain: agentic-ai\ntaxonomies: [mitre_atlas]\n",
+        findings_yaml,
+        caps_yaml,
+    )
+    result = CliRunner().invoke(main, ["rollup", str(declared)])
+    assert result.exit_code == 0, result.output
+    doc = yaml.safe_load((declared / "40-synthesis" / "atlas-coverage.yaml").read_text())
+    assert _validate(doc, "atlas-coverage.schema.json") == []
+    by_id = {e["atlas_id"]: e for e in doc["entries"]}
+    # AML.T0051 cited by two findings → one row, finding_count == 2.
+    assert by_id["AML.T0051"]["finding_count"] == 2
+    assert by_id["AML.T0051"]["name"] == "LLM Prompt Injection"
+    assert sorted(by_id["AML.T0051"]["finding_ids"]) == ["intg-a1111111", "intg-a2222222"]
+    # Sub-technique resolves with a parent-prefixed name.
+    assert ":" in by_id["AML.T0051.000"]["name"]

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/atlas-coverage.schema.json",
+  "title": "APD Gauntlet MITRE ATLAS Coverage Rollup",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["atlas_id", "name", "finding_count", "finding_ids"],
+        "additionalProperties": false,
+        "properties": {
+          "atlas_id":      { "$ref": "_defs.schema.json#/$defs/atlas_technique_id" },
+          "name":          { "type": "string", "minLength": 3 },
+          "finding_count": { "type": "integer", "minimum": 0 },
+          "finding_ids":   { "type": "array", "items": { "type": "string" } },
+          "surfaces":      { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

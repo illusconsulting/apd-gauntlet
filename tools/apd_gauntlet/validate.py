@@ -186,6 +186,7 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "cwe-coverage.yaml":           "cwe-coverage.schema.json",
     "owasp-coverage.yaml":         "owasp-coverage.schema.json",
     "d3fend-coverage.yaml":        "d3fend-coverage.schema.json",
+    "atlas-coverage.yaml":         "atlas-coverage.schema.json",
     "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
     # C-21: Phase C synthesis artifacts
     "asset-graph.yaml":            "asset-graph.schema.json",

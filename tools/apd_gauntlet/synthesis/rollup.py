@@ -30,7 +30,7 @@ from typing import Any
 
 import yaml
 
-from ..report.taxonomy import attack_technique_titles, d3fend_titles
+from ..report.taxonomy import atlas_titles, attack_technique_titles, d3fend_titles
 from . import coverage_logic as cl
 from .loader import load_corpus
 
@@ -51,6 +51,7 @@ class RollupResult:
     cwe: dict[str, Any] | None = None
     owasp: dict[str, Any] | None = None
     d3fend: dict[str, Any] | None = None
+    atlas: dict[str, Any] | None = None
 
 
 def _nist_titles() -> dict[str, str]:
@@ -246,6 +247,8 @@ def build_rollups(run_dir: Path) -> RollupResult:
         result.owasp = _owasp_rollup(findings, declared)
     if "d3fend" in declared:
         result.d3fend = _d3fend_rollup(findings, caps)
+    if "mitre_atlas" in declared:
+        result.atlas = _atlas_rollup(findings)
 
     _write(run_dir, result)
     return result
@@ -277,6 +280,35 @@ def _cwe_rollup(findings: list[dict[str, Any]]) -> dict[str, Any]:
             "finding_count": len(grouped[cid]["finding_ids"]),
             "finding_ids": sorted(grouped[cid]["finding_ids"]),
             "surfaces": sorted(grouped[cid]["surfaces"]),
+        })
+    return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
+
+
+def _atlas_rollup(findings: list[dict[str, Any]]) -> dict[str, Any]:
+    # Mirrors _cwe_rollup: ATLAS is a flat technique-id list on
+    # control_mappings.atlas (AML.T####[.###]). Names resolve from the bundled
+    # ATLAS catalog (report.taxonomy.atlas_titles → {id: name}), falling back to
+    # the id on miss. First-appearance order over the deduped finding order.
+    names = atlas_titles()
+    order: list[str] = []
+    grouped: dict[str, dict[str, Any]] = {}
+    for f in findings:
+        for aid in cl.extract_ids_from_mapping((f.get("control_mappings") or {}).get("atlas")):
+            if aid not in grouped:
+                grouped[aid] = {"finding_ids": [], "surfaces": set()}
+                order.append(aid)
+            if f["id"] not in grouped[aid]["finding_ids"]:
+                grouped[aid]["finding_ids"].append(f["id"])
+            for ev in f.get("evidence") or []:
+                if isinstance(ev, dict) and ev.get("locator"):
+                    grouped[aid]["surfaces"].add(str(ev["locator"]))
+    entries = []
+    for aid in sorted(order, key=lambda a: (order.index(a), a)):
+        entries.append({
+            "atlas_id": aid, "name": names.get(aid, aid),
+            "finding_count": len(grouped[aid]["finding_ids"]),
+            "finding_ids": sorted(grouped[aid]["finding_ids"]),
+            "surfaces": sorted(grouped[aid]["surfaces"]),
         })
     return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
 
@@ -407,3 +439,6 @@ def _write(run_dir: Path, result: RollupResult) -> None:
     if result.d3fend is not None:
         (synth / "d3fend-coverage.yaml").write_text(
             yaml.safe_dump(result.d3fend, sort_keys=False), encoding="utf-8")
+    if result.atlas is not None:
+        (synth / "atlas-coverage.yaml").write_text(
+            yaml.safe_dump(result.atlas, sort_keys=False), encoding="utf-8")

@@ -239,7 +239,7 @@ If two agents emit *contradictory* mappings (one maps to a mitigation, the other
 
 ## Per-taxonomy discipline (v1.2+)
 
-A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, owasp_top10, owasp_api_top10, owasp_llm_top10, d3fend]`). The intake brief lists which are in scope plus any taxonomies intake auto-suggested. **Only emit mappings for taxonomies declared in the run.** Auto-suggestions that the operator did not adopt do not authorize emission.
+A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, owasp_top10, owasp_api_top10, owasp_llm_top10, d3fend, mitre_atlas]`). The intake brief lists which are in scope plus any taxonomies intake auto-suggested. **Only emit mappings for taxonomies declared in the run.** Auto-suggestions that the operator did not adopt do not authorize emission.
 
 ### CWE (on findings, optional)
 
@@ -273,6 +273,14 @@ A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, o
 - Each D3FEND entry requires `rationale` (≥30 chars) explaining how the capability implements the D3FEND technique.
 - Use the format `D3-<short_code>` (e.g., D3-NTA for Network Traffic Analysis, D3-NTF for Network Traffic Filtering, D3-PHDURA for Process Hierarchy Database Update Restriction Analysis — codes can be 2 to 7 letters). Reference data with the full set of valid codes is at `tools/apd_gauntlet/data/d3fend.json`.
 
+### MITRE ATLAS (on findings, optional)
+
+- ATLAS is the adversarial-ML technique taxonomy (the AI/ML analog of ATT&CK). Declare it as `mitre_atlas` in `.apd-run.yaml`. Map only when the SUT has an AI/ML surface (a model in the trust boundary, a training/inference pipeline, an agent, a RAG/vector store, an ML supply chain).
+- ATLAS attaches to **findings**, not capabilities — it names an offensive technique a finding's weakness exposes, mirroring the `mitre_attack` field. A finding earns an ATLAS mapping when its weakness pattern matches a specific ATLAS technique's description.
+- Each `atlas` mapping is just the ID string (no rationale field on the schema — but the finding's `detail` text must justify the technique match, exactly as for CWE). One finding may carry multiple ATLAS IDs when the weakness composes.
+- Use the format `AML.T####` for a top-level technique or `AML.T####.###` for a sub-technique (e.g., AML.T0051 LLM Prompt Injection, AML.T0051.000 Direct, AML.T0043 Craft Adversarial Data, AML.T0020 Poison Training Data). Reference data with the full set of valid IDs and names ships at `tools/apd_gauntlet/data/atlas-techniques.json`; refresh with `apd-gauntlet refresh-atlas`.
+- ATLAS and the `agentic-ai` domain pack pair naturally — but ATLAS is a taxonomy, not a pack: declare it on any run with an ML surface, regardless of domain.
+
 ## High-confidence-only rule (extends unchanged)
 
-The existing high-confidence-only rule applies to all five new taxonomies. When uncertain whether a CWE matches the weakness pattern, when uncertain whether the SUT actually exposes the OWASP-categorized surface, when uncertain whether a capability truly implements a D3FEND technique — **do not map**. Leave the field absent.
+The existing high-confidence-only rule applies to all six new taxonomies. When uncertain whether a CWE matches the weakness pattern, when uncertain whether the SUT actually exposes the OWASP-categorized surface, when uncertain whether a capability truly implements a D3FEND technique, when uncertain whether an ATLAS technique matches the finding's weakness — **do not map**. Leave the field absent.

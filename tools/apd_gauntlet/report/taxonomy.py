@@ -156,6 +156,40 @@ def d3fend_titles() -> dict[str, str]:
     return out
 
 
+@_register_cached
+@lru_cache(maxsize=1)
+def atlas_titles() -> dict[str, str]:
+    """Map MITRE ATLAS technique id (AML.T####[.###]) → name.
+
+    Reads the bundled ATLAS catalog produced by ``apd-gauntlet refresh-atlas``.
+    Returns an empty dict if the file is missing or unparseable so callers fall
+    back to using the id as the display title. Same ``techniques`` dict shape as
+    :func:`attack_technique_titles`.
+
+    Supported shapes:
+    - {"techniques": {"AML.T0051": "Name", ...}, ...}
+    - {"techniques": {"AML.T0051": {"name": "Name"}, ...}, ...}
+    """
+    path = _DATA / "atlas-techniques.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    out: dict[str, str] = {}
+    if not isinstance(raw, dict):
+        return out
+    techniques = raw.get("techniques")
+    if isinstance(techniques, dict):
+        for tid, v in techniques.items():
+            out[tid] = (
+                v if isinstance(v, str)
+                else (v.get("name") or tid) if isinstance(v, dict)
+                else tid
+            )
+    return out
+
+
 def reference_db_versions() -> dict[str, dict[str, Any]]:
     """Return {family: {fetched_at, count, source}} for each shipped reference DB.
 
@@ -169,6 +203,7 @@ def reference_db_versions() -> dict[str, dict[str, Any]]:
         ("attack", attack_technique_titles, "mitre-attack-techniques.json"),
         ("cwe",    cwe_titles,              "cwe.json"),
         ("d3fend", d3fend_titles,           "d3fend.json"),
+        ("atlas",  atlas_titles,            "atlas-techniques.json"),
     ):
         path = _DATA / path_name
         meta: dict[str, Any] = {}
@@ -218,6 +253,7 @@ def invalidate_if_modified(
         "mitre-attack-techniques.json":  attack_technique_titles,
         "cwe.json":                      cwe_titles,
         "d3fend.json":                   d3fend_titles,
+        "atlas-techniques.json":         atlas_titles,
     }
     for filename, loader in catalog_to_loader.items():
         path = target / filename

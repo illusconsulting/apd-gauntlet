@@ -426,6 +426,10 @@ def findings_array(
                     (f.get("control_mappings") or {}).get("d3fend"),
                     warnings=warnings,
                 ),
+                "atlas":     _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("atlas"),
+                    warnings=warnings,
+                ),
             },
             "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
             "prerequisite_evidence": f.get("prerequisite_evidence", []),
@@ -1779,6 +1783,7 @@ _NIST_FAMILY_DISPLAY = "NIST 800-53r5"
 _ATTACK_FAMILY_DISPLAY = "MITRE ATT&CK"
 _CWE_FAMILY_DISPLAY = "CWE"
 _D3FEND_FAMILY_DISPLAY = "MITRE D3FEND"
+_ATLAS_FAMILY_DISPLAY = "MITRE ATLAS"
 
 
 def _extract_ids_from_mapping(
@@ -1862,7 +1867,7 @@ def _collect_referenced_ids(
     ``data.meta.warnings`` rather than being silently dropped.
     """
     out: dict[str, set[str]] = {
-        "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(),
+        "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(), "atlas": set(),
     }
     for rec in artifacts.deduped_findings + artifacts.attack_path_findings:
         cm = rec.get("control_mappings") or {}
@@ -1881,6 +1886,9 @@ def _collect_referenced_ids(
         ))
         out["d3fend"].update(_extract_ids_from_mapping(
             cm.get("d3fend"), warnings=warnings,
+        ))
+        out["atlas"].update(_extract_ids_from_mapping(
+            cm.get("atlas"), warnings=warnings,
         ))
     for rec in artifacts.deduped_capabilities:
         cm = rec.get("control_mappings") or {}
@@ -2004,5 +2012,12 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         if not did:
             continue
         out[did] = {"family": _D3FEND_FAMILY_DISPLAY, "title": d3.get(did, did)}
+
+    # MITRE ATLAS: titles from taxonomy module; fall back to id if absent.
+    atlas = _taxonomy.atlas_titles()
+    for aid in sorted(refs["atlas"]):
+        if not aid:
+            continue
+        out[aid] = {"family": _ATLAS_FAMILY_DISPLAY, "title": atlas.get(aid, aid)}
 
     return out

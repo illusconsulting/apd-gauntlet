@@ -542,6 +542,15 @@ def refresh_d3fend_cmd() -> None:
     click.echo(f"Wrote {path}")
 
 
+@main.command("refresh-atlas")
+def refresh_atlas_cmd() -> None:
+    """Refresh MITRE ATLAS technique-title reference data."""
+    from .refresh_atlas import refresh_atlas
+
+    path = refresh_atlas()
+    click.echo(f"Wrote {path}")
+
+
 @main.command("parse-threat-model")
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option(

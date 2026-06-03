@@ -60,6 +60,11 @@ window.APD_DATA = {
         "fetched_at": null,
         "source": null,
         "count": 149
+      },
+      "atlas": {
+        "fetched_at": "2026-06-02",
+        "source": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
+        "count": 170
       }
     },
     "section_errors": {},
@@ -405,7 +410,8 @@ window.APD_DATA = {
           "API3:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -451,7 +457,8 @@ window.APD_DATA = {
           "API1:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -495,7 +502,8 @@ window.APD_DATA = {
           "API3:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -567,7 +575,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [
         null,
@@ -620,7 +629,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -677,7 +687,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [
         null,
@@ -742,7 +753,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [
         null,
@@ -791,7 +803,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -837,7 +850,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -888,7 +902,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -932,7 +947,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -976,7 +992,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1027,7 +1044,8 @@ window.APD_DATA = {
           "API6:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -1072,7 +1090,8 @@ window.APD_DATA = {
           "API6:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1122,7 +1141,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -1171,7 +1191,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -1217,7 +1238,8 @@ window.APD_DATA = {
           "API3:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1262,7 +1284,8 @@ window.APD_DATA = {
           "API5:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1309,7 +1332,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1373,7 +1397,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [
         null,
@@ -1425,7 +1450,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1468,7 +1494,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1518,7 +1545,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1560,7 +1588,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1603,7 +1632,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1642,7 +1672,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1686,7 +1717,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1729,7 +1761,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1774,7 +1807,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1816,7 +1850,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1858,7 +1893,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -1903,7 +1939,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1945,7 +1982,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1987,7 +2025,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2029,7 +2068,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -2076,7 +2116,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2117,7 +2158,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2161,7 +2203,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2207,7 +2250,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -2251,7 +2295,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2293,7 +2338,8 @@ window.APD_DATA = {
           "API4:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2336,7 +2382,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -2381,7 +2428,8 @@ window.APD_DATA = {
           "API10:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2418,7 +2466,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -2475,7 +2524,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2519,7 +2569,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2563,7 +2614,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2604,7 +2656,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -2650,7 +2703,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2693,7 +2747,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2737,7 +2792,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2780,7 +2836,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2827,7 +2884,8 @@ window.APD_DATA = {
           "API5:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2873,7 +2931,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -2919,7 +2978,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2965,7 +3025,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3009,7 +3070,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3051,7 +3113,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -3102,7 +3165,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -3147,7 +3211,8 @@ window.APD_DATA = {
           "API2:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3188,7 +3253,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3230,7 +3296,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -3274,7 +3341,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -3320,7 +3388,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3361,7 +3430,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3408,7 +3478,8 @@ window.APD_DATA = {
           "API9:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3453,7 +3524,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -3501,7 +3573,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3544,7 +3617,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -3590,7 +3664,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3633,7 +3708,8 @@ window.APD_DATA = {
           "API8:2023"
         ],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3670,7 +3746,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [

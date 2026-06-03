@@ -8,3 +8,4 @@ taxonomies:
   - mitre_attack
   - d3fend
   - owasp_api_top10
+  - mitre_atlas

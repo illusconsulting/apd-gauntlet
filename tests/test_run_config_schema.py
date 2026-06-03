@@ -70,6 +70,18 @@ def test_run_config_rejects_unknown_taxonomy():
     assert errors
 
 
+def test_run_config_accepts_mitre_atlas_taxonomy():
+    """The mitre_atlas taxonomy (v1.6+) is an accepted enum value."""
+    data = {
+        "run_id": "apd-20260602-atlas",
+        "domains": ["agentic-ai"],
+        "framework_version": "1.6.0",
+        "taxonomies": ["mitre_atlas"],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
 def test_run_config_without_taxonomies_still_valid():
     """Omitting taxonomies entirely must remain valid (field is optional)."""
     data = yaml.safe_load((FIXTURES / "valid/run-config.yaml").read_text())

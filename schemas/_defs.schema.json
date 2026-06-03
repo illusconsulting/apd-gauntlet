@@ -39,6 +39,11 @@
       "type": "string",
       "pattern": "^CWE-[0-9]+$",
       "description": "CWE identifier (e.g. CWE-79)."
+    },
+    "atlas_technique_id": {
+      "type": "string",
+      "pattern": "^AML\\.T[0-9]{4}(\\.[0-9]{3})?$",
+      "description": "MITRE ATLAS technique ID; accepts both top-level (AML.T0051) and sub-technique (AML.T0051.000) forms."
     }
   }
 }
