@@ -184,7 +184,7 @@ def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version) ->
 @click.option(
     "--methodology-hint",
     type=click.Choice(
-        ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form"],
+        ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form"],
         case_sensitive=False,
     ),
     default=None,
@@ -547,7 +547,7 @@ def refresh_d3fend_cmd() -> None:
 @click.option(
     "--methodology-hint",
     default=None,
-    help="Force a methodology (stride/linddun/attack_tree/pasta/vast/trike/free_form).",
+    help="Force a methodology (stride/linddun/attack_tree/pasta/vast/trike/maestro/free_form).",
 )
 @click.option(
     "--output",

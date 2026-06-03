@@ -10,7 +10,7 @@ from . import attack_tree, linddun_table, microsoft_tmt, stride_table, threat_dr
 from .linddun_table import is_linddun_table
 
 _SUPPORTED_HINTS: frozenset[str] = frozenset({
-    "stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form",
+    "stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form",
 })
 
 
@@ -26,7 +26,7 @@ def dispatch_parser(path: Path, hint: str | None = None) -> dict[str, Any]:
             f"unknown methodology hint '{hint}'; expected one of {sorted(_SUPPORTED_HINTS)}"
         )
 
-    if hint in ("pasta", "vast", "trike", "free_form"):
+    if hint in ("pasta", "vast", "trike", "maestro", "free_form"):
         return _free_form_envelope(path, methodology=hint)
 
     suffix = path.suffix.lower()

@@ -15,7 +15,7 @@
     },
     "methodology": {
       "type": "string",
-      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"]
+      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form", "unknown"]
     },
     "extraction_summary": {
       "type": "object",
@@ -40,7 +40,7 @@
           "asset":                 { "type": "string", "minLength": 1 },
           "threat":                { "type": "string", "minLength": 1 },
           "mitigation":            { "type": ["string", "null"] },
-          "methodology":           { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"] },
+          "methodology":           { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form", "unknown"] },
           "source_locator":        { "type": "string" },
           "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
           "framework_refs": {

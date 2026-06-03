@@ -25,13 +25,14 @@ Native support: **STRIDE** (OWASP Threat Dragon JSON, Microsoft TMT `.tm7`,
 STRIDE-per-element Markdown/CSV), **LINDDUN** (Markdown/CSV tables), **attack
 trees** (indented prose, ADTool XML, JSON).
 
-Reduced-fidelity support: **PASTA**, **VAST**, **Trike**, free-form prose. The
-recon agent's LLM does extraction; entries get `extraction_confidence: low`.
+Reduced-fidelity support: **PASTA**, **VAST**, **Trike**, **MAESTRO** (CSA
+agentic-AI, 7-layer), free-form prose. The recon agent's LLM does extraction;
+entries get `extraction_confidence: low`.
 
 ## Methodology → APD-goal mapping (canonical)
 
-These tables are the **single source of truth** for STRIDE/LINDDUN → APD goal
-inference. They mirror the Python module
+These tables are the **single source of truth** for STRIDE/LINDDUN/MAESTRO → APD
+goal inference. They mirror the Python module
 `tools/apd_gauntlet/threat_model/mappings.py` — when one changes, the other
 must change. The Python module is authoritative for parser code; this skill is
 authoritative for agent reasoning.
@@ -70,6 +71,32 @@ disambiguates via column position; this skill uses compound keys:
 override (e.g., PBM maps `N_compliance` to HIPAA breach-notification controls
 under Non-Repudiation), use the domain-specific goal set. Default falls back to
 Non-Repudiation.
+
+### MAESTRO (CSA agentic-AI)
+
+CSA MAESTRO is a 7-layer threat-modeling framework for agentic-AI systems.
+Unlike STRIDE/LINDDUN (per-element categories that map mostly 1:1 to a goal),
+MAESTRO layers describe an architectural stack, so each layer maps to
+**multiple** APD goals. MAESTRO has no canonical file format, so it routes
+through the free-form envelope: the recon agent extracts entries from prose at
+`extraction_confidence: low`, tags each with the layer it sits at, and derives
+`inferred_apd_goals` from this table.
+
+| Layer | Name | APD Goal(s) |
+|---|---|---|
+| L1 | Foundation Models | Integrity + Confidentiality |
+| L2 | Data Operations | Integrity + Confidentiality |
+| L3 | Agent Frameworks | Authenticity + Integrity |
+| L4 | Deployment & Infrastructure | Availability + Confidentiality + Resilient |
+| L5 | Evaluation & Observability | Non-Repudiation + Immutability |
+| L6 | Security & Compliance | Non-Repudiation |
+| L7 | Agent Ecosystem | Authenticity + Confidentiality + Distributed |
+
+Layer attribution lives in the entry's threat text / `source_locator` (there is
+no structured `maestro_layer` field in the normalized schema); the layer's APD
+goals populate `inferred_apd_goals`. Because each layer maps to several goals, a
+MAESTRO entry typically spreads across more specialist lenses than a
+STRIDE/LINDDUN entry.
 
 ### Attack tree
 

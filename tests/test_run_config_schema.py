@@ -93,6 +93,22 @@ def test_run_config_rejects_unknown_methodology_hint():
     assert errors  # truthy: rejected by the enum
 
 
+@pytest.mark.parametrize(
+    "hint",
+    ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form"],
+)
+def test_all_methodology_hints_accepted(hint):
+    """Every recognized methodology hint (incl. maestro) validates."""
+    data = {
+        "run_id": "valid-run-id",
+        "domains": ["agentic-ai"],
+        "framework_version": "1.5.0",
+        "methodology_hint": hint,
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
 def test_run_config_accepts_crown_jewels_and_attacker_positions():
     """A run-config with crown_jewels and attacker_positions passes."""
     data = yaml.safe_load(

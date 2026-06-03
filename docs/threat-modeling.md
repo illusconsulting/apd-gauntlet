@@ -22,8 +22,8 @@ silences (surfaces specialists flagged that the TM never addressed).
 
 ### Reduced-fidelity support (low extraction confidence)
 
-PASTA, VAST, Trike, and free-form prose are accepted via the
-`--methodology-hint` flag or by setting `methodology_hint:` in
+PASTA, VAST, Trike, MAESTRO (CSA agentic-AI, 7-layer), and free-form prose are
+accepted via the `--methodology-hint` flag or by setting `methodology_hint:` in
 `.apd-run.yaml`. The recon agent's LLM does the extraction; the entries are
 marked `extraction_confidence: low` and cannot drive contradiction findings
 (only silence / uncertainty). See "Confidence cascading" below.
@@ -68,7 +68,9 @@ The hint forces a specific methodology, overriding auto-detection. Use it when:
   hit this)
 
 Valid hints: `stride`, `linddun`, `attack_tree`, `pasta`, `vast`, `trike`,
-`free_form`.
+`maestro`, `free_form`. MAESTRO routes through the free-form envelope (no native
+parser); the recon agent tags entries with the MAESTRO layer (L1–L7) and derives
+APD goals from the layer→goal table in the `apd-threat-model-methodologies` skill.
 
 ## What the recon agent produces
 

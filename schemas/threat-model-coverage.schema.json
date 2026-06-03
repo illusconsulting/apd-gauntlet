@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
     "generated_by":   { "type": "string", "enum": ["threat_model_evaluator"] },
-    "methodology":    { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form", "unknown"] },
+    "methodology":    { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form", "unknown"] },
     "surface_coverage": {
       "type": "array",
       "items": {

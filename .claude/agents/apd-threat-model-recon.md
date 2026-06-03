@@ -119,6 +119,18 @@ For each entry, apply enrichment passes as appropriate to its methodology:
     STRIDE category; otherwise all null
   - `inferred_apd_goals`: best-effort based on the threat description
 
+**MAESTRO entries** (parser output had `methodology: maestro` and `entries: []`):
+
+- Extract from prose exactly like free-form (read the source, identify each
+  asset/threat/mitigation claim, `extraction_confidence: low`, quoted
+  `source_locator`).
+- Additionally tag each entry with the MAESTRO layer (L1–L7) it sits at, named
+  in the threat text / `source_locator` (there is no structured `maestro_layer`
+  field in the normalized schema).
+- Derive `inferred_apd_goals` from the MAESTRO layer → APD-goal table in the
+  `apd-threat-model-methodologies` skill. Each layer maps to several goals, so a
+  MAESTRO entry typically lands across multiple specialist lenses.
+
 ### Step 5 — Validate
 
 Validate the enriched envelope against `schemas/threat-model-normalized.schema.json`.

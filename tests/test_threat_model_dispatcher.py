@@ -68,6 +68,16 @@ def test_hint_pasta_returns_free_form_envelope():
     assert "LLM extraction required" in result["extraction_summary"]["parser_used"]
 
 
+def test_hint_maestro_returns_free_form_envelope():
+    result = dispatch_parser(
+        Path("tests/fixtures/threat_models/sample-stride-table.md"),
+        hint="maestro",
+    )
+    assert result["methodology"] == "maestro"
+    assert result["entries"] == []
+    assert "LLM extraction required" in result["extraction_summary"]["parser_used"]
+
+
 def test_unknown_hint_raises_value_error():
     with pytest.raises(ValueError, match="unknown methodology hint"):
         dispatch_parser(

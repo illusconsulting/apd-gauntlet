@@ -208,7 +208,7 @@ For each surface in `tm_entries_by_surface ∪ findings_by_surface`:
   attack-tree positions present in TM entries for this surface
 - Determine `categories_absent`: complement of `categories_present` within
   the methodology's category set (e.g., for STRIDE: full set is
-  `{S, T, R, I, D, E}`)
+  `{S, T, R, I, D, E}`; for MAESTRO: the 7-layer set `{L1, L2, L3, L4, L5, L6, L7}`)
 - Count `tm_entry_count` and list `tm_entry_ids`
 
 Build the coverage YAML envelope matching `schemas/threat-model-coverage.schema.json`.
@@ -230,7 +230,7 @@ summary: "The supplied threat-model artifact could not be parsed into a
   normalized graph. Re-supply in a supported format or provide a
   methodology_hint in .apd-run.yaml."
 detail: "Supported formats are documented at docs/threat-modeling.md.
-  Methodology hints: stride, linddun, attack_tree, pasta, vast, trike,
+  Methodology hints: stride, linddun, attack_tree, pasta, vast, trike, maestro,
   free_form."
 evidence:
   - artifact: <source threat-model path>

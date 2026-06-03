@@ -110,6 +110,27 @@ def test_cli_init_run_accepts_threat_model_and_methodology_hint(tmp_path):
     assert cfg["methodology_hint"] == "stride"
 
 
+def test_cli_init_run_accepts_maestro_methodology_hint(tmp_path):
+    """The MAESTRO hint is a valid --methodology-hint Choice (agentic-AI runs)."""
+    inputs = tmp_path / "src-inputs"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# stub")
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "init-run", "run-maestro-001",
+            "--inputs", str(inputs),
+            "--domain", "agentic-ai",
+            "--root", str(tmp_path / "runs"),
+            "--methodology-hint", "maestro",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    cfg = yaml.safe_load((tmp_path / "runs" / "run-maestro-001" / ".apd-run.yaml").read_text())
+    assert cfg["methodology_hint"] == "maestro"
+
+
 def test_cli_init_run_methodology_hint_validated_against_known_set(tmp_path):
     inputs = tmp_path / "src-inputs"
     inputs.mkdir()

@@ -27,7 +27,7 @@
     },
     "methodology_hint": {
       "type": "string",
-      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "free_form"],
+      "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form"],
       "description": "Optional hint to the recon parser when the methodology can't be auto-detected from the file shape."
     },
     "crown_jewels": {
