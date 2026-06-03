@@ -311,11 +311,11 @@ releases run:
 apd-gauntlet refresh-d3fend
 ```
 
-The refresh updates `reference_data/d3fend/` in-place. Re-running an
+The refresh updates `tools/apd_gauntlet/data/d3fend.json` in-place. Re-running an
 existing attack-path analysis after a refresh will pick up the new
 counter-mappings without any other configuration change. The same
-cadence applies to the companion `refresh-mitre`, `refresh-cwe`, and
-`refresh-owasp` commands — see `docs/taxonomy-mappings.md` for the
+cadence applies to the companion `refresh-mitre`, `refresh-cwe`,
+`refresh-owasp`, and `refresh-atlas` commands — see `docs/taxonomy-mappings.md` for the
 full reference-data lifecycle.
 
 ## Design rationale

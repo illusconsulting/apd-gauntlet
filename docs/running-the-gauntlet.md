@@ -23,17 +23,27 @@ apd-gauntlet validate <run-dir>                  # three-pass validation
 apd-gauntlet init-run <run-id> --inputs DIR --domain pbm [--domain api-security] ...
 apd-gauntlet build-domain-skill <pack...>        # compile one or more packs into the apd-domain skill
 apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
+apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml against the schema
+apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics
 apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
 apd-gauntlet lint-agents                         # validate agent file frontmatter
+apd-gauntlet parse-threat-model <path>           # parse a threat model file into a normalized YAML graph
 apd-gauntlet analyze-attack-paths <run-dir>      # v1.4+: run the attack-path analyzer
 apd-gauntlet build-report <run-dir>              # (re)generate the HTML advisory report
-apd-gauntlet refresh-mitre                       # refresh the cached MITRE crosswalk
+apd-gauntlet audit-report <run-dir>              # cross-check data.js vs YAMLs; enforces 8 completeness checks (structural + editorial)
+apd-gauntlet refresh-mitre                       # refresh the cached MITRE ATT&CK crosswalk
+apd-gauntlet refresh-mitre-mobile                # additively merge the ATT&CK Mobile matrix into the bundled catalogs
+apd-gauntlet refresh-nist                        # refresh the bundled NIST 800-53r5 control catalog
+apd-gauntlet refresh-cwe                         # refresh MITRE CWE reference data (also projects Category entries)
+apd-gauntlet refresh-owasp                       # refresh OWASP Top 10 / API Top 10 / LLM Top 10 reference data
+apd-gauntlet refresh-d3fend                      # refresh MITRE D3FEND reference data
+apd-gauntlet refresh-atlas                       # refresh MITRE ATLAS technique-title reference data (AML.T####)
 ```
 
-`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
+`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
 
 ## Step 1: Scaffold the run
 
@@ -114,7 +124,17 @@ If CBM is unreachable when the recon agent runs:
 
 ### Taxonomy scope (v1.2+)
 
-Declare taxonomies in `.apd-run.yaml` or pass `--taxonomies cwe,mitre_attack,d3fend,owasp_api_top10` to `init-run`. CWE, ATT&CK, and D3FEND are default-on; OWASP variants are opt-in (gated on the SUT having the relevant web/API/LLM surface). See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
+Declare taxonomies in `.apd-run.yaml` or pass `--taxonomies cwe,mitre_attack,d3fend,owasp_api_top10` to `init-run`. CWE, ATT&CK, and D3FEND are default-on; OWASP variants are opt-in (gated on the SUT having the relevant web/API/LLM surface). To include MITRE ATLAS coverage (adversarial ML technique IDs of the form `AML.T####`), add `mitre_atlas` to the `taxonomies` list in `.apd-run.yaml`:
+
+```yaml
+taxonomies:
+  - cwe
+  - mitre_attack
+  - d3fend
+  - mitre_atlas   # opt-in: MITRE ATLAS adversarial-ML finding taxonomy
+```
+
+Refresh the bundled ATLAS data with `apd-gauntlet refresh-atlas`. When `mitre_atlas` is declared, the rollup phase includes an atlas-coverage summary. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
 
 ### Threat model evaluation (v1.3+)
 
@@ -124,6 +144,8 @@ If the run includes a threat model, declare it in `.apd-run.yaml` or pass
 ```yaml
 threat_model: inputs/threat-model.json
 methodology_hint: stride   # optional; auto-detected if absent
+# methodology_hint: maestro  # routes the threat model through the CSA MAESTRO
+                              # free-form envelope (L1–L7 → APD-goal mapping)
 ```
 
 `apd-threat-model-recon` (tier-0) parses the file into a normalized graph;
@@ -226,11 +248,17 @@ It:
 1. Builds the `apd-domain` skill from the active pack(s) and validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
    agents when their preconditions are met).
-3. Dispatches the three tier-1 specialists, then tier-2, then tier-3, validating
-   each tier's output before proceeding.
+3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
+   each tier's validate gate, the runner runs `canonicalize` (idempotent
+   structural canonicalizer: normalizes envelopes, recomputes deterministic IDs,
+   rewrites cross-references) so the gate always sees canonical records.
 4. Runs the decomposed synthesis (cluster → adjudicate → apply → rollup),
    dispatches the optional attack-path analyzer when activated, builds the
-   advisory report and HTML bundle, then runs the gated report audit.
+   advisory report and HTML bundle, then runs the report completeness gate
+   (`audit-report`). The gate enforces 8 completeness checks (structural and
+   editorial). A structural failure that is unresolved after two remediation
+   attempts **blocks the run** — a degraded HTML report cannot ship silently.
+   Editorial-only residuals are surfaced non-blocking.
 5. Returns the final summary at closeout.
 
 The runner is resumable: re-running it against the same directory replays

@@ -34,7 +34,7 @@ The gauntlet ships 19 agents: intake, the nine specialists, the synthesizer and 
 | Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
 | Synthesis (fallback) | `apd-synthesizer` | One-shot fallback when the decomposed path fails: clusters via merge/link/separate and produces the report and rollups directly |
 | Optional intake (v1.1+) | `apd-code-recon` | Produces the code-grounded companion to the intake brief from codebase-memory-mcp call/symbol graphs |
-| Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a supplied threat model into a normalized graph |
+| Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a supplied threat model into a normalized graph; recognized methodologies include STRIDE, LINDDUN, PASTA, and CSA MAESTRO (reduced-fidelity `methodology_hint: maestro`, L1–L7 layers mapped to APD goals) |
 | Optional synthesis (v1.3+) | `apd-threat-model-evaluator` | Emits coverage-gap, contradiction, and silence findings against the dedup'd specialist findings |
 | Optional synthesis (v1.4+) | `apd-attack-path-analyzer` | Enumerates BloodHound-style attack paths from declared attacker positions to declared crown jewels over a partial graph; recommends D3FEND counters on bottleneck edges that expose ATT&CK techniques |
 | Optional post-synthesis (v1.5+) | `apd-domain-auditor` | Captures domain-pack improvement opportunities into an advisory `domain-improvements.yaml` (non-blocking) |
@@ -86,10 +86,10 @@ A twentieth file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude
 | `apd-framework` | Canonical lens definitions, boundary calls between adjacent goals |
 | `apd-finding-schema` | YAML contracts for findings and capabilities; the JSON Schema files at `schemas/*.schema.json` are the canonical contract |
 | `apd-evidence-discipline` | Five discipline rules (evidence-pointer required, block on ambiguity, stay in your lens, reproduce before recommend, calibrated posture) |
-| `apd-control-mappings` | NIST 800-53r5 mapping families per goal; MITRE ATT&CK mapping discipline |
+| `apd-control-mappings` | NIST 800-53r5 mapping families per goal; MITRE ATT&CK mapping discipline; MITRE ATLAS adversarial-ML technique IDs (`AML.T####`) for AI/ML surfaces |
 | `apd-domain` | **Generated** at runtime from the active domain pack — contains the severity rubric, consequential actions, common patterns |
 
-The first four ship under [.claude/skills/](../.claude/skills/). `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0).
+The first four ship under [.claude/skills/](../.claude/skills/). `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0). In addition to the full cross-goal `SKILL.md`, the build step emits nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md` — one per lens agent. Each sidecar contains only that goal's common-patterns section, which bounds context on multi-domain runs. The full `SKILL.md` is still loaded by the cross-goal consumers: `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`.
 
 ## Run lifecycle
 
@@ -149,8 +149,9 @@ The synthesizer:
    - **Separate** when initial clustering signals were spurious.
 4. Detects finding-vs-capability contradictions (finding asserts absence, capability asserts presence) and writes them to `contradictions.yaml`.
 5. Reconciles severity disagreements; highest severity wins on merged records; disagreement preserved in `severity-disagreements.yaml`.
-6. Produces NIST 800-53r5 coverage, ATT&CK exposure, and APD coverage matrices.
+6. Produces NIST 800-53r5 coverage, ATT&CK exposure, and APD coverage matrices. When `mitre_atlas` is declared in `.apd-run.yaml`, also produces an ATLAS coverage rollup over adversarial-ML technique IDs.
 7. Composes the human-readable advisory report.
+8. Runs the `audit-report` completeness gate: cross-checks the built report data against the authoritative YAMLs and enforces eight completeness checks (`structural`: attack_paths_present, d3fend_overlay_present, apd_matrix_nonempty, coverage_rollups_nonempty, taxonomy_titles_resolve, section_errors_empty; `editorial`: exec_summary_present, editorial_sections_present). A structural failure that is still unresolved after two remediation attempts blocks the run — a completed run guarantees a structurally complete report. Editorial gaps self-heal via the report-writer; the LLM auditor's semantic residual (misleading-severity / material-omission / invented-content) stays non-blocking.
 
 Cluster decisions are LLM-driven (no algorithmic clustering code in the validator). See [ADR-0006](adrs/0006-llm-driven-clustering.md).
 
@@ -182,6 +183,7 @@ runs/<run-id>/
     ├── cwe-coverage.yaml                 # v1.2+ (when cwe declared)
     ├── owasp-coverage.yaml               # v1.2+ (when any owasp_* declared)
     ├── d3fend-coverage.yaml              # v1.2+ (when d3fend declared)
+    ├── atlas-coverage.yaml               # v1.6+ (when mitre_atlas declared)
     ├── threat-model-coverage-report.md  (v1.3+, optional)
     ├── threat-model-coverage.yaml       (v1.3+, optional)
     ├── asset-graph.yaml                 (v1.4+, optional — attack-path analyzer)
@@ -191,7 +193,7 @@ runs/<run-id>/
     └── attack-path-report.md            (v1.4+, optional — human-readable report)
 ```
 
-The three additional rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`) are activation-gated: they are emitted only when the corresponding taxonomies are declared in the run's `taxonomies:` field in `.apd-run.yaml`. Runs that omit the `taxonomies:` field produce the same output as v1.1. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
+The activation-gated rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fend-coverage.yaml`, `atlas-coverage.yaml`) are emitted only when the corresponding taxonomies are declared in the run's `taxonomies:` field in `.apd-run.yaml`. `atlas-coverage.yaml` (v1.6+) covers MITRE ATLAS adversarial-ML techniques and is gated on `mitre_atlas`. Runs that omit the `taxonomies:` field produce the same output as v1.1. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
 
 ## Output schemas
 
@@ -203,6 +205,7 @@ The validator uses the following JSON Schema files (`schemas/*.schema.json`):
 - `schemas/attack-exposure.schema.json` — Synthesizer ATT&CK rollup.
 - `schemas/d3fend-coverage.schema.json` — Synthesizer D3FEND rollup (v1.2+).
 - `schemas/cwe-coverage.schema.json` — Synthesizer CWE rollup (v1.2+).
+- `schemas/atlas-coverage.schema.json` — Synthesizer MITRE ATLAS adversarial-ML technique rollup (v1.6+).
 - `schemas/threat-model-normalized.schema.json` — Recon output (v1.3+).
 - `schemas/threat-model-coverage.schema.json` — Evaluator output (v1.3+).
 - `schemas/_defs.schema.json` — Shared pattern definitions for ATT&CK/D3FEND/CWE (v1.3+).
@@ -215,4 +218,4 @@ See [Attack-path analysis](attack-path-analysis.md) for the operator guide to th
 
 ## Domain packs
 
-Severity calibration, consequential-action surface, immutability classes, data taxonomy, and per-goal common patterns are domain-specific. They live in `domains/<name>/` packs. The PBM pack ships in v1.0. The runner builds `.claude/skills/apd-domain/SKILL.md` from the active pack(s) in Phase 0. See [adapting-to-other-domains.md](adapting-to-other-domains.md) and [ADR-0003](adrs/0003-pluggable-domain-packs.md).
+Severity calibration, consequential-action surface, immutability classes, data taxonomy, and per-goal common patterns are domain-specific. They live in `domains/<name>/` packs. The PBM pack ships in v1.0. The runner builds `.claude/skills/apd-domain/SKILL.md` from the active pack(s) in Phase 0, and also emits nine goal-scoped sidecars (`.claude/skills/apd-domain/by-goal/<goal>.md`) — one per lens agent — so specialists load only their own goal's common patterns (v1.6+). The full `SKILL.md` is retained for `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`. See [adapting-to-other-domains.md](adapting-to-other-domains.md) and [ADR-0003](adrs/0003-pluggable-domain-packs.md).

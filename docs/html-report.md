@@ -1,4 +1,4 @@
-# HTML Advisory Report (v1.5)
+# HTML Advisory Report (v1.6)
 
 Every gauntlet run automatically produces an interactive HTML view of the
 synthesizer's outputs at:
@@ -10,12 +10,114 @@ contains six tabs (Overview, Findings, Capabilities, Coverage, Attack paths,
 Annexes) sourced from the existing `40-synthesis/*.yaml` artifacts plus the
 synthesizer-emitted `report-data.yaml`.
 
+The Coverage tab renders taxonomy tooltips for every cited control or technique
+ID. Tooltip families include NIST 800-53r5, MITRE ATT&CK, CWE, OWASP (web /
+API / LLM), MITRE D3FEND, and — when `mitre_atlas` is declared for the run —
+**MITRE ATLAS** (adversarial-ML techniques). A bare ID in a tooltip (title
+equals the ID string) means the reference catalog for that family failed to
+load; this is caught by the completeness gate's `taxonomy_titles_resolve` check.
+
 ## Manual regeneration
 
 If you change a 40-synthesis file by hand or want to regenerate without
 re-running the gauntlet:
 
     apd-gauntlet build-report runs/<run_id>
+
+## Report completeness gate (v1.6+)
+
+Every gauntlet workflow run passes the finished HTML report through a
+deterministic completeness gate before completing. The gate gives you a strong
+guarantee: **the report you open is either complete or the run failed** — a
+degraded report (placeholder executive summary, mismatched finding counts,
+empty attack-path section, missing D3FEND overlays, bare taxonomy IDs) cannot
+ship silently.
+
+### What the gate checks
+
+The `audit-report` step (step 5g in the workflow, also available standalone as
+`apd-gauntlet audit-report <run_dir>`) does two things in one pass:
+
+1. **Cross-check data.js against the authoritative YAMLs.** It parses the
+   rendered `report-html/data.js` bundle back to a dict and verifies its records
+   match `40-synthesis/deduped-findings.yaml`, `deduped-capabilities.yaml`,
+   `attack-path.findings.yaml`, `nist-coverage.yaml`, and `attack-exposure.yaml`
+   — so a build that dropped or corrupted records is caught before you read the
+   report. (The APD coverage matrix is checked for non-emptiness and bundle-hash
+   drift rather than record-by-record equality.)
+2. **Enforce 8 completeness checks**, each tagged as either `structural` or
+   `editorial`:
+
+**Structural checks** (a failure blocks the run):
+
+- `attack_paths_present` — the attack-paths section must be populated whenever
+  `asset-graph.yaml` exists (exempt when attack-path analysis was not activated).
+- `d3fend_overlay_present` — D3FEND bottleneck overlays declared in
+  `defense-graph.yaml` must all reach `data.js` (exempt when no defense graph
+  or zero overlays).
+- `apd_matrix_nonempty` — the 9×N APD coverage matrix must have rows whenever
+  findings are present.
+- `coverage_rollups_nonempty` — rendered NIST and ATT&CK rollups must be
+  non-empty when the authoritative coverage YAMLs have rows.
+- `taxonomy_titles_resolve` — no cited taxonomy ID may appear as a bare ID
+  (title equals ID), which would indicate a failed reference-catalog load.
+- `section_errors_empty` — the rendered report must carry no unresolved section
+  errors.
+
+Pre-existing cross-checks (`id_coverage_findings`, `id_coverage_capabilities`,
+`id_coverage_nist`, `id_coverage_attack`, `count_parity_severity`,
+`count_parity_totals`, `nist_rollup_parity`, `data_js_recompute_drift`) are also
+structural.
+
+**Editorial checks** (failures are self-healed, not blocking):
+
+- `exec_summary_present` — the executive summary must be present and not the
+  placeholder text.
+- `editorial_sections_present` — `report-data.yaml` must contain
+  `exec_summary`, `posture_summary`, `headline_findings`, and `next_steps`.
+
+### How the workflow uses the gate
+
+The workflow runs the gate in a loop (cap: 2 remediation attempts, 3 total).
+On each iteration:
+
+- If both the structural check and the LLM semantic-faithfulness auditor pass,
+  the loop exits and the run completes normally.
+- On a failure, the report-writer is re-invoked with the full `report-audit.yaml`
+  output. The report-writer addresses every failed **editorial** check
+  (regenerating `report-data.yaml` blocks) and the semantic critique; then
+  `build-report` rebuilds `data.js` and the gate runs again.
+- If a **structural** failure is still unresolved after 2 remediations, the
+  workflow **blocks the run** with an error. The rendered HTML is not delivered.
+- A residual semantic discrepancy after 2 remediations is surfaced as a
+  non-blocking log entry; it does not block the run.
+
+The `audit-report` CLI prints a summary line:
+
+    audit-report: pass (16 checks, 0 failed; structural_failed=0 editorial_failed=0)
+
+It exits 1 on any failure, making it usable as a CI gate independently of the
+workflow.
+
+### The `report-audit.yaml` artifact
+
+Every `audit-report` run writes `40-synthesis/report-audit.yaml` with per-check
+results including `name`, `status`, `detail`, and `klass`. The report-writer
+reads this file when remediating editorial failures.
+
+### Legitimately empty states
+
+The gate exempts states that are accurate run outcomes rather than build gaps:
+
+- **No asset-graph.yaml** — attack-path analysis was not activated; the
+  `attack_paths_present` check passes automatically.
+- **No defense-graph.yaml or zero overlays** — the `d3fend_overlay_present`
+  check passes automatically.
+- **`is_empty_run: true`** in report metadata — all completeness checks are
+  exempted (an empty run has no findings to summarize).
+- **"Graph exists but no traversable chain"** — the attack-paths section renders
+  an informative explanation block rather than path data; this is not a
+  completeness failure (see [Empty-state interpretation](#empty-state-interpretation)).
 
 ## When `report-data.yaml` is absent
 

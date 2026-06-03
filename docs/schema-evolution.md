@@ -104,6 +104,72 @@ enforced).
 PBM domain pack (`framework_compat: ">=1.0.0,<2.0.0"`) consumes v1.3.0
 with no changes.
 
+## v1.6.0 — MITRE ATLAS taxonomy, MAESTRO methodology, and report completeness gate
+
+Additive within v1.x. Extensions:
+
+- `schemas/_defs.schema.json` — gains `atlas_technique_id` def (`^AML\.T[0-9]{4}(\.[0-9]{3})?$`),
+  shared by `finding.schema.json` and `atlas-coverage.schema.json`.
+- `finding.schema.json` — `control_mappings` gains optional `atlas` array of
+  `atlas_technique_id` refs; validates MITRE ATLAS technique IDs emitted by specialists.
+- New: `schemas/atlas-coverage.schema.json` — synthesizer rollup of ATLAS technique
+  coverage: entries carry `atlas_id`, `name`, `finding_count`, `finding_ids`, and optional
+  `surfaces`. Gated by `mitre_atlas` in the run's `taxonomies:` list.
+- `run-config.schema.json` — `taxonomies` enum gains `mitre_atlas`; `methodology_hint`
+  enum gains `maestro` (alongside the existing stride/linddun/attack_tree/pasta/vast/trike/free_form values).
+- `threat-model-normalized.schema.json` — `methodology` and per-entry `methodology` enums
+  gain `maestro`.
+- `threat-model-coverage.schema.json` — `methodology` enum gains `maestro`.
+- `report-audit.schema.json` — per-check `klass` field added (optional `enum: ["structural", "editorial"]`),
+  classifying each completeness check for the workflow's block-on-structural-failure gate.
+
+Nothing removed. `framework_compat: ">=1.0.0,<2.0.0"` packs consume v1.6.0 without changes;
+all additions are optional fields or new rollup schemas.
+
+## v1.5.0 — HTML report, workflow runner, multi-domain runs, and deduplication pipeline (Phases A/B + report)
+
+Additive within v1.x. Extensions:
+
+- New: `schemas/agent-receipt.schema.json` — compact structured value an APD agent emits
+  as its final message; carries `agent`, `status`, `outputs` (path + schema_valid per file),
+  `counts` (findings_by_severity, capabilities_by_maturity, blocked), and optional `errors`.
+  Used by the workflow runner (Subsystem A).
+- `run-config.schema.json` — `domain` (single string) replaced by `domains` (array,
+  `minItems: 1`) to support multi-domain runs; first element is the declared-order primary.
+- New doc-envelope schemas wrapping existing per-record schemas (all added in Subsystem A):
+  `nist-coverage-doc.schema.json`, `attack-exposure-doc.schema.json`,
+  `coverage-matrix-doc.schema.json`, `severity-disagreements-doc.schema.json`,
+  `contradictions-doc.schema.json`. Each wraps the corresponding record schema in a
+  top-level array property.
+- New: `schemas/cluster-candidates.schema.json` — mechanical candidate groups emitted by
+  the `cluster-candidates` command; entries carry `group_id`, `kind`, `signals`
+  (evidence_locator_overlap / title_similarity / related_concerns), and `members` (with
+  full finding/capability snapshot per member).
+- New: `schemas/cluster-decisions.schema.json` — disposition + merged prose emitted by the
+  cluster-adjudicator; entries carry `group_id`, `disposition` (merge/link/separate),
+  optional merged title/summary/detail/recommendation, and optional `contradictions` array.
+- New: `schemas/rejected-records.schema.json` — records excluded from clustering and
+  stale-capability maturity downgrades; entries carry `id`, `reason`, `category`
+  (failed_validation / stale_capability_downgrade), and optional `from_maturity`/`to_maturity`.
+- New: `schemas/report-data.schema.json` — synthesizer editorial supplement for the HTML
+  report; carries `exec_summary` (1–6 paragraphs), `headline_findings`, `strengths`
+  (with `caveats`), `next_steps`, `posture_summary` (per-tier text), and optional
+  `domain_pack_caveat`.
+- New: `schemas/report-audit.schema.json` — compact structural audit emitted by
+  `audit-report`; carries `status`, `checks` (name/status/detail), `counts`
+  (id-coverage/count-parity/nist_rollup_parity/recompute-drift counts), and `drift` (hash
+  mismatches). Initial version ships without per-check `klass`; that field is added in v1.6.0.
+- New: `schemas/domain-improvement.schema.json` and `schemas/domain-improvements-doc.schema.json`
+  (Subsystem B) — capture domain-pack improvement opportunities identified during a run;
+  entries carry `id` (`dimpr-<sha8>`), `improvement_type` (9 enum values including
+  missing_crown_jewel, missing_severity_clause, missing_common_pattern), `target_pack`,
+  `target_file`, `source`, `priority`, `evidence`, `rationale`, `suggested_action`,
+  `draft_snippet`, and optional `insertion_hint`.
+- New: `schemas/domain-coverage-delta-doc.schema.json` (Subsystem B) — paired with
+  domain-improvements-doc for the domain-improvement capture step.
+
+Nothing removed. `framework_compat: ">=1.0.0,<2.0.0"` packs consume v1.5.0 without changes.
+
 ## v1.4.0 — Attack-path enumeration and D3FEND defense graph (Phase C)
 
 Additive within v1.x. Extensions:

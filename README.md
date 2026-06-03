@@ -12,7 +12,7 @@ Scalability       →  Distributed · Resilient · Ephemeral
 Auditability      →  Authenticity · Non-Repudiation · Immutability
 ```
 
-Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / API / LLM mappings when the run declares those taxonomies). Capabilities carry NIST + ATT&CK mitigation + optional D3FEND mappings. Severity is calibrated against an explicit, domain-specific rubric — never a free-text guess.
+Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / API / LLM / MITRE ATLAS mappings when the run declares those taxonomies). Capabilities carry NIST + ATT&CK mitigation + optional D3FEND mappings. Severity is calibrated against an explicit, domain-specific rubric — never a free-text guess.
 
 ---
 
@@ -21,9 +21,9 @@ Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / A
 | You give it | It produces |
 |---|---|
 | A tech plan + supporting artifacts | An advisory report (`40-synthesis/advisory-report.md`) and an interactive HTML view |
-| A threat model (optional — Threat Dragon, MS TMT, STRIDE, LINDDUN, attack trees) | A coverage/contradiction/silence report against your TM |
+| A threat model (optional — Threat Dragon, MS TMT, STRIDE, LINDDUN, MAESTRO, attack trees) | A coverage/contradiction/silence report against your TM |
 | Crown jewels + attacker positions (optional, v1.4+) | A BloodHound-style attack-path graph with a D3FEND defensive overlay on bottleneck edges |
-| A domain pack (PBM ships in v1; api-security, identity-security, security-tooling, agentic-ai ship in v1.5) | Calibrated severity, consequential-action surface, immutability classes, and common-pattern hints tuned for that domain |
+| A domain pack (PBM ships in v1; api-security, identity-security, security-tooling, agentic-ai ship in v1.5) | Calibrated severity, consequential-action surface, immutability classes, and per-goal domain sidecars that bound each lens agent's context |
 
 ---
 
@@ -97,7 +97,7 @@ In Claude Code, from the repo root, run the `apd-gauntlet` workflow runner again
 > Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
 ```
 
-The runner (`.claude/workflows/apd-gauntlet.js`) phases the run end-to-end: it builds the `apd-domain` skill from the active pack(s), runs intake, dispatches the nine specialist agents by tier, then runs the decomposed synthesis and the gated report audit. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
+The runner (`.claude/workflows/apd-gauntlet.js`) phases the run end-to-end: it builds the `apd-domain` skill from the active pack(s) — including per-goal sidecars that each lens agent reads instead of the full cross-goal skill — runs intake, dispatches the nine specialist agents by tier, then runs the decomposed synthesis and the report-completeness audit. The completeness audit enforces eight checks before writing the HTML report; if any check fails the run blocks rather than shipping a degraded report. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
 
 For the full operator workflow including code reconnaissance, threat-model evaluation, and attack-path analysis, see **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)**.
 
@@ -153,12 +153,12 @@ Author a new pack with `apd-gauntlet build-domain-skill <pack-name>` and the str
 | `apd-gauntlet build-report <run-dir>` | Regenerate the HTML report |
 | `apd-gauntlet analyze-attack-paths <run-dir>` | (v1.4+) Build asset graph + enumerate paths |
 | `apd-gauntlet parse-threat-model <file>` | Normalize a TM into the gauntlet's graph format |
-| `apd-gauntlet build-domain-skill <pack>` | Assemble the `apd-domain` skill from a pack |
+| `apd-gauntlet build-domain-skill <pack>` | Assemble the `apd-domain` skill from a pack (full cross-goal SKILL.md + per-goal by-goal/ sidecars; pass `--full-only` to suppress sidecars) |
 | `apd-gauntlet validate-domain <pack>` | Lint a domain pack for completeness |
 | `apd-gauntlet summarize <run-dir>` | Finding / capability statistics |
 | `apd-gauntlet lint-agents` | Check agent file frontmatter |
 | `apd-gauntlet check-ids <yaml>` | Verify deterministic IDs |
-| `apd-gauntlet refresh-mitre / refresh-cwe / refresh-d3fend / refresh-owasp` | Refresh cached taxonomy data |
+| `apd-gauntlet refresh-mitre / refresh-cwe / refresh-d3fend / refresh-owasp / refresh-atlas` | Refresh cached taxonomy data |
 
 Every command supports `--help`.
 
