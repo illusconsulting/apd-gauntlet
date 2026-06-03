@@ -22,9 +22,9 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The 19 agents
+## The 20 agents
 
-The gauntlet ships 19 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), and five activation-gated optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
+The gauntlet ships 20 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
 
 | Role | Agent | Purpose |
 |---|---|---|
@@ -34,14 +34,15 @@ The gauntlet ships 19 agents: intake, the nine specialists, the synthesizer and 
 | Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
 | Synthesis (fallback) | `apd-synthesizer` | One-shot fallback when the decomposed path fails: clusters via merge/link/separate and produces the report and rollups directly |
 | Optional intake (v1.1+) | `apd-code-recon` | Produces the code-grounded companion to the intake brief from codebase-memory-mcp call/symbol graphs |
-| Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a supplied threat model into a normalized graph; recognized methodologies include STRIDE, LINDDUN, PASTA, and CSA MAESTRO (reduced-fidelity `methodology_hint: maestro`, L1–L7 layers mapped to APD goals) |
+| Always-on intake (v1.6+) | `apd-threat-model-author` | Authors the canonical baseline threat model on every run — drives the deterministic `author-threat-model` CLI floor then grounds or blocks each cell; emits `00-context/threat-model-normalized.yaml` (`generated_by: threat_model_author`) + `00-context/threat-model-authored.md` |
+| Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a *supplied* threat model into the sibling `00-context/threat-model-supplied-normalized.yaml` (the author owns the canonical baseline); recognized methodologies include STRIDE, LINDDUN, PASTA, and CSA MAESTRO (reduced-fidelity `methodology_hint: maestro`, L1–L7 layers mapped to APD goals) |
 | Optional synthesis (v1.3+) | `apd-threat-model-evaluator` | Emits coverage-gap, contradiction, and silence findings against the dedup'd specialist findings |
 | Optional synthesis (v1.4+) | `apd-attack-path-analyzer` | Enumerates BloodHound-style attack paths from declared attacker positions to declared crown jewels over a partial graph; recommends D3FEND counters on bottleneck edges that expose ATT&CK techniques |
 | Optional post-synthesis (v1.5+) | `apd-domain-auditor` | Captures domain-pack improvement opportunities into an advisory `domain-improvements.yaml` (non-blocking) |
 
-Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). The five activation-gated optional agents (code-recon, threat-model-recon, threat-model-evaluator, attack-path-analyzer, domain-auditor) declare their preconditions in `.apd-run.yaml` or the active domain pack, and the runner skips them silently (or blocks, where the discipline rule demands it) when those preconditions are unmet.
+Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). Three of the optional agents are truly **activation-gated** — the runner dispatches them only when a precondition holds, and skips them silently (or blocks, where the discipline rule demands it) otherwise: `apd-code-recon` (gated on `code_recon` enabled/auto and CBM reachable), `apd-threat-model-recon` (gated on a supplied `threat_model:`), and `apd-attack-path-analyzer` (gated on a declared crown jewel + attacker position). These declare their preconditions in `.apd-run.yaml` or the active domain pack. The remaining optional agents run unconditionally: `apd-threat-model-evaluator` is **no longer gated** (the always-on author guarantees a baseline threat model, so the evaluator runs on every run), and `apd-domain-auditor` runs every run as an advisory, non-blocking pass. Separately, `apd-threat-model-author` (v1.6+) is **always-on**: it is not optional and not gated — it authors the canonical baseline threat model on every run.
 
-A twentieth file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 19.
+A twenty-first file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 20.
 
 ## Tier topology
 
@@ -49,6 +50,7 @@ A twentieth file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude
 
 - apd-intake
 - apd-code-recon (optional, v1.1+)
+- apd-threat-model-author (always-on, v1.6+)
 - apd-threat-model-recon (optional, v1.3+)
 
 ### Tier-1 (trustworthiness)
@@ -75,7 +77,7 @@ A twentieth file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude
 - apd-report-writer
 - apd-report-auditor
 - apd-synthesizer (fallback)
-- apd-threat-model-evaluator (optional, v1.3+)
+- apd-threat-model-evaluator (always-on since v1.6, v1.3+)
 - apd-attack-path-analyzer (optional, v1.4+)
 - apd-domain-auditor (optional, v1.5+)
 
@@ -166,7 +168,9 @@ runs/<run-id>/
 │   ├── context-brief.md          # intake output with frontmatter
 │   ├── asset-inventory.yaml             (v1.4+, intake rollup)
 │   ├── code-evidence-index.yaml         (v1.1+, optional)
-│   └── threat-model-normalized.yaml     (v1.3+, optional)
+│   ├── threat-model-normalized.yaml     (v1.6+, always — authored baseline, generated_by: threat_model_author)
+│   ├── threat-model-authored.md         (v1.6+, always — human-readable render of the baseline)
+│   └── threat-model-supplied-normalized.yaml  (v1.6+, optional — recon's parse of a supplied TM)
 ├── 20-findings/
 │   ├── 10-trustworthiness/
 │   │   ├── confidentiality.findings.yaml     confidentiality.capabilities.yaml
@@ -174,7 +178,7 @@ runs/<run-id>/
 │   │   └── availability.findings.yaml        availability.capabilities.yaml
 │   ├── 20-scalability/               # six files, same shape
 │   ├── 30-auditability/              # six files, same shape
-│   └── 40-threat-model/                 (v1.3+, optional — tmeval-*.yaml)
+│   └── 40-threat-model/                 (v1.3+; always since v1.6 — tmeval-*.yaml, evaluator always runs)
 └── 40-synthesis/
     ├── deduped-findings.yaml             deduped-capabilities.yaml
     ├── contradictions.yaml               severity-disagreements.yaml
@@ -184,8 +188,8 @@ runs/<run-id>/
     ├── owasp-coverage.yaml               # v1.2+ (when any owasp_* declared)
     ├── d3fend-coverage.yaml              # v1.2+ (when d3fend declared)
     ├── atlas-coverage.yaml               # v1.6+ (when mitre_atlas declared)
-    ├── threat-model-coverage-report.md  (v1.3+, optional)
-    ├── threat-model-coverage.yaml       (v1.3+, optional)
+    ├── threat-model-coverage-report.md  (v1.3+; always since v1.6 — evaluator always runs)
+    ├── threat-model-coverage.yaml       (v1.3+; always since v1.6 — evaluator always runs)
     ├── asset-graph.yaml                 (v1.4+, optional — attack-path analyzer)
     ├── attack-paths.yaml                (v1.4+, optional — attack-path analyzer)
     ├── defense-graph.yaml               (v1.4+, optional — D3FEND overlay)
@@ -206,7 +210,7 @@ The validator uses the following JSON Schema files (`schemas/*.schema.json`):
 - `schemas/d3fend-coverage.schema.json` — Synthesizer D3FEND rollup (v1.2+).
 - `schemas/cwe-coverage.schema.json` — Synthesizer CWE rollup (v1.2+).
 - `schemas/atlas-coverage.schema.json` — Synthesizer MITRE ATLAS adversarial-ML technique rollup (v1.6+).
-- `schemas/threat-model-normalized.schema.json` — Recon output (v1.3+).
+- `schemas/threat-model-normalized.schema.json` — Author output, the canonical baseline `threat-model-normalized.yaml` (v1.3+; authored by `apd-threat-model-author` since v1.6); also validates recon's supplied sibling `threat-model-supplied-normalized.yaml`.
 - `schemas/threat-model-coverage.schema.json` — Evaluator output (v1.3+).
 - `schemas/_defs.schema.json` — Shared pattern definitions for ATT&CK/D3FEND/CWE (v1.3+).
 - `schemas/asset-inventory.schema.json` — Intake rollup of assets, trust boundaries, and data classifications (v1.4+).

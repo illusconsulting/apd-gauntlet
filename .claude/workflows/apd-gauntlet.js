@@ -34,7 +34,7 @@ export const meta = {
   name: 'apd-gauntlet',
   description: 'Deterministic APD gauntlet runner (replaces apd-orchestrator); receipt-only dispatch + decomposed synthesis + gated report audit + synthesizer fallback.',
   phases: [
-    'setup', 'intake', 'code-recon', 'tm-recon',
+    'setup', 'intake', 'code-recon', 'threat-model-author', 'tm-recon',
     'canonicalize',
     'tier-1', 'tier-2', 'tier-3',
     'synthesis-cluster', 'synthesis-adjudicate', 'synthesis-apply',
@@ -278,19 +278,52 @@ if (args.code_recon && args.code_recon !== 'disabled') {
 }
 
 // ===========================================================================
+// PHASE 1.55 — threat-model-author (ALWAYS-ON; occupies the old tm-recon slot).
+// Two steps, floor-before-enrich (mirrors the parse/analyze deterministic-floor
+// pattern): (1) pyStep('author-threat-model') builds the surface x applicable-
+// STRIDE skeleton at 00-context/threat-model-skeleton.yaml (deterministic, no
+// LLM, never-invents-a-surface); (2) llmStep('apd-threat-model-author') grounds
+// or blocks each skeleton cell, reconstructs flow direction in-LLM, and emits the
+// canonical 00-context/threat-model-normalized.yaml (generated_by:
+// threat_model_author) + 00-context/threat-model-authored.md. No gate: the
+// grounded baseline ALWAYS exists, so tmeval always has a TM to grade.
+// ===========================================================================
+phase('threat-model-author');
+pyStep('author-threat-model', {
+  phase: 'threat-model-author', label: 'author-threat-model-floor',
+  outputs: runDir + '/00-context/threat-model-skeleton.yaml',
+  validateScope: runDir + '/00-context',
+});
+llmStep('apd-threat-model-author',
+  'Author the grounded baseline threat model. Run apd-gauntlet author-threat-model ' +
+  'internally to (re)build 00-context/threat-model-skeleton.yaml, then ground or BLOCK ' +
+  'each skeleton cell and emit the canonical 00-context/threat-model-normalized.yaml ' +
+  '(generated_by: threat_model_author) PLUS the human-readable 00-context/threat-model-authored.md.',
+  { phase: 'threat-model-author', label: 'threat-model-author',
+    validateScope: runDir + '/00-context',
+    outputs: runDir + '/00-context/threat-model-normalized.yaml, ' +
+      runDir + '/00-context/threat-model-authored.md' });
+
+// ===========================================================================
 // PHASE 1.6 — tm-recon (gate on args.threat_model)
 // ===========================================================================
 phase('tm-recon');
 if (args.threat_model) {
+  // A TM was supplied: recon parses it into the SIBLING file so it can be diffed
+  // against the always-on authored baseline (the author owns the canonical
+  // 00-context/threat-model-normalized.yaml). Recon runs its parse-threat-model
+  // CLI with --output 00-context/threat-model-supplied-normalized.yaml.
   llmStep('apd-threat-model-recon',
-    'Parse + enrich the threat model at ' + args.threat_model + ' (run apd-gauntlet ' +
-    'parse-threat-model internally as your agent contract specifies); emit ' +
-    '00-context/threat-model-normalized.yaml.',
+    'Parse + enrich the supplied threat model at ' + args.threat_model + ' (run apd-gauntlet ' +
+    'parse-threat-model internally with --output ' +
+    '00-context/threat-model-supplied-normalized.yaml as your agent contract specifies); ' +
+    'emit 00-context/threat-model-supplied-normalized.yaml. Do NOT touch the canonical ' +
+    'threat-model-normalized.yaml — the apd-threat-model-author agent owns it.',
     { phase: 'tm-recon', label: 'tm-recon',
       validateScope: runDir + '/00-context',
-      outputs: runDir + '/00-context/threat-model-normalized.yaml' });
+      outputs: runDir + '/00-context/threat-model-supplied-normalized.yaml' });
 } else {
-  log('tm-recon: no threat_model declared — skipping Phase 1.6.');
+  log('tm-recon: no threat_model supplied — skipping Phase 1.6 (the authored baseline always exists).');
 }
 
 // ===========================================================================
@@ -468,15 +501,21 @@ phase('tmeval');
 phase('apath');
 parallel([
   function () {
-    if (args.threat_model) {
-      return llmStep('apd-threat-model-evaluator',
-        'Evaluate the run against 00-context/threat-model-normalized.yaml; emit ' +
-        '40-synthesis/threat-model-coverage.yaml + tmeval findings.',
-        { phase: 'tmeval', label: 'tmeval',
-          outputs: runDir + '/40-synthesis/threat-model-coverage.yaml' });
-    }
-    log('tmeval: no threat_model — skipping Phase 5.5.');
-    return null;
+    // tmeval gate WIDENED from args.threat_model to TM-present: the always-on
+    // author phase guarantees a canonical 00-context/threat-model-normalized.yaml
+    // (generated_by: threat_model_author), so the evaluator ALWAYS runs. Its own
+    // internal activation is file-existence. When a TM was supplied, the recon
+    // sibling 00-context/threat-model-supplied-normalized.yaml is also present and
+    // the evaluator runs the supplied-vs-authored comparator; with no sibling it
+    // runs the baseline-only carve-out (contradiction + specialist corroboration).
+    return llmStep('apd-threat-model-evaluator',
+      'Evaluate the run against the authored baseline 00-context/threat-model-normalized.yaml ' +
+      '(generated_by: threat_model_author). If 00-context/threat-model-supplied-normalized.yaml ' +
+      'exists, run the supplied-vs-authored comparator (emit omission findings + the ' +
+      'supplied_vs_authored delta block); otherwise apply the baseline-only carve-out. Emit ' +
+      '40-synthesis/threat-model-coverage.yaml + tmeval findings.',
+      { phase: 'tmeval', label: 'tmeval',
+        outputs: runDir + '/40-synthesis/threat-model-coverage.yaml' });
   },
   function () {
     if (Array.isArray(args.crown_jewels) && args.crown_jewels.length) {

@@ -23,7 +23,7 @@ def test_architecture_doc_documents_attack_path_analyzer() -> None:
 
 def test_architecture_doc_shows_agent_count() -> None:
     text = (REPO_ROOT / "docs" / "architecture.md").read_text()
-    assert "19 agents" in text or "19-agent" in text
+    assert "20 agents" in text or "20-agent" in text
 
 
 def test_running_doc_documents_new_run_config_fields() -> None:

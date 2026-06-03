@@ -8,11 +8,12 @@ window.APD_DATA = {
     "run_id": "apd-20260527-crapi-owasp-api-top10",
     "synthesizer_version": "1.5.0",
     "specialists_skipped": [
-      "code-recon"
+      "code-recon",
+      "threat-model-recon"
     ],
     "subject": "OWASP crAPI v1.1.5",
     "subject_tagline": "automotive B2C demonstration platform (Apache-2.0)",
-    "date": "2026-06-02",
+    "date": "2026-06-03",
     "artifact_count": 9,
     "artifact_types": [
       "md×8",
@@ -5139,5 +5140,13 @@ window.APD_DATA = {
       "family": "CWE",
       "title": "Improper Neutralization of Special Elements in Data Query Logic"
     }
+  },
+  "threat_model": {
+    "present": true,
+    "authored": false,
+    "supplied_present": false,
+    "comparator": false,
+    "entry_count": 32,
+    "generated_by": "threat_model_recon"
   }
 };

@@ -115,10 +115,15 @@ class RunArtifacts:
     attack_path_findings: list[dict[str, Any]]
     report_data: dict[str, Any] | None
     source_hashes: dict[str, str] = field(default_factory=dict)
-    # Crown jewels and attacker positions sourced from .apd-run.yaml (run_cfg).
+
     # These override / supplement the asset_inventory-derived lists in meta_block.
     run_crown_jewels: list[str] = field(default_factory=list)
     run_attacker_positions: list[str] = field(default_factory=list)
+    # The canonical normalized threat model (authored baseline or recon-parsed)
+    # and the supplied-TM sibling, when present. Both optional; used by the
+    # transform to expose the authored-vs-supplied comparator. None when absent.
+    threat_model_normalized: dict[str, Any] | None = None
+    threat_model_supplied: dict[str, Any] | None = None
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -460,6 +465,9 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         else []
     )
     report_data = _yaml_optional(synth / "report-data.yaml")
+    context = run_dir / "00-context"
+    tm_normalized = _yaml_optional(context / "threat-model-normalized.yaml")
+    tm_supplied = _yaml_optional(context / "threat-model-supplied-normalized.yaml")
 
     # Optional artifacts are hashed via the existing single-read helper:
     # they are already loaded above and we tolerate the second read here
@@ -506,4 +514,6 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         source_hashes=source_hashes,
         run_crown_jewels=_extract_str_list(run_cfg, "crown_jewels"),
         run_attacker_positions=_extract_str_list(run_cfg, "attacker_positions"),
+        threat_model_normalized=tm_normalized,
+        threat_model_supplied=tm_supplied,
     )

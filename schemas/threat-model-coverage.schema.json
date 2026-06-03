@@ -24,6 +24,25 @@
         }
       }
     },
+    "supplied_vs_authored": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Supplied-TM vs authored-baseline diff (present only when a TM was supplied).",
+      "properties": {
+        "baseline_only_threats": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diff_threat" }
+        },
+        "supplied_only_threats": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diff_threat" }
+        },
+        "shared": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diff_threat" }
+        }
+      }
+    },
     "summary": {
       "type": "object",
       "required": ["total_entries", "contradictions_emitted", "silences_emitted", "coverage_gaps_emitted"],
@@ -33,7 +52,21 @@
         "contradictions_emitted": { "type": "integer", "minimum": 0 },
         "silences_emitted":       { "type": "integer", "minimum": 0 },
         "coverage_gaps_emitted":  { "type": "integer", "minimum": 0 },
-        "surfaces_examined":      { "type": "integer", "minimum": 0 }
+        "surfaces_examined":      { "type": "integer", "minimum": 0 },
+        "supplied_omissions_emitted": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "diff_threat": {
+      "type": "object",
+      "required": ["entry_id", "asset", "threat", "stride_letter"],
+      "additionalProperties": false,
+      "properties": {
+        "entry_id":      { "type": "string", "pattern": "^tm-[0-9a-f]{8}$" },
+        "asset":         { "type": "string", "minLength": 1 },
+        "threat":        { "type": "string", "minLength": 1 },
+        "stride_letter": { "type": "string", "enum": ["S", "T", "R", "I", "D", "E"] }
       }
     }
   }

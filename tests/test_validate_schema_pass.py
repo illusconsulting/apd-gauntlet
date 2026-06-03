@@ -250,3 +250,46 @@ def test_validate_rejects_malformed_threat_model_normalized(tmp_path):
     result = runner.invoke(main, ["validate", str(dst)])
     assert result.exit_code == 1
     assert "threat-model-normalized.yaml" in result.output
+
+
+def test_validate_picks_up_valid_threat_model_supplied_sibling(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    (dst / "00-context" / "threat-model-supplied-normalized.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: threat_model_recon
+        source_artifact: inputs/threat-model.json
+        methodology: stride
+        entries:
+          - entry_id: tm-deadbeef
+            asset: test-asset
+            threat: test-threat
+            extraction_confidence: high
+            methodology: stride
+            framework_refs:
+              stride_letter: S
+              linddun_letter: null
+              attack_tree_position: null
+              mitre_attack: []
+            inferred_apd_goals: [confidentiality]
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 0, result.output
+    # Baseline clean-run scans 2 files; the sibling adds 1.
+    assert "Files scanned: 3" in result.output
+
+
+def test_validate_rejects_malformed_threat_model_supplied_sibling(tmp_path):
+    dst = _copy_clean_run(tmp_path)
+    # Invalid generated_by value — must be caught against the same schema.
+    (dst / "00-context" / "threat-model-supplied-normalized.yaml").write_text(dedent("""\
+        schema_version: 1
+        generated_by: invalid_agent
+        source_artifact: inputs/threat-model.json
+        methodology: stride
+        entries: []
+    """))
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "threat-model-supplied-normalized.yaml" in result.output

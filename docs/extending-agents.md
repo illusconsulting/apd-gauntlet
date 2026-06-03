@@ -120,13 +120,14 @@ This is intentionally hard to do — the framework's nine-goal structure is part
 
 The framework's nine-goal symmetry is closed, but new *cross-cutting* analyses that consume the deduped specialist outputs (or that enrich the intake) do not require a new goal. These are added as **activation-gated optional agents**: they sit at tier 0 (intake-enrichment) or tier 4 (synthesis-augmentation), the orchestrator dispatches them only when their preconditions are met, and they emit a finding-prefix the synthesizer recognizes.
 
-The four optional agents already in v1.x follow this pattern:
+The optional agents already in v1.x follow this pattern (one always-on tier-0 context-builder, `apd-threat-model-author`, is listed alongside them for completeness — it runs on every run rather than on a precondition):
 
 | Agent | Tier | Activation precondition | Output prefix |
 |---|---|---|---|
 | `apd-code-recon` (v1.1+) | Tier 0 | `code_recon` enabled and codebase-memory-mcp reachable | enriches intake (`00-context/code-evidence-index.yaml`) |
-| `apd-threat-model-recon` (v1.3+) | Tier 0 | `threat_model:` path declared in run-config | enriches intake (`00-context/threat-model-normalized.yaml`) |
-| `apd-threat-model-evaluator` (v1.3+) | Tier 4 | Normalized threat model exists | `tmeval-*` findings |
+| `apd-threat-model-author` (v1.6+) | Tier 0 | Always-on — runs every run (no precondition) | authors the canonical intake baseline (`00-context/threat-model-normalized.yaml` + `00-context/threat-model-authored.md`) |
+| `apd-threat-model-recon` (v1.3+) | Tier 0 | `threat_model:` path declared in run-config (or a TM-like artifact detected) | enriches intake (`00-context/threat-model-supplied-normalized.yaml` — the supplied sibling; the author owns the canonical file) |
+| `apd-threat-model-evaluator` (v1.3+) | Tier 4 | Normalized threat model exists (now always — the author's baseline is always present) | `tmeval-*` findings |
 | `apd-attack-path-analyzer` (v1.4+) | Tier 4 | At least one crown jewel and at least one attacker position declared (domain pack or run-config) | `apath-*` findings |
 
 The `apd-attack-path-analyzer` is the canonical worked example. It demonstrates the full pattern: (1) declare activation preconditions in the active domain pack with run-config override; (2) emit a `*-skipped.txt` artifact when preconditions are unmet; (3) emit a `disposition: blocked` finding when the operator's explicit declaration contradicts the domain default; (4) write its discipline rules to a dedicated skill file the agent declares as required reading; (5) extend `finding.schema.json` additively with a new `agent` enum value and a new id prefix pattern.

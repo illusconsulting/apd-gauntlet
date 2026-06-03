@@ -30,7 +30,8 @@ apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage g
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics
 apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
 apd-gauntlet lint-agents                         # validate agent file frontmatter
-apd-gauntlet parse-threat-model <path>           # parse a threat model file into a normalized YAML graph
+apd-gauntlet parse-threat-model <path>           # parse a SUPPLIED threat model file into a normalized YAML graph
+apd-gauntlet author-threat-model <run-dir>       # v1.7+: build the deterministic baseline threat-model skeleton
 apd-gauntlet analyze-attack-paths <run-dir>      # v1.4+: run the attack-path analyzer
 apd-gauntlet build-report <run-dir>              # (re)generate the HTML advisory report
 apd-gauntlet audit-report <run-dir>              # cross-check data.js vs YAMLs; enforces 8 completeness checks (structural + editorial)
@@ -148,10 +149,31 @@ methodology_hint: stride   # optional; auto-detected if absent
                               # free-form envelope (L1–L7 → APD-goal mapping)
 ```
 
-`apd-threat-model-recon` (tier-0) parses the file into a normalized graph;
+`apd-threat-model-recon` (tier-0) parses the file into the sibling
+`00-context/threat-model-supplied-normalized.yaml`;
 `apd-threat-model-evaluator` (tier-4) emits coverage-gap, contradiction, and
 silence findings against the synthesizer's dedup'd specialist findings. See
 [docs/threat-modeling.md](threat-modeling.md) for the full operator guide.
+
+### Authored baseline threat model (v1.7+)
+
+Independent of any supplied threat model, the gauntlet **always** authors a
+grounded baseline. The tier-0, always-on `apd-threat-model-author` agent runs
+after intake/code-recon and before tier-1. It drives the deterministic CLI floor
+`apd-gauntlet author-threat-model <run-dir>` to build a
+surface x applicable-STRIDE skeleton, then grounds or blocks each cell and emits:
+
+- `00-context/threat-model-normalized.yaml` — the canonical authored baseline
+  (`generated_by: threat_model_author`)
+- `00-context/threat-model-authored.md` — the human-readable render
+
+Because the authored baseline always exists, `apd-threat-model-evaluator` always
+runs. When you also supply a threat model, the evaluator runs the
+supplied-vs-authored comparator (omission findings + a delta section in the
+coverage report). The evaluator never grades the authored baseline's
+coverage/silence against itself — see the anti-tautology carve-out in
+[docs/threat-modeling.md](threat-modeling.md) and
+[docs/adrs/0013-author-grounded-baseline-threat-model.md](adrs/0013-author-grounded-baseline-threat-model.md).
 
 ### Attack-path analysis (v1.4+)
 

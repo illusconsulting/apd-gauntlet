@@ -1,0 +1,32 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+surface_coverage:
+  - surface: "claim-ingress-API"
+    categories_present: [S, T, I, D]
+    categories_absent: [R, E]
+    tm_entry_count: 4
+    tm_entry_ids: [tm-a1b2c3d4, tm-5e6f7a8b, tm-9c0d1e2f, tm-3a4b5c6d]
+supplied_vs_authored:
+  baseline_only_threats:
+    - entry_id: tm-deadbeef
+      asset: claim-processing-queue
+      threat: "Denial of service on claim-processing-queue: queue saturation"
+      stride_letter: D
+  supplied_only_threats:
+    - entry_id: tm-5e6f7a8b
+      asset: claim-ingress-API
+      threat: "Repudiation of submitted claims"
+      stride_letter: R
+  shared:
+    - entry_id: tm-a1b2c3d4
+      asset: claim-ingress-API
+      threat: "Spoofing of API client identity"
+      stride_letter: S
+summary:
+  total_entries: 5
+  contradictions_emitted: 1
+  silences_emitted: 0
+  coverage_gaps_emitted: 0
+  surfaces_examined: 1
+  supplied_omissions_emitted: 1

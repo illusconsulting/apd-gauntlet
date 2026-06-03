@@ -114,6 +114,103 @@ def test_threat_model_normalized_schema_validates() -> None:
     assert errors == [], errors
 
 
+def test_threat_model_authored_generated_by_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-authored-valid.yaml",
+        "threat-model-normalized.schema.json",
+    )
+    assert errors == [], errors
+
+
+def _normalized_validator():
+    schema = json.loads((SCHEMA_DIR / "threat-model-normalized.schema.json").read_text())
+    return Draft202012Validator(schema, registry=_build_registry())
+
+
+def test_prerequisite_evidence_accepts_string_array() -> None:
+    doc = {
+        "schema_version": 1,
+        "generated_by": "threat_model_author",
+        "source_artifact": "00-context/asset-inventory.yaml",
+        "methodology": "stride",
+        "entries": [
+            {
+                "entry_id": "tm-deadbeef",
+                "asset": "claim-processing-queue",
+                "threat": "DoS on claim-processing-queue: ungrounded flow direction",
+                "mitigation": None,
+                "methodology": "stride",
+                "source_locator": "asset-inventory.yaml:assets[3].provenance",
+                "extraction_confidence": "low",
+                "prerequisite_evidence": [
+                    "code-evidence-index.yaml: producer->queue edge",
+                ],
+                "framework_refs": {"stride_letter": "D", "mitre_attack": []},
+                "inferred_apd_goals": ["availability"],
+            }
+        ],
+    }
+    assert list(_normalized_validator().iter_errors(doc)) == []
+
+
+def test_prerequisite_evidence_rejects_non_string_item() -> None:
+    doc = {
+        "schema_version": 1,
+        "generated_by": "threat_model_author",
+        "source_artifact": "00-context/asset-inventory.yaml",
+        "methodology": "stride",
+        "entries": [
+            {
+                "entry_id": "tm-deadbeef",
+                "asset": "claim-processing-queue",
+                "threat": "DoS on claim-processing-queue",
+                "mitigation": None,
+                "methodology": "stride",
+                "source_locator": "asset-inventory.yaml:assets[3].provenance",
+                "extraction_confidence": "low",
+                "prerequisite_evidence": [123],
+                "framework_refs": {"stride_letter": "D", "mitre_attack": []},
+                "inferred_apd_goals": ["availability"],
+            }
+        ],
+    }
+    assert list(_normalized_validator().iter_errors(doc))
+
+
+def _coverage_validator():
+    schema = json.loads((SCHEMA_DIR / "threat-model-coverage.schema.json").read_text())
+    return Draft202012Validator(schema, registry=_build_registry())
+
+
+def test_coverage_supplied_vs_authored_block_validates() -> None:
+    errors = _validate_whole_doc_schema(
+        "threat-model-coverage-comparator-valid.yaml",
+        "threat-model-coverage.schema.json",
+    )
+    assert errors == [], errors
+
+
+def test_coverage_supplied_vs_authored_item_requires_fields() -> None:
+    doc = {
+        "schema_version": 1,
+        "generated_by": "threat_model_evaluator",
+        "methodology": "stride",
+        "surface_coverage": [],
+        "supplied_vs_authored": {
+            "baseline_only_threats": [{"asset": "x", "threat": "y", "stride_letter": "D"}],
+            "supplied_only_threats": [],
+            "shared": [],
+        },
+        "summary": {
+            "total_entries": 0,
+            "contradictions_emitted": 0,
+            "silences_emitted": 0,
+            "coverage_gaps_emitted": 0,
+        },
+    }
+    assert list(_coverage_validator().iter_errors(doc))
+
+
 def test_threat_model_coverage_schema_validates() -> None:
     errors = _validate_whole_doc_schema(
         "threat-model-coverage-valid.yaml",

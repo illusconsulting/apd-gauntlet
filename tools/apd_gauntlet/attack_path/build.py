@@ -516,8 +516,23 @@ def _add_capability_edges(g: Graph, capabilities: list[dict[str, Any]]) -> None:
 def _add_threat_model_edges(g: Graph, tm: dict[str, Any]) -> None:
     """For each TM entry whose `asset` matches an inventory asset name
     (case-insensitive), wire a `network_reachable` edge from every
-    attacker_position to that asset with `provenance.source = 'threat_model'`.
+    attacker_position to that asset.
+
+    Provenance source distinguishes the TM's authority:
+    - a recon-parsed, operator-supplied TM (`generated_by:
+      threat_model_recon`, or the legacy default) is DECLARED coverage →
+      `provenance.source = 'threat_model'`;
+    - an author-agent baseline (`generated_by: threat_model_author`) is the
+      gauntlet's own INFERRED reconstruction, not operator ground truth →
+      `provenance.source = 'threat_model_inferred'`. Each authored entry
+      keeps its own `extraction_confidence` rather than borrowing
+      declared-ground-truth weight.
     """
+    source = (
+        "threat_model_inferred"
+        if tm.get("generated_by") == "threat_model_author"
+        else "threat_model"
+    )
     node_names = _node_name_index(g)
     attackers = g.nodes_by_type("attacker_position")
     for entry in tm.get("entries", []):
@@ -542,7 +557,7 @@ def _add_threat_model_edges(g: Graph, tm: dict[str, Any]) -> None:
                     from_node=atk.node_id,
                     to_node=asset_id,
                     provenance={
-                        "source": "threat_model",
+                        "source": source,
                         "locator": entry["entry_id"],
                     },
                     confidence=entry.get("extraction_confidence", "medium"),

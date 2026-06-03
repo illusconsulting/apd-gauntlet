@@ -3,7 +3,9 @@
 **Status:** Accepted
 **Date:** 2026-05-26
 **Supersedes:** —
-**Superseded by:** —
+**Superseded by:** ADR-0013 (the reviewer-only posture is reversed to an
+always-on grounded baseline author; the methodology-aware evaluator design is
+preserved and extended)
 
 ## Context
 

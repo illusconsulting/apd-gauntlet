@@ -25,6 +25,7 @@ from .refresh_d3fend import refresh_d3fend
 from .refresh_mitre import fetch_and_project
 from .refresh_owasp import refresh_owasp
 from .summary import render_summary, summarize_run
+from .threat_model.author import build_skeleton_from_inventory_file
 from .validate import (
     ValidationReport,
     build_registry,
@@ -639,6 +640,31 @@ def parse_threat_model_cmd(
         click.echo(f"  entries:     {normalized['extraction_summary']['entry_count']}", err=True)
     else:
         click.echo(text)
+
+
+@main.command("author-threat-model")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def author_threat_model_cmd(run_dir: Path) -> None:
+    """Build the deterministic threat-model skeleton from the asset inventory.
+
+    Reads ``run_dir/00-context/asset-inventory.yaml`` and writes one
+    normalized-TM skeleton entry per (surface, applicable-STRIDE) cell to
+    ``run_dir/00-context/threat-model-skeleton.yaml``. Pure + idempotent;
+    never emits a surface absent from the inventory. The apd-threat-model-author
+    agent enriches/blocks each cell and emits the canonical normalized TM.
+    """
+    inventory_path = run_dir / "00-context" / "asset-inventory.yaml"
+    if not inventory_path.exists():
+        raise click.ClickException(
+            f"asset-inventory.yaml not found at {inventory_path}; run intake first."
+        )
+    envelope = build_skeleton_from_inventory_file(inventory_path)
+    out_path = run_dir / "00-context" / "threat-model-skeleton.yaml"
+    out_path.write_text(yaml.safe_dump(envelope, sort_keys=False), encoding="utf-8")
+    click.echo(
+        f"author-threat-model: wrote {envelope['extraction_summary']['entry_count']} "
+        f"skeleton entries to {out_path}"
+    )
 
 
 @main.command("analyze-attack-paths")

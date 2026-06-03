@@ -72,12 +72,63 @@ Valid hints: `stride`, `linddun`, `attack_tree`, `pasta`, `vast`, `trike`,
 parser); the recon agent tags entries with the MAESTRO layer (L1–L7) and derives
 APD goals from the layer→goal table in the `apd-threat-model-methodologies` skill.
 
+## The authored baseline threat model (v1.7+)
+
+The gauntlet **always** authors a grounded baseline threat model — even when no
+threat model is supplied. The tier-0, always-on `apd-threat-model-author` agent
+runs after intake/code-recon and before the tier-1 specialists. It is a pure
+context-builder: it emits no findings; the tier-4 evaluator turns the baseline
+into findings.
+
+Authoring runs in two layers:
+
+1. **Deterministic CLI floor.** `apd-gauntlet author-threat-model <run-dir>`
+   reads `00-context/asset-inventory.yaml` and emits
+   `00-context/threat-model-skeleton.yaml` — one entry per
+   (surface, applicable-STRIDE category) cell, using a fixed element-type ->
+   applicable-STRIDE matrix. The CLI never invents a surface; every cell traces
+   to an inventory record.
+2. **LLM enrichment.** The `apd-threat-model-author` agent reconstructs directed
+   data flows in-LLM, then **grounds** or **blocks** each skeleton cell. A
+   grounded cell gets a specific threat, a contradictable `mitigation`, and an
+   `extraction_confidence` set to its weakest grounding source. An
+   applicable-but-ungrounded cell becomes a blocked placeholder with a
+   structured `prerequisite_evidence` array naming the missing artifact — a
+   gap-marker, never counted as coverage.
+
+The author emits two files:
+
+- `00-context/threat-model-normalized.yaml` — the canonical authored baseline,
+  with `generated_by: threat_model_author`.
+- `00-context/threat-model-authored.md` — the human-readable render.
+
+### Supplied-vs-authored comparator
+
+When you supply a threat model, it does **not** replace the authored baseline.
+`apd-threat-model-recon` parses your TM into the sibling file
+`00-context/threat-model-supplied-normalized.yaml`, and the evaluator runs the
+**supplied-vs-authored comparator**: it diffs your TM against the grounded
+baseline and emits an omission finding for each *material* threat your TM left
+out (material = corroborated by an independent specialist finding on the same
+surface and APD goal), plus a supplied-vs-authored delta section in the coverage
+report.
+
+### Anti-tautology carve-out
+
+When the canonical TM is authored and no supplied TM exists, the evaluator does
+NOT run its coverage-gap / silence passes against the authored entries (those
+only mean something against a *human* TM — grading authored content would be
+self-grading). Baseline-only grading is limited to the contradiction pass plus
+an independent-specialist-corroboration gate. See
+`docs/adrs/0013-author-grounded-baseline-threat-model.md` for the full rationale.
+
 ## What the recon agent produces
 
 `apd-threat-model-recon` (tier-0, activation-gated on the
-`threat_model:` declaration) parses the file and emits:
+`threat_model:` declaration) parses the supplied file and emits:
 
-- `00-context/threat-model-normalized.yaml` — normalized graph of all entries
+- `00-context/threat-model-supplied-normalized.yaml` — normalized graph of all
+  supplied entries (the sibling to the authored baseline)
 
 This file is consumed by:
 

@@ -66,6 +66,52 @@ def test_builder_threat_model_edges_carry_threat_model_provenance() -> None:
     )
 
 
+def test_authored_tm_edges_carry_inferred_provenance(tmp_path: Path) -> None:
+    """A canonical TM emitted by the author agent (generated_by:
+    threat_model_author) must NOT be presented as operator-DECLARED TM
+    coverage. Its network_reachable edges carry provenance.source
+    'threat_model_inferred', distinguishing them from a recon-parsed
+    (operator-declared) TM which stays 'threat_model'."""
+    run = tmp_path / "run"
+    shutil.copytree(FIXTURE_ROOT, run)
+    tm = run / "00-context" / "threat-model-normalized.yaml"
+    tm.write_text(
+        tm.read_text().replace(
+            "generated_by: threat_model_recon",
+            "generated_by: threat_model_author",
+            1,
+        )
+    )
+    graph = build_graph(run).graph
+    inferred = [
+        e for e in graph._edges.values()
+        if e.provenance.get("source") == "threat_model_inferred"
+    ]
+    declared = [
+        e for e in graph._edges.values()
+        if e.provenance.get("source") == "threat_model"
+    ]
+    assert inferred, "authored TM must yield threat_model_inferred edges"
+    assert not declared, "authored TM must NOT yield declared threat_model edges"
+
+
+def test_recon_tm_edges_stay_declared_golden_unchanged() -> None:
+    """Regression guard: the recon-parsed minimal-run fixture
+    (generated_by: threat_model_recon) keeps declared 'threat_model'
+    provenance — the author guard must not alter recon golden behavior."""
+    graph = build_graph(FIXTURE_ROOT).graph
+    declared = [
+        e for e in graph._edges.values()
+        if e.provenance.get("source") == "threat_model"
+    ]
+    inferred = [
+        e for e in graph._edges.values()
+        if e.provenance.get("source") == "threat_model_inferred"
+    ]
+    assert declared, "recon TM must keep declared threat_model provenance"
+    assert not inferred, "recon TM must NOT be downgraded to inferred"
+
+
 def test_builder_skips_when_no_crown_jewels_declared(tmp_path: Path) -> None:
     run = tmp_path / "run"
     shutil.copytree(FIXTURE_ROOT, run)

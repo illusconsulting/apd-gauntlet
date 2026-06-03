@@ -111,7 +111,10 @@ def _count_artifact_types(run_dir: pathlib.Path | None) -> tuple[int, list[str]]
 # they are not represented here.
 _OPTIONAL_SPECIALIST_MARKERS: list[tuple[str, str]] = [
     ("code-recon", "00-context/code-evidence-index.yaml"),
-    ("threat-model-recon", "00-context/threat-model-normalized.yaml"),
+    # Recon now runs only when a TM is supplied, parsing to the sibling. The
+    # canonical threat-model-normalized.yaml is the always-on authored baseline,
+    # so it is NOT a recon-skipped marker; the supplied sibling is.
+    ("threat-model-recon", "00-context/threat-model-supplied-normalized.yaml"),
     ("attack-path-analyzer", "40-synthesis/attack-paths.yaml"),
 ]
 
@@ -1655,6 +1658,37 @@ def posture_summary_section(
     }
 
 
+def threat_model_block(artifacts: RunArtifacts) -> dict[str, Any]:
+    """Return the data.threat_model block for the HTML report.
+
+    Recognizes the always-on authored baseline (``generated_by:
+    threat_model_author``) and the supplied-TM comparator (the recon-parsed
+    sibling at ``threat-model-supplied-normalized.yaml``). ``comparator`` is
+    True only when BOTH the canonical baseline and the supplied sibling are
+    present — that is the case in which the evaluator emits the
+    supplied-vs-authored delta.
+    """
+    normalized = artifacts.threat_model_normalized
+    supplied = artifacts.threat_model_supplied
+    present = isinstance(normalized, dict)
+    generated_by = normalized.get("generated_by") if isinstance(normalized, dict) else None
+    authored = generated_by == "threat_model_author"
+    entries = normalized.get("entries") if isinstance(normalized, dict) else None
+    entry_count = len(entries) if isinstance(entries, list) else 0
+    supplied_present = isinstance(supplied, dict)
+    return {
+        "present": present,
+        "authored": authored,
+        "supplied_present": supplied_present,
+        # Comparator is the supplied-vs-AUTHORED diff only (spec C6): key on the
+        # authored baseline, NOT mere presence, so a recon-parsed canonical TM +
+        # a supplied sibling is not falsely flagged as a comparator.
+        "comparator": authored and supplied_present,
+        "entry_count": entry_count,
+        "generated_by": generated_by,
+    }
+
+
 def build_apd_data(
     artifacts: RunArtifacts,
     *,
@@ -1740,6 +1774,16 @@ def build_apd_data(
         ("taxonomy",
          lambda: taxonomy_dict(artifacts),
          {}),
+        ("threat_model",
+         lambda: threat_model_block(artifacts),
+         {
+             "present": False,
+             "authored": False,
+             "supplied_present": False,
+             "comparator": False,
+             "entry_count": 0,
+             "generated_by": None,
+         }),
     ]
 
     # Passthrough fields are spliced in right after their related section to

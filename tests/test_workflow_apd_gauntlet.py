@@ -26,7 +26,7 @@ RECEIPT_SCHEMA = REPO / "schemas" / "agent-receipt.schema.json"
 # the source — those three are pinned via the runTier(...) call tokens instead.
 # Every OTHER phase is emitted by a direct `phase('X')` literal in the body.
 EXPECTED_PHASES = [
-    "setup", "intake", "code-recon", "tm-recon",
+    "setup", "intake", "code-recon", "threat-model-author", "tm-recon",
     "canonicalize",
     "tier-1", "tier-2", "tier-3",
     "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
@@ -38,7 +38,7 @@ EXPECTED_PHASES = [
 
 # Phases emitted by a DIRECT `phase('X')` literal (checked as call literals).
 DIRECT_PHASE_LITERALS = [
-    "setup", "intake", "code-recon", "tm-recon",
+    "setup", "intake", "code-recon", "threat-model-author", "tm-recon",
     "synthesis-cluster", "synthesis-adjudicate", "synthesis-apply",
     "synthesis-rollup", "synthesis-fallback",
     "synthesis-report", "synthesis-build", "synthesis-audit",
@@ -411,3 +411,116 @@ def test_report_writer_remediation_reads_report_audit():
     src = _text()
     assert "report-audit.yaml" in src
     assert 'klass is "editorial"' in src
+
+
+def test_threat_model_author_phase_in_meta_phases() -> None:
+    """C5: the always-on threat-model-author phase is declared in meta.phases."""
+    text = _text()
+    m = re.search(r"phases:\s*\[(.*?)\]", text, re.DOTALL)
+    assert m, "phases:[...] array not found in meta"
+    phases_blob = m.group(1)
+    found = set(re.findall(r"'([^']+)'", phases_blob))
+    assert "threat-model-author" in found, "'threat-model-author' missing from meta.phases"
+
+
+def test_threat_model_author_phase_dispatches_floor_then_enrich() -> None:
+    """C5: the threat-model-author phase emits a phase('threat-model-author') literal,
+    runs the deterministic CLI floor via pyStep('author-threat-model'), THEN dispatches
+    the apd-threat-model-author agent via llmStep — floor strictly before enrich."""
+    text = _text()
+    assert "phase('threat-model-author')" in text, (
+        "phase('threat-model-author') not invoked in body"
+    )
+    assert "pyStep('author-threat-model'" in text, (
+        "deterministic CLI floor pyStep('author-threat-model') missing"
+    )
+    assert "llmStep('apd-threat-model-author'" in text, (
+        "apd-threat-model-author enrich llmStep missing"
+    )
+    i_phase = text.index("phase('threat-model-author')")
+    i_floor = text.index("pyStep('author-threat-model'", i_phase)
+    i_enrich = text.index("llmStep('apd-threat-model-author'", i_phase)
+    assert i_phase < i_floor < i_enrich, (
+        "order must be phase -> pyStep(author-threat-model) floor -> llmStep(enrich)"
+    )
+
+
+def test_author_phase_precedes_tm_recon_and_tiers() -> None:
+    """C5: the always-on author baseline runs after code-recon and before tm-recon
+    and the tier-1 lens dispatch (specialists cite the authored baseline)."""
+    text = _text()
+    i_coderecon = text.index("phase('code-recon')")
+    i_author = text.index("phase('threat-model-author')")
+    i_tmrecon = text.index("phase('tm-recon')")
+    i_tier1 = text.index("runTier('tier-1'")
+    assert i_coderecon < i_author < i_tmrecon < i_tier1, (
+        "order must be code-recon -> threat-model-author -> tm-recon -> tier-1"
+    )
+
+
+def test_tm_recon_writes_supplied_sibling_when_gated() -> None:
+    """C5: recon remains gated on args.threat_model but now writes the SIBLING
+    threat-model-supplied-normalized.yaml (recon's CLI --output), never the
+    canonical threat-model-normalized.yaml the author owns."""
+    text = _text()
+    i_tmrecon = text.index("phase('tm-recon')")
+    block = text[i_tmrecon:text.index("function runTier", i_tmrecon)]
+    assert "if (args.threat_model)" in block, "recon must stay gated on args.threat_model"
+    assert "llmStep('apd-threat-model-recon'" in block, "recon dispatch missing"
+    assert "threat-model-supplied-normalized.yaml" in block, (
+        "recon must write the supplied sibling threat-model-supplied-normalized.yaml"
+    )
+    recon_call = block[block.index("llmStep('apd-threat-model-recon'"):]
+    recon_call = recon_call[:recon_call.index("});") + 3]
+    assert "00-context/threat-model-normalized.yaml" not in recon_call, (
+        "recon must no longer write the canonical threat-model-normalized.yaml "
+        "(the author owns it); recon writes the supplied sibling"
+    )
+    assert "--output" in recon_call, "recon must pass --output to the sibling file"
+
+
+def test_tmeval_gate_widened_to_tm_present() -> None:
+    """C5: tmeval is no longer gated on args.threat_model — the authored baseline
+    always exists, so the evaluator always runs. Pin that the tmeval thunk
+    unconditionally dispatches apd-threat-model-evaluator (no args.threat_model
+    guard) and that its instruction names BOTH the canonical authored TM and the
+    supplied sibling so the comparator path is reachable."""
+    text = _text()
+    i_eval = text.index("llmStep('apd-threat-model-evaluator'")
+    thunk_start = text.rindex("function ()", 0, i_eval)
+    thunk = text[thunk_start:text.index("function ()", i_eval)]
+    assert "if (args.threat_model)" not in thunk, (
+        "tmeval gate must be widened: the authored baseline always exists, so the "
+        "evaluator must not be gated on args.threat_model"
+    )
+    assert "00-context/threat-model-normalized.yaml" in thunk, (
+        "tmeval must evaluate against the canonical authored baseline"
+    )
+    assert "threat-model-supplied-normalized.yaml" in thunk, (
+        "tmeval must read the supplied sibling for the comparator path when present"
+    )
+
+
+def test_author_threat_model_command_registered_and_dispatched() -> None:
+    """C1/C5: author-threat-model is a registered Click command dispatched via
+    pyStep('author-threat-model', ...) — the deterministic skeleton floor."""
+    text = _text()
+    registered = set(cli.commands.keys())
+    assert "author-threat-model" in registered, (
+        "author-threat-model not registered in the Click CLI"
+    )
+    assert "pyStep('author-threat-model'" in text, (
+        "author-threat-model not dispatched via pyStep in the workflow"
+    )
+
+
+def test_threat_model_author_agent_resolves_to_file() -> None:
+    """C2/C5: the apd-threat-model-author agentType resolves to a .claude/agents file."""
+    text = _text()
+    referenced = _referenced_agent_types(text)
+    assert "apd-threat-model-author" in referenced, (
+        "apd-threat-model-author not dispatched by the runner"
+    )
+    assert (AGENTS_DIR / "apd-threat-model-author.md").is_file(), (
+        "apd-threat-model-author agentType has no .claude/agents/apd-threat-model-author.md"
+    )

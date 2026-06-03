@@ -20,7 +20,8 @@ tools:
 ## Required reading
 
 - `apd-threat-model-methodologies` (mapping tables + the three disposition
-  algorithms in Rules 5/6/7)
+  algorithms in Rules 5/6/7 + the **Authoring discipline** section, which
+  governs how to read an authored baseline)
 - `apd-finding-schema` (finding YAML structure + id pattern requirements;
   tmeval- prefix per Task B-7)
 - `apd-evidence-discipline` (evidence pointers required, never invent,
@@ -82,6 +83,92 @@ If TM has `methodology: unknown` AND `entries: []`:
 - Skip Steps 3-6
 - Go to Step 7 (emit blocked finding)
 - Skip Steps 8-9 (no coverage report when blocked)
+
+### Step 2b — Authored-baseline mode (Anti-tautology carve-out)
+
+First read the canonical TM's `generated_by`:
+
+- If `generated_by: threat_model_recon` (an operator-supplied TM was parsed
+  directly into the canonical file) → run the full intrinsic passes
+  (Steps 3-6) exactly as before. The carve-out does not apply.
+
+- If `generated_by: threat_model_author` (the always-on authored baseline) →
+  grading the gauntlet's OWN authored entries with the coverage-gap (Step 3)
+  and silence (Step 5) passes would be tautological (the author and grader are
+  the same system). Apply the carve-out:
+
+  1. **Skip Step 3** (coverage-gap) and **skip Step 5** (silence) against
+     authored entries — do not run the coverage-gap / silence passes on
+     `threat_model_author` content. These passes only carry meaning against a
+     *human* TM.
+  2. **Keep Step 4** — the **contradiction pass** still runs (author-asserted
+     `mitigation` vs specialist reality is a real, non-tautological signal).
+  3. **Specialist-corroboration gate:** an authored threat is treated as
+     "material" only when an independent specialist finding flags the same
+     surface + APD goal. Authored entries with no corroborating specialist
+     finding are NOT escalated.
+  4. **Blocked placeholders never count as coverage:** an authored entry whose
+     `prerequisite_evidence` is non-empty is a gap-marker, not coverage. It is
+     not counted as a present category in Step 6's coverage matrix.
+
+### Step 2c — Supplied-vs-authored comparator
+
+This step runs ONLY when the supplied sibling
+`00-context/threat-model-supplied-normalized.yaml` exists alongside an authored
+canonical baseline. (When no sibling exists, skip this step.)
+
+Diff the supplied sibling's entries against the authored baseline, keyed on
+(surface `asset`, `framework_refs.stride_letter`). This diff is STRIDE-keyed
+by design: entries whose `framework_refs.stride_letter` is null (i.e. entries
+from non-STRIDE methodologies such as LINDDUN, attack\_tree, or MAESTRO) are
+EXCLUDED from all three `diff_threat` buckets — the coverage schema's
+`diff_threat.stride_letter` admits only the six STRIDE letters (`S T R I D E`)
+and null/absent values would fail schema validation.
+
+- `baseline_only_threats` — present in the authored baseline, absent from the
+  supplied TM.
+- `supplied_only_threats` — present in the supplied TM, absent from the baseline.
+- `shared` — present in both.
+
+For each **material** `baseline_only_threats` entry (material = corroborated by
+an independent specialist finding on the same surface + goal, per the Step 2b
+corroboration gate), emit a NEW omission finding flavor:
+
+```yaml
+id: tmeval-<sha8>   # sha over baseline tm_entry_id + "supplied_omission"
+agent: threat_model_evaluator
+apd_tier: <tier of the corroborating finding>
+apd_goal: <goal of the corroborating finding>
+disposition: gap
+severity: <inherit from the corroborating specialist finding>
+confidence: medium   # bump to high if multiple specialists corroborate
+title: "Supplied threat model omits <Threat> on <surface> that the grounded baseline found"
+summary: "The authored baseline entry <baseline-tm-id> flags <threat> on
+  <surface>; the supplied threat model has no matching entry. Specialist
+  finding <finding-id> corroborates this surface+goal."
+evidence:
+  - artifact: "00-context/threat-model-normalized.yaml"
+    locator: "entries[entry_id=<baseline-tm-id>]"
+    excerpt: "<authored threat text>"
+  - artifact: "00-context/threat-model-supplied-normalized.yaml"
+    locator: "(no entry for surface=<surface>, category=<stride_letter>)"
+    excerpt: "(absent in supplied TM)"
+cross_references:
+  - <corroborating specialist finding id>
+recommendation:
+  posture: recommended
+  summary: "Add <Threat> analysis for <surface> to the supplied threat model"
+  detail: "The grounded baseline and an independent specialist both flag this
+    surface; the supplied threat model should cover it or annotate it
+    out-of-scope."
+```
+
+Then write the `supplied_vs_authored` block into
+`40-synthesis/threat-model-coverage.yaml` (each bucket a list of
+`{entry_id, asset, threat, stride_letter}`), and set
+`summary.supplied_omissions_emitted` to the count of omission findings emitted.
+Add a "Supplied-vs-authored delta" section to the coverage-report markdown
+listing the three buckets and the emitted omission findings.
 
 ### Step 3 — Coverage gap detection (Rule 5)
 
@@ -205,7 +292,9 @@ recommendation:
 For each surface in `tm_entries_by_surface ∪ findings_by_surface`:
 
 - Determine `categories_present`: STRIDE letters / LINDDUN compound keys /
-  attack-tree positions present in TM entries for this surface
+  attack-tree positions present in TM entries for this surface (exclude
+  blocked-placeholder entries whose `prerequisite_evidence` is non-empty —
+  those are gap-markers, not coverage; see Step 2b rule 4)
 - Determine `categories_absent`: complement of `categories_present` within
   the methodology's category set (e.g., for STRIDE: full set is
   `{S, T, R, I, D, E}`; for MAESTRO: the 7-layer set `{L1, L2, L3, L4, L5, L6, L7}`)
@@ -281,6 +370,10 @@ Exit cleanly.
   useful"
 - **Cross-references are required for contradictions** (validator enforces
   this per Task B-25)
+- **Anti-tautology** (authored baseline): never coverage-gap or silence-grade
+  `threat_model_author` content; baseline-only grading is contradiction +
+  specialist corroboration only. Blocked placeholders
+  (non-empty `prerequisite_evidence`) are gap-markers, never counted as coverage.
 
 ## Final message (receipt only)
 

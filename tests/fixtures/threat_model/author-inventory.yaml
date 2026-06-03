@@ -1,0 +1,37 @@
+schema_version: 1
+generated_by: intake
+assets:
+  - asset_id: asset-1a2b3c4d
+    name: "claim-ingress-api"
+    asset_type: service
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§4 Event Bus Architecture"
+    confidence: high
+  - asset_id: asset-7a8b9c0d
+    name: "member-record-store"
+    asset_type: data_store
+    data_classifications: [phi]
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§5.1 Database (member_demographics, PostgreSQL RDS)"
+    confidence: high
+identities:
+  - identity_id: idn-0f1e2d3c
+    name: "claims-adjudicator"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/tech_plan.md"
+      locator: "§2 Roles"
+    confidence: medium
+trust_boundaries: []
+extraction_summary:
+  asset_count: 2
+  identity_count: 1
+  trust_boundary_count: 0
+  high_confidence_count: 2
+  medium_confidence_count: 1
+  low_confidence_count: 0

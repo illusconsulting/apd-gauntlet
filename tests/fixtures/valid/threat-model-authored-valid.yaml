@@ -1,0 +1,43 @@
+schema_version: 1
+generated_by: threat_model_author
+source_artifact: 00-context/asset-inventory.yaml
+methodology: stride
+extraction_summary:
+  entry_count: 2
+  high_confidence_count: 0
+  medium_confidence_count: 1
+  low_confidence_count: 1
+  parser_used: threat_model_author
+
+entries:
+  - entry_id: tm-a1b2c3d4
+    asset: claim-ingress-API
+    threat: "Spoofing on claim-ingress-API: caller identity is asserted but not cryptographically bound at the trust boundary tb-edge per the inventory"
+    mitigation: "Design intent: enforce mutual TLS at the ingress gateway with per-service identity validation"
+    methodology: stride
+    source_locator: "asset-inventory.yaml:assets[0].provenance"
+    extraction_confidence: medium
+    framework_refs:
+      stride_letter: S
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - authenticity
+  - entry_id: tm-deadbeef
+    asset: claim-processing-queue
+    threat: "Denial of service on claim-processing-queue: ungrounded flow direction; no rate-limit evidence in inventory or code-evidence"
+    mitigation: null
+    methodology: stride
+    source_locator: "asset-inventory.yaml:assets[3].provenance"
+    extraction_confidence: low
+    prerequisite_evidence:
+      - "code-evidence-index.yaml: a route/handler edge proving the producer→queue direction"
+      - "asset-inventory.yaml: a documented throughput cap or DLQ control on claim-processing-queue"
+    framework_refs:
+      stride_letter: D
+      linddun_letter: null
+      attack_tree_position: null
+      mitre_attack: []
+    inferred_apd_goals:
+      - availability

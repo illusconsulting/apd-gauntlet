@@ -2,7 +2,8 @@
 name: apd-threat-model-recon
 description: |
   Tier-0 activation-gated agent that parses user-supplied threat models into
-  a normalized graph at 00-context/threat-model-normalized.yaml. Activates
+  a normalized graph at 00-context/threat-model-supplied-normalized.yaml (the
+  supplied sibling; apd-threat-model-author owns the canonical baseline). Activates
   when .apd-run.yaml declares threat_model:<path> or intake detects a TM-like
   artifact. Does not emit findings — pure context-builder. Output is consumed
   by specialists (as evidence pointers) and by apd-threat-model-evaluator
@@ -36,12 +37,20 @@ This agent activates when **any** of the following is true:
 
 If neither condition is met, this agent SKIPS — write a `00-context/threat-
 model-skip.txt` placeholder with one line: `"skipped: no threat model declared
-or detected"`, exit cleanly. The orchestrator proceeds to tier-1 unchanged.
+or detected"`, exit cleanly. The authored baseline at
+`00-context/threat-model-normalized.yaml` (from `apd-threat-model-author`) still
+exists, so the evaluator and tier-1 proceed unchanged.
 
 ## Output contract
 
 When activated, emits exactly one file:
-`00-context/threat-model-normalized.yaml`
+`00-context/threat-model-supplied-normalized.yaml`
+
+This is the **supplied sibling**: the always-on `apd-threat-model-author` agent
+owns the canonical `00-context/threat-model-normalized.yaml` (a grounded
+baseline). When the operator supplies a threat model, this agent parses it into
+the sibling so `apd-threat-model-evaluator` can diff supplied-vs-authored. NEVER
+write `00-context/threat-model-normalized.yaml` — that is the author's file.
 
 The file MUST validate against `schemas/threat-model-normalized.schema.json`.
 
@@ -64,7 +73,7 @@ Run:
 ```bash
 apd-gauntlet parse-threat-model <run-dir>/inputs/<threat-model-path> \
   [--methodology-hint <hint>] \
-  --output <run-dir>/00-context/threat-model-normalized.yaml \
+  --output <run-dir>/00-context/threat-model-supplied-normalized.yaml \
   --no-validate
 ```
 
@@ -144,7 +153,7 @@ If validation fails:
 
 ### Step 6 — Write final YAML
 
-Write `00-context/threat-model-normalized.yaml`. Re-compute
+Write `00-context/threat-model-supplied-normalized.yaml`. Re-compute
 `extraction_summary` counts after enrichment (free-form additions count
 toward `low_confidence_count`).
 
@@ -152,7 +161,7 @@ toward `low_confidence_count`).
 
 Confirm:
 
-- [ ] File exists at `00-context/threat-model-normalized.yaml`
+- [ ] File exists at `00-context/threat-model-supplied-normalized.yaml`
 - [ ] File validates against `schemas/threat-model-normalized.schema.json`
 - [ ] `extraction_summary.entry_count` matches `len(entries)`
 - [ ] Every entry has a non-null `source_locator`

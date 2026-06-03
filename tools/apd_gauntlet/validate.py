@@ -226,6 +226,13 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
 CONTEXT_ROLLUPS: dict[str, str] = {
     "threat-model-normalized.yaml": "threat-model-normalized.schema.json",
+    # The supplied-TM sibling parsed by recon when a TM is supplied. It shares
+    # the normalized-TM schema (the authoring effort widened that schema's
+    # generated_by enum to include threat_model_author); the sibling itself is
+    # recon output, so it carries generated_by: threat_model_recon. Wiring it
+    # here ensures a malformed sibling is caught the same way the canonical
+    # baseline is.
+    "threat-model-supplied-normalized.yaml": "threat-model-normalized.schema.json",
     # C-21: Phase C intake artifact (emitted by the intake step).
     "asset-inventory.yaml":         "asset-inventory.schema.json",
 }
