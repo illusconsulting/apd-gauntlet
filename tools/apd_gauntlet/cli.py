@@ -135,13 +135,27 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
     default=pathlib.Path(".claude/skills/apd-domain"),
 )
 @click.option("--framework-version", default=__version__)
-def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--full-only",
+    is_flag=True,
+    default=False,
+    help="Write only the full cross-goal SKILL.md; skip the per-goal by-goal/ "
+    "sidecars (which lens agents read to bound context on multi-domain runs).",
+)
+def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version, full_only) -> None:  # type: ignore[no-untyped-def]
     try:
-        path = build_domain_skill(list(domain_names), domains_dir, out, framework_version)
+        path = build_domain_skill(
+            list(domain_names), domains_dir, out, framework_version,
+            emit_sidecars=not full_only,
+        )
     except (FileNotFoundError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1) from None
     click.echo(f"Wrote {path}")
+    if not full_only:
+        by_goal = path.parent / "by-goal"
+        n = sum(1 for _ in by_goal.glob("*.md")) if by_goal.is_dir() else 0
+        click.echo(f"Wrote {n} per-goal sidecars to {by_goal}")
 
 
 @main.command("init-run", help="Scaffold runs/<run-id>/ with subdirs and copy input artifacts.")

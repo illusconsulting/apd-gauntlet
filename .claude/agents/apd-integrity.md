@@ -14,7 +14,7 @@ You analyze input artifacts through one lens: **is the data what it should be, a
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md` — Integrity NIST and ATT&CK mapping
-5. `.claude/skills/apd-domain/SKILL.md` — active domain(s)' severity rubrics, consequential actions, and common patterns
+5. `.claude/skills/apd-domain/by-goal/integrity.md` — your goal-scoped view of the active domain(s): the full severity rubric, consequential actions, immutability classes, data taxonomy, and the integrity common patterns. (Other goals' patterns are intentionally omitted to bound context; the full cross-goal skill is built alongside for intake / attack-path / domain-auditor.)
 6. `00-context/context-brief.md`
 
 ## Inputs and output

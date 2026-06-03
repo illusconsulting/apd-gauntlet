@@ -6,7 +6,7 @@ This guide is a complete reference for authoring a domain pack. It dissects the 
 
 ## 1. How a pack influences a run
 
-A domain pack is compiled by `apd-gauntlet build-domain-skill` into a single `.claude/skills/apd-domain/SKILL.md` skill that every specialist loads at the start of a run. Through that skill the pack does four things:
+A domain pack is compiled by `apd-gauntlet build-domain-skill` into the `.claude/skills/apd-domain/` skill that every specialist loads at the start of a run. Through that skill the pack does four things:
 
 - **Calibrates severity.** Each specialist cites the active pack's `severity-rubric.md` clause in a finding's `detail`, so the rubric thresholds decide what is critical versus high versus medium for this domain.
 - **Defines the consequential-action surface.** `consequential-actions.md` enumerates the audit-worthy actions the Non-Repudiation lens checks for, and `immutability-classes.md` names the data classes the Immutability lens expects to be write-once.
@@ -14,6 +14,8 @@ A domain pack is compiled by `apd-gauntlet build-domain-skill` into a single `.c
 - **Seeds the per-goal pattern catalogs.** The nine `common-patterns/<goal>.md` files calibrate the analytical style, the severity assignment, and the NIST/ATT&CK mapping habits a specialist applies in each lens.
 
 Everything else — the lens definitions, the boundary calls between adjacent goals, the three analytical disciplines — stays identical across domains. The pack is calibration, not a rewrite of the framework.
+
+**Full skill vs per-goal sidecars.** `build-domain-skill` emits the full cross-goal `SKILL.md` *and* nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md`. Each sidecar carries all four calibration files plus the merged attack-path defaults, but only its own goal's `common-patterns` — so a lens specialist (e.g. `apd-confidentiality`) reads `by-goal/confidentiality.md`, not the other eight goals' patterns. This bounds per-lens context on multi-domain runs (the saving grows with pack count). The full `SKILL.md` is still read by the cross-goal consumers — `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`. Every sidecar's frontmatter carries a `pruned` manifest naming exactly which goal it is scoped to and which goal-pattern files were omitted (no silent caps). Pass `--full-only` to suppress sidecar emission.
 
 ## 2. Anatomy: the 14 files and the `domain.yaml` schema
 

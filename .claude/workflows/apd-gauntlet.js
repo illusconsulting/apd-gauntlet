@@ -221,11 +221,14 @@ pyStep('validate', {
 // so use noRunDir + positional=args.domains.join(' '). --framework-version is a flag.
 // alwaysRun bypasses the JS-side idempotency guard; the Python command is itself
 // idempotent and decides pack-set freshness.
+// Emits the full cross-goal SKILL.md (read by intake / attack-path / domain-auditor)
+// PLUS .claude/skills/apd-domain/by-goal/<goal>.md sidecars — one per lens agent,
+// goal-scoped to bound context on multi-domain runs (each lens reads only its own).
 pyStep('build-domain-skill', {
   phase: 'setup', label: 'build-domain-skill',
   noRunDir: true, positional: args.domains.join(' '),
   cliArgs: '--framework-version ' + args.framework_version,
-  outputs: '.claude/skills/apd-domain/SKILL.md',
+  outputs: '.claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)',
   validateScope: runDir, alwaysRun: true,
 });
 // 0c — validate-domain also takes a BARE domain_name positional (read-only check).

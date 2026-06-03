@@ -154,6 +154,7 @@ Inspect the supplied artifacts for surfaces that suggest additional taxonomies t
 - **owasp_top10** — declare-or-suggest if you see: HTML templates, browser-targeted routes, session cookies, CSRF tokens, web framework imports (Django, Flask, Rails, Express, Next.js).
 - **owasp_api_top10** — declare-or-suggest if you see: OpenAPI/Swagger spec, REST endpoint declarations, GraphQL schema, API gateway config, JWT bearer auth on HTTP endpoints.
 - **owasp_llm_top10** — declare-or-suggest if you see: `openai` / `anthropic` / `langchain` / `llama-index` SDK imports, prompt template files (`*.prompt`, `*.tmpl`), vector store usage (Pinecone, Weaviate, Chroma), LLM-tool-use patterns.
+- **mitre_atlas** — declare-or-suggest if you see an adversarial-ML surface: a model in the trust boundary, a training/inference/fine-tune pipeline, an autonomous agent, a RAG / vector store, or an ML supply chain (model/dataset artifacts). ATLAS is the AI/ML analog of ATT&CK and attaches to findings; it pairs naturally with `owasp_llm_top10` and the `agentic-ai` pack but is independent of any pack.
 - **cwe**, **mitre_attack**, **d3fend** — default-on; do not suggest (they're always-on unless the operator explicitly removed them from `taxonomies:`).
 
 Write the result into the context brief as a `taxonomy_suggestions:` block (see template). Specialists are bound by the operator-accepted scope (i.e., what's in `taxonomies:` at run time) — auto-suggestions are advisory only and must not drive specialist mappings unless the operator re-runs with them added.

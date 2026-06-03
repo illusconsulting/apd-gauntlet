@@ -232,11 +232,11 @@ def test_skip_sentinel_convention_documented() -> None:
 PLUGIN_MANIFEST = REPO / "plugin.json"
 
 
-def test_plugin_manifest_version_is_1_5_0() -> None:
-    """plugin.json must report version 1.5.0 (matches pyproject; closes skew gap)."""
+def test_plugin_manifest_version_is_1_6_0() -> None:
+    """plugin.json must report version 1.6.0 (matches pyproject; closes skew gap)."""
     manifest = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8"))
-    assert manifest["version"] == "1.5.0", (
-        f"plugin.json version is {manifest['version']!r}; expected '1.5.0'"
+    assert manifest["version"] == "1.6.0", (
+        f"plugin.json version is {manifest['version']!r}; expected '1.6.0'"
     )
 
 

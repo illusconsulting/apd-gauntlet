@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## v1.6.0 — 2026-06-03
+
+### Added
+
+- **`agentic-ai` domain pack** — security-architecture calibration for autonomous LLM-agent systems (tool-use agents, multi-agent topologies, self-improving loops), grounded in the OWASP LLM Top 10, MITRE ATLAS, and CSA MAESTRO.
+- **`mobile-applications` domain pack** — OWASP MASVS/MASWE/MASTG + MAS Checklist + NIST SP 800-163r1 app-vetting, calibrated for the adversary-controlled-client surface (on-device storage, keystore/TEE, pinning, WebView/JS bridges, deep-link/IPC, in-process SDKs, reverse-engineering resilience, hardware attestation), anchored to the MITRE ATT&CK Mobile matrix.
+- **MITRE ATLAS as a first-class finding taxonomy** — declare `mitre_atlas` in `.apd-run.yaml`; specialists emit `atlas` technique IDs (`AML.T####[.###]`) in structured finding fields, feeding the new `atlas-coverage` synthesis rollup and the report's taxonomy tooltips. New `apd-gauntlet refresh-atlas` verb + bundled `atlas-techniques.json`.
+- **CSA MAESTRO as a recognized threat-model methodology** — `methodology_hint: maestro` routes supplied threat models through the free-form envelope with an L1–L7 → APD-goal mapping in the `apd-threat-model-methodologies` skill.
+- **Per-goal domain-skill sidecars** — `build-domain-skill` emits `.claude/skills/apd-domain/by-goal/<goal>.md` (calibration files + merged surfaces + only that goal's common-patterns, with a `pruned` manifest) so each lens agent loads a goal-scoped slice; the full cross-goal `SKILL.md` is retained for intake / attack-path / domain-auditor. `--full-only` suppresses sidecars.
+
+### Changed
+
+- ATT&CK Mobile technique titles and mitigation→technique crosswalk merged additively into the bundled catalogs so Mobile-pack runs render names rather than bare IDs.
+- HTML report now renders `data.meta` diagnostics and informational-severity findings that the template previously dropped.
+
+### Fixed
+
+- Golden-run framework defects (F1–F5): new `apd-gauntlet canonicalize`, non-vacuous record/ID validators, loader capability-id guard, deduped-union resolver, and attack-path crown-jewel↔asset name-collision handling.
+
 ## v1.5.1 — 2026-05-27
 
 ### Added

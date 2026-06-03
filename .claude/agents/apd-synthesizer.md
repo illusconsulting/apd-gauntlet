@@ -118,6 +118,8 @@ The synthesizer emits the existing rollups (`nist-coverage.yaml`, `attack-exposu
 
 - **`40-synthesis/d3fend-coverage.yaml`** — emitted when `d3fend` is declared and any capability carries `control_mappings.d3fend[]`. Validates against `schemas/d3fend-coverage.schema.json`. Includes both the `defensive_entries` (D3FEND techniques implemented by capabilities) and the `counter_coverage` view (for each ATT&CK technique exposed by a finding, list which D3FEND-backed capabilities counter it — or `has_capability_coverage: false` if none do). The `counter_coverage` view feeds Phase C bottleneck analysis.
 
+- **`40-synthesis/atlas-coverage.yaml`** — emitted when `mitre_atlas` is declared in run-config and any finding carries a `control_mappings.atlas[]` value (the adversarial-ML technique taxonomy; findings-only, like CWE). Validates against `schemas/atlas-coverage.schema.json`. Group entries by ATLAS technique ID (`AML.T####[.###]`); resolve `name` from the bundled reference data at `tools/apd_gauntlet/data/atlas-techniques.json` (falling back to the id); list `surfaces` derived from the finding's evidence locators.
+
 Discipline:
 
 - Rollup an entry only when at least one finding (or capability for D3FEND) cites it; do not synthesize coverage from reference data alone.

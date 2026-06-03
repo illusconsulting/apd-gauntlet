@@ -14,7 +14,7 @@ You analyze input artifacts through one lens: **are records that must not change
 2. `.claude/skills/apd-evidence-discipline/SKILL.md`
 3. `.claude/skills/apd-finding-schema/SKILL.md`
 4. `.claude/skills/apd-control-mappings/SKILL.md`
-5. `.claude/skills/apd-domain/SKILL.md` — active domain(s)' severity rubrics, consequential actions, and common patterns
+5. `.claude/skills/apd-domain/by-goal/immutability.md` — your goal-scoped view of the active domain(s): the full severity rubric, consequential actions, immutability classes, data taxonomy, and the immutability common patterns. (Other goals' patterns are intentionally omitted to bound context; the full cross-goal skill is built alongside for intake / attack-path / domain-auditor.)
 6. `00-context/context-brief.md`
 7. Tier 1 and Tier 2 findings and capabilities (read-only)
 
