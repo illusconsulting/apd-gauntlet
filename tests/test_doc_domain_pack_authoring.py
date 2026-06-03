@@ -18,7 +18,13 @@ IMPROVEMENT_TYPES = [
 
 
 def test_no_apd_orchestrator_in_user_docs():
+    # architecture.md deliberately names apd-orchestrator.md to explain the
+    # 20-files-vs-19-functional-agents discrepancy; every other user doc must
+    # remain clean.
+    _ALLOWED = {"architecture.md"}
     for doc in USER_DOCS:
+        if doc.name in _ALLOWED:
+            continue
         assert "apd-orchestrator" not in doc.read_text(encoding="utf-8"), (
             f"{doc.name} still references the retired apd-orchestrator"
         )

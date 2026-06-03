@@ -153,6 +153,60 @@ def test_canonicalize_count_is_zero_on_idempotent_rerun(tmp_path):
     assert second.cross_refs_rewritten == 0
 
 
+def test_canonicalize_leaves_id_untouched_when_no_locator(tmp_path):
+    """An in-scope record with no evidence locator cannot yield a deterministic
+    id, so canonicalize leaves its id untouched (by-design; mirrors the linters'
+    early-return).
+
+    When the file has ONLY locator-less records, in_scope stays 0 and the file
+    is not written back at all.  When a file also contains a record with a valid
+    locator (making in_scope >= 1), the file IS written back — but the
+    locator-less record's id is still left as-is.
+    """
+    run = tmp_path / "run"
+
+    # Case A: file contains ONLY a locator-less in-scope record → file untouched.
+    only_nolocator = {
+        "finding": [
+            {
+                "id": "fabricated-only-no-locator",
+                "agent": "confidentiality",
+                "title": "No locator finding",
+                "evidence": [],
+            }
+        ]
+    }
+    path_a = run / "10-trustworthiness" / "confidentiality.findings.yaml"
+    _write(path_a, only_nolocator)
+    before_a = path_a.read_bytes()
+    canonicalize_run(run)
+    assert path_a.read_bytes() == before_a  # file not rewritten
+
+    # Case B: file contains one locator-less + one normal record → file IS
+    # rewritten (in_scope >= 1), but the locator-less record's id is still
+    # left untouched.
+    run2 = tmp_path / "run2"
+    mixed = {
+        "finding": [
+            {
+                "id": "fabricated-no-locator",
+                "agent": "confidentiality",
+                "title": "PHI exposure with no evidence locator",
+                "evidence": [],
+            },
+            _finding("confidentiality", "PHI in logs", "§3.1", fid="fabricated-has-locator"),
+        ]
+    }
+    path_b = run2 / "10-trustworthiness" / "confidentiality.findings.yaml"
+    _write(path_b, mixed)
+    canonicalize_run(run2)
+    out = yaml.safe_load(path_b.read_text())
+    # The normal record gets its id recomputed deterministically.
+    assert out["finding"][1]["id"] == compute_id("conf", "PHI in logs", "§3.1")
+    # The locator-less record's id is left as-is.
+    assert out["finding"][0]["id"] == "fabricated-no-locator"
+
+
 def test_canonicalize_normalizes_plural_capabilities_root(tmp_path):
     """A genuine 'capabilities:' plural root key is now correctly normalized."""
     run = tmp_path / "run"

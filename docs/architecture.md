@@ -41,6 +41,8 @@ The gauntlet ships 19 agents: intake, the nine specialists, the synthesizer and 
 
 Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). The five activation-gated optional agents (code-recon, threat-model-recon, threat-model-evaluator, attack-path-analyzer, domain-auditor) declare their preconditions in `.apd-run.yaml` or the active domain pack, and the runner skips them silently (or blocks, where the discipline rule demands it) when those preconditions are unmet.
 
+A twentieth file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 19.
+
 ## Tier topology
 
 ### Tier-0 (intake)
