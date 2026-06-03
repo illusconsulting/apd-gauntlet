@@ -5,6 +5,8 @@ import pathlib
 import re
 import shutil
 
+from . import __version__
+
 SUBDIRS = [
     "inputs", "00-context", "10-trustworthiness",
     "20-scalability", "30-auditability", "40-synthesis",
@@ -47,7 +49,7 @@ def scaffold_run(
     config_text = (
         f"run_id: {run_id}\n"
         f"{domains_block}"
-        f"framework_version: 1.1.0\n"
+        f"framework_version: {__version__}\n"
         f"code_recon: auto\n"
         "# code_recon: enabled  # hard-fail if CBM not reachable\n"
         "# code_recon: disabled # skip code-recon entirely\n"

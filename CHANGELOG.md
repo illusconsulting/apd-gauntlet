@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+### Fixed
+
+- **Workflow no longer passes `--framework-version undefined`** — the `apd-gauntlet.js` setup phase built the `build-domain-skill` flag by blind string concatenation (`'--framework-version ' + args.framework_version`); when a run's `.apd-run.yaml` omitted `framework_version`, JS stringified `undefined` into the literal arg `--framework-version undefined`, which crashed `build_domain_skill` at `int('undefined')` in `_version_in_range`. The flag is now emitted only when `args.framework_version` is present; otherwise it is omitted and the CLI's own `default=__version__` applies.
+- **`scaffold_run` stamps the live framework version** — `init-run`/`scaffold_run` hardcoded `framework_version: 1.1.0` in every generated `.apd-run.yaml`, recording a stale version and risking a spurious `framework_compat` failure in `build_domain_skill` if a pack floor ever rose above `1.1.0`. It now writes the live package `__version__`.
+
 ## v1.6.0 — 2026-06-03
 
 ### Added

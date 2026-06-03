@@ -308,6 +308,29 @@ def test_build_domain_skill_step_always_runs() -> None:
         "build-domain-skill step must carry alwaysRun: true"
 
 
+def test_build_domain_skill_framework_version_flag_is_guarded() -> None:
+    """The --framework-version flag must be GUARDED on args.framework_version being
+    present. Unconditional `'--framework-version ' + args.framework_version` produces
+    the literal `--framework-version undefined` when the run-config omits the key,
+    which then crashes build_domain_skill at int('undefined') in _version_in_range.
+    When the key is absent the flag must be omitted so the CLI's own
+    `default=__version__` applies."""
+    text = _text()
+    m = re.search(r"pyStep\('build-domain-skill', \{[\s\S]*?\n\}\);", text)
+    assert m, "build-domain-skill pyStep block not found"
+    block = m.group(0)
+    # The buggy unconditional concat must be gone.
+    assert "cliArgs: '--framework-version ' + args.framework_version," not in block, (
+        "unconditional '--framework-version ' + args.framework_version yields "
+        "'--framework-version undefined' when args.framework_version is absent"
+    )
+    # The flag must be emitted only behind a presence guard on args.framework_version.
+    assert "args.framework_version ?" in block, (
+        "build-domain-skill must guard --framework-version on args.framework_version "
+        "(ternary), omitting the flag when the key is absent"
+    )
+
+
 def test_phase_5h_names_in_meta_and_body() -> None:
     text = _text()
     for p in ("domain-coverage-delta", "domain-improvements"):

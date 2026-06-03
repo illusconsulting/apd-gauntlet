@@ -224,10 +224,14 @@ pyStep('validate', {
 // Emits the full cross-goal SKILL.md (read by intake / attack-path / domain-auditor)
 // PLUS .claude/skills/apd-domain/by-goal/<goal>.md sidecars — one per lens agent,
 // goal-scoped to bound context on multi-domain runs (each lens reads only its own).
+// GUARD the --framework-version flag on args.framework_version being present: blindly
+// concatenating an absent value stringifies `undefined`, yielding the literal arg
+// `--framework-version undefined`, which crashes build_domain_skill at int('undefined').
+// When the key is absent, OMIT the flag so the CLI's own `default=__version__` applies.
 pyStep('build-domain-skill', {
   phase: 'setup', label: 'build-domain-skill',
   noRunDir: true, positional: args.domains.join(' '),
-  cliArgs: '--framework-version ' + args.framework_version,
+  cliArgs: args.framework_version ? ('--framework-version ' + args.framework_version) : '',
   outputs: '.claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)',
   validateScope: runDir, alwaysRun: true,
 });
