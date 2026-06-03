@@ -60,12 +60,12 @@ def test_refresh_cwe_size_cap_is_200_mib() -> None:
 
 
 def test_project_extracts_required_fields(sample_cwe_xml_bytes: bytes) -> None:
-    """The fixture has 2 weaknesses with the fields the projection cares about."""
+    """The fixture has 3 weaknesses + 1 category with the fields the projection cares about."""
     projected = project_cwe_xml_to_json(sample_cwe_xml_bytes)
     assert "entries" in projected
     assert "source_sha256" in projected
     assert "fetched_at" in projected
-    assert len(projected["entries"]) == 3
+    assert len(projected["entries"]) == 4
 
     entry = projected["entries"][0]
     assert set(entry.keys()) >= {
@@ -138,7 +138,7 @@ def test_refresh_cwe_writes_to_data_dir(tmp_path: Path, sample_cwe_xml_bytes: by
     data = json.loads(target.read_text())
     assert data["source_sha256"] == hashlib.sha256(sample_cwe_xml_bytes).hexdigest()
     assert data["source_url"]
-    assert "entries" in data and len(data["entries"]) == 3
+    assert "entries" in data and len(data["entries"]) == 4
 
 
 def test_project_deduplicates_parents_across_views(sample_cwe_xml_bytes: bytes) -> None:
@@ -150,3 +150,16 @@ def test_project_deduplicates_parents_across_views(sample_cwe_xml_bytes: bytes) 
     entry = by_id["CWE-416"]
     assert entry["parents"] == ["CWE-825", "CWE-672"]
     assert len(entry["parents"]) == len(set(entry["parents"]))
+
+
+def test_project_includes_categories(sample_cwe_xml_bytes: bytes) -> None:
+    """<Category> elements are projected as abstraction=category with no parents."""
+    projected = project_cwe_xml_to_json(sample_cwe_xml_bytes)
+    by_id = {e["cwe_id"]: e for e in projected["entries"]}
+    assert "CWE-840" in by_id, "category CWE-840 must be projected"
+    cat = by_id["CWE-840"]
+    assert cat["abstraction"] == "category"
+    assert cat["name"] == "Business Logic Errors"
+    assert cat["parents"] == []
+    assert cat["demonstrative_examples_present"] is False
+    assert cat["observed_examples_present"] is False

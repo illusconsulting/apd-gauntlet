@@ -6,11 +6,11 @@ window.APD_DATA = {
       "version": "unknown"
     },
     "run_id": "apd-20260601-claim-event-bus",
-    "synthesizer_version": "1.0.0",
+    "synthesizer_version": "1.4.0",
     "specialists_skipped": [],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-05-29",
+    "date": "2026-06-02",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -32,7 +32,7 @@ window.APD_DATA = {
       "attack": {
         "fetched_at": "2026-05-29",
         "source": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
-        "count": 858
+        "count": 1034
       },
       "cwe": {
         "fetched_at": null,
@@ -43,6 +43,11 @@ window.APD_DATA = {
         "fetched_at": null,
         "source": null,
         "count": 149
+      },
+      "atlas": {
+        "fetched_at": "2026-06-02",
+        "source": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
+        "count": 170
       }
     },
     "section_errors": {},
@@ -84,12 +89,13 @@ window.APD_DATA = {
     "severity_disagreements": 1
   },
   "exec_summary": [
-    "Run summary not provided by synthesizer."
+    "This APD gauntlet run reviews the claim-event-bus reference architecture under the pbm domain pack: a Kafka-based pipeline carrying PHI claim-events across a multi-AZ deployment. The 9-specialist gauntlet assessed operational consequences across all nine APD goals over the deduped corpus plus the attack-path analysis.",
+    "The highest-leverage concern is the unsigned, mutably-stored audit log (merged-4dd83f6a, critical): consequential claim actions cannot be reconstructed or proven tamper-free. High-severity gaps cluster around authentication assurance (SMS MFA fallback), availability (single-region 99.95% SLO, untested DR failover), and confidentiality (PHI in the Kafka topic lacking envelope encryption; unspecified KMS DEK rotation)."
   ],
   "posture_summary": {
-    "trustworthiness": "Posture statement not provided by synthesizer.",
-    "scalability": "Posture statement not provided by synthesizer.",
-    "auditability": "Posture statement not provided by synthesizer."
+    "trustworthiness": "PHI in the claim-event topic lacks envelope encryption and DEK rotation is unspecified; Kafka event payloads also lack producer signing (intg-42a3ebbd), leaving end-to-end payload integrity unverified beyond TLS transport.",
+    "scalability": "Single-region active-passive topology is the dominant distribution risk, and automatic KMS key rotation is disabled for the MSK cluster key (enable_key_rotation = false, ephem-bff0e958), accumulating cryptographic exposure on the broker at-rest key.",
+    "auditability": "The audit log is unsigned and stored in a mutable table — the single critical finding — undermining non-repudiation and tamper-evidence for every consequential claim action."
   },
   "capabilities": [
     {
@@ -173,7 +179,27 @@ window.APD_DATA = {
       "scope": "Covers RDS cluster-level deletion protection only. Does not address table-level mutability, backup immutability, or audit log WORM protection."
     }
   ],
-  "strengths": [],
+  "strengths": [
+    {
+      "id": "conf-cap-d0590471",
+      "title": "MSK cluster with KMS-managed at-rest encryption",
+      "goal": "confidentiality",
+      "maturity": "implemented",
+      "caveats": [
+        "At-rest KMS encryption only; PHI in the topic still lacks field-level envelope encryption (conf-7aa376c5)",
+        "Broker key auto-rotation is disabled (ephem-bff0e958)"
+      ]
+    },
+    {
+      "id": "intg-cap-d4ef7325",
+      "title": "TLS 1.2 or higher enforced on all Kafka transport paths",
+      "goal": "integrity",
+      "maturity": "implemented",
+      "caveats": [
+        "TLS protects transport, not end-to-end payload integrity; events are unsigned (intg-42a3ebbd)"
+      ]
+    }
+  ],
   "findings": [
     {
       "id": "conf-7aa376c5",
@@ -210,7 +236,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -249,14 +276,15 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
         "DEK rotation policy document with cadence, automation trigger, and revocation runbook"
       ],
       "headline": true,
-      "headline_rank": 10
+      "headline_rank": 6
     },
     {
       "id": "conf-e443de8b",
@@ -290,7 +318,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -330,12 +359,11 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
-      "prerequisite_evidence": [],
-      "headline": true,
-      "headline_rank": 8
+      "prerequisite_evidence": []
     },
     {
       "id": "avail-ce35b2ed",
@@ -369,7 +397,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -408,7 +437,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -447,12 +477,11 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
-      "prerequisite_evidence": [],
-      "headline": true,
-      "headline_rank": 6
+      "prerequisite_evidence": []
     },
     {
       "id": "resil-0173b90b",
@@ -486,7 +515,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -526,7 +556,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -565,7 +596,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -605,7 +637,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -645,7 +678,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -685,12 +719,11 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
-      "prerequisite_evidence": [],
-      "headline": true,
-      "headline_rank": 9
+      "prerequisite_evidence": []
     },
     {
       "id": "immut-067a7391",
@@ -724,7 +757,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -770,7 +804,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [
         null,
@@ -817,7 +852,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -859,7 +895,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -901,7 +938,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -943,7 +981,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -985,7 +1024,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1027,7 +1067,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1069,7 +1110,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1111,7 +1153,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1153,7 +1196,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1195,7 +1239,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1237,7 +1282,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1279,7 +1325,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1321,7 +1368,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1363,7 +1411,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1405,7 +1454,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1447,7 +1497,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1489,7 +1540,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1531,7 +1583,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1573,7 +1626,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1615,7 +1669,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1657,7 +1712,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1699,7 +1755,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1741,7 +1798,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1783,7 +1841,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1825,7 +1884,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1867,7 +1927,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1909,7 +1970,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1951,7 +2013,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1993,7 +2056,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2035,7 +2099,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2077,7 +2142,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2119,7 +2185,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2161,7 +2228,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2203,7 +2271,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2245,7 +2314,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2287,7 +2357,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2329,7 +2400,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2371,7 +2443,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2413,7 +2486,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2455,7 +2529,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2497,7 +2572,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2539,7 +2615,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2581,7 +2658,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2623,7 +2701,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2665,7 +2744,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2707,7 +2787,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2749,7 +2830,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2791,7 +2873,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2833,7 +2916,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2875,7 +2959,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2917,7 +3002,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -2959,7 +3045,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3001,7 +3088,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3043,7 +3131,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3085,7 +3174,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3127,7 +3217,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3169,7 +3260,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3211,7 +3303,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3253,7 +3346,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3295,7 +3389,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3337,7 +3432,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3379,7 +3475,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3421,7 +3518,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3463,7 +3561,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3505,7 +3604,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3547,7 +3647,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3589,7 +3690,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3631,7 +3733,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3673,7 +3776,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3715,7 +3819,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3757,7 +3862,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3799,7 +3905,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3841,7 +3948,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3883,7 +3991,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -3925,7 +4034,8 @@ window.APD_DATA = {
         "cwe": [],
         "owasp_api": [],
         "owasp": [],
-        "d3fend": []
+        "d3fend": [],
+        "atlas": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -10093,7 +10203,45 @@ window.APD_DATA = {
       "capability_derived_edge_count": 0
     }
   },
-  "next_steps": [],
+  "next_steps": [
+    {
+      "rank": 1,
+      "text": "Sign every audit record (HMAC or asymmetric) and move the audit store to a WORM substrate (object-lock) so consequential claim actions are tamper-evident and reconstructable.",
+      "refs": [
+        "merged-4dd83f6a"
+      ]
+    },
+    {
+      "rank": 2,
+      "text": "Replace SMS MFA fallback with TOTP/WebAuthn to raise authentication assurance on claim-submitter and operator surfaces.",
+      "refs": [
+        "auth-dbba3dea"
+      ]
+    },
+    {
+      "rank": 3,
+      "text": "Add envelope encryption for PHI fields in the Kafka claim-events topic and pin a KMS DEK rotation cadence.",
+      "refs": [
+        "conf-7aa376c5",
+        "conf-98a543cd"
+      ]
+    },
+    {
+      "rank": 4,
+      "text": "Establish a tested DR failover procedure (document RTO/RPO, run a game-day) and evaluate multi-region active-active to meet the 99.95% SLO.",
+      "refs": [
+        "avail-ce35b2ed",
+        "avail-4e08f6d8"
+      ]
+    },
+    {
+      "rank": 5,
+      "text": "Enable automatic KMS key rotation for the MSK cluster key (enable_key_rotation = true) to stop accumulating static-key exposure on the broker at-rest encryption.",
+      "refs": [
+        "ephem-bff0e958"
+      ]
+    }
+  ],
   "taxonomy": {
     "AU-10": {
       "family": "NIST 800-53r5",

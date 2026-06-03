@@ -570,14 +570,32 @@ for (let i = 0; i <= 2; i++) {
   const semanticOk = typeof auditor === 'string' && /GATE:\s*pass/i.test(auditor);
   if (structuralOk && semanticOk) { break; }
   if (i === 2) {
-    log('report audit: residual discrepancies after 2 remediations; surfacing non-blocking.');
+    // Report completeness gate: a structural failure (or an unverifiable report)
+    // must NEVER ship. The LLM auditor's semantic residual stays non-blocking.
+    if (!audit) {
+      throw new Error(
+        'report completeness gate: audit-report produced no receipt after 2 remediations ' +
+        '(dispatch/skip error) — cannot verify report completeness. ' +
+        'Refusing to ship an unverified report.');
+    }
+    if (!structuralOk) {
+      throw new Error(
+        'report completeness gate: audit-report still FAILED after 2 remediations — ' +
+        'the HTML report is structurally incomplete (see ' + runDir +
+        '/40-synthesis/report-audit.yaml). Refusing to ship a degraded report.');
+    }
+    log('report audit: residual SEMANTIC discrepancies after 2 remediations; surfacing non-blocking.');
     break;
   }
-  critique = auditor;
-  // Feed the compact critique back into 5e, then rebuild 5f.
+  critique = typeof auditor === 'string' ? auditor : '';
+  // Feed BOTH the structural audit (report-audit.yaml) AND the semantic critique back
+  // into 5e, then rebuild 5f. The report-writer reads report-audit.yaml and fixes any
+  // failed editorial completeness checks (exec_summary/posture_summary/headline/next_steps).
   llmStep('apd-report-writer',
-    'Address each item in this PRIOR AUDIT CRITIQUE and regenerate 40-synthesis/report-data.yaml + ' +
-    'advisory-report.md accordingly. CRITIQUE: ' + critique,
+    'Read ' + runDir + '/40-synthesis/report-audit.yaml: address EVERY failed check whose ' +
+    'klass is "editorial" by regenerating 40-synthesis/report-data.yaml + advisory-report.md ' +
+    '(exec_summary paragraphs, posture_summary, headline_findings, next_steps). ALSO address ' +
+    'this semantic critique. CRITIQUE: ' + critique,
     { phase: 'synthesis-report', label: 'report-writer-attempt-' + (i + 1),
       outputs: runDir + '/40-synthesis/report-data.yaml' });
   pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-' + (i + 1),

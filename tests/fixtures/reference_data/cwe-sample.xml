@@ -40,4 +40,12 @@
       </Related_Weaknesses>
     </Weakness>
   </Weaknesses>
+  <Categories>
+    <Category ID="840" Name="Business Logic Errors" Status="Incomplete">
+      <Summary>Test fixture: weaknesses in this category identify business logic errors.</Summary>
+      <Relationships>
+        <Has_Member CWE_ID="89" View_ID="699"/>
+      </Relationships>
+    </Category>
+  </Categories>
 </Weakness_Catalog>

@@ -5,28 +5,68 @@ checks:
 - name: id_coverage_findings
   status: pass
   detail: yaml=90 data.js=90 missing=[]
+  klass: structural
 - name: id_coverage_capabilities
   status: pass
   detail: yaml=10 data.js=10
+  klass: structural
 - name: id_coverage_nist
   status: pass
   detail: controls=36 missing_from_taxonomy=[]
+  klass: structural
+- name: nist_rollup_parity
+  status: pass
+  detail: recompute_rows=7 data.js_rows=7 mismatched_families=[]
+  klass: structural
 - name: id_coverage_attack
   status: pass
   detail: yaml=4 data.js=4
+  klass: structural
 - name: count_parity_severity
   status: pass
   detail: 'recomputed={''high'': 9, ''medium'': 80, ''critical'': 1} data.js={''critical'':
     1, ''high'': 9, ''medium'': 80, ''low'': 0, ''info'': 0}'
+  klass: structural
 - name: count_parity_totals
   status: pass
   detail: data.js=90 yaml=90
+  klass: structural
 - name: data_js_recompute_drift
   status: pass
   detail: recompute_findings=90 data.js=90
+  klass: structural
 - name: section_errors_empty
   status: pass
   detail: section_errors=[]
+  klass: structural
+- name: exec_summary_present
+  status: pass
+  detail: is_empty_run=False paragraphs=2
+  klass: editorial
+- name: editorial_sections_present
+  status: pass
+  detail: report_data=True posture=True headline=7 next_steps=5
+  klass: editorial
+- name: attack_paths_present
+  status: pass
+  detail: node_count=16 total_paths=75 apath_blocked=False
+  klass: structural
+- name: d3fend_overlay_present
+  status: pass
+  detail: 'exempt: defense_graph=True overlays=0'
+  klass: structural
+- name: apd_matrix_nonempty
+  status: pass
+  detail: findings_present=True matrix_rows=12
+  klass: structural
+- name: coverage_rollups_nonempty
+  status: pass
+  detail: nist_controls=36 nist_rollup_rows=7 attack_techniques=4 attack_exposure_rows=4
+  klass: structural
+- name: taxonomy_titles_resolve
+  status: pass
+  detail: taxonomy_entries=40 bare_id=0 sample=[]
+  klass: structural
 counts:
   deduped_findings_yaml: 15
   apath_findings_yaml: 75

@@ -47,8 +47,11 @@ def parse_data_js(path: Path) -> dict[str, Any]:
 def _yaml_records(path: Path, key: str) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    return [r for r in (doc.get(key) or []) if isinstance(r, dict)]
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(doc, dict):
+        return []
+    val = doc.get(key)
+    return [r for r in (val if isinstance(val, list) else []) if isinstance(r, dict)]
 
 
 def _recompute_nist_rollup(run_dir: Path) -> list[dict[str, Any]]:
@@ -65,15 +68,19 @@ def _recompute_nist_rollup(run_dir: Path) -> list[dict[str, Any]]:
     return [r for r in rollup if isinstance(r, dict)]
 
 
-def _check(result: AuditResult, name: str, ok: bool, detail: str) -> None:
-    result.checks.append({"name": name, "status": "pass" if ok else "fail", "detail": detail})
+def _check(
+    result: AuditResult, name: str, ok: bool, detail: str, klass: str = "structural",
+) -> None:
+    result.checks.append({
+        "name": name, "status": "pass" if ok else "fail", "detail": detail, "klass": klass,
+    })
     if not ok:
         result.status = "fail"
 
 
 def audit_report(run_dir: Path) -> AuditResult:
     from ..report.loader import load_run
-    from ..report.transform import build_apd_data
+    from ..report.transform import EXEC_SUMMARY_PLACEHOLDER, build_apd_data
 
     synth = run_dir / "40-synthesis"
     result = AuditResult()
@@ -113,7 +120,8 @@ def audit_report(run_dir: Path) -> AuditResult:
     # NIST per-control vs taxonomy keys (nist_rollup is family-aggregated).
     # Subset check (yaml_ids ⊆ taxonomy keys): taxonomy carries the full reference catalog,
     # so only "every cited id is present" is required, not equality.
-    taxonomy = parsed.get("taxonomy", {})
+    _tax_raw = parsed.get("taxonomy")
+    taxonomy = _tax_raw if isinstance(_tax_raw, dict) else {}
     nist_ids = {row.get("id") for row in nist}
     missing_nist = {cid for cid in nist_ids if cid not in taxonomy}
     missing_nist_sample = sorted(str(x) for x in missing_nist)[:5]
@@ -192,6 +200,137 @@ def audit_report(run_dir: Path) -> AuditResult:
     section_errors = (parsed.get("meta") or {}).get("section_errors") or {}
     _check(result, "section_errors_empty", not section_errors,
            f"section_errors={list(section_errors)}")
+
+    # === Report-completeness gate (report-completeness-gate) ===
+    meta = parsed.get("meta") or {}
+    is_empty_run = bool(meta.get("is_empty_run"))
+
+    # Completeness check #1 — exec summary (editorial; per design spec):
+    # executive summary present and not the placeholder.
+    exec_summary = parsed.get("exec_summary")
+    exec_summary = exec_summary if isinstance(exec_summary, list) else []
+    exec_ok = is_empty_run or (
+        len(exec_summary) > 0 and exec_summary != [EXEC_SUMMARY_PLACEHOLDER]
+    )
+    _check(result, "exec_summary_present", exec_ok,
+           f"is_empty_run={is_empty_run} paragraphs={len(exec_summary)}",
+           klass="editorial")
+
+    # Completeness check #8 — editorial sections (editorial; per design spec):
+    # editorial blocks present in report-data.yaml.
+    rd_path = synth / "report-data.yaml"
+    try:
+        rd_raw = yaml.safe_load(rd_path.read_text(encoding="utf-8")) if rd_path.is_file() else None
+    except yaml.YAMLError:
+        rd_raw = None
+    rd_doc = rd_raw if isinstance(rd_raw, dict) else {}
+    editorial_ok = is_empty_run or (
+        rd_path.is_file()
+        and bool((rd_doc.get("exec_summary") or {}).get("paragraphs"))
+        and bool(rd_doc.get("posture_summary"))
+        and bool(rd_doc.get("headline_findings"))
+        and bool(rd_doc.get("next_steps"))
+    )
+    _check(result, "editorial_sections_present", editorial_ok,
+           f"report_data={rd_path.is_file()} posture={bool(rd_doc.get('posture_summary'))} "
+           f"headline={len(rd_doc.get('headline_findings') or [])} "
+           f"next_steps={len(rd_doc.get('next_steps') or [])}",
+           klass="editorial")
+
+    # Completeness check #3 — attack paths (structural; per design spec):
+    # the analysis section must be present whenever attack-path analysis activated.
+    asset_graph_path = synth / "asset-graph.yaml"
+    ap = parsed.get("attack_paths")
+    if not asset_graph_path.is_file():
+        _check(result, "attack_paths_present", True,
+               "exempt: attack-path analysis not activated (no asset-graph.yaml)",
+               klass="structural")
+    elif not isinstance(ap, dict):
+        _check(result, "attack_paths_present", False,
+               f"asset-graph.yaml present but data.attack_paths is {type(ap).__name__} "
+               f"(expected an object — build dropped or malformed the section)",
+               klass="structural")
+    else:
+        summary_block = ap.get("asset_graph_summary")
+        raw_nc = summary_block.get("node_count") if isinstance(summary_block, dict) else None
+        try:
+            node_count = int(raw_nc) if raw_nc is not None else 0
+        except (ValueError, TypeError):
+            node_count = 0
+        # apath_blocked: fallback for a completed run with an empty graph
+        # (node_count==0) that still emitted blocked-path findings.
+        apath_blocked = any(
+            str(f.get("id", "")).startswith("apath-") and f.get("disposition") == "blocked"
+            for f in apath_f
+        )
+        ap_ok = node_count > 0 or apath_blocked
+        total_paths = (ap.get("summary") or {}).get("total_paths")
+        _check(result, "attack_paths_present", ap_ok,
+               f"node_count={node_count} total_paths={total_paths} apath_blocked={apath_blocked}",
+               klass="structural")
+
+    # Completeness check #4 — D3FEND overlay (structural; per design spec):
+    # whatever bottleneck overlays the defense graph declares must reach data.js.
+    defense_graph_path = synth / "defense-graph.yaml"
+    dg_overlays = _yaml_records(defense_graph_path, "bottleneck_overlays")
+    _raw_overlays = ap.get("bottleneck_overlays") if isinstance(ap, dict) else None
+    _overlays_list = _raw_overlays if isinstance(_raw_overlays, list) else []
+    data_overlays = [o for o in _overlays_list if isinstance(o, dict)]
+    if not defense_graph_path.is_file() or len(dg_overlays) == 0:
+        _check(result, "d3fend_overlay_present", True,
+               f"exempt: defense_graph={defense_graph_path.is_file()} overlays={len(dg_overlays)}",
+               klass="structural")
+    else:
+        counts_match = len(data_overlays) == len(dg_overlays)
+        has_d3fend = bool(data_overlays) and all(
+            isinstance(o, dict) and bool(o.get("candidate_d3fend"))
+            for o in data_overlays
+        )
+        d3_ok = counts_match and has_d3fend
+        _check(result, "d3fend_overlay_present", d3_ok,
+               f"defense_graph_overlays={len(dg_overlays)} data_js_overlays={len(data_overlays)} "
+               f"candidate_d3fend_present={has_d3fend}",
+               klass="structural")
+
+    # Completeness check #6a — APD matrix (structural; per design spec):
+    # the 9xN matrix must have rows whenever findings exist.
+    findings_present = (len(deduped_f) + len(apath_f)) > 0
+    apd_matrix = parsed.get("apd_matrix")
+    matrix_rows = apd_matrix.get("rows") if isinstance(apd_matrix, dict) else None
+    matrix_rows = matrix_rows if isinstance(matrix_rows, list) else []
+    matrix_ok = is_empty_run or (not findings_present) or len(matrix_rows) > 0
+    _check(result, "apd_matrix_nonempty", matrix_ok,
+           f"findings_present={findings_present} matrix_rows={len(matrix_rows)}",
+           klass="structural")
+
+    # Completeness check #6b — coverage rollups (structural; per design spec):
+    # rendered rollups must be non-empty when the authoritative coverage YAML has rows.
+    _nr = parsed.get("nist_rollup")
+    nist_rollup = _nr if isinstance(_nr, list) else []
+    _ae = parsed.get("attack_exposure")
+    attack_exposure = _ae if isinstance(_ae, list) else []
+    rollups_ok = is_empty_run or (
+        (len(nist) == 0 or len(nist_rollup) > 0)
+        and (len(attack) == 0 or len(attack_exposure) > 0)
+    )
+    _check(result, "coverage_rollups_nonempty", rollups_ok,
+           f"nist_controls={len(nist)} nist_rollup_rows={len(nist_rollup)} "
+           f"attack_techniques={len(attack)} attack_exposure_rows={len(attack_exposure)}",
+           klass="structural")
+
+    # Completeness check #7 — taxonomy titles resolve (structural; per design spec):
+    # no cited taxonomy id may render as a bare ID (title == id), which means a
+    # reference DB failed to load.
+    # (A failed reference-DB load makes transform fall back to title==id for every
+    # cited id, so this bare-id check also catches an empty/missing reference catalog.)
+    # `taxonomy` was bound (isinstance-guarded) above in the id_coverage_nist block.
+    bare = [
+        k for k, v in taxonomy.items()
+        if isinstance(v, dict) and v.get("title") in (None, "", k)
+    ]
+    _check(result, "taxonomy_titles_resolve", len(bare) == 0,
+           f"taxonomy_entries={len(taxonomy)} bare_id={len(bare)} sample={sorted(bare)[:5]}",
+           klass="structural")
 
     result.counts = {
         # deduped + apath = findings_data_js (the total that id_coverage_findings checks).

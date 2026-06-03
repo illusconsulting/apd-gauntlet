@@ -379,3 +379,35 @@ def test_canonicalize_precedes_tier_validate_gate() -> None:
     assert run_tier.index("pyStep('canonicalize'") < run_tier.index(
         "pyStep('validate'"
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 10 — completeness gate: block on structural failure, semantic non-blocking
+# ---------------------------------------------------------------------------
+
+
+def test_completeness_gate_throws_on_structural_failure():
+    src = _text()
+    assert "report completeness gate" in src
+    assert "throw new Error(" in src
+    assert "Refusing to ship a degraded report" in src
+    assert "if (!structuralOk)" in src
+
+
+def test_completeness_gate_blocks_on_missing_audit_receipt():
+    src = _text()
+    assert "if (!audit)" in src
+    assert "cannot verify report completeness" in src
+    assert "Refusing to ship an unverified report" in src
+
+
+def test_semantic_residual_remains_non_blocking():
+    src = _text()
+    assert "residual SEMANTIC discrepancies" in src
+    assert "non-blocking" in src
+
+
+def test_report_writer_remediation_reads_report_audit():
+    src = _text()
+    assert "report-audit.yaml" in src
+    assert 'klass is "editorial"' in src

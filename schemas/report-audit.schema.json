@@ -19,7 +19,8 @@
         "properties": {
           "name": { "type": "string" },
           "status": { "type": "string", "enum": ["pass", "fail"] },
-          "detail": { "type": "string" }
+          "detail": { "type": "string" },
+          "klass": { "type": "string", "enum": ["structural", "editorial"] }
         }
       }
     },

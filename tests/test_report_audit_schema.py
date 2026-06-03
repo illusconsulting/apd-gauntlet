@@ -19,7 +19,12 @@ def test_minimal_pass_audit():
         "schema_version": 1,
         "generated_by": "apd-gauntlet",
         "status": "pass",
-        "checks": [{"name": "id_coverage_findings", "status": "pass", "detail": "90/90"}],
+        "checks": [
+            {
+                "name": "id_coverage_findings", "status": "pass",
+                "detail": "90/90", "klass": "structural",
+            },
+        ],
         "counts": {
             "deduped_findings_yaml": 15, "apath_findings_yaml": 75, "findings_data_js": 90,
             "capabilities_yaml": 10, "capabilities_data_js": 10,

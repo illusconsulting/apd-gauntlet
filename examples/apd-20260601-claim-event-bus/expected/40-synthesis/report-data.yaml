@@ -1,0 +1,46 @@
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "This APD gauntlet run reviews the claim-event-bus reference architecture under the pbm domain pack: a Kafka-based pipeline carrying PHI claim-events across a multi-AZ deployment. The 9-specialist gauntlet assessed operational consequences across all nine APD goals over the deduped corpus plus the attack-path analysis."
+    - "The highest-leverage concern is the unsigned, mutably-stored audit log (merged-4dd83f6a, critical): consequential claim actions cannot be reconstructed or proven tamper-free. High-severity gaps cluster around authentication assurance (SMS MFA fallback), availability (single-region 99.95% SLO, untested DR failover), and confidentiality (PHI in the Kafka topic lacking envelope encryption; unspecified KMS DEK rotation)."
+
+headline_findings:
+  - {id: "merged-4dd83f6a", rank: 1}
+  - {id: "auth-dbba3dea", rank: 2}
+  - {id: "avail-4e08f6d8", rank: 3}
+  - {id: "avail-ce35b2ed", rank: 4}
+  - {id: "conf-7aa376c5", rank: 5}
+  - {id: "conf-98a543cd", rank: 6}
+  - {id: "ephem-bff0e958", rank: 7}
+
+strengths:
+  - id: "conf-cap-d0590471"
+    caveats:
+      - "At-rest KMS encryption only; PHI in the topic still lacks field-level envelope encryption (conf-7aa376c5)"
+      - "Broker key auto-rotation is disabled (ephem-bff0e958)"
+  - id: "intg-cap-d4ef7325"
+    caveats:
+      - "TLS protects transport, not end-to-end payload integrity; events are unsigned (intg-42a3ebbd)"
+
+next_steps:
+  - rank: 1
+    text: "Sign every audit record (HMAC or asymmetric) and move the audit store to a WORM substrate (object-lock) so consequential claim actions are tamper-evident and reconstructable."
+    refs: ["merged-4dd83f6a"]
+  - rank: 2
+    text: "Replace SMS MFA fallback with TOTP/WebAuthn to raise authentication assurance on claim-submitter and operator surfaces."
+    refs: ["auth-dbba3dea"]
+  - rank: 3
+    text: "Add envelope encryption for PHI fields in the Kafka claim-events topic and pin a KMS DEK rotation cadence."
+    refs: ["conf-7aa376c5", "conf-98a543cd"]
+  - rank: 4
+    text: "Establish a tested DR failover procedure (document RTO/RPO, run a game-day) and evaluate multi-region active-active to meet the 99.95% SLO."
+    refs: ["avail-ce35b2ed", "avail-4e08f6d8"]
+  - rank: 5
+    text: "Enable automatic KMS key rotation for the MSK cluster key (enable_key_rotation = true) to stop accumulating static-key exposure on the broker at-rest encryption."
+    refs: ["ephem-bff0e958"]
+
+posture_summary:
+  trustworthiness: "PHI in the claim-event topic lacks envelope encryption and DEK rotation is unspecified; Kafka event payloads also lack producer signing (intg-42a3ebbd), leaving end-to-end payload integrity unverified beyond TLS transport."
+  scalability: "Single-region active-passive topology is the dominant distribution risk, and automatic KMS key rotation is disabled for the MSK cluster key (enable_key_rotation = false, ephem-bff0e958), accumulating cryptographic exposure on the broker at-rest key."
+  auditability: "The audit log is unsigned and stored in a mutable table — the single critical finding — undermining non-repudiation and tamper-evidence for every consequential claim action."

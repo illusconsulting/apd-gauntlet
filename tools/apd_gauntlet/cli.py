@@ -1186,10 +1186,16 @@ def audit_report_cmd(run_dir: Path) -> None:
     from .synthesis.audit import audit_report
 
     result = audit_report(run_dir)
-    failed = [c["name"] for c in result.checks if c["status"] == "fail"]
-    click.echo(f"audit-report: {result.status} ({len(result.checks)} checks, {len(failed)} failed)")
-    for name in failed:
-        click.echo(f"  FAIL: {name}", err=True)
+    failed = [c for c in result.checks if c["status"] == "fail"]
+    structural_failed = sum(1 for c in failed if c.get("klass", "structural") == "structural")
+    editorial_failed = sum(1 for c in failed if c.get("klass") == "editorial")
+    click.echo(
+        f"audit-report: {result.status} ({len(result.checks)} checks, {len(failed)} failed; "
+        f"structural_failed={structural_failed} editorial_failed={editorial_failed})"
+    )
+    for c in failed:
+        klass = c.get("klass", "structural")
+        click.echo(f"  FAIL [{klass}]: {c['name']} — {c.get('detail', '')}", err=True)
     if result.status == "fail":
         raise SystemExit(1)
 

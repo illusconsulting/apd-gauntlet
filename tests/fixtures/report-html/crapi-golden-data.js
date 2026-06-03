@@ -54,7 +54,7 @@ window.APD_DATA = {
       "cwe": {
         "fetched_at": null,
         "source": null,
-        "count": 969
+        "count": 970
       },
       "d3fend": {
         "fetched_at": null,
@@ -5109,7 +5109,7 @@ window.APD_DATA = {
     },
     "CWE-840": {
       "family": "CWE",
-      "title": "CWE-840"
+      "title": "Business Logic Errors"
     },
     "CWE-862": {
       "family": "CWE",

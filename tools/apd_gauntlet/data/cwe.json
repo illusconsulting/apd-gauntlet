@@ -7094,6 +7094,14 @@
       ]
     },
     {
+      "abstraction": "category",
+      "cwe_id": "CWE-840",
+      "demonstrative_examples_present": false,
+      "name": "Business Logic Errors",
+      "observed_examples_present": false,
+      "parents": []
+    },
+    {
       "abstraction": "class",
       "cwe_id": "CWE-841",
       "demonstrative_examples_present": true,

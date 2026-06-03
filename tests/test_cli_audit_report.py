@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib
 import shutil
 
+import pytest
 import yaml
 from apd_gauntlet.cli import main
 from apd_gauntlet.synthesis.audit import audit_report, parse_data_js
@@ -118,6 +119,17 @@ def test_nist_rollup_parity_fails_when_data_js_diverges(tmp_path):
     assert cli_result.exit_code == 1, cli_result.output
 
 
+def test_every_check_carries_a_valid_klass(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    assert result.checks, "expected at least one check"
+    for c in result.checks:
+        assert c["klass"] in ("structural", "editorial"), c
+    # Pre-existing checks are all structural.
+    sec = [c for c in result.checks if c["name"] == "section_errors_empty"]
+    assert sec and sec[0]["klass"] == "structural"
+
+
 def test_nist_rollup_parity_soft_on_transform_exception(tmp_path, monkeypatch):
     dst = _copy_example(tmp_path)
     # Force the recompute to raise; the parity check must record a NON-blocking soft entry.
@@ -134,3 +146,288 @@ def test_nist_rollup_parity_soft_on_transform_exception(tmp_path, monkeypatch):
     # Soft: the parity check itself reports pass (non-blocking) and notes the exception.
     assert parity[0]["status"] == "pass"
     assert "exception" in parity[0]["detail"].lower() or "skipped" in parity[0]["detail"].lower()
+
+
+def _mutate_data_js(dst, fn):
+    """Parse the example data.js, apply fn(dict), re-emit it canonically."""
+    from apd_gauntlet.report.emit import write_data_js
+    p = dst / "40-synthesis" / "report-html" / "data.js"
+    d = parse_data_js(p)
+    fn(d)
+    write_data_js(d, p)
+
+
+def test_exec_summary_present_passes_on_enriched_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "exec_summary_present"]
+    assert c and c[0]["status"] == "pass", c
+    assert c[0]["klass"] == "editorial"
+
+
+def test_exec_summary_present_fails_on_placeholder(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__(
+        "exec_summary", ["Run summary not provided by synthesizer."]))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "exec_summary_present"]
+    assert c and c[0]["status"] == "fail", c
+    assert result.status == "fail"
+
+
+def test_exec_summary_present_exempt_when_empty_run(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: (
+        d["meta"].__setitem__("is_empty_run", True),
+        d.__setitem__("exec_summary", ["Run summary not provided by synthesizer."]),
+    ))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "exec_summary_present"]
+    assert c and c[0]["status"] == "pass", "empty run is exempt"
+
+
+def test_editorial_sections_present_fails_when_report_data_absent(tmp_path):
+    dst = _copy_example(tmp_path)
+    (dst / "40-synthesis" / "report-data.yaml").unlink()
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "editorial_sections_present"]
+    assert c and c[0]["status"] == "fail", c
+    assert c[0]["klass"] == "editorial"
+
+
+def test_editorial_sections_fails_gracefully_on_malformed_report_data(tmp_path):
+    dst = _copy_example(tmp_path)
+    (dst / "40-synthesis" / "report-data.yaml").write_text("key: [unclosed\n", encoding="utf-8")
+    result = audit_report(dst)  # must NOT raise
+    c = [x for x in result.checks if x["name"] == "editorial_sections_present"]
+    assert c and c[0]["status"] == "fail", c
+    audit_artifact = dst / "40-synthesis" / "report-audit.yaml"
+    assert audit_artifact.is_file(), "audit must still write its artifact"
+
+
+def test_attack_paths_present_passes_on_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "attack_paths_present"]
+    assert c and c[0]["status"] == "pass", c
+    assert c[0]["klass"] == "structural"
+
+
+def test_attack_paths_present_fails_when_section_null_but_graph_exists(tmp_path):
+    dst = _copy_example(tmp_path)  # has asset-graph.yaml
+    _mutate_data_js(dst, lambda d: d.__setitem__("attack_paths", None))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "attack_paths_present"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_attack_paths_present_exempt_when_not_activated(tmp_path):
+    dst = _copy_example(tmp_path)
+    (dst / "40-synthesis" / "asset-graph.yaml").unlink()
+    _mutate_data_js(dst, lambda d: d.__setitem__("attack_paths", None))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "attack_paths_present"]
+    assert c and c[0]["status"] == "pass", "no asset-graph.yaml -> exempt"
+
+
+def test_attack_paths_present_handles_nondict_section(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__("attack_paths", []))
+    result = audit_report(dst)  # must NOT raise
+    c = [x for x in result.checks if x["name"] == "attack_paths_present"]
+    assert c and c[0]["status"] == "fail", c
+    audit_artifact = dst / "40-synthesis" / "report-audit.yaml"
+    assert audit_artifact.is_file(), "audit must still write its artifact"
+
+
+def _overlay(edge_id="e1"):
+    return {
+        "edge_id": edge_id, "paths_traversing": 3,
+        "exposed_attack_techniques": ["T1078"],
+        "candidate_d3fend": [
+            {"d3fend_id": "D3-MFA", "counters": ["T1078"],
+             "rationale": "multi-factor auth counters valid-accounts abuse here"}
+        ],
+        "existing_capability_backing": [], "net_new_d3fend": ["D3-MFA"],
+    }
+
+
+def test_d3fend_overlay_exempt_when_no_overlays(tmp_path):
+    dst = _copy_example(tmp_path)  # defense-graph.yaml has 0 overlays
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "d3fend_overlay_present"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_d3fend_overlay_fails_when_defense_graph_overlays_dropped(tmp_path):
+    dst = _copy_example(tmp_path)
+    dg = dst / "40-synthesis" / "defense-graph.yaml"
+    doc = yaml.safe_load(dg.read_text()) or {}
+    doc["bottleneck_overlays"] = [_overlay()]
+    dg.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    _mutate_data_js(dst, lambda d: d["attack_paths"].__setitem__("bottleneck_overlays", []))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "d3fend_overlay_present"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_d3fend_overlay_passes_when_counts_match(tmp_path):
+    dst = _copy_example(tmp_path)
+    dg = dst / "40-synthesis" / "defense-graph.yaml"
+    doc = yaml.safe_load(dg.read_text()) or {}
+    doc["bottleneck_overlays"] = [_overlay()]
+    dg.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    _mutate_data_js(
+        dst,
+        lambda d: d["attack_paths"].__setitem__("bottleneck_overlays", [_overlay()]),
+    )
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "d3fend_overlay_present"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_d3fend_overlay_exempt_when_defense_graph_missing(tmp_path):
+    dst = _copy_example(tmp_path)
+    (dst / "40-synthesis" / "defense-graph.yaml").unlink()
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "d3fend_overlay_present"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_d3fend_overlay_handles_nonlist_bottleneck_overlays(tmp_path):
+    dst = _copy_example(tmp_path)
+    dg = dst / "40-synthesis" / "defense-graph.yaml"
+    doc = yaml.safe_load(dg.read_text()) or {}
+    doc["bottleneck_overlays"] = [_overlay()]
+    dg.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    _mutate_data_js(dst, lambda d: d["attack_paths"].__setitem__("bottleneck_overlays", 42))
+    result = audit_report(dst)  # must NOT raise
+    c = [x for x in result.checks if x["name"] == "d3fend_overlay_present"]
+    assert c and c[0]["status"] == "fail", c
+    assert (dst / "40-synthesis" / "report-audit.yaml").is_file()
+
+
+def test_apd_matrix_nonempty_passes_on_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "apd_matrix_nonempty"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_apd_matrix_nonempty_fails_when_rows_empty_but_findings_exist(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d["apd_matrix"].__setitem__("rows", []))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "apd_matrix_nonempty"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_apd_matrix_nonempty_handles_nondict_matrix(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__("apd_matrix", []))
+    result = audit_report(dst)  # must NOT raise
+    c = [x for x in result.checks if x["name"] == "apd_matrix_nonempty"]
+    assert c and c[0]["status"] == "fail", c
+    assert (dst / "40-synthesis" / "report-audit.yaml").is_file()
+
+
+def test_coverage_rollups_nonempty_passes_on_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_coverage_rollups_fail_when_nist_rollup_dropped(tmp_path):
+    dst = _copy_example(tmp_path)  # nist-coverage.yaml has controls
+    _mutate_data_js(dst, lambda d: d.__setitem__("nist_rollup", []))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_coverage_rollups_fail_when_attack_exposure_dropped(tmp_path):
+    dst = _copy_example(tmp_path)  # attack-exposure.yaml has techniques
+    _mutate_data_js(dst, lambda d: d.__setitem__("attack_exposure", []))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_taxonomy_titles_resolve_passes_on_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "taxonomy_titles_resolve"]
+    assert c and c[0]["status"] == "pass", c
+
+
+def test_taxonomy_titles_resolve_fails_on_bare_id(tmp_path):
+    dst = _copy_example(tmp_path)
+    def _bare(d):
+        # Force one taxonomy entry's title to equal its id (a bare-ID tooltip).
+        k = next(iter(d["taxonomy"]))
+        d["taxonomy"][k]["title"] = k
+    _mutate_data_js(dst, _bare)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "taxonomy_titles_resolve"]
+    assert c and c[0]["status"] == "fail", c
+
+
+def test_taxonomy_titles_resolve_handles_nondict_taxonomy(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__("taxonomy", []))
+    result = audit_report(dst)  # must NOT raise
+    c = [x for x in result.checks if x["name"] == "taxonomy_titles_resolve"]
+    assert c and c[0]["status"] == "pass", "empty/absent taxonomy has no bare ids -> pass"
+    assert (dst / "40-synthesis" / "report-audit.yaml").is_file()
+
+
+def test_cli_audit_report_prints_per_class_counts(tmp_path):
+    dst = _copy_example(tmp_path)
+    # Break one editorial check (placeholder exec summary).
+    _mutate_data_js(dst, lambda d: d.__setitem__(
+        "exec_summary", ["Run summary not provided by synthesizer."]))
+    result = CliRunner().invoke(main, ["audit-report", str(dst)])
+    assert result.exit_code == 1, result.output
+    assert "editorial_failed=1" in result.output
+    assert "structural_failed=0" in result.output
+
+
+SHIPPED_RUNS = sorted((REPO / "runs").glob("apd-2026*"))
+
+
+@pytest.mark.parametrize("run_dir", SHIPPED_RUNS, ids=lambda p: p.name)
+def test_completeness_gate_passes_on_shipped_runs(run_dir, tmp_path):
+    dst = tmp_path / run_dir.name
+    shutil.copytree(run_dir, dst)  # hermetic: never mutate the committed run
+    # runs/*/report-html/ is gitignored, so a fresh checkout has no data.js. Build it
+    # from the committed YAMLs first; this also exercises the full build -> audit path.
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    result = audit_report(dst)
+    failed = [c for c in result.checks if c["status"] == "fail"]
+    assert result.status == "pass", f"{run_dir.name}: {failed}"
+
+
+def test_completeness_gate_passes_on_enriched_example(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    failed = [c for c in result.checks if c["status"] == "fail"]
+    assert result.status == "pass", failed
+    names = {c["name"] for c in result.checks}
+    for expected in (
+        "exec_summary_present", "editorial_sections_present", "attack_paths_present",
+        "d3fend_overlay_present", "apd_matrix_nonempty", "coverage_rollups_nonempty",
+        "taxonomy_titles_resolve", "section_errors_empty",
+    ):
+        assert expected in names, f"missing check {expected}"
+
+
+def test_audit_handles_nondict_taxonomy_scalar(tmp_path):
+    # A non-container taxonomy (int) must not crash id_coverage_nist or check #7.
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__("taxonomy", 42))
+    result = audit_report(dst)  # must NOT raise
+    assert (dst / "40-synthesis" / "report-audit.yaml").is_file()
+    tax_check = [c for c in result.checks if c["name"] == "taxonomy_titles_resolve"]
+    assert tax_check and tax_check[0]["status"] == "pass"  # no entries -> no bare ids

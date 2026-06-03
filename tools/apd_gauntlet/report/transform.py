@@ -25,6 +25,8 @@ TIER_GOALS: dict[str, list[str]] = {
     "auditability":    ["authenticity", "non_repudiation", "immutability"],
 }
 
+EXEC_SUMMARY_PLACEHOLDER = "Run summary not provided by synthesizer."
+
 
 def _crown_jewels_from_inventory(inventory: dict[str, Any]) -> list[str]:
     """Derive crown jewels from asset_inventory assets.
@@ -1691,9 +1693,9 @@ def build_apd_data(
          {}),
         ("exec_summary",
          lambda: (supplement.get("exec_summary") or {}).get(
-             "paragraphs", ["Run summary not provided by synthesizer."],
+             "paragraphs", [EXEC_SUMMARY_PLACEHOLDER],
          ),
-         ["Run summary not provided by synthesizer."]),
+         [EXEC_SUMMARY_PLACEHOLDER]),
         ("posture_summary",
          lambda: posture_summary_section(supplement.get("posture_summary")),
          {}),

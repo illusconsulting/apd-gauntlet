@@ -76,6 +76,9 @@ def project_cwe_xml_to_json(xml_bytes: bytes) -> dict[str, Any]:
     """
     root = ET.fromstring(xml_bytes)
     entries: list[dict[str, Any]] = []
+    # Projects both <Weakness> and <Category> elements (see the Category loop
+    # below). Categories are needed because some findings cite category CWEs
+    # (e.g. CWE-840). <View> elements are intentionally not projected.
     for weakness in root.iter(f"{_NS}Weakness"):
         cwe_id = weakness.get("ID")
         if not cwe_id:
@@ -104,6 +107,25 @@ def project_cwe_xml_to_json(xml_bytes: bytes) -> dict[str, Any]:
                 "parents": parents,
                 "demonstrative_examples_present": has_demo,
                 "observed_examples_present": has_obs,
+            }
+        )
+    # Project <Category> elements too. Categories (e.g. CWE-840 "Business Logic
+    # Errors") are cited by some findings; without them taxonomy_titles_resolve
+    # would render a bare id. Categories have no Abstraction attr and no ChildOf
+    # parents (they relate to members via Has_Member), so: abstraction="category",
+    # parents=[].
+    for category in root.iter(f"{_NS}Category"):
+        cwe_id = category.get("ID")
+        if not cwe_id:
+            continue
+        entries.append(
+            {
+                "cwe_id": f"CWE-{cwe_id}",
+                "name": category.get("Name") or "",
+                "abstraction": "category",
+                "parents": [],
+                "demonstrative_examples_present": False,
+                "observed_examples_present": False,
             }
         )
     entries.sort(key=lambda e: int(str(e["cwe_id"]).removeprefix("CWE-")))
