@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+### Changed
+
+- **`runs/` is now fully gitignored and no longer ships pre-built runs.** The three shipped example runs (crAPI, authentik, caldera) were removed from version control and `runs/` (the gauntlet's output directory) is ignored in its entirety, so a tool user cannot accidentally commit a sensitive security review. The single canonical fixture is now the synthetic `examples/apd-20260601-claim-event-bus/expected/` run; all tests, the report golden, and the dev-template demo data (`report-template/data.js`) were repointed to it, and the README quickstart now validates the example. The report transforms' divergent-shape regression coverage is preserved by the in-memory synthetic-shape unit tests in `test_transform_new_shapes.py` (no real-run fixtures required).
+
 ### Fixed
 
 - **Workflow no longer passes `--framework-version undefined`** — the `apd-gauntlet.js` setup phase built the `build-domain-skill` flag by blind string concatenation (`'--framework-version ' + args.framework_version`); when a run's `.apd-run.yaml` omitted `framework_version`, JS stringified `undefined` into the literal arg `--framework-version undefined`, which crashed `build_domain_skill` at `int('undefined')` in `_version_in_range`. The flag is now emitted only when `args.framework_version` is present; otherwise it is omitted and the CLI's own `default=__version__` applies.

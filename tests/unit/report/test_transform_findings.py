@@ -27,8 +27,8 @@ def test_findings_array_supplied_headlines_set_rank(example_run: pathlib.Path) -
     arr = findings_array(
         artifacts,
         headline_supplement=[
-            {"id": "merged-c829ffc8", "rank": 1},
-            {"id": "merged-514507e6", "rank": 2},
+            {"id": "merged-4dd83f6a", "rank": 1},
+            {"id": "auth-dbba3dea", "rank": 2},
         ],
     )
     headlined = [f for f in arr if f.get("headline")]

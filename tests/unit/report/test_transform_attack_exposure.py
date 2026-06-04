@@ -42,13 +42,13 @@ def test_rows_carry_coverage_label(example_run: pathlib.Path) -> None:
 
 
 def test_rows_uncovered_when_no_mitigations(example_run: pathlib.Path) -> None:
-    """T1078 in the crAPI fixture has zero countering capabilities → uncovered."""
+    """T1530 in the example fixture has zero countering capabilities → uncovered."""
     artifacts = load_run(example_run)
     rows = attack_exposure_rows(artifacts)
     by_id = {r["id"]: r for r in rows}
-    # T1078 (Valid Accounts) has countering_capabilities: [] in the crAPI run.
-    assert "T1078" in by_id, "T1078 should be present in crAPI fixture rows"
-    assert by_id["T1078"]["coverage"] == "uncovered"
+    # T1530 (Data from Cloud Storage) has no mitigating capability in the example run.
+    assert "T1530" in by_id, "T1530 should be present in the example fixture rows"
+    assert by_id["T1530"]["coverage"] == "uncovered"
 
 
 def test_rows_partial_when_both_findings_and_mitigations() -> None:

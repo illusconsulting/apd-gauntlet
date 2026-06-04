@@ -1,99 +1,29 @@
 # tests/unit/report/test_transform_new_shapes.py
-"""Coverage for the caldera ``*_to_findings`` shape and the authentik
-``controls`` / ``goals`` / ``techniques.findings`` shapes used by the
-synthesizers shipped in 2026-05 fixtures.
+"""Coverage for the divergent coverage-YAML shapes the report transforms must
+tolerate: the caldera ``control_to_findings`` / ``technique_to_findings`` /
+``matrix`` shapes and the authentik ``controls`` / ``techniques`` / ``goals``
+shapes (alongside the chainguard-era and crAPI-era array shapes).
 
-PR #12 made the report transforms tolerate the chainguard-era and crAPI-era
-shapes; this file locks in tolerance for the caldera + authentik shapes
-introduced in the security-tooling and identity-security domain packs.
+Each shape is reproduced here as a synthesized in-memory artifact (MagicMock)
+and the transform output is asserted directly — the regression coverage needs
+no shipped real-project run on disk. ``load_run`` performs no shape-specific
+parsing (it stores the raw coverage dict), so exercising the transforms against
+the constructed shapes is the load-independent equivalent.
 """
 from __future__ import annotations
 
-import pathlib
 from unittest.mock import MagicMock
 
-from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import (
     apd_matrix,
     attack_exposure_rows,
     nist_rollup_rows,
 )
 
-REPO = pathlib.Path(__file__).resolve().parents[3]
-CALDERA_RUN = REPO / "runs" / "apd-20260527-caldera-adversary-emulation"
-AUTHENTIK_RUN = REPO / "runs" / "apd-20260527-authentik-identity-provider"
-
-
 # ---------------------------------------------------------------------------
-# Caldera fixture — control_to_findings + technique_to_findings + matrix
-# ---------------------------------------------------------------------------
-
-
-def test_caldera_nist_rollup_populates_rows() -> None:
-    artifacts = load_run(CALDERA_RUN)
-    rows = nist_rollup_rows(artifacts)
-    families = {r["family"] for r in rows}
-    # Caldera fixture cites at least AC, AU, CM, IA, SC.
-    assert families >= {"AC", "AU", "CM", "IA", "SC"}
-    total = sum(r["covered"] + r["gapped"] + r["both"] for r in rows)
-    assert total > 0, "expected non-zero NIST coverage counts from caldera fixture"
-
-
-def test_caldera_attack_exposure_populates_rows() -> None:
-    artifacts = load_run(CALDERA_RUN)
-    rows = attack_exposure_rows(artifacts)
-    assert len(rows) > 0, "expected ATT&CK rows from caldera technique_to_findings"
-    by_id = {r["id"]: r for r in rows}
-    # T1078 (Valid Accounts) is cited by four caldera findings.
-    assert "T1078" in by_id
-    assert by_id["T1078"]["findings"] >= 1
-    # Every row must carry the canonical fields.
-    for r in rows:
-        assert r["coverage"] in {"covered", "partial", "uncovered"}
-        assert isinstance(r["mitigations"], list)
-
-
-def test_caldera_apd_matrix_populates_rows() -> None:
-    artifacts = load_run(CALDERA_RUN)
-    m = apd_matrix(artifacts)
-    assert len(m["rows"]) > 0, "expected APD matrix rows derived from caldera findings"
-    # Every cell must be one of the four legal posture values.
-    for row in m["rows"]:
-        for g in m["goals"]:
-            assert row["cells"][g] in {"covered", "gapped", "both", "silent"}
-
-
-# ---------------------------------------------------------------------------
-# Authentik fixture — controls + techniques.findings + goals
-# ---------------------------------------------------------------------------
-
-
-def test_authentik_nist_rollup_populates_rows() -> None:
-    artifacts = load_run(AUTHENTIK_RUN)
-    rows = nist_rollup_rows(artifacts)
-    families = {r["family"] for r in rows}
-    assert "AC" in families, "AC family expected in authentik fixture"
-    total = sum(r["covered"] + r["gapped"] + r["both"] for r in rows)
-    assert total > 0
-
-
-def test_authentik_attack_exposure_populates_rows() -> None:
-    artifacts = load_run(AUTHENTIK_RUN)
-    rows = attack_exposure_rows(artifacts)
-    assert len(rows) > 0
-    by_id = {r["id"]: r for r in rows}
-    assert "T1078" in by_id, "T1078 expected in authentik techniques map"
-
-
-def test_authentik_apd_matrix_populates_rows() -> None:
-    artifacts = load_run(AUTHENTIK_RUN)
-    m = apd_matrix(artifacts)
-    assert len(m["rows"]) > 0
-
-
-# ---------------------------------------------------------------------------
-# Synthetic per-shape unit tests — exercise each branch in isolation so a
-# fixture-only failure has a single point of regression to investigate.
+# Synthetic per-shape unit tests — each constructs a divergent coverage shape
+# in memory and asserts the transform output, so a shape regression has a
+# single, real-run-independent point of failure to investigate.
 # ---------------------------------------------------------------------------
 
 

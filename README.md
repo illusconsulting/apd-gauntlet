@@ -48,31 +48,31 @@ That installs both the Python CLI and the Claude Code agent + skill bundle.
 
 ## First run (~10 minutes)
 
-The fastest way to see what a finished report looks like is to validate one of the bundled example runs and open its HTML view. No Claude Code session required.
+The fastest way to see what a finished report looks like is to validate the bundled example run and open its HTML view. No Claude Code session required.
 
-### 1. Validate the bundled crAPI run
+### 1. Validate the bundled example run
 
 ```bash
 git clone https://github.com/shoveleejoe/apd-gauntlet.git
 cd apd-gauntlet
-apd-gauntlet validate runs/apd-20260527-crapi-owasp-api-top10/
+apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 ```
 
-You should see `Validation passed` — the run is well-formed against every schema and cross-file invariant.
+You should see `Clean.` — the run is well-formed against every schema and cross-file invariant.
 
 ### 2. View the HTML report
 
-Every completed run ships a self-contained HTML bundle at `runs/<run-id>/40-synthesis/report-html/`. Two ways to open it:
+A completed run ships a self-contained HTML bundle at `<run>/40-synthesis/report-html/`; the bundled example's is committed under `examples/`. Two ways to open it:
 
 ```bash
 # Option A — open directly (no server)
-open runs/apd-20260527-crapi-owasp-api-top10/40-synthesis/report-html/index.html
+open examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html/index.html
 ```
 
 ```bash
 # Option B — serve over HTTP (recommended; some browsers restrict
 # file:// access for the Mermaid attack-graph rendering)
-cd runs/apd-20260527-crapi-owasp-api-top10/40-synthesis/report-html
+cd examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html
 python3 -m http.server 8080
 # then open http://localhost:8080
 ```
@@ -103,24 +103,23 @@ For the full operator workflow including code reconnaissance, threat-model evalu
 
 ---
 
-## Example runs
+## Example run
 
-Three fully worked runs ship in `runs/`. Each demonstrates a different domain pack and a different review surface.
+A complete, **synthetic** example run ships under `examples/`. Reviews you generate land in
+`runs/`, which is gitignored — so a real (potentially sensitive) security report is never
+committed by accident.
 
 | Run | Domain pack | Subject | What it demonstrates |
 |---|---|---|---|
-| `apd-20260527-crapi-owasp-api-top10` | `api-security` | OWASP crAPI (deliberately vulnerable API) | OWASP API Top 10 coverage, BOLA/MFA findings, the canonical "what does a report look like" example |
-| `apd-20260527-caldera-adversary-emulation` | `security-tooling` | MITRE Caldera | NIST 800-115 + ATT&CK-anchored review of a security tool, two-axis severity rubric, ROE/CFAA framing |
-| `apd-20260527-authentik-identity-provider` | `identity-security` | authentik IdP | NIST 800-63B + OAuth/OIDC/SAML + GDPR coverage, attack-path enumeration |
+| `apd-20260601-claim-event-bus` | `pbm` | Synthetic claim-event bus (Kafka/PHI) | A complete gauntlet output across all nine goals — the canonical "what does a report look like" example, with NIST / ATT&CK / APD-component coverage rollups and attack-path enumeration |
 
-Validate any of them:
+Validate it:
 
 ```bash
-apd-gauntlet validate runs/apd-20260527-caldera-adversary-emulation/
-apd-gauntlet validate runs/apd-20260527-authentik-identity-provider/
+apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 ```
 
-The HTML report at `<run>/40-synthesis/report-html/index.html` is preloaded — open it the same way as step 2 above.
+The HTML report at `examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html/index.html` is preloaded — open it the same way as step 2 above.
 
 ---
 

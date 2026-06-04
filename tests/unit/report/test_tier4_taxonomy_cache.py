@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 
+import pytest
 from apd_gauntlet.report.taxonomy import (
     attack_technique_titles,
     cwe_titles,
@@ -11,6 +12,22 @@ from apd_gauntlet.report.taxonomy import (
     invalidate_if_modified,
     nist_control_titles,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_taxonomy_cache():
+    """Clear the module-level taxonomy LRU caches around every test in this file.
+
+    These tests prime the caches and (via a monkeypatched ``_DATA``) deliberately
+    load FAKE catalog contents. ``monkeypatch`` restores ``_DATA`` on teardown but
+    does NOT clear the lru_caches, so without this fixture a faked single-entry
+    NIST result leaks into later tests that resolve titles from the same caches —
+    notably the report golden and the completeness audit. Clearing before AND
+    after each test keeps the global cache state hermetic regardless of order.
+    """
+    invalidate_all()
+    yield
+    invalidate_all()
 
 
 def test_invalidate_all_clears_every_cached_loader():

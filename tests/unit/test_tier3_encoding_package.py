@@ -104,8 +104,8 @@ def test_cli_help_works_under_c_locale(monkeypatch):
 
 
 def test_validate_runs_under_c_locale(monkeypatch):
-    """`apd-gauntlet validate` must run cleanly under LC_ALL=C against a
-    shipped run. Uses in-process Click runner (no subprocess)."""
+    """`apd-gauntlet validate` must run cleanly under LC_ALL=C against the
+    canonical example run. Uses in-process Click runner (no subprocess)."""
     import locale
 
     from apd_gauntlet.cli import main as cli
@@ -114,6 +114,6 @@ def test_validate_runs_under_c_locale(monkeypatch):
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["validate", str(REPO / "runs" / "apd-20260527-crapi-owasp-api-top10")],
+        ["validate", str(REPO / "examples" / "apd-20260601-claim-event-bus" / "expected")],
     )
     assert result.exit_code == 0, result.output

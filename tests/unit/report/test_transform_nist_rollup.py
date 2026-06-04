@@ -17,8 +17,8 @@ def test_rollup_one_row_per_family(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
     rows = nist_rollup_rows(artifacts)
     families = {r["family"] for r in rows}
-    # The crAPI fixture touches at least SC, AU, CM, CP, AC, IA.
-    assert families >= {"SC", "AU", "CM", "CP", "AC", "IA"}
+    # The example fixture touches at least SC, AU, CP, IA, SI.
+    assert families >= {"SC", "AU", "CP", "IA", "SI"}
 
 
 def test_rollup_counts_match_family_summary(example_run: pathlib.Path) -> None:

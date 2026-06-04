@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
-from apd_gauntlet.report.loader import load_run
+from apd_gauntlet.report.loader import RunArtifacts, load_run
 from apd_gauntlet.report.transform import (
     build_apd_data,
     contradictions_section,
@@ -11,6 +11,24 @@ from apd_gauntlet.report.transform import (
     posture_summary_section,
     severity_disagreements_section,
 )
+
+
+def _artifacts_with_notes(
+    *, contradictions_notes: str | None = None, severity_notes: str | None = None,
+) -> RunArtifacts:
+    """Minimal RunArtifacts carrying only the note fields under test, so the
+    note-passthrough wiring is verified without depending on a fixture run's
+    specific contradictions/severity content."""
+    return RunArtifacts(
+        run_id="r", framework_version="1.0.0", domain_pack_name="p",
+        domain_pack_version="1", subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=contradictions_notes,
+        severity_disagreements=[], severity_disagreements_notes=severity_notes,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths=None, asset_graph=None, defense_graph=None,
+        attack_path_findings=[], report_data=None,
+    )
 
 
 def test_contradictions_section_shape(example_run: pathlib.Path) -> None:
@@ -66,22 +84,19 @@ def test_build_apd_data_assembles_full_window_object(example_run: pathlib.Path) 
         assert key in data, f"missing key {key}"
 
 
-def test_contradictions_notes_pulled_from_yaml(example_run: pathlib.Path) -> None:
-    """crAPI fixture has notes in contradictions.yaml; they must surface in build_apd_data."""
-    artifacts = load_run(example_run)
-    data = build_apd_data(artifacts, run_dir=example_run)
-    # crAPI has zero contradictions but non-empty notes.
+def test_contradictions_notes_pulled_from_yaml() -> None:
+    """contradictions_notes loaded from the yaml must surface in build_apd_data."""
+    note = "Scope clarification: these reflect language an out-of-context reviewer over-read."
+    artifacts = _artifacts_with_notes(contradictions_notes=note)
+    data = build_apd_data(artifacts)
     assert data["contradictions"] == []
-    assert data["contradictions_notes"] is not None
-    assert isinstance(data["contradictions_notes"], str)
-    assert len(data["contradictions_notes"]) > 20
+    assert data["contradictions_notes"] == note
 
 
-def test_severity_disagreements_notes_pulled_from_yaml(example_run: pathlib.Path) -> None:
-    """crAPI fixture has notes in severity-disagreements.yaml; they must surface."""
-    artifacts = load_run(example_run)
-    data = build_apd_data(artifacts, run_dir=example_run)
+def test_severity_disagreements_notes_pulled_from_yaml() -> None:
+    """severity_disagreements_notes loaded from the yaml must surface in build_apd_data."""
+    note = "Severity deltas here are calibration differences, not unresolved disputes."
+    artifacts = _artifacts_with_notes(severity_notes=note)
+    data = build_apd_data(artifacts)
     assert data["severity_disagreements"] == []
-    assert data["severity_disagreements_notes"] is not None
-    assert isinstance(data["severity_disagreements_notes"], str)
-    assert len(data["severity_disagreements_notes"]) > 20
+    assert data["severity_disagreements_notes"] == note

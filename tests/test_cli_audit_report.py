@@ -4,7 +4,6 @@ from __future__ import annotations
 import pathlib
 import shutil
 
-import pytest
 import yaml
 from apd_gauntlet.cli import main
 from apd_gauntlet.synthesis.audit import audit_report, parse_data_js
@@ -393,20 +392,15 @@ def test_cli_audit_report_prints_per_class_counts(tmp_path):
     assert "structural_failed=0" in result.output
 
 
-SHIPPED_RUNS = sorted((REPO / "runs").glob("apd-2026*"))
-
-
-@pytest.mark.parametrize("run_dir", SHIPPED_RUNS, ids=lambda p: p.name)
-def test_completeness_gate_passes_on_shipped_runs(run_dir, tmp_path):
-    dst = tmp_path / run_dir.name
-    shutil.copytree(run_dir, dst)  # hermetic: never mutate the committed run
-    # runs/*/report-html/ is gitignored, so a fresh checkout has no data.js. Build it
-    # from the committed YAMLs first; this also exercises the full build -> audit path.
+def test_completeness_gate_passes_after_build_on_canonical_example(tmp_path):
+    """Build the report fresh from the committed YAMLs, then audit — exercises the
+    full build -> audit path on the one shipped (synthetic) example run."""
+    dst = _copy_example(tmp_path)
     build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
     assert build.exit_code == 0, build.output
     result = audit_report(dst)
     failed = [c for c in result.checks if c["status"] == "fail"]
-    assert result.status == "pass", f"{run_dir.name}: {failed}"
+    assert result.status == "pass", failed
 
 
 def test_completeness_gate_passes_on_enriched_example(tmp_path):

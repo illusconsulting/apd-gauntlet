@@ -265,13 +265,17 @@ def test_loader_reads_plural_severity_disagreements_from_canonical_example() -> 
         "canonical example contains severity disagreements under plural key"
 
 
-def test_loader_reads_caldera_disagreements_alias() -> None:
-    """Caldera uses the abbreviated ``disagreements:`` key."""
-    caldera_run = REPO / "runs" / "apd-20260527-caldera-adversary-emulation"
-    artifacts = load_run(caldera_run)
-    # The list may be empty (no disagreements in this fixture) but the load
-    # must not silently drop entries under the ``disagreements`` key.
-    assert isinstance(artifacts.severity_disagreements, list)
+def test_loader_reads_disagreements_alias(tmp_path) -> None:
+    """Some synthesizers emit the abbreviated ``disagreements:`` key instead of the
+    canonical ``severity_disagreements:``. The loader fallback must read both. Tested
+    at the ``_records`` helper level so it needs no real run fixture."""
+    from apd_gauntlet.report.loader import _records
+    p = tmp_path / "severity-disagreements.yaml"
+    p.write_text("disagreements:\n  - id: sd-1\n    note: scope\n", encoding="utf-8")
+    recs = _records(
+        p, "severity_disagreements", "disagreements", "severity_disagreement",
+    )
+    assert [r["id"] for r in recs] == ["sd-1"]
 
 
 # ---------------------------------------------------------------------------
@@ -285,17 +289,14 @@ def test_chainguard_directory_removed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# End-to-end: every shipped run + the canonical example builds successfully.
+# End-to-end: the canonical example builds successfully.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("run_path", [
-    "runs/apd-20260527-crapi-owasp-api-top10",
-    "runs/apd-20260527-caldera-adversary-emulation",
-    "runs/apd-20260527-authentik-identity-provider",
     "examples/apd-20260601-claim-event-bus/expected",
 ])
-def test_build_report_succeeds_on_every_shipped_run(run_path: str, tmp_path) -> None:
+def test_build_report_succeeds_on_canonical_example(run_path: str, tmp_path) -> None:
     run = REPO / run_path
     out = tmp_path / "report"
     build_report(run, out_dir=out)

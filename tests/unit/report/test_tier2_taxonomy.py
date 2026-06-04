@@ -37,13 +37,11 @@ def test_attack_technique_titles_now_resolves() -> None:
     assert len(titles) >= 50
 
 
-def test_taxonomy_dict_resolves_nist_titles_for_every_shipped_run() -> None:
-    """No NIST entry in any shipped run should remain bare-id after Tier-2-A."""
+def test_taxonomy_dict_resolves_nist_titles_for_canonical_example() -> None:
+    """No NIST entry in the canonical example should remain bare-id after Tier-2-A."""
     REPO = pathlib.Path(__file__).resolve().parents[3]
     for run_path in (
-        "runs/apd-20260527-crapi-owasp-api-top10",
-        "runs/apd-20260527-caldera-adversary-emulation",
-        "runs/apd-20260527-authentik-identity-provider",
+        "examples/apd-20260601-claim-event-bus/expected",
     ):
         artifacts = load_run(REPO / run_path)
         td = taxonomy_dict(artifacts)
@@ -58,12 +56,10 @@ def test_taxonomy_dict_resolves_nist_titles_for_every_shipped_run() -> None:
         )
 
 
-def test_taxonomy_dict_resolves_attack_titles_for_every_shipped_run() -> None:
+def test_taxonomy_dict_resolves_attack_titles_for_canonical_example() -> None:
     REPO = pathlib.Path(__file__).resolve().parents[3]
     for run_path in (
-        "runs/apd-20260527-crapi-owasp-api-top10",
-        "runs/apd-20260527-caldera-adversary-emulation",
-        "runs/apd-20260527-authentik-identity-provider",
+        "examples/apd-20260601-claim-event-bus/expected",
     ):
         artifacts = load_run(REPO / run_path)
         td = taxonomy_dict(artifacts)

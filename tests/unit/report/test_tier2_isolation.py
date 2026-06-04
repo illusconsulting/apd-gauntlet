@@ -166,7 +166,7 @@ def test_build_report_returns_data_dict(tmp_path: pathlib.Path) -> None:
     """
     out = tmp_path / "report"
     result = build_report(
-        REPO / "runs" / "apd-20260527-crapi-owasp-api-top10",
+        REPO / "examples" / "apd-20260601-claim-event-bus" / "expected",
         out_dir=out,
         quiet=True,
     )
@@ -178,19 +178,16 @@ def test_build_report_returns_data_dict(tmp_path: pathlib.Path) -> None:
     assert "section_errors" in data["meta"]
 
 
-def test_build_report_succeeds_on_every_shipped_run_with_empty_section_errors(
+def test_build_report_succeeds_on_canonical_example_with_empty_section_errors(
     tmp_path: pathlib.Path,
 ) -> None:
-    """After Tier-2-C, every shipped run builds with no section errors.
+    """After Tier-2-C, the canonical example builds with no section errors.
 
     This locks in the baseline so a future regression that crashes a section
     fails CI loudly. Per-section isolation is a safety net — it must not
     silently mask new authoring errors that would have rendered cleanly before.
     """
     for run_path in (
-        "runs/apd-20260527-crapi-owasp-api-top10",
-        "runs/apd-20260527-caldera-adversary-emulation",
-        "runs/apd-20260527-authentik-identity-provider",
         "examples/apd-20260601-claim-event-bus/expected",
     ):
         out = tmp_path / run_path.replace("/", "_")

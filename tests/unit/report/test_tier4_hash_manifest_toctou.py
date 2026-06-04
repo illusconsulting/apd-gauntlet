@@ -21,7 +21,7 @@ from apd_gauntlet.report.loader import (
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
-RUNS = REPO_ROOT / "runs"
+EXAMPLE = REPO_ROOT / "examples" / "apd-20260601-claim-event-bus" / "expected"
 
 
 def _write(tmp_path: pathlib.Path, name: str, body: str) -> pathlib.Path:
@@ -105,12 +105,12 @@ def test_yaml_with_hash_hash_is_16_chars_hex(tmp_path: pathlib.Path) -> None:
 
 
 @pytest.mark.skipif(
-    not any(RUNS.glob("apd-20260527-*")),
-    reason="requires a real run fixture under runs/",
+    not EXAMPLE.is_dir(),
+    reason="requires the canonical example run fixture",
 )
 def test_load_run_hashes_match_file_content() -> None:
     """source_hashes recorded by load_run must equal sha256(file)[:16] verbatim."""
-    run_dir = next(iter(RUNS.glob("apd-20260527-*")))
+    run_dir = EXAMPLE
     artifacts = load_run(run_dir)
 
     # Path resolution for each well-known manifest entry. Required artifacts

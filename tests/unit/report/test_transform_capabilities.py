@@ -42,12 +42,12 @@ def test_strengths_section_resolves_titles(example_run: pathlib.Path) -> None:
 
 def test_strengths_section_with_supplement_joins_titles(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
-    # conf-cap-c354ef8e title contains "JWKS endpoint published over /.well-known/jwks.json"
-    supplement = [{"id": "conf-cap-c354ef8e", "caveats": ["A caveat long enough."]}]
+    # conf-cap-d0590471 title: "MSK cluster with KMS-managed at-rest encryption".
+    supplement = [{"id": "conf-cap-d0590471", "caveats": ["A caveat long enough."]}]
     s = strengths_section(artifacts, supplied_strengths=supplement)
     assert len(s) == 1
-    assert s[0]["id"] == "conf-cap-c354ef8e"
-    assert "jwks" in s[0]["title"].lower()
+    assert s[0]["id"] == "conf-cap-d0590471"
+    assert "kms" in s[0]["title"].lower()
     assert s[0]["caveats"] == ["A caveat long enough."]
 
 

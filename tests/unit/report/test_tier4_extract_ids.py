@@ -107,9 +107,9 @@ REPO = pathlib.Path(__file__).resolve().parents[3]
 
 
 def test_build_apd_data_emits_empty_warnings_on_clean_input() -> None:
-    """The shipped crAPI run uses well-formed control_mappings everywhere, so
+    """The canonical example uses well-formed control_mappings everywhere, so
     data.meta.warnings exists and is an empty list."""
-    artifacts = load_run(REPO / "runs" / "apd-20260527-crapi-owasp-api-top10")
+    artifacts = load_run(REPO / "examples" / "apd-20260601-claim-event-bus" / "expected")
     data = build_apd_data(artifacts)
     assert "warnings" in data["meta"]
     assert data["meta"]["warnings"] == []
@@ -120,7 +120,7 @@ def test_build_apd_data_aggregates_warnings_from_findings() -> None:
     entry must surface a ``mapping_id_missing_using_name`` warning on
     data.meta.warnings — confirming the warnings list is threaded through
     findings_array → _extract_ids_from_mapping correctly."""
-    artifacts = load_run(REPO / "runs" / "apd-20260527-crapi-owasp-api-top10")
+    artifacts = load_run(REPO / "examples" / "apd-20260601-claim-event-bus" / "expected")
     # Inject one synthetic finding with a name-only mitre_attack entry. The
     # deduped_findings list on RunArtifacts is mutable (a plain list), so this
     # surgical mutation exercises the production code path end-to-end.

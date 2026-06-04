@@ -1,9 +1,8 @@
-"""Assert the synthesizer test harness fixture produces a valid report-data.yaml.
+"""Assert the canonical example fixture produces a valid report-data.yaml.
 
 This test is permissive: it checks that *if* report-data.yaml is present in the
-crAPI fixture (it will be once the synthesizer agent has been re-run), the
-schema and cross-file validation passes. If the file isn't present yet, the
-test skips.
+example fixture, the schema and cross-file validation passes. If the file isn't
+present, the test skips.
 """
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ import pytest
 from apd_gauntlet.validate import run_cross_file_pass, run_schema_pass
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-FIXTURE = REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"
+FIXTURE = REPO / "examples" / "apd-20260601-claim-event-bus" / "expected"
 REPORT_DATA = FIXTURE / "40-synthesis" / "report-data.yaml"
 
 

@@ -1,11 +1,11 @@
 # tests/integration/report/test_example_golden.py
-"""Golden-output test: build_report against the crAPI fixture must
+"""Golden-output test: build_report against the canonical example fixture must
 produce byte-identical data.js to the checked-in fixture.
 
 Update protocol: when a transform changes intentionally, run
-`python -m apd_gauntlet build-report runs/apd-20260527-crapi-owasp-api-top10
+`python -m apd_gauntlet build-report examples/apd-20260601-claim-event-bus/expected
 --out /tmp/golden && cp /tmp/golden/data.js tests/fixtures/report-html/
-crapi-golden-data.js` and commit alongside the transform change.
+claim-event-bus-golden-data.js` and commit alongside the transform change.
 """
 from __future__ import annotations
 
@@ -15,10 +15,21 @@ import re
 
 import pytest
 from apd_gauntlet.report.build import build_report
+from apd_gauntlet.report.taxonomy import invalidate_all
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-FIXTURE_RUN = REPO / "runs" / "apd-20260527-crapi-owasp-api-top10"
-GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "crapi-golden-data.js"
+FIXTURE_RUN = REPO / "examples" / "apd-20260601-claim-event-bus" / "expected"
+GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "claim-event-bus-golden-data.js"
+
+
+@pytest.fixture(autouse=True)
+def _fresh_taxonomy_cache():
+    """The golden is a byte-exact comparison that includes resolved NIST/ATT&CK
+    titles, so the build must use the real shipped catalog. Clear the taxonomy
+    LRU caches first so a result primed/faked by an earlier test cannot make this
+    comparison order-dependent."""
+    invalidate_all()
+    yield
 
 # The report's "date" field falls back to the wall-clock build date when the run
 # declares none (loader.py date fallback chain), so a frozen golden would drift

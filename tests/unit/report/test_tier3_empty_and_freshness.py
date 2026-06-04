@@ -94,11 +94,9 @@ def test_meta_block_carries_reference_db_versions():
     assert set(meta["reference_db_versions"].keys()) == {"nist", "attack", "cwe", "d3fend", "atlas"}
 
 
-def test_shipped_runs_render_with_is_empty_run_false():
+def test_canonical_example_renders_with_is_empty_run_false():
     for run_path in (
-        "runs/apd-20260527-crapi-owasp-api-top10",
-        "runs/apd-20260527-caldera-adversary-emulation",
-        "runs/apd-20260527-authentik-identity-provider",
+        "examples/apd-20260601-claim-event-bus/expected",
     ):
         artifacts = load_run(REPO / run_path)
         meta = meta_block(artifacts)

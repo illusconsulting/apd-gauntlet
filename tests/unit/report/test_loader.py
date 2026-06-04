@@ -12,15 +12,15 @@ from apd_gauntlet.report.loader import (
 
 def test_load_run_returns_artifacts(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
-    assert artifacts.run_id == "apd-20260527-crapi-owasp-api-top10"
-    assert artifacts.framework_version == "1.5.0"
-    assert artifacts.domain_pack_name == "api-security"
+    assert artifacts.run_id == "apd-20260601-claim-event-bus"
+    assert artifacts.framework_version == "1.4.0"
+    assert artifacts.domain_pack_name == "pbm"
 
 
 def test_load_run_findings_and_capabilities_present(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
-    assert len(artifacts.deduped_findings) >= 40
-    assert len(artifacts.deduped_capabilities) >= 15
+    assert len(artifacts.deduped_findings) >= 10
+    assert len(artifacts.deduped_capabilities) >= 5
 
 
 def test_load_run_includes_attack_paths(example_run: pathlib.Path) -> None:
@@ -28,7 +28,7 @@ def test_load_run_includes_attack_paths(example_run: pathlib.Path) -> None:
     assert artifacts.attack_paths is not None
     assert artifacts.asset_graph is not None
     assert artifacts.defense_graph is not None
-    # crAPI's attack-paths.yaml may carry zero paths if asset-inventory↔finding
+    # The example's attack-paths.yaml may carry zero paths if asset-inventory↔finding
     # edge connectivity is sparse; the file's presence + asset_graph + defense_graph
     # is what we assert.
 
@@ -42,6 +42,6 @@ def test_load_run_missing_required_raises(tmp_path: pathlib.Path) -> None:
 
 
 def test_load_run_report_data_present(example_run: pathlib.Path) -> None:
-    """The crAPI fixture ships with report-data.yaml; loader returns a non-None dict."""
+    """The example fixture ships with report-data.yaml; loader returns a non-None dict."""
     artifacts = load_run(example_run)
     assert artifacts.report_data is not None
