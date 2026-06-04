@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/metrics.schema.json",
+  "title": "APD Gauntlet Report Metrics (canonical summary block)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "findings_total", "findings_pre_dedup",
+    "cross_lens_merged_clusters", "linked_clusters",
+    "bySeverity", "byDisposition", "byTier",
+    "capabilities_total", "capabilities_pre_dedup", "capabilitiesByMaturity",
+    "contradictions", "severity_disagreements"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "findings_total": { "type": "integer", "minimum": 0 },
+    "findings_pre_dedup": { "type": "integer", "minimum": 0 },
+    "cross_lens_merged_clusters": { "type": "integer", "minimum": 0 },
+    "linked_clusters": { "type": "integer", "minimum": 0 },
+    "bySeverity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["critical", "high", "medium", "low", "info"],
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "high":     { "type": "integer", "minimum": 0 },
+        "medium":   { "type": "integer", "minimum": 0 },
+        "low":      { "type": "integer", "minimum": 0 },
+        "info":     { "type": "integer", "minimum": 0 }
+      }
+    },
+    "byDisposition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gap", "blocked", "risk", "uncertainty", "ok"],
+      "properties": {
+        "gap":         { "type": "integer", "minimum": 0 },
+        "blocked":     { "type": "integer", "minimum": 0 },
+        "risk":        { "type": "integer", "minimum": 0 },
+        "uncertainty": { "type": "integer", "minimum": 0 },
+        "ok":          { "type": "integer", "minimum": 0 }
+      }
+    },
+    "byTier": {
+      "type": "object", "additionalProperties": false,
+      "required": ["trustworthiness", "scalability", "auditability"],
+      "properties": {
+        "trustworthiness": { "type": "integer", "minimum": 0 },
+        "scalability":     { "type": "integer", "minimum": 0 },
+        "auditability":    { "type": "integer", "minimum": 0 }
+      }
+    },
+    "capabilities_total": { "type": "integer", "minimum": 0 },
+    "capabilities_pre_dedup": { "type": "integer", "minimum": 0 },
+    "capabilitiesByMaturity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["designed", "implemented", "tested", "operationalized"],
+      "properties": {
+        "designed":        { "type": "integer", "minimum": 0 },
+        "implemented":     { "type": "integer", "minimum": 0 },
+        "tested":          { "type": "integer", "minimum": 0 },
+        "operationalized": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "contradictions": { "type": "integer", "minimum": 0 },
+    "severity_disagreements": { "type": "integer", "minimum": 0 }
+  }
+}

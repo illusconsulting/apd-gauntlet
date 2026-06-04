@@ -11,6 +11,12 @@ function Overview({ data, onOpenFinding, onNavigate }) {
         {/* Exec summary */}
         <section>
           <div className="section-eyebrow">§ 1 — Executive Summary</div>
+          <div className="count-strip">
+            <strong>{s.findings_total}</strong> findings —{" "}
+            {s.bySeverity.critical} critical · {s.bySeverity.high} high ·{" "}
+            {s.bySeverity.medium} medium · {s.bySeverity.low} low ·{" "}
+            {s.bySeverity.info} info
+          </div>
           <article className="exec-summary">
             {(data.exec_summary || []).map((p, i) => (
               <p key={i}>{p}</p>
@@ -25,11 +31,15 @@ function Overview({ data, onOpenFinding, onNavigate }) {
               <div className="headline-grid__label">Findings</div>
               <div className="headline-grid__num">{s.findings_total}</div>
               <div className="headline-grid__breakdown">
+                <span>{s.bySeverity.critical} crit</span>
+                <span>·</span>
                 <span>{s.bySeverity.high} high</span>
                 <span>·</span>
                 <span>{s.bySeverity.medium} med</span>
                 <span>·</span>
                 <span>{s.bySeverity.low} low</span>
+                <span>·</span>
+                <span>{s.bySeverity.info} info</span>
               </div>
             </div>
             <div className="headline-grid__cell">

@@ -26,6 +26,18 @@ from apd_gauntlet.report.transform import (
     summary_rollup,
 )
 
+EMPTY_METRICS = {
+    "schema_version": 1,
+    "findings_total": 0, "findings_pre_dedup": 0,
+    "cross_lens_merged_clusters": 0, "linked_clusters": 0,
+    "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+    "byDisposition": {"gap": 0, "blocked": 0, "risk": 0, "uncertainty": 0, "ok": 0},
+    "byTier": {"trustworthiness": 0, "scalability": 0, "auditability": 0},
+    "capabilities_total": 0, "capabilities_pre_dedup": 0,
+    "capabilitiesByMaturity": {"designed": 0, "implemented": 0, "tested": 0, "operationalized": 0},
+    "contradictions": 0, "severity_disagreements": 0,
+}
+
 
 def _make_minimal_artifacts() -> MagicMock:
     a = MagicMock()
@@ -52,6 +64,7 @@ def _make_minimal_artifacts() -> MagicMock:
     a.attack_paths = None
     a.asset_graph = None
     a.defense_graph = None
+    a.metrics = EMPTY_METRICS
     return a
 
 
@@ -108,10 +121,23 @@ def test_findings_array_preserves_graded_severities() -> None:
     assert sev_by_id["conf-00000003"] == "low"
 
 
-def test_summary_rollup_counts_informational_under_info() -> None:
-    """The summary already buckets informational under bySeverity.info; pin it so
-    the per-finding normalization stays consistent with the summary count."""
+def test_summary_rollup_passthrough_returns_metrics_bysev() -> None:
+    """summary_rollup now passes through artifacts.metrics; the informational->info
+    bucketing itself is covered by tests/unit/synthesis/test_metrics.py."""
     artifacts = _make_minimal_artifacts()
-    artifacts.deduped_findings = [_finding("conf-00000004", "informational")]
+    artifacts.metrics = {**EMPTY_METRICS,
+                         "findings_total": 1,
+                         "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 1}}
     summary = summary_rollup(artifacts)
     assert summary["bySeverity"]["info"] == 1
+    assert "schema_version" not in summary
+
+
+def test_findings_array_defaults_missing_tier_to_trustworthiness() -> None:
+    """A finding lacking apd_tier renders tier='trustworthiness' (matching
+    compute_metrics' tier default), so §2 tier-posture reconciles with byTier."""
+    artifacts = _make_minimal_artifacts()
+    artifacts.deduped_findings = [{"id": "conf-00000099", "severity": "high"}]  # no apd_tier
+    rows = findings_array(artifacts, headline_supplement=None)
+    assert len(rows) == 1
+    assert rows[0]["tier"] == "trustworthiness"

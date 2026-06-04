@@ -44,6 +44,14 @@
 }
 .exec-summary strong { color: var(--ink); font-weight: 600; }
 
+.count-strip {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  margin-bottom: var(--space-3);
+}
+.count-strip strong { color: var(--ink); }
+
 .headline-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

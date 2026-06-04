@@ -1,7 +1,7 @@
 ---
 name: apd-report-writer
 description: |
-  5e judgment-only agent. Fresh context. Reads 40-synthesis/deduped-findings.yaml
+  5e judgment-only agent. Fresh context. Reads 40-synthesis/metrics.yaml (authoritative counts) + deduped-findings.yaml
   (for the §4 Findings narrative + headline ranking) plus the COMPACT rollups
   (nist-coverage, attack-exposure, apd-coverage-matrix, cwe/owasp/d3fend-coverage)
   and the contradictions/severity-disagreements annex files. Produces the
@@ -41,8 +41,16 @@ The opening paragraph of `exec_summary` must name the domain pack(s) the run
 examined, read from the run's `.apd-run.yaml` `domains` list (e.g. "Reviewed
 across the PBM and API-security domains.").
 
+Keep the prose **qualitative**. Do NOT restate raw totals or per-severity
+counts: the authoritative numbers render structurally from `metrics.yaml` (the
+HTML Overview count strip and the markdown report read them directly). Describe
+the *shape* of the assessment (e.g. "a concentration of high-severity
+auditability gaps against strong trustworthiness posture"), not the digits.
+
 ## Inputs
 
+- `40-synthesis/metrics.yaml` (the canonical report summary block — the authoritative counts)
+- `40-synthesis/attack-path.findings.yaml` (apath-* findings, when present)
 - `40-synthesis/deduped-findings.yaml`
 - `40-synthesis/nist-coverage.yaml`, `attack-exposure.yaml`,
   `apd-coverage-matrix.yaml`, and `cwe/owasp/d3fend-coverage.yaml` (the compact

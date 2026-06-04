@@ -6,6 +6,18 @@ import pathlib
 from apd_gauntlet.report.loader import load_run
 from apd_gauntlet.report.transform import attack_paths_data
 
+EMPTY_METRICS = {
+    "schema_version": 1,
+    "findings_total": 0, "findings_pre_dedup": 0,
+    "cross_lens_merged_clusters": 0, "linked_clusters": 0,
+    "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+    "byDisposition": {"gap": 0, "blocked": 0, "risk": 0, "uncertainty": 0, "ok": 0},
+    "byTier": {"trustworthiness": 0, "scalability": 0, "auditability": 0},
+    "capabilities_total": 0, "capabilities_pre_dedup": 0,
+    "capabilitiesByMaturity": {"designed": 0, "implemented": 0, "tested": 0, "operationalized": 0},
+    "contradictions": 0, "severity_disagreements": 0,
+}
+
 
 def test_returns_none_when_artifacts_missing(tmp_path: pathlib.Path) -> None:
     # Build a minimal artifacts via load_run requires a full run; instead build one
@@ -20,6 +32,7 @@ def test_returns_none_when_artifacts_missing(tmp_path: pathlib.Path) -> None:
         nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
         attack_paths=None, asset_graph=None, defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     assert attack_paths_data(art) is None
 
@@ -138,6 +151,7 @@ def test_pairs_empty_explanation_absent_when_pairs_non_empty() -> None:
         },
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data = attack_paths_data(art)
     assert data is not None
@@ -208,6 +222,7 @@ def test_edges_detailed_carries_node_names_and_edge_type() -> None:
         },
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data = attack_paths_data(art)
     assert data is not None
@@ -244,6 +259,7 @@ def test_attack_paths_max_edge_traversal_count_is_int() -> None:
         asset_graph={"nodes": [], "edges": []},
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data_empty = attack_paths_data(art_empty)
     assert data_empty is not None
@@ -288,6 +304,7 @@ def test_attack_paths_max_edge_traversal_count_is_int() -> None:
         },
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data_one = attack_paths_data(art_one)
     assert data_one is not None
@@ -366,6 +383,7 @@ def test_graph_path_focused_present_when_pairs_nonempty() -> None:
         },
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data = attack_paths_data(art)
     assert data is not None
@@ -389,6 +407,7 @@ def test_graph_path_focused_is_none_when_no_pairs() -> None:
         asset_graph={"nodes": [], "edges": []},
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data = attack_paths_data(art)
     assert data is not None
@@ -439,6 +458,7 @@ def test_graph_path_focused_subsets_to_path_nodes_and_edges() -> None:
         },
         defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
     data = attack_paths_data(art)
     assert data is not None

@@ -16,6 +16,18 @@ from unittest.mock import MagicMock
 
 from apd_gauntlet.report.transform import build_apd_data, strengths_section
 
+EMPTY_METRICS = {
+    "schema_version": 1,
+    "findings_total": 0, "findings_pre_dedup": 0,
+    "cross_lens_merged_clusters": 0, "linked_clusters": 0,
+    "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+    "byDisposition": {"gap": 0, "blocked": 0, "risk": 0, "uncertainty": 0, "ok": 0},
+    "byTier": {"trustworthiness": 0, "scalability": 0, "auditability": 0},
+    "capabilities_total": 0, "capabilities_pre_dedup": 0,
+    "capabilitiesByMaturity": {"designed": 0, "implemented": 0, "tested": 0, "operationalized": 0},
+    "contradictions": 0, "severity_disagreements": 0,
+}
+
 
 def _make_minimal_artifacts() -> MagicMock:
     """Build a RunArtifacts-shaped mock with every field populated to a
@@ -49,6 +61,7 @@ def _make_minimal_artifacts() -> MagicMock:
     a.attack_paths = None
     a.asset_graph = None
     a.defense_graph = None
+    a.metrics = EMPTY_METRICS
     return a
 
 

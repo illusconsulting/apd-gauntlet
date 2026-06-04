@@ -7,6 +7,18 @@ from typing import Any
 from apd_gauntlet.report.loader import RunArtifacts, load_run
 from apd_gauntlet.report.transform import taxonomy_dict
 
+EMPTY_METRICS = {
+    "schema_version": 1,
+    "findings_total": 0, "findings_pre_dedup": 0,
+    "cross_lens_merged_clusters": 0, "linked_clusters": 0,
+    "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+    "byDisposition": {"gap": 0, "blocked": 0, "risk": 0, "uncertainty": 0, "ok": 0},
+    "byTier": {"trustworthiness": 0, "scalability": 0, "auditability": 0},
+    "capabilities_total": 0, "capabilities_pre_dedup": 0,
+    "capabilitiesByMaturity": {"designed": 0, "implemented": 0, "tested": 0, "operationalized": 0},
+    "contradictions": 0, "severity_disagreements": 0,
+}
+
 
 def _artifacts_with_findings(findings: list[dict[str, Any]]) -> RunArtifacts:
     return RunArtifacts(
@@ -18,6 +30,7 @@ def _artifacts_with_findings(findings: list[dict[str, Any]]) -> RunArtifacts:
         nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
         attack_paths=None, asset_graph=None, defense_graph=None,
         attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
     )
 
 

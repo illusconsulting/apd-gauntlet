@@ -33,6 +33,7 @@ import yaml
 from ..report.taxonomy import atlas_titles, attack_technique_titles, d3fend_titles
 from . import coverage_logic as cl
 from .loader import load_corpus
+from .metrics import compute_metrics
 
 _PKG_DATA = Path(__file__).resolve().parent.parent / "data"
 
@@ -52,6 +53,7 @@ class RollupResult:
     owasp: dict[str, Any] | None = None
     d3fend: dict[str, Any] | None = None
     atlas: dict[str, Any] | None = None
+    metrics: dict[str, Any] = field(default_factory=dict)
 
 
 def _nist_titles() -> dict[str, str]:
@@ -225,6 +227,23 @@ def _declared_taxonomies(run_cfg: dict[str, Any]) -> set[str]:
     return {str(t).strip() for t in raw} if isinstance(raw, list) else set()
 
 
+def _read_records(path: Path, *keys: str) -> list[dict[str, Any]]:
+    """Key-tolerant record reader matching loader.load_run's fallbacks so the
+    metrics counts equal the transform's view of the same files."""
+    if not path.is_file():
+        return []
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(doc, dict):
+        return []
+    for key in keys:
+        value = doc.get(key)
+        if isinstance(value, list):
+            return [r for r in value if isinstance(r, dict)]
+        if isinstance(value, dict):
+            return [value]
+    return []
+
+
 def build_rollups(run_dir: Path) -> RollupResult:
     findings, caps = _load_deduped(run_dir)
     inventory = yaml.safe_load(
@@ -249,6 +268,16 @@ def build_rollups(run_dir: Path) -> RollupResult:
         result.d3fend = _d3fend_rollup(findings, caps)
     if "mitre_atlas" in declared:
         result.atlas = _atlas_rollup(findings)
+
+    synth = run_dir / "40-synthesis"
+    contradictions = _read_records(
+        synth / "contradictions.yaml", "contradictions", "contradiction")
+    sev_dis = _read_records(
+        synth / "severity-disagreements.yaml",
+        "severity_disagreements", "disagreements", "severity_disagreement")
+    # findings already UNION apath-* (via _load_deduped); compute_metrics is the
+    # single canonical report summary block.
+    result.metrics = compute_metrics(findings, caps, contradictions, sev_dis)
 
     _write(run_dir, result)
     return result
@@ -430,6 +459,8 @@ def _write(run_dir: Path, result: RollupResult) -> None:
         yaml.safe_dump({"techniques": result.attack}, sort_keys=False), encoding="utf-8")
     (synth / "apd-coverage-matrix.yaml").write_text(
         yaml.safe_dump({"components": result.matrix}, sort_keys=False), encoding="utf-8")
+    (synth / "metrics.yaml").write_text(
+        yaml.safe_dump(result.metrics, sort_keys=False), encoding="utf-8")
     if result.cwe is not None:
         (synth / "cwe-coverage.yaml").write_text(
             yaml.safe_dump(result.cwe, sort_keys=False), encoding="utf-8")

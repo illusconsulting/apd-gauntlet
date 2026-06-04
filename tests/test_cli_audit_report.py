@@ -464,3 +464,70 @@ def test_attack_paths_present_checks_structured_graph(tmp_path):
     c = [x for x in result.checks if x["name"] == "attack_paths_present"][0]
     assert c["status"] == "pass"
     assert "graph_nodes=" in c["detail"]   # detail now reports structured graph size
+
+
+# ---------------------------------------------------------------------------
+# count_parity passthrough + internal-consistency (Task 6)
+# ---------------------------------------------------------------------------
+
+def test_count_parity_passes_on_faithful_build(tmp_path):
+    """After a fresh build, data.js.summary must faithfully carry metrics.yaml —
+    both parity checks and the new internal-consistency check must pass."""
+    dst = _copy_example(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    result = audit_report(dst)
+    sev = [c for c in result.checks if c["name"] == "count_parity_severity"][0]
+    tot = [c for c in result.checks if c["name"] == "count_parity_totals"][0]
+    con = [c for c in result.checks if c["name"] == "metrics_internal_consistency"][0]
+    assert sev["status"] == "pass", sev["detail"]
+    assert tot["status"] == "pass", tot["detail"]
+    assert con["status"] == "pass", con["detail"]
+
+
+def test_count_parity_fails_when_data_js_diverges_from_metrics(tmp_path):
+    """Perturbing metrics.yaml AFTER the build (so data.js no longer matches)
+    must trip count_parity_severity."""
+    import yaml as _yaml
+
+    dst = _copy_example(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    mpath = dst / "40-synthesis" / "metrics.yaml"
+    doc = _yaml.safe_load(mpath.read_text())
+    doc["bySeverity"]["critical"] = doc["bySeverity"]["critical"] + 5
+    doc["findings_total"] = doc["findings_total"] + 5
+    mpath.write_text(_yaml.safe_dump(doc, sort_keys=False))
+    result = audit_report(dst)
+    sev = [c for c in result.checks if c["name"] == "count_parity_severity"][0]
+    assert sev["status"] == "fail", sev["detail"]
+
+
+def test_metrics_internal_consistency_fails_on_broken_invariant(tmp_path):
+    """Breaking sum(bySeverity) == findings_total (while keeping data.js in sync
+    so parity stays OK) must trip metrics_internal_consistency."""
+    import yaml as _yaml
+    from apd_gauntlet.report.build import build_report as _build_report
+
+    dst = _copy_example(tmp_path)
+    mpath = dst / "40-synthesis" / "metrics.yaml"
+    doc = _yaml.safe_load(mpath.read_text())
+    doc["findings_total"] = doc["findings_total"] + 7  # break sum(bySeverity)==total
+    mpath.write_text(_yaml.safe_dump(doc, sort_keys=False))
+    # Rebuild data.js so it faithfully carries the corrupted total (parity stays OK).
+    _build_report(dst, out_dir=dst / "40-synthesis" / "report-html")
+    result = audit_report(dst)
+    con = [c for c in result.checks if c["name"] == "metrics_internal_consistency"][0]
+    assert con["status"] == "fail", con["detail"]
+
+
+def test_metrics_present_fails_when_metrics_yaml_absent(tmp_path):
+    """Deleting metrics.yaml after the build must trip the metrics_present check."""
+    dst = _copy_example(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    (dst / "40-synthesis" / "metrics.yaml").unlink()
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "metrics_present"][0]
+    assert c["status"] == "fail"
+    assert result.status == "fail"

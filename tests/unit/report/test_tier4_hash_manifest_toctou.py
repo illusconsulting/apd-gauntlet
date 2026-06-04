@@ -132,6 +132,7 @@ def test_load_run_hashes_match_file_content() -> None:
         "asset-graph.yaml": run_dir / "40-synthesis" / "asset-graph.yaml",
         "defense-graph.yaml": run_dir / "40-synthesis" / "defense-graph.yaml",
         "report-data.yaml": run_dir / "40-synthesis" / "report-data.yaml",
+        "metrics.yaml": run_dir / "40-synthesis" / "metrics.yaml",
     }
 
     assert artifacts.source_hashes, "expected at least required-artifact hashes"

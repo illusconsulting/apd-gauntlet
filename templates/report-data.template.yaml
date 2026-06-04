@@ -7,8 +7,8 @@ schema_version: 1
 
 exec_summary:
   paragraphs:
-    - "<2-4 sentences framing the run — subject, artifact count, domain pack applicability, headline gap, headline strength.>"
-    - "<2-3 more sentences on dedup outcome, headline cluster families, blocked-on-evidence count, and what's most actionable next.>"
+    - "<2-4 sentences framing the run — subject, domain-pack applicability, the headline architectural signal (qualitative; do NOT state raw counts — they render from metrics.yaml).>"
+    - "<2-3 more sentences on the dedup/cluster shape and what is most actionable next, qualitatively.>"
 
 headline_findings:
   # The synthesizer's editorial top-N (≤ 10), ordered by reviewer priority.

@@ -7,15 +7,12 @@ data.js). Status fail -> CLI exits 1 so the workflow gate branches.
 """
 from __future__ import annotations
 
-import collections
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-_INFORMATIONAL_TO_INFO = {"informational": "info"}
 
 
 @dataclass
@@ -166,25 +163,40 @@ def audit_report(run_dir: Path) -> AuditResult:
     _check(result, "id_coverage_attack", attack_ids <= data_attack_ids,
            f"yaml={len(attack_ids)} data.js={len(data_attack_ids)}")
 
-    # Count parity (severity): recompute from deduped+apath, normalizing
-    # 'informational'->'info'. NOT against summarize_run (which omits apath).
-    def _norm_sev(f: dict[str, Any]) -> str:
-        s = str(f.get("severity", "informational"))
-        return _INFORMATIONAL_TO_INFO.get(s, s)
-
-    by_sev = collections.Counter(_norm_sev(f) for f in deduped_f + apath_f)
-    data_by_sev = parsed.get("summary", {}).get("bySeverity", {})
-    sev_ok = all(data_by_sev.get(k, 0) == by_sev.get(k, 0)
+    # Count parity (passthrough): the rendered data.js.summary must faithfully
+    # carry the canonical 40-synthesis/metrics.yaml. compute_metrics
+    # (synthesis/metrics.py) is the single source — no independent recompute.
+    metrics_path = synth / "metrics.yaml"
+    _check(result, "metrics_present", metrics_path.is_file(),
+           "present" if metrics_path.is_file() else f"missing {metrics_path}")
+    _m_raw = yaml.safe_load(metrics_path.read_text(encoding="utf-8")) \
+        if metrics_path.is_file() else None
+    metrics_doc = _m_raw if isinstance(_m_raw, dict) else {}
+    m_by_sev = metrics_doc.get("bySeverity") or {}
+    data_summary = parsed.get("summary") or {}
+    data_by_sev = data_summary.get("bySeverity") or {}
+    sev_ok = all(data_by_sev.get(k, 0) == m_by_sev.get(k, 0)
                  for k in ("critical", "high", "medium", "low", "info"))
     _check(result, "count_parity_severity", sev_ok,
-           f"recomputed={dict(by_sev)} data.js={data_by_sev}")
+           f"metrics.yaml={dict(m_by_sev)} data.js={data_by_sev}")
 
-    # Count parity (totals).
-    total_ok = parsed.get("summary", {}).get("findings_total") == len(deduped_f) + len(apath_f)
-    data_total = parsed.get("summary", {}).get("findings_total")
-    yaml_total = len(deduped_f) + len(apath_f)
-    _check(result, "count_parity_totals", total_ok,
-           f"data.js={data_total} yaml={yaml_total}")
+    m_total = metrics_doc.get("findings_total")
+    data_total = data_summary.get("findings_total")
+    _check(result, "count_parity_totals", data_total == m_total,
+           f"data.js={data_total} metrics.yaml={m_total}")
+
+    def _sum(d: dict[str, Any], *keys: str) -> int:
+        return sum(int((d or {}).get(k, 0)) for k in keys)
+
+    total = int(m_total or 0)
+    by_tier = metrics_doc.get("byTier") or {}
+    by_disp = metrics_doc.get("byDisposition") or {}
+    sev_sum = _sum(m_by_sev, "critical", "high", "medium", "low", "info")
+    tier_sum = _sum(by_tier, "trustworthiness", "scalability", "auditability")
+    disp_sum = _sum(by_disp, "gap", "risk", "uncertainty", "blocked")
+    _check(result, "metrics_internal_consistency",
+           sev_sum == total and tier_sum == total and disp_sum == total,
+           f"total={total} sev_sum={sev_sum} tier_sum={tier_sum} disp_sum={disp_sum}")
 
     # data.js <-> recomputed drift.
     try:

@@ -22,14 +22,23 @@ checks:
   status: pass
   detail: yaml=4 data.js=4
   klass: structural
+- name: metrics_present
+  status: pass
+  detail: missing examples/apd-20260601-claim-event-bus/expected/40-synthesis/metrics.yaml
+  klass: structural
 - name: count_parity_severity
   status: pass
-  detail: 'recomputed={''high'': 9, ''medium'': 80, ''critical'': 1} data.js={''critical'':
-    1, ''high'': 9, ''medium'': 80, ''low'': 0, ''info'': 0}'
+  detail: 'metrics.yaml={''critical'': 1, ''high'': 9, ''medium'': 80, ''low'': 0,
+    ''info'': 0} data.js={''critical'': 1, ''high'': 9, ''medium'': 80, ''low'': 0,
+    ''info'': 0}'
   klass: structural
 - name: count_parity_totals
   status: pass
-  detail: data.js=90 yaml=90
+  detail: data.js=90 metrics.yaml=90
+  klass: structural
+- name: metrics_internal_consistency
+  status: pass
+  detail: total=90 sev_sum=90 tier_sum=90 disp_sum=90
   klass: structural
 - name: data_js_recompute_drift
   status: pass
@@ -49,7 +58,7 @@ checks:
   klass: editorial
 - name: attack_paths_present
   status: pass
-  detail: node_count=16 total_paths=75 apath_blocked=False
+  detail: node_count=16 graph_nodes=16 total_paths=75 apath_blocked=False
   klass: structural
 - name: d3fend_overlay_present
   status: pass
@@ -66,6 +75,10 @@ checks:
 - name: taxonomy_titles_resolve
   status: pass
   detail: taxonomy_entries=40 bare_id=0 sample=[]
+  klass: structural
+- name: threat_model_scene_coherent
+  status: pass
+  detail: entries=11 matrix_rows=3
   klass: structural
 counts:
   deduped_findings_yaml: 15

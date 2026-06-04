@@ -565,7 +565,7 @@ if (isErr(rl)) {
 // ===========================================================================
 phase('synthesis-report');
 llmStep('apd-report-writer',
-  'Read 40-synthesis/deduped-findings.yaml + attack-path.findings.yaml (apath-*, when present) + ' +
+  'Read 40-synthesis/metrics.yaml + deduped-findings.yaml + attack-path.findings.yaml (apath-*, when present) + ' +
   'the COMPACT rollups + contradictions/severity-disagreements; rank the headline findings across ' +
   'BOTH the deduped and apath sets; emit 40-synthesis/advisory-report.md + 40-synthesis/report-data.yaml.',
   { phase: 'synthesis-report', label: 'report-writer-attempt-0',

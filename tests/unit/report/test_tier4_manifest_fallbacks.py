@@ -24,6 +24,18 @@ from apd_gauntlet.report.loader import (
 )
 from apd_gauntlet.report.transform import meta_block
 
+EMPTY_METRICS = {
+    "schema_version": 1,
+    "findings_total": 0, "findings_pre_dedup": 0,
+    "cross_lens_merged_clusters": 0, "linked_clusters": 0,
+    "bySeverity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+    "byDisposition": {"gap": 0, "blocked": 0, "risk": 0, "uncertainty": 0, "ok": 0},
+    "byTier": {"trustworthiness": 0, "scalability": 0, "auditability": 0},
+    "capabilities_total": 0, "capabilities_pre_dedup": 0,
+    "capabilitiesByMaturity": {"designed": 0, "implemented": 0, "tested": 0, "operationalized": 0},
+    "contradictions": 0, "severity_disagreements": 0,
+}
+
 # ---------------------------------------------------------------------------
 # _extract_domain_pack_version
 # ---------------------------------------------------------------------------
@@ -141,6 +153,7 @@ def _empty_artifacts(framework_version: str = "") -> RunArtifacts:
         defense_graph=None,
         attack_path_findings=[],
         report_data=None,
+        metrics=EMPTY_METRICS,
     )
 
 

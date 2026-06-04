@@ -193,61 +193,15 @@ def meta_block(
 
 
 def summary_rollup(artifacts: RunArtifacts) -> dict[str, Any]:
-    """Return the data.summary block — totals and tier/sev/disposition rollups."""
-    findings = artifacts.deduped_findings + artifacts.attack_path_findings
-    caps = artifacts.deduped_capabilities
+    """Return the data.summary block — the canonical metrics, passthrough.
 
-    by_sev = collections.Counter(f.get("severity", "informational") for f in findings)
-    by_disp = collections.Counter(f.get("disposition", "gap") for f in findings)
-    by_tier = collections.Counter(f.get("apd_tier", "trustworthiness") for f in findings)
-    by_mat = collections.Counter(c.get("maturity", "implemented") for c in caps)
-
-    cross_lens_merged = sum(
-        1 for c in caps
-        if c.get("merged") or (
-            c.get("lens_perspectives") and c.get("id", "").startswith("cap-merged")
-        )
-    )
-    linked_clusters = sum(
-        1 for f in findings if f.get("linked_perspectives")
-    )
-
-    return {
-        "findings_total": len(findings),
-        # post-dedup view; pre/post unknown without specialist counts
-        "findings_pre_dedup": len(findings),
-        "cross_lens_merged_clusters": cross_lens_merged,
-        "linked_clusters": linked_clusters,
-        "bySeverity": {
-            "critical":      by_sev.get("critical", 0),
-            "high":          by_sev.get("high", 0),
-            "medium":        by_sev.get("medium", 0),
-            "low":           by_sev.get("low", 0),
-            "info":          by_sev.get("informational", 0),
-        },
-        "byDisposition": {
-            "gap":         by_disp.get("gap", 0),
-            "blocked":     by_disp.get("blocked", 0),
-            "risk":        by_disp.get("risk", 0),
-            "uncertainty": by_disp.get("uncertainty", 0),
-            "ok":          0,  # ok is a capability-side concept; kept for template parity
-        },
-        "byTier": {
-            "trustworthiness": by_tier.get("trustworthiness", 0),
-            "scalability":     by_tier.get("scalability", 0),
-            "auditability":    by_tier.get("auditability", 0),
-        },
-        "capabilities_total":    len(caps),
-        "capabilities_pre_dedup": len(caps),
-        "capabilitiesByMaturity": {
-            "designed":         by_mat.get("designed", 0),
-            "implemented":      by_mat.get("implemented", 0),
-            "tested":           by_mat.get("tested", 0),
-            "operationalized":  by_mat.get("operationalized", 0),
-        },
-        "contradictions": len(artifacts.contradictions),
-        "severity_disagreements": len(artifacts.severity_disagreements),
-    }
+    Metrics are computed once in synthesis (synthesis/metrics.py) and persisted
+    as 40-synthesis/metrics.yaml; this strips the schema_version envelope and
+    returns the rest verbatim. NO recomputation — single source of truth.
+    """
+    metrics = dict(artifacts.metrics or {})
+    metrics.pop("schema_version", None)
+    return metrics
 
 
 def _goal_to_tier(goal: str | None) -> str | None:
@@ -396,7 +350,7 @@ def findings_array(
             "id":           fid,
             "title":        f.get("title", ""),
             "goal":         f.get("apd_goal"),
-            "tier":         f.get("apd_tier"),
+            "tier":         f.get("apd_tier") or "trustworthiness",
             "severity":     _display_severity(f.get("severity")),
             "confidence":   f.get("confidence", "low"),
             "disposition":  f.get("disposition", "gap"),

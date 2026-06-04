@@ -32,6 +32,7 @@ Required artifacts (raise MissingArtifactError when absent):
   - ``40-synthesis/nist-coverage.yaml``         → ``nist_coverage``
   - ``40-synthesis/attack-exposure.yaml``       → ``attack_exposure``
   - ``40-synthesis/apd-coverage-matrix.yaml``   → ``apd_coverage_matrix``
+  - ``40-synthesis/metrics.yaml``               → ``metrics``
 
 Optional artifacts (default to ``None`` / ``[]`` when absent):
   - ``40-synthesis/contradictions.yaml``        → ``contradictions`` / notes
@@ -114,6 +115,7 @@ class RunArtifacts:
     defense_graph: dict[str, Any] | None
     attack_path_findings: list[dict[str, Any]]
     report_data: dict[str, Any] | None
+    metrics: dict[str, Any]
     source_hashes: dict[str, str] = field(default_factory=dict)
 
     # These override / supplement the asset_inventory-derived lists in meta_block.
@@ -403,6 +405,7 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     nist_path = _required(run_dir, "40-synthesis/nist-coverage.yaml")
     attack_exposure_path = _required(run_dir, "40-synthesis/attack-exposure.yaml")
     apd_matrix_path = _required(run_dir, "40-synthesis/apd-coverage-matrix.yaml")
+    metrics_path = _required(run_dir, "40-synthesis/metrics.yaml")
 
     # Read required artifacts once each, collecting hashes inline. Reading
     # bytes + hashing in one pass closes the TOCTOU window that a separate
@@ -426,6 +429,7 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     apd_matrix_doc, source_hashes["apd-coverage-matrix.yaml"] = (
         _yaml_with_hash(apd_matrix_path)
     )
+    metrics_doc, source_hashes["metrics.yaml"] = _yaml_with_hash(metrics_path)
 
     # Optional artifacts.
     synth = run_dir / "40-synthesis"
@@ -517,6 +521,7 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         defense_graph=defense_graph,
         attack_path_findings=apath_findings,
         report_data=report_data,
+        metrics=metrics_doc,
         source_hashes=source_hashes,
         run_crown_jewels=_extract_str_list(run_cfg, "crown_jewels"),
         run_attacker_positions=_extract_str_list(run_cfg, "attacker_positions"),

@@ -194,6 +194,8 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "defense-graph.yaml":          "defense-graph.schema.json",
     # D: HTML report input
     "report-data.yaml":            "report-data.schema.json",
+    # The canonical report summary block (unified-metrics-model).
+    "metrics.yaml":                "metrics.schema.json",
     # Plan 2 — synthesis decomposition artifacts.
     "cluster-candidates.yaml":     "cluster-candidates.schema.json",
     "cluster-decisions.yaml":      "cluster-decisions.schema.json",

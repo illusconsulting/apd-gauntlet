@@ -25,9 +25,9 @@ specialists_skipped: []
 
 **Scope.** One paragraph naming what was assessed (the change covered by the tech plan), what supplementary artifacts were available, and what was out of scope. Reference the context brief for canonical scope.
 
-**Finding posture.** One paragraph naming the headline finding numbers — `<n>` critical, `<n>` high, `<n>` medium, `<n>` low, `<n>` informational, plus `<n>` blocked-on-evidence and `<n>` strengths called out. State the architectural signal these numbers carry (e.g. "predominantly auditability gaps with strong trustworthiness posture," "broad coverage gaps across all tiers indicating early-stage design," etc.). Do not editorialize; report the shape of the assessment.
+**Finding posture.** One paragraph describing the *shape* of the assessment qualitatively — which tiers/goals carry the headline gaps and which carry strength (e.g. "predominantly auditability gaps with strong trustworthiness posture"). Do NOT hand-type counts: the authoritative finding numbers live in `40-synthesis/metrics.yaml` and the HTML report's Overview.
 
-**Capability posture.** One paragraph naming what was confirmed — `<n>` capabilities at designed maturity, `<n>` at implemented, `<n>` at tested, `<n>` at operationalized. Identify the tier or goal with strongest coverage and the one with thinnest coverage.
+**Capability posture.** One paragraph naming, qualitatively, what was confirmed and where coverage is strongest vs. thinnest across tiers/goals. Do NOT hand-type maturity counts — they are carried by `metrics.yaml` and the HTML report.
 
 ---
 
