@@ -47,13 +47,7 @@ const stripped = html
   .replace(/<link[^>]*fonts\.gstatic\.com[^>]*>\s*/g, "");
 writeFileSync(join(OUT_DIR, "index.html"), stripped);
 
-// 4. Vendor mermaid.
-copyFileSync(
-  resolve(HERE, "node_modules/mermaid/dist/mermaid.min.js"),
-  join(OUT_DIR, "mermaid.min.js"),
-);
-
-// 5. Source hash of report-template/ JSX + CSS sources.
+// 4. Source hash of report-template/ JSX + CSS sources.
 const hash = createHash("sha256");
 function walk(d, prefix = "") {
   for (const e of readdirSync(d).sort()) {
@@ -71,10 +65,12 @@ function walk(d, prefix = "") {
 walk(TEMPLATE_DIR);
 writeFileSync(join(OUT_DIR, ".source-hash"), hash.digest("hex"));
 
-// 6. Vendor-licenses.txt.
+// 5. Vendor-licenses.txt.
 writeFileSync(join(OUT_DIR, "vendor-licenses.txt"), [
   "React 18.3.1 — MIT — https://github.com/facebook/react/blob/main/LICENSE",
-  "Mermaid 10.9.1 — MIT — https://github.com/mermaid-js/mermaid/blob/develop/LICENSE",
+  "Cytoscape.js 3.30.2 — MIT — https://github.com/cytoscape/cytoscape.js/blob/master/LICENSE",
+  "cytoscape-dagre 2.5.0 — MIT — https://github.com/cytoscape/cytoscape.js-dagre/blob/master/LICENSE",
+  "cytoscape-fcose 2.2.0 — MIT — https://github.com/iVis-at-Bilkent/cytoscape.js-fcose/blob/master/LICENSE",
   "",
   "Vendored fonts (woff2, latin subset) — SIL Open Font License 1.1",
   "  Newsreader v26 — Production Type / Google Fonts",

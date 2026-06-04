@@ -977,45 +977,23 @@
   color: var(--ink-2);
 }
 .report-graph__canvas {
-  background: var(--surface-1);
+  width: 100%;
+  height: 520px;
+  background: var(--paper);
   border: 1px solid var(--border-2);
   border-radius: 8px;
-  padding: var(--space-4);
-  overflow-x: auto;
 }
-.report-graph__canvas svg {
-  min-width: 2400px !important;   /* 41 nodes need ~60px each for label readability */
-  max-width: none !important;     /* defeat Mermaid's inline style="max-width: NNNpx" */
-  height: auto !important;
-}
-/* Mermaid 10+ renders node labels inside <foreignObject> as HTML <div> nodes,
-   not as <text> elements. Target both so labels are visible regardless of the
-   renderer Mermaid picks based on the security level. */
-.report-graph__canvas svg .nodeLabel,
-.report-graph__canvas svg .node .label,
-.report-graph__canvas svg .node text,
-.report-graph__canvas svg foreignObject div {
-  font-size: 13px !important;
-  color: var(--ink) !important;
-  fill: var(--ink) !important;
-  font-family: var(--font-sans) !important;
-}
-.report-graph__canvas svg .edgeLabel,
-.report-graph__canvas svg .edgeLabel rect,
-.report-graph__canvas svg .edgeLabel foreignObject div {
-  font-size: 11px !important;
-  color: var(--ink-2) !important;
-  fill: var(--ink-2) !important;
-}
-.report-graph__canvas--focused {
-  /* Cap the focused-subgraph container so the SVG doesn't stretch the whole page */
-  max-width: 720px;
-}
-.report-graph__canvas--focused svg {
-  /* Defeat the parent's !important min-width for the focused subgraph */
-  min-width: unset !important;
-  max-width: 100% !important;
-  height: auto !important;
+.report-graph__tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 3px;
+  max-width: 280px;
 }
 .attack-pair {
   border: 1px solid var(--border-2);

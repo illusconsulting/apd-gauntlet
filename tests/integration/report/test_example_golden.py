@@ -65,7 +65,7 @@ def test_all_expected_files_present(tmp_path: pathlib.Path) -> None:
     out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
     expected = {
         "index.html", "app.js", "data.js", "styles.css", "screens.css",
-        "mermaid.min.js", "vendor-licenses.txt", "build-manifest.txt",
+        "vendor-licenses.txt", "build-manifest.txt",
     }
     actual = {p.name for p in out.iterdir() if p.is_file()}
     missing = expected - actual

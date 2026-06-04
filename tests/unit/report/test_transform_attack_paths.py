@@ -24,12 +24,13 @@ def test_returns_none_when_artifacts_missing(tmp_path: pathlib.Path) -> None:
     assert attack_paths_data(art) is None
 
 
-def test_returns_mermaid_string(example_run: pathlib.Path) -> None:
+def test_returns_structured_graph(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
     data = attack_paths_data(artifacts)
     assert data is not None
-    assert isinstance(data["mermaid"], str)
-    assert "graph" in data["mermaid"].lower()
+    assert isinstance(data["graph"], dict)
+    assert isinstance(data["graph"]["nodes"], list)
+    assert isinstance(data["graph"]["edges"], list)
 
 
 def test_path_pairs_present(example_run: pathlib.Path) -> None:
@@ -294,28 +295,29 @@ def test_attack_paths_max_edge_traversal_count_is_int() -> None:
     assert data_one["max_edge_traversal_count"] == 1
 
 
-def test_mermaid_sanitizes_adversarial_labels() -> None:
-    """Asset names with <script>, brackets, newlines must not appear raw
-    in the mermaid source — adopter-controlled inputs cannot inject syntax."""
-    from apd_gauntlet.report.transform import _build_mermaid
+def test_graph_view_sanitizes_adversarial_labels() -> None:
+    """Asset names with <script>, brackets, newlines must not appear raw in the
+    structured graph labels — adopter-controlled inputs cannot inject syntax."""
+    from apd_gauntlet.report.transform import _asset_graph_view
 
     graph = {
         "nodes": [
             {"node_id": "n1", "name": "<script>alert(1)</script>", "node_type": "service"},
             {"node_id": "n2", "name": "Valkey\nINJECT", "node_type": "data_store"},
-            {"node_id": "bad id with space", "name": "bad id", "node_type": "service"},
         ],
-        "edges": [{"from": "n1", "to": "n2"}],
+        "edges": [{"edge_id": "e1", "from": "n1", "to": "n2"}],
     }
-    src = _build_mermaid(graph)
-    assert "<script>" not in src
-    assert "alert" not in src.lower() or "alert" in "(unnamed)"  # only if accidentally allowed
-    assert "\n  bad id with space" not in src  # bad id must have been remapped
-    assert "n1" in src and "n2" in src
+    g = _asset_graph_view(graph, bottleneck_ids=set())
+    by_id = {n["id"]: n for n in g["nodes"]}
+    # HTML-tag-bearing labels are discarded entirely (defense in depth).
+    assert by_id["n1"]["label"] == "(unnamed)"
+    assert "<script>" not in by_id["n1"]["label"]
+    assert "\n" not in by_id["n2"]["label"]
+    assert "n1" in by_id and "n2" in by_id
 
 
-def test_mermaid_path_focused_present_when_pairs_nonempty() -> None:
-    """mermaid_path_focused must be a non-empty string when paths are present."""
+def test_graph_path_focused_present_when_pairs_nonempty() -> None:
+    """graph_path_focused must be a non-empty graph dict when paths are present."""
     from apd_gauntlet.report.loader import RunArtifacts
 
     art = RunArtifacts(
@@ -367,13 +369,13 @@ def test_mermaid_path_focused_present_when_pairs_nonempty() -> None:
     )
     data = attack_paths_data(art)
     assert data is not None
-    focused = data.get("mermaid_path_focused")
-    assert isinstance(focused, str), "mermaid_path_focused must be a string when pairs non-empty"
-    assert len(focused) > 0
+    focused = data.get("graph_path_focused")
+    assert isinstance(focused, dict), "graph_path_focused must be a dict when pairs non-empty"
+    assert focused["nodes"] and focused["edges"]
 
 
-def test_mermaid_path_focused_is_none_when_no_pairs() -> None:
-    """mermaid_path_focused must be None when no paths are enumerated."""
+def test_graph_path_focused_is_none_when_no_pairs() -> None:
+    """graph_path_focused must be None when no paths are enumerated."""
     from apd_gauntlet.report.loader import RunArtifacts
 
     art = RunArtifacts(
@@ -390,13 +392,13 @@ def test_mermaid_path_focused_is_none_when_no_pairs() -> None:
     )
     data = attack_paths_data(art)
     assert data is not None
-    assert data.get("mermaid_path_focused") is None, (
-        "mermaid_path_focused must be None when paths list is empty"
+    assert data.get("graph_path_focused") is None, (
+        "graph_path_focused must be None when paths list is empty"
     )
 
 
-def test_mermaid_path_focused_uses_LR_direction() -> None:
-    """The focused subgraph must use `graph LR` so attacker → crown-jewel reads left-to-right."""
+def test_graph_path_focused_subsets_to_path_nodes_and_edges() -> None:
+    """The focused subgraph must contain only nodes/edges on enumerated paths."""
     from apd_gauntlet.report.loader import RunArtifacts
 
     art = RunArtifacts(
@@ -440,6 +442,60 @@ def test_mermaid_path_focused_uses_LR_direction() -> None:
     )
     data = attack_paths_data(art)
     assert data is not None
-    focused = data.get("mermaid_path_focused")
-    assert isinstance(focused, str)
-    assert "graph LR" in focused, "Focused subgraph must use `graph LR` direction"
+    focused = data.get("graph_path_focused")
+    assert isinstance(focused, dict)
+    assert {n["id"] for n in focused["nodes"]} == {"internet", "db"}
+    assert {e["id"] for e in focused["edges"]} == {"e1"}
+
+
+def test_asset_graph_view_maps_nodes_edges_and_bottlenecks():
+    from apd_gauntlet.report.transform import _asset_graph_view
+    asset_graph = {
+        "nodes": [
+            {"node_id": "atk-1", "node_type": "attacker", "name": "external_internet"},
+            {"node_id": "a-1", "node_type": "asset", "name": "claim-ingress<api>",
+             "provenance": {"artifact": "tech_plan.md", "locator": "§4"}, "confidence": "high"},
+            {"node_id": "j-1", "node_type": "crown_jewel", "name": "phi_store"},
+        ],
+        "edges": [
+            {"edge_id": "e-1", "edge_type": "network_reachable", "from": "atk-1", "to": "a-1"},
+            {"edge_id": "e-2", "edge_type": "data_resides_on", "from": "a-1", "to": "j-1"},
+        ],
+    }
+    g = _asset_graph_view(asset_graph, bottleneck_ids={"e-2"})
+    by_id = {n["id"]: n for n in g["nodes"]}
+    assert by_id["atk-1"]["type"] == "attacker"
+    assert by_id["j-1"]["type"] == "crown_jewel"
+    # adopter label sanitized (no raw < > )
+    assert "<" not in by_id["a-1"]["label"] and ">" not in by_id["a-1"]["label"]
+    assert by_id["a-1"]["provenance"] == {"artifact": "tech_plan.md", "locator": "§4"}
+    edges = {e["id"]: e for e in g["edges"]}
+    assert edges["e-1"]["source"] == "atk-1" and edges["e-1"]["target"] == "a-1"
+    assert edges["e-1"]["type"] == "network_reachable"
+    assert edges["e-2"]["bottleneck"] is True and edges["e-1"]["bottleneck"] is False
+
+
+def test_asset_graph_view_empty_on_missing():
+    from apd_gauntlet.report.transform import _asset_graph_view
+    assert _asset_graph_view({}, bottleneck_ids=set()) == {"nodes": [], "edges": []}
+    assert _asset_graph_view(None, bottleneck_ids=set()) == {"nodes": [], "edges": []}
+
+
+def test_asset_graph_view_focused_subsets_to_path_edges():
+    from apd_gauntlet.report.transform import _asset_graph_view_focused
+    asset_graph = {
+        "nodes": [{"node_id": "a", "node_type": "attacker", "name": "atk"},
+                  {"node_id": "b", "node_type": "asset", "name": "svc"},
+                  {"node_id": "c", "node_type": "asset", "name": "unused"}],
+        "edges": [{"edge_id": "e1", "edge_type": "trust", "from": "a", "to": "b"},
+                  {"edge_id": "e9", "edge_type": "trust", "from": "b", "to": "c"}],
+    }
+    paths = [{"path_id": "p1", "edges": ["e1"]}]
+    g = _asset_graph_view_focused(asset_graph, paths)
+    assert {n["id"] for n in g["nodes"]} == {"a", "b"}   # only nodes on path edges
+    assert {e["id"] for e in g["edges"]} == {"e1"}
+
+
+def test_asset_graph_view_focused_none_when_no_paths():
+    from apd_gauntlet.report.transform import _asset_graph_view_focused
+    assert _asset_graph_view_focused({"nodes": [], "edges": []}, []) is None

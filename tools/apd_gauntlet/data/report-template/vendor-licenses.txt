@@ -1,5 +1,7 @@
 React 18.3.1 — MIT — https://github.com/facebook/react/blob/main/LICENSE
-Mermaid 10.9.1 — MIT — https://github.com/mermaid-js/mermaid/blob/develop/LICENSE
+Cytoscape.js 3.30.2 — MIT — https://github.com/cytoscape/cytoscape.js/blob/master/LICENSE
+cytoscape-dagre 2.5.0 — MIT — https://github.com/cytoscape/cytoscape.js-dagre/blob/master/LICENSE
+cytoscape-fcose 2.2.0 — MIT — https://github.com/iVis-at-Bilkent/cytoscape.js-fcose/blob/master/LICENSE
 
 Vendored fonts (woff2, latin subset) — SIL Open Font License 1.1
   Newsreader v26 — Production Type / Google Fonts

@@ -124,10 +124,10 @@ function ThreatModel({ data }) {
       )}
 
       {/* D — trust-boundary surface map */}
-      {tm.surface_mermaid && (
+      {tm.surface_graph && (
         <section>
           <div className="section-eyebrow" style={{ marginTop: "var(--space-5)" }}>D — Surface map</div>
-          <MermaidGraph source={tm.surface_mermaid} idBase="apd-tm-surface" />
+          <GraphView graph={tm.surface_graph} layout="fcose" idBase="apd-tm-surface" compound />
         </section>
       )}
 

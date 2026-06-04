@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-03",
+    "date": "2026-06-04",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -4368,8 +4368,840 @@ window.APD_DATA = {
     ]
   },
   "attack_paths": {
-    "mermaid": "graph TD\n  asset-1a2b3c4d[\"claim-ingress-api\"]\n  asset-2b3c4d5e[\"pharmacy-edge-gateway\"]\n  asset-3c4d5e6f[\"adjudication-service\"]\n  asset-4d5e6f7a[\"pricing-service\"]\n  asset-5e6f7a8b[\"audit-log-writer\"]\n  asset-6f7a8b9c[\"audit-log-store\"]\n  asset-7a8b9c0d[\"member-record-store\"]\n  asset-8b9c0d1e[\"pde-submission-service\"]\n  atk-2d392558((\"compromised_vendor_integration\"))\n  atk-accb3a4c((\"compromised_pharmacy_credential\"))\n  atk-e0a03f74((\"external_internet\"))\n  idn-aabbccdd>\"pharmacy-submitter-role\"]\n  idn-bbccddee>\"adjudication-service-account\"]\n  idn-ccddeeff>\"member-services-agent-role\"]\n  jewel-358e9430{{\"phi_store\"}}\n  jewel-e9cb35a7{{\"pde_submission_pipeline\"}}\n  atk-e0a03f74 --> asset-1a2b3c4d\n  asset-3c4d5e6f --> asset-8b9c0d1e\n  atk-2d392558 --> asset-5e6f7a8b\n  atk-e0a03f74 --> asset-1a2b3c4d\n  atk-accb3a4c --> asset-5e6f7a8b\n  atk-accb3a4c --> asset-1a2b3c4d\n  atk-e0a03f74 --> asset-1a2b3c4d\n  asset-6f7a8b9c --> asset-5e6f7a8b\n  atk-accb3a4c --> asset-5e6f7a8b\n  asset-5e6f7a8b --> asset-6f7a8b9c\n  atk-accb3a4c --> asset-1a2b3c4d\n  atk-e0a03f74 --> asset-5e6f7a8b\n  asset-3c4d5e6f --> asset-1a2b3c4d\n  asset-3c4d5e6f --> asset-7a8b9c0d\n  atk-e0a03f74 --> asset-5e6f7a8b\n  atk-accb3a4c --> asset-1a2b3c4d\n  asset-8b9c0d1e --> asset-3c4d5e6f\n  asset-7a8b9c0d --> asset-3c4d5e6f\n  atk-2d392558 --> asset-1a2b3c4d\n  atk-2d392558 --> asset-5e6f7a8b\n  atk-2d392558 --> asset-5e6f7a8b\n  atk-accb3a4c --> asset-1a2b3c4d\n  asset-1a2b3c4d --> asset-2b3c4d5e\n  asset-2b3c4d5e --> asset-1a2b3c4d\n  asset-6f7a8b9c --> jewel-358e9430\n  atk-2d392558 --> asset-5e6f7a8b\n  atk-accb3a4c --> asset-5e6f7a8b\n  atk-2d392558 --> asset-1a2b3c4d\n  atk-accb3a4c --> asset-1a2b3c4d\n  atk-e0a03f74 --> asset-1a2b3c4d\n  atk-accb3a4c --> asset-5e6f7a8b\n  atk-e0a03f74 --> asset-5e6f7a8b\n  atk-2d392558 --> asset-1a2b3c4d\n  atk-2d392558 --> asset-1a2b3c4d\n  atk-accb3a4c --> asset-5e6f7a8b\n  asset-1a2b3c4d --> asset-3c4d5e6f\n  atk-e0a03f74 --> asset-1a2b3c4d\n  atk-2d392558 --> asset-1a2b3c4d\n  asset-1a2b3c4d --> asset-5e6f7a8b\n  atk-e0a03f74 --> asset-5e6f7a8b\n  atk-e0a03f74 --> asset-5e6f7a8b\n  asset-7a8b9c0d --> jewel-358e9430\n  atk-2d392558 --> asset-5e6f7a8b",
-    "mermaid_path_focused": "graph LR\n  asset-1a2b3c4d[\"claim-ingress-api\"]\n  asset-2b3c4d5e[\"pharmacy-edge-gateway\"]\n  asset-3c4d5e6f[\"adjudication-service\"]\n  asset-5e6f7a8b[\"audit-log-writer\"]\n  asset-6f7a8b9c[\"audit-log-store\"]\n  asset-7a8b9c0d[\"member-record-store\"]\n  atk-2d392558((\"compromised_vendor_integration\"))\n  atk-accb3a4c((\"compromised_pharmacy_credential\"))\n  atk-e0a03f74((\"external_internet\"))\n  jewel-358e9430{{\"phi_store\"}}\n  atk-e0a03f74 -->|network_reachable| asset-1a2b3c4d\n  asset-1a2b3c4d -->|finding| asset-5e6f7a8b\n  asset-5e6f7a8b -->|trust| asset-6f7a8b9c\n  asset-6f7a8b9c -->|data_resides_on| jewel-358e9430\n  atk-e0a03f74 -->|network_reachable| asset-1a2b3c4d\n  atk-e0a03f74 -->|network_reachable| asset-1a2b3c4d\n  atk-e0a03f74 -->|network_reachable| asset-1a2b3c4d\n  atk-e0a03f74 -->|network_reachable| asset-1a2b3c4d\n  asset-1a2b3c4d -->|trust| asset-2b3c4d5e\n  asset-2b3c4d5e -->|trust| asset-1a2b3c4d\n  asset-1a2b3c4d -->|trust| asset-3c4d5e6f\n  asset-3c4d5e6f -->|trust| asset-1a2b3c4d\n  atk-e0a03f74 -->|network_reachable| asset-5e6f7a8b\n  atk-e0a03f74 -->|network_reachable| asset-5e6f7a8b\n  atk-e0a03f74 -->|network_reachable| asset-5e6f7a8b\n  atk-e0a03f74 -->|network_reachable| asset-5e6f7a8b\n  atk-e0a03f74 -->|network_reachable| asset-5e6f7a8b\n  asset-3c4d5e6f -->|trust| asset-7a8b9c0d\n  asset-7a8b9c0d -->|data_resides_on| jewel-358e9430\n  atk-accb3a4c -->|network_reachable| asset-1a2b3c4d\n  atk-accb3a4c -->|network_reachable| asset-1a2b3c4d\n  atk-accb3a4c -->|network_reachable| asset-1a2b3c4d\n  atk-accb3a4c -->|network_reachable| asset-1a2b3c4d\n  atk-accb3a4c -->|network_reachable| asset-1a2b3c4d\n  atk-accb3a4c -->|network_reachable| asset-5e6f7a8b\n  atk-accb3a4c -->|network_reachable| asset-5e6f7a8b\n  atk-accb3a4c -->|network_reachable| asset-5e6f7a8b\n  atk-accb3a4c -->|network_reachable| asset-5e6f7a8b\n  atk-accb3a4c -->|network_reachable| asset-5e6f7a8b\n  atk-2d392558 -->|network_reachable| asset-1a2b3c4d\n  atk-2d392558 -->|network_reachable| asset-1a2b3c4d\n  atk-2d392558 -->|network_reachable| asset-1a2b3c4d\n  atk-2d392558 -->|network_reachable| asset-1a2b3c4d\n  atk-2d392558 -->|network_reachable| asset-1a2b3c4d\n  atk-2d392558 -->|network_reachable| asset-5e6f7a8b\n  atk-2d392558 -->|network_reachable| asset-5e6f7a8b\n  atk-2d392558 -->|network_reachable| asset-5e6f7a8b\n  atk-2d392558 -->|network_reachable| asset-5e6f7a8b\n  atk-2d392558 -->|network_reachable| asset-5e6f7a8b",
+    "graph": {
+      "nodes": [
+        {
+          "id": "asset-1a2b3c4d",
+          "type": "asset",
+          "label": "claim-ingress-api",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§4 Event Bus Architecture"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-2b3c4d5e",
+          "type": "asset",
+          "label": "pharmacy-edge-gateway",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§8 Authentication (Member portal: OAuth + MFA via Okta)"
+          },
+          "confidence": "medium"
+        },
+        {
+          "id": "asset-3c4d5e6f",
+          "type": "asset",
+          "label": "adjudication-service",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.1 Database (Adjudication outcomes persisted to RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-4d5e6f7a",
+          "type": "asset",
+          "label": "pricing-service",
+          "provenance": {
+            "artifact": "00-context/threat-model-normalized.yaml",
+            "locator": "tm-1a799f16 (adjudication-to-pricing)"
+          },
+          "confidence": "medium"
+        },
+        {
+          "id": "asset-5e6f7a8b",
+          "type": "asset",
+          "label": "audit-log-writer",
+          "provenance": {
+            "artifact": "00-context/threat-model-normalized.yaml",
+            "locator": "tm-04b76ff1 (audit-log-writer)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-6f7a8b9c",
+          "type": "asset",
+          "label": "audit-log-store",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.2 Audit log (audit_log table in RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-7a8b9c0d",
+          "type": "asset",
+          "label": "member-record-store",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.1 Database (member_demographics and claims tables, PostgreSQL RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-8b9c0d1e",
+          "type": "asset",
+          "label": "pde-submission-service",
+          "provenance": {
+            "artifact": "domains/pbm/domain.yaml",
+            "locator": "crown_jewels[].pattern=pde_submission_pipeline"
+          },
+          "confidence": "low"
+        },
+        {
+          "id": "atk-2d392558",
+          "type": "attacker_position",
+          "label": "compromised_vendor_integration",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "atk-accb3a4c",
+          "type": "attacker_position",
+          "label": "compromised_pharmacy_credential",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "atk-e0a03f74",
+          "type": "attacker_position",
+          "label": "external_internet",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "idn-aabbccdd",
+          "type": "identity",
+          "label": "pharmacy-submitter-role",
+          "provenance": {
+            "artifact": "00-context/threat-model-normalized.yaml",
+            "locator": "tm-43625e57 (pharmacy credential)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "idn-bbccddee",
+          "type": "identity",
+          "label": "adjudication-service-account",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§8 Authentication (Service-to-service shared bearer tokens)"
+          },
+          "confidence": "medium"
+        },
+        {
+          "id": "idn-ccddeeff",
+          "type": "identity",
+          "label": "member-services-agent-role",
+          "provenance": {
+            "artifact": "domains/pbm/domain.yaml",
+            "locator": "attacker_positions[].position=insider_with_member_service_role"
+          },
+          "confidence": "low"
+        },
+        {
+          "id": "jewel-358e9430",
+          "type": "crown_jewel",
+          "label": "phi_store",
+          "confidence": "high"
+        },
+        {
+          "id": "jewel-e9cb35a7",
+          "type": "crown_jewel",
+          "label": "pde_submission_pipeline",
+          "confidence": "high"
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-07946d39",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-0ec04856",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-8b9c0d1e",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-1457b95a",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-17783b27",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-1c7d8d1d",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-20d89553",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-27e4ec84",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-2a479259",
+          "type": "trusts",
+          "source": "asset-6f7a8b9c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-33cbe3d9",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-37b95b02",
+          "type": "trusts",
+          "source": "asset-5e6f7a8b",
+          "target": "asset-6f7a8b9c",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-4b6f06ec",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-4f04c048",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-5074ec19",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-5b51f5a8",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-7a8b9c0d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-631176ba",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-67448007",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-67b87381",
+          "type": "trusts",
+          "source": "asset-8b9c0d1e",
+          "target": "asset-3c4d5e6f",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-6dbad8bd",
+          "type": "trusts",
+          "source": "asset-7a8b9c0d",
+          "target": "asset-3c4d5e6f",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-6e130fc8",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-78b786a1",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-867e7d3e",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-88ca3e5d",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-8af9f7aa",
+          "type": "trusts",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-2b3c4d5e",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-94c86287",
+          "type": "trusts",
+          "source": "asset-2b3c4d5e",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-989fc99a",
+          "type": "data_resides_on",
+          "source": "asset-6f7a8b9c",
+          "target": "jewel-358e9430",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-99707e24",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-9a22b4a2",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-9bf0cb8d",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-af0b27e9",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-bd61022c",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-c41dcef1",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-cb1c4890",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-cd042314",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-d6d18ce6",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-dceeaa66",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-dd4a931c",
+          "type": "trusts",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-3c4d5e6f",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-decfffea",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-e6170ee9",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-f0f89452",
+          "type": "compromisable_via_finding",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-f29aefbf",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f2a4568b",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f3c575df",
+          "type": "data_resides_on",
+          "source": "asset-7a8b9c0d",
+          "target": "jewel-358e9430",
+          "bottleneck": true
+        },
+        {
+          "id": "edge-f4e846c9",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        }
+      ]
+    },
+    "graph_path_focused": {
+      "nodes": [
+        {
+          "id": "asset-1a2b3c4d",
+          "type": "asset",
+          "label": "claim-ingress-api",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§4 Event Bus Architecture"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-2b3c4d5e",
+          "type": "asset",
+          "label": "pharmacy-edge-gateway",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§8 Authentication (Member portal: OAuth + MFA via Okta)"
+          },
+          "confidence": "medium"
+        },
+        {
+          "id": "asset-3c4d5e6f",
+          "type": "asset",
+          "label": "adjudication-service",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.1 Database (Adjudication outcomes persisted to RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-5e6f7a8b",
+          "type": "asset",
+          "label": "audit-log-writer",
+          "provenance": {
+            "artifact": "00-context/threat-model-normalized.yaml",
+            "locator": "tm-04b76ff1 (audit-log-writer)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-6f7a8b9c",
+          "type": "asset",
+          "label": "audit-log-store",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.2 Audit log (audit_log table in RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "asset-7a8b9c0d",
+          "type": "asset",
+          "label": "member-record-store",
+          "provenance": {
+            "artifact": "inputs/tech_plan.md",
+            "locator": "§5.1 Database (member_demographics and claims tables, PostgreSQL RDS)"
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "atk-2d392558",
+          "type": "attacker_position",
+          "label": "compromised_vendor_integration",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "atk-accb3a4c",
+          "type": "attacker_position",
+          "label": "compromised_pharmacy_credential",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "atk-e0a03f74",
+          "type": "attacker_position",
+          "label": "external_internet",
+          "provenance": {
+            "artifact": ".apd-run.yaml",
+            "locator": null
+          },
+          "confidence": "high"
+        },
+        {
+          "id": "jewel-358e9430",
+          "type": "crown_jewel",
+          "label": "phi_store",
+          "confidence": "high"
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-07946d39",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-1457b95a",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-17783b27",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-1c7d8d1d",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-20d89553",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-27e4ec84",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-33cbe3d9",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-37b95b02",
+          "type": "trusts",
+          "source": "asset-5e6f7a8b",
+          "target": "asset-6f7a8b9c",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-4b6f06ec",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-4f04c048",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-5074ec19",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-5b51f5a8",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-7a8b9c0d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-631176ba",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-67448007",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-6e130fc8",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-78b786a1",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-867e7d3e",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-88ca3e5d",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-8af9f7aa",
+          "type": "trusts",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-2b3c4d5e",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-94c86287",
+          "type": "trusts",
+          "source": "asset-2b3c4d5e",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-989fc99a",
+          "type": "data_resides_on",
+          "source": "asset-6f7a8b9c",
+          "target": "jewel-358e9430",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-99707e24",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-9a22b4a2",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-9bf0cb8d",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-af0b27e9",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-bd61022c",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-c41dcef1",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-cb1c4890",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-cd042314",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-d6d18ce6",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-dceeaa66",
+          "type": "network_reachable",
+          "source": "atk-accb3a4c",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-dd4a931c",
+          "type": "trusts",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-3c4d5e6f",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-decfffea",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-e6170ee9",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f0f89452",
+          "type": "compromisable_via_finding",
+          "source": "asset-1a2b3c4d",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f29aefbf",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f2a4568b",
+          "type": "network_reachable",
+          "source": "atk-e0a03f74",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f3c575df",
+          "type": "data_resides_on",
+          "source": "asset-7a8b9c0d",
+          "target": "jewel-358e9430",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-f4e846c9",
+          "type": "network_reachable",
+          "source": "atk-2d392558",
+          "target": "asset-5e6f7a8b",
+          "bottleneck": false
+        }
+      ]
+    },
     "pairs": [
       {
         "attacker_position": "atk-2d392558",
@@ -10648,7 +11480,32 @@ window.APD_DATA = {
         "surfaces_examined": 3
       }
     },
-    "surface_mermaid": "graph TD\n  adjudication-to-pricing[\"adjudication-to-pricing [I]\"]\n  audit-log-writer[\"audit-log-writer [S T I D E]\"]\n  claim-ingress-API[\"claim-ingress-API [S T I D E]\"]\n  classDef hot fill:#fbe9e9,stroke:#c0392b,color:#7a1f1f;",
+    "surface_graph": {
+      "nodes": [
+        {
+          "id": "adjudication-to-pricing",
+          "type": "asset",
+          "label": "adjudication-to-pricing",
+          "badge": "I",
+          "hot": false
+        },
+        {
+          "id": "audit-log-writer",
+          "type": "asset",
+          "label": "audit-log-writer",
+          "badge": "S T I D E",
+          "hot": false
+        },
+        {
+          "id": "claim-ingress-API",
+          "type": "asset",
+          "label": "claim-ingress-API",
+          "badge": "S T I D E",
+          "hot": false
+        }
+      ],
+      "edges": []
+    },
     "comparator_delta": null
   }
 };

@@ -19,14 +19,37 @@ API / LLM), MITRE D3FEND, and — when `mitre_atlas` is declared for the run —
 equals the ID string) means the reference catalog for that family failed to
 load; this is caught by the completeness gate's `taxonomy_titles_resolve` check.
 
+## Interactive graphs
+
+The **Attack paths** asset graph and the **Threat model** surface map are drawn
+with [Cytoscape.js](https://js.cytoscape.org/) (dagre layout for the directed
+asset graph, fcose compound layout for the trust-boundary surface map). Both are
+fully interactive: **pan, zoom, drag** nodes, a toolbar **fit** control, and
+**hover tooltips** (the asset-graph tooltip shows a node's provenance — source
+artifact and locator — and an edge's finding/capability reference). All colors
+are read from the report's CSS tokens via `getComputedStyle`, so the graphs
+**recolor automatically when the theme changes** (light / paper / dark).
+
+On the Attack-paths graph, **clicking a node highlights the attack path(s) that
+pass through it** (dimming the rest), and the graph cross-links both ways with the
+"Enumerated paths" list — **clicking a path row highlights that path on the
+graph**, and clicking it again (or clicking empty canvas) clears the selection.
+A path-focused subgraph showing only the nodes and edges on enumerated paths
+renders below the full graph when paths exist.
+
+These graphs replace the previous static Mermaid diagrams; Mermaid was removed
+from the bundle entirely (a smaller `app.js`), and the report remains
+self-contained and offline-openable with no network or Node toolchain on the
+consumer side.
+
 ## Threat model tab
 
 When the run has a threat model — either user-supplied or authored by the
 gauntlet's baseline threat-model author — the report adds a **Threat model** tab
 between Coverage and Attack paths. It surfaces the modeled threats and how well
 they are mitigated, in the report's existing design language (it reuses the
-shared `MermaidGraph` component and the `apd-matrix`, `coverage-bar`, and
-`contradiction` classes — no bespoke styling). When no threat model exists (no
+shared interactive `GraphView` component and the `apd-matrix`, `coverage-bar`,
+and `contradiction` classes — no bespoke styling). When no threat model exists (no
 user-supplied TM and none authored), the tab is **omitted entirely** rather than
 rendered empty, and the remaining tabs renumber automatically.
 
@@ -49,11 +72,13 @@ The scene is composed of up to five blocks:
   and a proportion bar), plus a summary of coverage gaps, contradictions, and
   silences the evaluator emitted. **Requires the evaluator** — this block is
   absent when only the author ran (no `threat-model-coverage.yaml`).
-- **Block D — Surface map.** A Mermaid trust-boundary map: assets are nodes
-  badged with their STRIDE letters, grouped into trust-boundary subgraphs when
-  the asset inventory provides boundaries (degrading to a flat node list
-  otherwise), and marked `hot` when an asset has an unmitigated (gap) threat. No
-  edges are fabricated — clusters and nodes only.
+- **Block D — Surface map.** An interactive trust-boundary map (Cytoscape, fcose
+  compound layout): assets are nodes badged with their STRIDE letters, nested
+  under trust-boundary compound parents when the asset inventory provides
+  boundaries (degrading to a flat node list otherwise), and marked `hot` when an
+  asset has an unmitigated (gap) threat. No edges are fabricated — clusters and
+  nodes only. Pan/zoom/drag, hover tooltips, and a fit control are available; the
+  graph recolors when the report theme changes.
 - **Block E — Supplied vs authored.** A comparator shown only when **both** a
   user-supplied TM and the authored baseline exist. It groups threats into
   authored-only, supplied-only, and corroborated (present in both, matched
@@ -185,12 +210,13 @@ The following empty states are **accurate run outcomes**, not rendering bugs:
 
 **Attack Paths — "0 pairs / 0 paths / 0 bottleneck edges"**
 This occurs when the asset graph exists (nodes and edges are present and rendered
-via Mermaid) but those edges do not form a traversable chain from any declared
-attacker position to any declared crown jewel. The most common cause: specialists
-reference prose documents (e.g., `tech_plan.md`) as evidence rather than specific
-`asset_id` values, so the analyzer cannot synthesize graph edges from prose. The
-"Enumerated paths" panel displays an informative explanation block (blue-bordered)
-rather than a blank section. To enable path enumeration, enrich
+in the interactive Cytoscape graph) but those edges do not form a traversable
+chain from any declared attacker position to any declared crown jewel. The most
+common cause: specialists reference prose documents (e.g., `tech_plan.md`) as
+evidence rather than specific `asset_id` values, so the analyzer cannot
+synthesize graph edges from prose. The "Enumerated paths" panel displays an
+informative explanation block (blue-bordered) rather than a blank section. To
+enable path enumeration, enrich
 `00-context/asset-inventory.yaml` with explicit trust-boundary edges connecting
 attacker positions to crown jewels, or have specialists tag finding evidence with
 the `asset_id` of the affected component.
@@ -246,5 +272,5 @@ rebuild the precompiled bundle and commit the result:
 
 CI gates that the precompiled bundle matches the JSX source
 (`tools/check_report_template_freshness.py`). The Node toolchain
-(esbuild 0.21.5 + react 18.3.1 + mermaid 10.9.1) is contributor-only — no
-runtime user needs Node.
+(esbuild 0.25.0 + react 18.3.1 + cytoscape 3.30.2 with cytoscape-dagre 2.5.0
+and cytoscape-fcose 2.2.0) is contributor-only — no runtime user needs Node.

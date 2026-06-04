@@ -264,9 +264,21 @@ def audit_report(run_dir: Path) -> AuditResult:
             for f in apath_f
         )
         ap_ok = node_count > 0 or apath_blocked
+        # Structured-graph assertion (Cytoscape renderer): the rendered
+        # data.attack_paths now carries a {nodes, edges} `graph` that the
+        # report draws. When the section declares assets (node_count>0) the
+        # structured graph must be non-empty too. The `graph` key is only
+        # asserted when present, so a data.js predating the field degrades
+        # gracefully instead of hard-failing.
+        graph_raw = ap.get("graph")
+        graph = graph_raw if isinstance(graph_raw, dict) else {}
+        graph_nodes = len(graph.get("nodes") or [])
+        if "graph" in ap:
+            ap_ok = ap_ok and (node_count == 0 or graph_nodes > 0)
         total_paths = (ap.get("summary") or {}).get("total_paths")
         _check(result, "attack_paths_present", ap_ok,
-               f"node_count={node_count} total_paths={total_paths} apath_blocked={apath_blocked}",
+               f"node_count={node_count} graph_nodes={graph_nodes} "
+               f"total_paths={total_paths} apath_blocked={apath_blocked}",
                klass="structural")
 
     # Completeness check #4 — D3FEND overlay (structural; per design spec):

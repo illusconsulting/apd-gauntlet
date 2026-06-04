@@ -1,12 +1,17 @@
 // report-template/screens/AttackPaths.jsx
 /* eslint-disable */
-// Attack Paths screen — Mermaid asset graph + per-pair path list + D3FEND overlay.
-// The Mermaid render + zoom toolbar live in the shared MermaidGraph component
-// (components.jsx, exported on window).
+// Attack Paths screen — Cytoscape asset graph + per-pair path list + D3FEND overlay.
+// The interactive graph render + zoom toolbar live in the shared GraphView component
+// (components.jsx, exported on window). Clicking a node highlights its path(s);
+// clicking an "Enumerated paths" row cross-highlights the graph (two-way link).
 
 function AttackPaths({ data }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
+
+  const [selectedPathId, setSelectedPathId] = React.useState(null);
+  const paths = (ap && ap.pairs || []).flatMap((pair) =>
+    (pair.paths || []).map((p) => ({ id: p.path_id, edgeIds: p.edges || [] })));
 
   if (!ap) {
     return (
@@ -103,13 +108,14 @@ function AttackPaths({ data }) {
 
       <section className="attack-paths__graph">
         <h3 className="attack-paths__section-h">Asset graph</h3>
-        <MermaidGraph source={ap.mermaid} idBase="apd-asset-graph" />
+        <GraphView graph={ap.graph} layout="dagre" idBase="apd-asset-graph"
+          paths={paths} selectedPathId={selectedPathId} onSelectPath={setSelectedPathId} />
       </section>
 
-      {ap.mermaid_path_focused && (
+      {ap.graph_path_focused && (
         <section className="attack-paths__graph">
           <h3 className="attack-paths__section-h">Path-focused graph</h3>
-          <MermaidGraph source={ap.mermaid_path_focused} idBase="apd-paths-focused" canvasModifier="focused" />
+          <GraphView graph={ap.graph_path_focused} layout="dagre" idBase="apd-paths-focused" />
         </section>
       )}
 
@@ -147,7 +153,14 @@ function AttackPaths({ data }) {
               </summary>
               <ul className="attack-pair__paths">
                 {pair.paths.map((p) => (
-                  <li key={p.path_id} className={`attack-path attack-path--${p.feasibility || "unknown"}`}>
+                  <li
+                    key={p.path_id}
+                    className={`attack-path attack-path--${p.feasibility || "unknown"}`}
+                    onClick={() => setSelectedPathId(
+                      (cur) => cur === p.path_id ? null : p.path_id)}
+                    style={{ cursor: "pointer", outline: selectedPathId === p.path_id
+                      ? "2px solid var(--accent)" : "none" }}
+                  >
                     <div className="attack-path__head">
                       <span
                         style={{

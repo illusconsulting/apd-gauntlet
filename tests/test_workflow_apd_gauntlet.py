@@ -549,28 +549,33 @@ def test_threat_model_author_agent_resolves_to_file() -> None:
     )
 
 
-# ── Task 8: shared MermaidGraph component + graph-CSS rename ──────────────────
-def test_mermaid_graph_is_shared_component() -> None:
+# ── Shared GraphView component (Cytoscape) ───────────────────────────────────
+def test_graph_view_is_shared_cytoscape_component() -> None:
     comp = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
-    assert "function MermaidGraph(" in comp
-    assert "securityLevel: \"strict\"" in comp and "htmlLabels: false" in comp
-    assert "MermaidGraph" in comp.split("Object.assign(window")[1]  # exported
-    # The component supports an optional BEM canvas modifier so callers can opt
-    # into modifier styling (e.g. the focused subgraph width cap) — preserving the
-    # pre-refactor behavior that the focused canvas carried `--focused`.
-    assert "canvasModifier" in comp
-    assert "report-graph__canvas--${canvasModifier}" in comp
+    assert "function GraphView(" in comp
+    assert "window.cytoscape" in comp
+    assert "dagre" in comp and "fcose" in comp           # both layouts supported
+    assert "getComputedStyle" in comp                    # token-derived theming
+    assert "data-theme" in comp or "MutationObserver" in comp  # re-style on theme change
+    assert "GraphView" in comp.split("Object.assign(window")[1]  # exported
+    assert "MermaidGraph" not in comp                    # fully replaced
+    assert "window.mermaid" not in comp
 
 
-def test_attack_paths_uses_shared_mermaid_graph() -> None:
+def test_attack_paths_uses_graphview_with_path_selection() -> None:
     ap = (REPO / "report-template" / "screens" / "AttackPaths.jsx").read_text(encoding="utf-8")
-    assert "MermaidGraph" in ap
-    # The bespoke renderer is gone — no duplicate mermaid.render in the screen.
-    assert "window.mermaid.render" not in ap and "window.mermaid\n" not in ap
-    # Behavior preservation: the path-focused graph must keep its `--focused`
-    # width cap by passing the canvas modifier (regression guard — pre-refactor
-    # b213cbf rendered `attack-paths__mermaid--focused`).
-    assert 'canvasModifier="focused"' in ap
+    assert "GraphView" in ap and "MermaidGraph" not in ap
+    assert "ap.graph" in ap and "ap.graph_path_focused" in ap
+    assert "selectedPathId" in ap and "onSelectPath" in ap
+    # derives a flat paths list (id + edgeIds) for highlighting
+    assert "edgeIds" in ap and "path_id" in ap
+
+
+def test_threat_model_uses_graphview_surface_map() -> None:
+    tm = (REPO / "report-template" / "screens" / "ThreatModel.jsx").read_text(encoding="utf-8")
+    assert "GraphView" in tm and "MermaidGraph" not in tm
+    assert "surface_graph" in tm and "surface_mermaid" not in tm
+    assert "compound" in tm and 'layout="fcose"' in tm
 
 
 def test_threat_model_screen_exists_and_renders_blocks() -> None:
@@ -581,7 +586,7 @@ def test_threat_model_screen_exists_and_renders_blocks() -> None:
     assert "apd-matrix" in src and "matrix-cell--" in src        # block A
     assert "attack-table" in src                                  # blocks B/C
     assert "coverage-bar" in src                                  # block C
-    assert "MermaidGraph" in src                                  # block D
+    assert "GraphView" in src                                     # block D
     assert "contradiction" in src                                 # block E
     # conditional blocks
     assert "surface_coverage" in src and "comparator_delta" in src
@@ -600,3 +605,44 @@ def test_threat_model_tab_is_conditional_and_routed() -> None:
     i_tm = src.index('"threat_model"')
     i_ap = src.index('"attack_paths"')
     assert i_cov < i_tm < i_ap
+
+
+def test_build_registers_cytoscape_not_mermaid() -> None:
+    rg = (REPO / "report-template" / ".build" / "react-globals.js").read_text(encoding="utf-8")
+    assert 'import cytoscape from "cytoscape"' in rg
+    assert "cytoscape-dagre" in rg and "cytoscape-fcose" in rg
+    assert "window.cytoscape = cytoscape" in rg
+    assert "mermaid" not in rg
+    pkg = (REPO / "report-template" / ".build" / "package.json").read_text(encoding="utf-8")
+    assert "cytoscape" in pkg and "cytoscape-dagre" in pkg and "cytoscape-fcose" in pkg
+    assert "mermaid" not in pkg
+    build = (REPO / "report-template" / ".build" / "build.mjs").read_text(encoding="utf-8")
+    assert "mermaid.min.js" not in build  # no longer vendored
+
+
+def test_no_mermaid_references_remain() -> None:
+    """The HTML-report renderer path carries zero Mermaid references.
+
+    Exclusions (all out of scope for the HTML-report Cytoscape migration):
+      - the precompiled bundle (tools/apd_gauntlet/data/report-template/) and
+        the generated report-template/data.js are regenerated in the
+        bundle-rebuild task; the mid-run source-vs-bundle mismatch is expected
+        and resolved there;
+      - tools/apd_gauntlet/attack_path/mermaid.py renders the attack-path
+        AGENT's separate Markdown deliverable (templates/attack-path-report
+        .template.md), which is Mermaid by design and has its own tested
+        contract (tests/test_attack_path_templates.py).
+    """
+    import subprocess
+
+    out = subprocess.run(
+        [
+            "git", "grep", "-il", "mermaid", "--",
+            "report-template", "tools",
+            ":!tools/apd_gauntlet/data/report-template",
+            ":!report-template/data.js",
+            ":!tools/apd_gauntlet/attack_path/mermaid.py",
+        ],
+        cwd=REPO, capture_output=True, text=True,
+    ).stdout
+    assert out.strip() == "", f"residual mermaid references:\n{out}"

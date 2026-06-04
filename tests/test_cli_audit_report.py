@@ -456,3 +456,11 @@ def test_threat_model_scene_coherent_fails_when_present_but_empty(tmp_path):
     c = [x for x in result.checks if x["name"] == "threat_model_scene_coherent"]
     assert c and c[0]["status"] == "fail"
     assert result.status == "fail"
+
+
+def test_attack_paths_present_checks_structured_graph(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "attack_paths_present"][0]
+    assert c["status"] == "pass"
+    assert "graph_nodes=" in c["detail"]   # detail now reports structured graph size

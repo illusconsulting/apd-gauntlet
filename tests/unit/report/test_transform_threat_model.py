@@ -69,7 +69,7 @@ def test_no_threat_model_returns_absent_block() -> None:
         "entries": [],
         "stride_matrix": {"letters_present": [], "rows": []},
         "surface_coverage": None,
-        "surface_mermaid": None,
+        "surface_graph": None,
         "comparator_delta": None,
     }
 
@@ -114,7 +114,7 @@ def test_threat_model_block_absent_is_omittable():
     assert block["present"] is False
     assert block["entries"] == []
     assert block["stride_matrix"] == {"letters_present": [], "rows": []}
-    assert block["surface_mermaid"] is None
+    assert block["surface_graph"] is None
 
 
 def test_authored_baseline_recognized() -> None:
@@ -216,69 +216,27 @@ def test_tm_surface_coverage_absent_returns_none():
     assert _tm_surface_coverage({}) is None
 
 
-def test_build_threat_surface_mermaid_clusters_and_hot():
-    from apd_gauntlet.report.transform import _build_threat_surface_mermaid
+def test_threat_surface_graph_clusters_badges_and_hot():
+    from apd_gauntlet.report.transform import _threat_surface_graph
     entries = [
         {"asset": "api", "stride_letter": "S", "mitigation": "MFA"},
-        {"asset": "api", "stride_letter": "I", "mitigation": ""},   # gap → hot
+        {"asset": "api", "stride_letter": "I", "mitigation": ""},     # gap -> hot
         {"asset": "broker", "stride_letter": "T", "mitigation": "x"},
     ]
     inv = {"trust_boundaries": [
         {"name": "internet", "assets": ["api"]},
         {"name": "data-plane", "assets": ["broker"]},
     ]}
-    out = _build_threat_surface_mermaid(entries, inv)
-    assert out.startswith("graph TD")
-    assert "subgraph" in out                    # clustered by trust boundary
-    assert "api [S I]" in out or 'api [S I]' in out  # node label badged with letters
-    assert "classDef hot" in out and ":::hot" in out  # api has a gap → hot class
-    assert "broker" in out
+    g = _threat_surface_graph(entries, inv)
+    api = next(n for n in g["nodes"] if n.get("label", "").startswith("api"))
+    assert api["type"] == "asset" and api["badge"] == "S I" and api["hot"] is True
+    assert api.get("parent")  # clustered under a boundary compound node
+    assert any(n["type"] == "boundary" for n in g["nodes"])
 
 
-def test_build_threat_surface_mermaid_degrades_without_boundaries():
-    from apd_gauntlet.report.transform import _build_threat_surface_mermaid
-    entries = [{"asset": "api", "stride_letter": "S", "mitigation": "MFA"}]
-    out = _build_threat_surface_mermaid(entries, {})  # no trust boundaries
-    assert out.startswith("graph TD")
-    assert "subgraph" not in out                 # flat node list, no clusters
-    assert "api [S]" in out
-
-
-def test_build_threat_surface_mermaid_none_when_no_entries():
-    from apd_gauntlet.report.transform import _build_threat_surface_mermaid
-    assert _build_threat_surface_mermaid([], {"trust_boundaries": []}) is None
-
-
-def test_build_threat_surface_mermaid_sanitizes_adopter_labels():
-    # Asset names and trust-boundary names are adopter/agent-controlled, so the
-    # builder MUST route them through _safe_label (the same defense-in-depth
-    # first layer used by the asset-graph Mermaid builders) before interpolation.
-    from apd_gauntlet.report.transform import _build_threat_surface_mermaid
-    entries = [
-        {"asset": 'api"]; click api callback <img src=x>',
-         "stride_letter": "S", "mitigation": ""},
-    ]
-    inv = {"trust_boundaries": [
-        {"name": "zone<script>", "assets": ['api"]; click api callback <img src=x>']},
-    ]}
-    out = _build_threat_surface_mermaid(entries, inv)
-    # No HTML-tag payload survives into the label, and the quote/bracket
-    # metacharacters that break Mermaid label quoting are gone.
-    assert "<img" not in out
-    assert "<script>" not in out
-    assert '"];' not in out
-    # HTML-tag-bearing labels are discarded entirely (defense in depth).
-    assert "(unnamed)" in out
-
-
-def test_build_threat_surface_mermaid_strips_bracket_metachars():
-    # A benign asset name containing [ ] would break Mermaid's ["..."] quoting
-    # if interpolated raw; _safe_label removes them so the graph still renders.
-    from apd_gauntlet.report.transform import _build_threat_surface_mermaid
-    entries = [{"asset": "queue[main]", "stride_letter": "D", "mitigation": "x"}]
-    out = _build_threat_surface_mermaid(entries, {})
-    assert "[main]" not in out
-    assert "queue main [D]" in out
+def test_threat_surface_graph_none_when_no_entries():
+    from apd_gauntlet.report.transform import _threat_surface_graph
+    assert _threat_surface_graph([], {"trust_boundaries": []}) is None
 
 
 def test_tm_comparator_delta():

@@ -1191,13 +1191,9 @@ _LABEL_STRIP = re.compile(r"[^A-Za-z0-9 _./:()-]")
 # HTML tag pattern: reject the entire label if angle-bracket tags are present.
 _HTML_TAG = re.compile(r"<[^>]*>")
 
-# Tighter than the full-graph 100-cap because path-focused subgraphs are meant
-# to be human-readable storytelling artifacts, not exhaustive inventories.
-_PATH_FOCUSED_NODE_CAP = 60
-
 
 def _safe_node_id(raw: str, fallback_seed: str = "") -> str:
-    """Return a Mermaid-safe node id. When raw is invalid, derive a stable
+    """Return a graph-safe node id. When raw is invalid, derive a stable
     hash-based id so two nodes with distinct raw ids cannot collide on the
     synthetic fallback. The optional fallback_seed namespaces ids across
     rendering contexts (full asset graph vs path-focused subgraph)."""
@@ -1208,10 +1204,9 @@ def _safe_node_id(raw: str, fallback_seed: str = "") -> str:
 
 
 def _safe_label(raw: str) -> str:
-    """Mermaid node labels are quoted strings; we additionally strip
-    metacharacters that confuse the parser or compose into XSS payloads when
-    mermaid renders to SVG (#, [, ], <, >, &, etc.). Truncated to 60 chars
-    so adversarial asset names cannot blow up graph layout.
+    """Strip metacharacters from graph node labels that could compose into
+    XSS payloads or confuse a renderer (#, [, ], <, >, &, etc.). Truncated to
+    60 chars so adversarial asset names cannot blow up graph layout.
 
     Defense-in-depth: if the raw label contains HTML-tag patterns (<…>), the
     entire label is discarded and replaced with "(unnamed)" — partial stripping
@@ -1225,152 +1220,57 @@ def _safe_label(raw: str) -> str:
     return cleaned[:60] or "(unnamed)"
 
 
-def _build_mermaid(asset_graph: dict[str, Any]) -> str:
-    """Render the asset graph as a small Mermaid graph TD definition.
-
-    Sanitization discipline: every node id and label is constrained to a safe
-    character set before interpolation. Asset-graph YAML is adopter-controlled
-    so unsafe characters MUST be filtered here, not at render time. Combined
-    with mermaid securityLevel='strict' on the JS side, this gives defense in
-    depth against label-based SVG/XSS payloads.
-
-    Mermaid handles ~100-node graphs comfortably. Larger graphs render a
-    summary string so the page still loads.
-    """
-    nodes = asset_graph.get("nodes") or []
-    edges = asset_graph.get("edges") or []
-    if len(nodes) > 100:
-        return f"graph TD\n  too_large[\"Graph has {len(nodes)} nodes; see asset-graph.yaml\"]"
-    lines = ["graph TD"]
-    id_remap: dict[str, str] = {}
-    for idx, n in enumerate(nodes):
-        raw_id = str(n.get("node_id", f"n{idx}"))
-        safe_id = _safe_node_id(raw_id, fallback_seed="asset_graph")
-        existing = next((r for r, s in id_remap.items() if s == safe_id), None)
-        if existing is not None and existing != raw_id:
-            raise RuntimeError(
-                f"_safe_node_id collision: {existing!r} and {raw_id!r} both → {safe_id!r}"
-            )
-        id_remap[raw_id] = safe_id
-        label = _safe_label(str(n.get("name") or raw_id))
-        ntype = n.get("node_type", "")
-        prefix = {
-            "attacker_position": "((", "crown_jewel": "{{", "service": "[",
-            "data_store": "[(", "secret_store": "[(",
-            "identity": ">",
-        }.get(ntype, "[")
-        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]", ">": "]"}[prefix]
-        lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
-    for e in edges:
-        src = id_remap.get(str(e.get("from", "")))
-        dst = id_remap.get(str(e.get("to", "")))
-        if src and dst:
-            lines.append(f"  {src} --> {dst}")
-    return "\n".join(lines)
+def _graph_node(raw: dict[str, Any]) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "id": str(raw.get("node_id") or ""),
+        "type": str(raw.get("node_type") or "asset"),
+        "label": _safe_label(str(raw.get("name") or raw.get("node_id") or "")),
+    }
+    prov = raw.get("provenance")
+    if isinstance(prov, dict) and (prov.get("artifact") or prov.get("locator")):
+        node["provenance"] = {"artifact": prov.get("artifact"), "locator": prov.get("locator")}
+    if raw.get("confidence"):
+        node["confidence"] = raw.get("confidence")
+    return node
 
 
-def _build_mermaid_path_focused(
-    asset_graph: dict[str, Any],
-    paths: list[dict[str, Any]],
-) -> str | None:
-    """Build a focused Mermaid graph LR showing only nodes/edges in enumerated paths.
+def _asset_graph_view(
+    asset_graph: dict[str, Any] | None, *, bottleneck_ids: set[str]
+) -> dict[str, Any]:
+    """Structured {nodes, edges} for the Attack-paths graph (Cytoscape renderer)."""
+    if not isinstance(asset_graph, dict):
+        return {"nodes": [], "edges": []}
+    nodes = [_graph_node(n) for n in asset_graph.get("nodes", []) if isinstance(n, dict)]
+    edges = []
+    for e in asset_graph.get("edges", []):
+        if not isinstance(e, dict):
+            continue
+        eid = str(e.get("edge_id") or "")
+        edge: dict[str, Any] = {
+            "id": eid,
+            "type": str(e.get("edge_type") or "edge"),
+            "source": str(e.get("from") or ""),
+            "target": str(e.get("to") or ""),
+            "bottleneck": eid in bottleneck_ids,
+        }
+        edges.append(edge)
+    return {"nodes": nodes, "edges": edges}
 
-    Returns None when ``paths`` is empty (nothing to focus on).
 
-    The focused subgraph:
-    - Uses ``graph LR`` so attacker → ... → crown_jewel reads left-to-right.
-    - Includes only nodes touched by path edges.
-    - Includes only edges that appear in enumerated paths.
-    - Labels edges with the edge_type short label for context.
-    """
-    if not paths:
+def _asset_graph_view_focused(
+    asset_graph: dict[str, Any] | None, paths: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """Subset of the asset graph containing only nodes/edges on enumerated paths."""
+    edge_ids: set[str] = set()
+    for p in paths or []:
+        edge_ids.update(str(e) for e in (p.get("edges") or []))
+    if not edge_ids:
         return None
-
-    raw_nodes: list[dict[str, Any]] = asset_graph.get("nodes") or []
-    raw_edges: list[dict[str, Any]] = asset_graph.get("edges") or []
-
-    node_by_id: dict[str, dict[str, Any]] = {
-        str(n.get("node_id", "")): n for n in raw_nodes if isinstance(n, dict)
-    }
-    edge_by_id: dict[str, dict[str, Any]] = {
-        str(e.get("edge_id", "")): e for e in raw_edges if isinstance(e, dict)
-    }
-
-    # Collect the edge IDs referenced by all paths.
-    path_edge_ids: list[str] = []
-    seen_edge_ids: set[str] = set()
-    for p in paths:
-        for eid in (p.get("edges") or []):
-            if eid not in seen_edge_ids:
-                path_edge_ids.append(eid)
-                seen_edge_ids.add(eid)
-
-    # Collect node IDs touched by those edges.
-    touched_node_ids: set[str] = set()
-    for eid in path_edge_ids:
-        e = edge_by_id.get(eid, {})
-        touched_node_ids.add(str(e.get("from", "")))
-        touched_node_ids.add(str(e.get("to", "")))
-    touched_node_ids.discard("")
-
-    if not touched_node_ids:
-        return None
-
-    if len(touched_node_ids) > _PATH_FOCUSED_NODE_CAP:
-        return (
-            f"graph LR\n  too_large[\"Path-focused subgraph has "
-            f"{len(touched_node_ids)} nodes; see attack-paths.yaml\"]"
-        )
-
-    # Edge type → short label for edge annotation.
-    _EDGE_LABEL: dict[str, str] = {
-        "compromisable_via_finding": "finding",
-        "finding": "finding",
-        "mitigated_by_capability": "capability",
-        "capability": "capability",
-        "trust_boundary": "trust",
-        "trusts": "trust",
-    }
-
-    lines = ["graph LR"]
-
-    # Emit only the touched nodes, preserving node_type shapes.
-    id_remap: dict[str, str] = {}
-    for raw_id in sorted(touched_node_ids):
-        n = node_by_id.get(raw_id, {})
-        safe_id = _safe_node_id(raw_id, fallback_seed="path_focused")
-        existing = next((r for r, s in id_remap.items() if s == safe_id), None)
-        if existing is not None and existing != raw_id:
-            raise RuntimeError(
-                f"_safe_node_id collision: {existing!r} and {raw_id!r} both → {safe_id!r}"
-            )
-        id_remap[raw_id] = safe_id
-        label = _safe_label(str(n.get("name") or raw_id))
-        ntype = n.get("node_type", "")
-        prefix = {
-            "attacker_position": "((",
-            "crown_jewel": "{{",
-            "service": "[",
-            "data_store": "[(",
-            "secret_store": "[(",
-            "identity": ">",
-        }.get(ntype, "[")
-        suffix = {"((": "))", "{{": "}}", "[": "]", "[(": ")]", ">": "]"}[prefix]
-        lines.append(f"  {safe_id}{prefix}\"{label}\"{suffix}")
-
-    # Emit only path edges, annotated with edge_type label.
-    for eid in path_edge_ids:
-        e = edge_by_id.get(eid, {})
-        src_raw = str(e.get("from", ""))
-        dst_raw = str(e.get("to", ""))
-        src = id_remap.get(src_raw)
-        dst = id_remap.get(dst_raw)
-        if src and dst:
-            raw_type = str(e.get("edge_type", ""))
-            edge_label = _EDGE_LABEL.get(raw_type, raw_type or "edge")
-            lines.append(f"  {src} -->|{edge_label}| {dst}")
-
-    return "\n".join(lines)
+    full = _asset_graph_view(asset_graph, bottleneck_ids=set())
+    edges = [e for e in full["edges"] if e["id"] in edge_ids]
+    keep = {e["source"] for e in edges} | {e["target"] for e in edges}
+    nodes = [n for n in full["nodes"] if n["id"] in keep]
+    return {"nodes": nodes, "edges": edges}
 
 
 def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
@@ -1526,8 +1426,13 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
         )
 
     result: dict[str, Any] = {
-        "mermaid": _build_mermaid(artifacts.asset_graph),
-        "mermaid_path_focused": _build_mermaid_path_focused(artifacts.asset_graph, paths),
+        "graph": _asset_graph_view(
+            artifacts.asset_graph,
+            bottleneck_ids={
+                str(eid) for p in paths for eid in (p.get("bottleneck_edges") or [])
+            },
+        ),
+        "graph_path_focused": _asset_graph_view_focused(artifacts.asset_graph, paths),
         "pairs":   pairs,
         "bottleneck_overlays": overlays,
         "bottleneck_threshold": bottleneck_threshold,
@@ -1770,34 +1675,22 @@ def _tm_asset_boundary(asset: str, asset_inventory: dict[str, Any]) -> str | Non
     return None
 
 
-def _build_threat_surface_mermaid(
-    entries: list[dict[str, Any]], asset_inventory: dict[str, Any],
-) -> str | None:
-    """Trust-boundary surface map (block D). Assets as nodes badged with their
-    STRIDE letters, grouped into trust-boundary subgraphs when the inventory
-    provides them, ``hot`` when an asset has an unmitigated (gap) threat. No
-    fabricated edges — clusters/nodes only, degrading to a flat list."""
+def _threat_surface_graph(
+    entries: list[dict[str, Any]], asset_inventory: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Trust-boundary surface map (block D) as structured nodes/edges.
+
+    Asset nodes are badged with their STRIDE/LINDDUN letters and flagged
+    ``hot`` on an unmitigated (gap) threat, optionally nested under boundary
+    compound parents drawn from the inventory. No edges are fabricated
+    (clusters only) so the map degrades gracefully to a flat node list.
+
+    Asset and trust-boundary names are adopter/agent-controlled, so labels
+    route through ``_safe_label`` and ids through ``_safe_node_id`` (the same
+    discipline used by the asset-graph view).
+    """
     if not entries:
         return None
-    # asset -> {letters:set, has_gap:bool}
-    assets: dict[str, dict[str, Any]] = {}
-    for e in entries:
-        a = e["asset"]
-        rec = assets.setdefault(a, {"letters": set(), "has_gap": False})
-        letter = e.get("stride_letter") or e.get("linddun_letter")
-        if letter:
-            rec["letters"].add(letter)
-        if not (e.get("mitigation") or "").strip():
-            rec["has_gap"] = True
-    inv = asset_inventory if isinstance(asset_inventory, dict) else {}
-    # group by boundary
-    clusters: dict[str | None, list[str]] = {}
-    for a in assets:
-        clusters.setdefault(_tm_asset_boundary(a, inv), []).append(a)
-    has_boundaries = any(k is not None for k in clusters)
-
-    lines = ["graph TD"]
-
     # STRIDE-then-LINDDUN ordering, de-duplicated (the two alphabets share
     # letters such as "I"/"D"/"N", so a naive concatenation double-counts).
     letter_order: list[str] = []
@@ -1805,50 +1698,36 @@ def _build_threat_surface_mermaid(
         if letter not in letter_order:
             letter_order.append(letter)
 
-    id_remap: dict[str, str] = {}
+    assets: dict[str, dict[str, Any]] = {}
+    for e in entries:
+        a = str(e.get("asset") or "—")
+        rec = assets.setdefault(a, {"letters": set(), "hot": False})
+        entry_letter = e.get("stride_letter") or e.get("linddun_letter")
+        if entry_letter:
+            rec["letters"].add(entry_letter)
+        if not (e.get("mitigation") or "").strip():
+            rec["hot"] = True
+    inv = asset_inventory if isinstance(asset_inventory, dict) else {}
+    nodes: list[dict[str, Any]] = []
+    boundary_ids: dict[str, str] = {}
 
-    def _node_id(a: str) -> str:
-        # Asset names are adopter/agent-controlled (00-context/asset-inventory
-        # + TM entries); guard the hashed-fallback collision like the asset-graph
-        # builders so two distinct names cannot alias onto one synthetic id.
-        nid = _safe_node_id(a, fallback_seed="tm_surface")
-        existing = next((r for r, s in id_remap.items() if s == nid), None)
-        if existing is not None and existing != a:
-            raise RuntimeError(
-                f"_safe_node_id collision: {existing!r} and {a!r} both → {nid!r}"
-            )
-        id_remap[a] = nid
-        return nid
-
-    def _node(a: str) -> str:
+    for a in sorted(assets):
         rec = assets[a]
-        letters = " ".join(
-            letter for letter in letter_order if letter in rec["letters"]
-        )
-        # Asset names are adopter-controlled, so sanitize the raw name through
-        # _safe_label (matching _build_mermaid / _build_mermaid_path_focused)
-        # BEFORE composing the framework-controlled "[letters]" badge.
-        safe_name = _safe_label(a)
-        label = f"{safe_name} [{letters}]" if letters else safe_name
-        nid = _node_id(a)
-        hot = ":::hot" if rec["has_gap"] else ""
-        return f'  {nid}["{label}"]{hot}'
-
-    if has_boundaries:
-        for boundary, members in clusters.items():
-            bid = _safe_node_id(boundary, fallback_seed="tm_boundary") if boundary else "unbounded"
-            # Trust-boundary names are adopter-controlled; sanitize like labels.
-            blabel = _safe_label(boundary) if boundary else "unbounded"
-            lines.append(f'  subgraph {bid}["{blabel}"]')
-            for a in sorted(members):
-                lines.append("  " + _node(a))
-            lines.append("  end")
-    else:
-        for a in sorted(assets):
-            lines.append(_node(a))
-
-    lines.append("  classDef hot fill:#fbe9e9,stroke:#c0392b,color:#7a1f1f;")
-    return "\n".join(lines)
+        letters = " ".join(L for L in letter_order if L in rec["letters"])
+        node: dict[str, Any] = {
+            "id": _safe_node_id(a, a), "type": "asset",
+            "label": _safe_label(a), "badge": letters, "hot": rec["hot"],
+        }
+        boundary = _tm_asset_boundary(a, inv)
+        if boundary:
+            bid = boundary_ids.get(boundary)
+            if bid is None:
+                bid = _safe_node_id("boundary:" + boundary, boundary)
+                boundary_ids[boundary] = bid
+                nodes.append({"id": bid, "type": "boundary", "label": _safe_label(boundary)})
+            node["parent"] = bid
+        nodes.append(node)
+    return {"nodes": nodes, "edges": []}
 
 
 def _tm_comparator_delta(
@@ -1910,7 +1789,7 @@ def threat_model_block(artifacts: RunArtifacts) -> dict[str, Any]:
         "entries": entries,
         "stride_matrix": _tm_stride_matrix(entries, methodology),
         "surface_coverage": _tm_surface_coverage(artifacts.threat_model_coverage),
-        "surface_mermaid": _build_threat_surface_mermaid(entries, artifacts.asset_inventory),
+        "surface_graph": _threat_surface_graph(entries, artifacts.asset_inventory),
         "comparator_delta": _tm_comparator_delta(normalized, supplied) if comparator else None,
     }
 
@@ -2016,7 +1895,7 @@ def build_apd_data(
              "entries": [],
              "stride_matrix": {"letters_present": [], "rows": []},
              "surface_coverage": None,
-             "surface_mermaid": None,
+             "surface_graph": None,
              "comparator_delta": None,
          }),
     ]

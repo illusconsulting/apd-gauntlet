@@ -6,10 +6,11 @@ All notable changes to this project will be documented in this file. Format base
 
 ### Added
 
-- **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, a trust-boundary surface map (Mermaid), and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared `MermaidGraph`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
+- **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, an interactive trust-boundary surface map, and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared interactive `GraphView`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
 
 ### Changed
 
+- **Report graphs are now interactive (Cytoscape.js).** The Attack-paths asset graph and the Threat-model surface map render with Cytoscape (dagre/fcose layouts) instead of static Mermaid — pan/zoom/drag, hover tooltips with provenance, and click-to-highlight-paths with two-way Attack-paths list↔graph cross-highlight. Mermaid was removed from the bundle (smaller `app.js`); the report stays self-contained/offline.
 - **`runs/` is now fully gitignored and no longer ships pre-built runs.** The three shipped example runs (crAPI, authentik, caldera) were removed from version control and `runs/` (the gauntlet's output directory) is ignored in its entirety, so a tool user cannot accidentally commit a sensitive security review. The single canonical fixture is now the synthetic `examples/apd-20260601-claim-event-bus/expected/` run; all tests, the report golden, and the dev-template demo data (`report-template/data.js`) were repointed to it, and the README quickstart now validates the example. The report transforms' divergent-shape regression coverage is preserved by the in-memory synthetic-shape unit tests in `test_transform_new_shapes.py` (no real-run fixtures required).
 
 ### Fixed

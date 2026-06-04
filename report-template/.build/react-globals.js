@@ -13,11 +13,15 @@
 // module-top evaluation time.
 import React from "react";
 import { createRoot } from "react-dom/client";
-import mermaid from "mermaid";
+import cytoscape from "cytoscape";
+import dagre from "cytoscape-dagre";
+import fcose from "cytoscape-fcose";
+cytoscape.use(dagre);
+cytoscape.use(fcose);
 
 window.React = React;
 window.ReactDOM = { createRoot };
-window.mermaid = mermaid;
+window.cytoscape = cytoscape;
 
 // The dev template's JSX modules use React hooks as bare free identifiers
 // (`useState(...)`, `useEffect(...)`, etc.) because the unbundled scripts share

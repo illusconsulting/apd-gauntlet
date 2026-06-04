@@ -217,71 +217,171 @@ const TIER_GOALS = {
   auditability: ["authenticity", "non_repudiation", "immutability"],
 };
 
-// ── Shared Mermaid graph (asset graph, threat-model surface map) ────────────
-// One self-contained component: renders a Mermaid `source` into an SVG keyed by
-// `idBase`, with a zoom toolbar (explicit %, 100%, fit-to-width) and
-// ctrl/cmd+wheel zoom. securityLevel:'strict' + flowchart.htmlLabels:false keep
-// adopter-controlled graph source from injecting markup (see AttackPaths notes).
-// `canvasModifier` appends `report-graph__canvas--<modifier>` to the canvas so
-// callers can opt into BEM modifier styling (e.g. "focused" caps the width of a
-// small path-focused subgraph instead of inheriting the asset-graph min-width).
-var GRAPH_ZOOM_MIN = 0.25, GRAPH_ZOOM_MAX = 4.0, GRAPH_ZOOM_STEP = 0.25;
+// ── Shared graph renderer (Cytoscape) — asset graph + threat-model surface map ──
+// One self-contained component: renders structured `{nodes, edges}` data keyed by
+// `idBase` with dagre (layered) or fcose (compound) layout, a zoom/fit toolbar,
+// pan/zoom/drag, hover tooltips (canvas text only — never HTML from adopter data),
+// and click-to-highlight (path selection in AttackPaths, neighborhood otherwise).
+// All node/edge colors are read from the report CSS tokens via getComputedStyle
+// so the graph recolors when the theme changes (MutationObserver on document.body).
+function _cssVar(name, fallback) {
+  const v = getComputedStyle(document.body).getPropertyValue(name).trim();
+  return v || fallback;
+}
 
-function MermaidGraph({ source, idBase, canvasModifier }) {
+function _graphStylesheet() {
+  const ink = _cssVar("--ink", "#1a1a1a");
+  const ink3 = _cssVar("--ink-3", "#888");
+  const paper = _cssVar("--paper", "#fff");
+  const paper2 = _cssVar("--paper-2", "#f4f4f4");
+  const rule = _cssVar("--rule", "#ddd");
+  const accent = _cssVar("--accent", "#3b6cb7");
+  const sevHigh = _cssVar("--sev-high", "#c0392b");
+  const sevLow = _cssVar("--sev-low", "#3a7d54");
+  return [
+    { selector: "node", style: {
+        "background-color": paper2, "border-color": rule, "border-width": 1,
+        "label": "data(label)", "color": ink, "font-size": 10, "text-wrap": "wrap",
+        "text-max-width": 120, "text-valign": "center", "text-halign": "center",
+        "padding": "6px", "shape": "round-rectangle", "width": "label", "height": "label" } },
+    { selector: 'node[type="attacker"]', style: { "shape": "diamond", "border-color": sevHigh, "border-width": 2 } },
+    { selector: 'node[type="crown_jewel"]', style: { "shape": "hexagon", "border-color": accent, "border-width": 2, "background-color": paper } },
+    { selector: 'node[type="identity"]', style: { "shape": "round-tag" } },
+    { selector: 'node[?hot]', style: { "border-color": sevHigh, "background-color": "color-mix(in srgb, " + sevHigh + " 14%, " + paper + ")" } },
+    { selector: 'node[type="boundary"]', style: { "background-color": paper, "background-opacity": 0.04, "border-style": "dashed", "border-color": ink3, "label": "data(label)", "text-valign": "top", "text-halign": "center", "font-size": 9, "color": ink3, "shape": "round-rectangle" } },
+    { selector: "edge", style: {
+        "width": 1.4, "line-color": rule, "target-arrow-color": rule,
+        "target-arrow-shape": "triangle", "curve-style": "bezier", "arrow-scale": 0.8 } },
+    { selector: 'edge[?bottleneck]', style: { "width": 3, "line-color": sevHigh, "target-arrow-color": sevHigh } },
+    { selector: 'edge[type="trust_boundary"]', style: { "line-style": "dashed", "line-color": ink3, "target-arrow-color": ink3 } },
+    { selector: 'edge[type="mitigated_by_capability"]', style: { "line-color": sevLow, "target-arrow-color": sevLow } },
+    { selector: ".dim", style: { "opacity": 0.15 } },
+    { selector: ".hl", style: { "opacity": 1, "z-index": 99 } },
+    { selector: 'edge.hl', style: { "width": 3, "line-color": accent, "target-arrow-color": accent } },
+    { selector: 'node.hl', style: { "border-color": accent, "border-width": 3 } },
+  ];
+}
+
+function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPathId = null, onSelectPath = null, compound = false }) {
   const ref = React.useRef(null);
-  const baseWidth = React.useRef(null);
-  const [zoom, setZoom] = React.useState(1.0);
-  const zoomRef = React.useRef(1.0);
+  const cyRef = React.useRef(null);
+  const tipRef = React.useRef(null);
 
-  function parseSvgNode(svg) {
-    const node = new DOMParser().parseFromString(svg, "image/svg+xml").documentElement;
-    node.removeAttribute("style"); node.removeAttribute("width"); node.removeAttribute("height");
-    return node;
+  function buildElements(g) {
+    const els = [];
+    (g.nodes || []).forEach((n) => {
+      const data = { id: n.id, label: n.badge ? `${n.label} [${n.badge}]` : n.label, type: n.type };
+      if (n.parent) data.parent = n.parent;
+      if (n.hot) data.hot = true;
+      if (n.provenance) data._prov = n.provenance;
+      els.push({ data });
+    });
+    (g.edges || []).forEach((e) => {
+      els.push({ data: { id: e.id, source: e.source, target: e.target, type: e.type,
+        bottleneck: e.bottleneck || undefined, finding_id: e.finding_id, capability_id: e.capability_id } });
+    });
+    return els;
   }
-  function svgNaturalWidth(n) {
-    const vb = n && n.getAttribute && n.getAttribute("viewBox");
-    if (vb) { const p = vb.trim().split(/\s+|,/); if (p.length >= 4) { const w = parseFloat(p[2]); if (w > 0) return w; } }
-    return null;
+
+  function layoutOpts() {
+    if (layout === "fcose") return { name: "fcose", animate: false, quality: "default", nodeSeparation: 80, padding: 20 };
+    return { name: "dagre", rankDir: "TB", nodeSep: 28, rankSep: 48, padding: 20 };
   }
-  function applyZoom(el, z, base) {
-    if (!el) return; const svg = el.querySelector("svg"); if (!svg) return;
-    if (z === null) { const w = el.parentElement ? el.parentElement.clientWidth : el.clientWidth; svg.style.width = w + "px"; }
-    else { svg.style.width = ((base || 2400) * z) + "px"; }
-  }
+
+  // Build / rebuild the graph when data changes.
   React.useEffect(() => {
-    if (!source || !window.mermaid || !ref.current) return;
-    window.mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "strict", flowchart: { htmlLabels: false } });
-    window.mermaid.render(idBase, source)
-      .then(({ svg }) => { const n = parseSvgNode(svg); baseWidth.current = svgNaturalWidth(n); ref.current.replaceChildren(n); applyZoom(ref.current, zoomRef.current, baseWidth.current); })
-      .catch((e) => { ref.current.textContent = "Graph render failed: " + e.message; });
-  }, [source, idBase]);
-  React.useEffect(() => { zoomRef.current = zoom; applyZoom(ref.current, zoom, baseWidth.current); }, [zoom]);
-  function onWheel(e) {
-    if (!e.ctrlKey && !e.metaKey) return; e.preventDefault();
-    setZoom((z) => { const cur = z === null ? 1.0 : z; const d = e.deltaY > 0 ? -GRAPH_ZOOM_STEP : GRAPH_ZOOM_STEP;
-      return Math.min(GRAPH_ZOOM_MAX, Math.max(GRAPH_ZOOM_MIN, Math.round((cur + d) / GRAPH_ZOOM_STEP) * GRAPH_ZOOM_STEP)); });
+    if (!graph || !(graph.nodes || []).length || !window.cytoscape || !ref.current) return;
+    const cy = window.cytoscape({
+      container: ref.current, elements: buildElements(graph),
+      style: _graphStylesheet(), layout: layoutOpts(),
+      wheelSensitivity: 0.2, boxSelectionEnabled: false, autoungrabify: false,
+    });
+    cyRef.current = cy;
+
+    // Hover tooltip (text only — no HTML from data).
+    const tip = tipRef.current;
+    cy.on("mouseover", "node", (ev) => {
+      const d = ev.target.data();
+      const prov = d._prov ? ` · ${d._prov.artifact || ""}${d._prov.locator ? " " + d._prov.locator : ""}` : "";
+      tip.textContent = `${d.label} (${d.type})${prov}`; tip.style.display = "block";
+    });
+    cy.on("mouseover", "edge", (ev) => {
+      const d = ev.target.data();
+      const ref2 = d.finding_id || d.capability_id ? ` · ${d.finding_id || d.capability_id}` : "";
+      tip.textContent = `${d.type}${ref2}`; tip.style.display = "block";
+    });
+    cy.on("mousemove", (ev) => {
+      if (tip.style.display === "block" && ev.renderedPosition) {
+        tip.style.left = ev.renderedPosition.x + 12 + "px";
+        tip.style.top = ev.renderedPosition.y + 12 + "px";
+      }
+    });
+    cy.on("mouseout", "node, edge", () => { tip.style.display = "none"; });
+
+    // Click-to-highlight.
+    cy.on("tap", "node", (ev) => {
+      const nodeId = ev.target.id();
+      if (paths && onSelectPath) {
+        // pick the first path whose edges touch this node
+        const hit = paths.find((p) => (p.edgeIds || []).some((eid) => {
+          const e = cy.getElementById(eid);
+          return e.nonempty() && (e.source().id() === nodeId || e.target().id() === nodeId);
+        }));
+        onSelectPath(hit ? hit.id : null);
+        if (!hit) highlightNeighborhood(cy, ev.target);
+      } else {
+        highlightNeighborhood(cy, ev.target);
+      }
+    });
+    cy.on("tap", (ev) => { if (ev.target === cy) { clearHighlight(cy); if (onSelectPath) onSelectPath(null); } });
+
+    return () => { cy.destroy(); cyRef.current = null; };
+  }, [graph, layout, compound, idBase]);
+
+  // Controlled path highlight (list ↔ graph cross-link).
+  React.useEffect(() => {
+    const cy = cyRef.current; if (!cy || !paths) return;
+    if (!selectedPathId) { clearHighlight(cy); return; }
+    const p = paths.find((x) => x.id === selectedPathId); if (!p) { clearHighlight(cy); return; }
+    const edges = cy.collection();
+    (p.edgeIds || []).forEach((eid) => { const e = cy.getElementById(eid); if (e.nonempty()) edges.merge(e); });
+    const hl = edges.union(edges.connectedNodes());
+    cy.elements().addClass("dim").removeClass("hl");
+    hl.removeClass("dim").addClass("hl");
+  }, [selectedPathId, paths]);
+
+  // Re-style on theme change.
+  React.useEffect(() => {
+    const obs = new MutationObserver(() => { if (cyRef.current) cyRef.current.style(_graphStylesheet()); });
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-theme", "data-sev"] });
+    return () => obs.disconnect();
+  }, []);
+
+  function highlightNeighborhood(cy, node) {
+    const hood = node.closedNeighborhood();
+    cy.elements().addClass("dim").removeClass("hl");
+    hood.removeClass("dim").addClass("hl");
   }
-  const pct = Math.round((zoom === null ? 1.0 : zoom) * 100) + "%";
-  if (!source) return null;
-  const canvasClass = canvasModifier
-    ? `report-graph__canvas report-graph__canvas--${canvasModifier}`
-    : "report-graph__canvas";
+  function clearHighlight(cy) { cy.elements().removeClass("dim").removeClass("hl"); }
+
+  if (!graph || !(graph.nodes || []).length) {
+    return <div className="empty-state empty-state--info">No graph data for this run.</div>;
+  }
   return (
-    <div className="report-graph__wrapper" onWheel={onWheel}>
+    <div className="report-graph__wrapper" style={{ position: "relative" }}>
       <div className="report-graph__toolbar">
-        <button onClick={() => setZoom((z) => Math.max(GRAPH_ZOOM_MIN, (z === null ? 1.0 : z) - GRAPH_ZOOM_STEP))} title="Zoom out">−</button>
-        <span className="zoom-level">{pct}</span>
-        <button onClick={() => setZoom((z) => Math.min(GRAPH_ZOOM_MAX, (z === null ? 1.0 : z) + GRAPH_ZOOM_STEP))} title="Zoom in">+</button>
-        <button onClick={() => setZoom(1.0)} title="Reset to 100%">100%</button>
-        <button onClick={() => setZoom(null)} title="Fit to width">fit</button>
+        <button onClick={() => cyRef.current && cyRef.current.zoom(cyRef.current.zoom() * 0.8)} title="Zoom out">−</button>
+        <button onClick={() => cyRef.current && cyRef.current.zoom(cyRef.current.zoom() * 1.25)} title="Zoom in">+</button>
+        <button onClick={() => cyRef.current && cyRef.current.fit(undefined, 24)} title="Fit">fit</button>
       </div>
-      <div ref={ref} className={canvasClass} />
+      <div ref={ref} className="report-graph__canvas" />
+      <div ref={tipRef} className="report-graph__tooltip" style={{ display: "none" }} />
     </div>
   );
 }
 
 Object.assign(window, {
   SeverityPill, DispositionMark, MaturityMark, CopyPill, TaxonomyTag, TagRow, ToastHost, DiagnosticsBanner,
-  MermaidGraph,
+  GraphView,
   GOAL_LABELS, GOAL_SHORT, TIER_LABELS, TIER_GOALS,
 });
