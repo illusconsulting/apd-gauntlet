@@ -45,3 +45,10 @@ def test_load_run_report_data_present(example_run: pathlib.Path) -> None:
     """The example fixture ships with report-data.yaml; loader returns a non-None dict."""
     artifacts = load_run(example_run)
     assert artifacts.report_data is not None
+
+
+def test_load_run_reads_threat_model_coverage(example_run: pathlib.Path) -> None:
+    artifacts = load_run(example_run)
+    # The example ships 40-synthesis/threat-model-coverage.yaml (evaluator output).
+    assert isinstance(artifacts.threat_model_coverage, dict)
+    assert isinstance(artifacts.threat_model_coverage.get("surface_coverage"), list)

@@ -747,6 +747,7 @@
 .matrix-cell--covered { background: var(--cell-covered); color: var(--cell-covered-text); }
 .matrix-cell--gapped  { background: var(--cell-gapped); color: var(--cell-gapped-text); }
 .matrix-cell--both    { background: var(--cell-both); color: var(--cell-both-text); }
+.matrix-cell--partial { background: var(--cell-both); color: var(--cell-both-text); }
 .matrix-cell--silent  { background: var(--cell-silent); color: var(--cell-silent-text); opacity: 0.6; }
 
 .legend {
@@ -933,10 +934,10 @@
   margin-bottom: var(--space-3);
   color: var(--ink);
 }
-.attack-paths__graph-wrapper {
+.report-graph__wrapper {
   position: relative;  /* anchor for the absolute-positioned toolbar */
 }
-.attack-paths__zoom-toolbar {
+.report-graph__toolbar {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
@@ -952,7 +953,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
-.attack-paths__zoom-toolbar button {
+.report-graph__toolbar button {
   appearance: none;
   background: transparent;
   border: none;
@@ -963,26 +964,26 @@
   font: inherit;
   line-height: 1;
 }
-.attack-paths__zoom-toolbar button:hover {
+.report-graph__toolbar button:hover {
   background: var(--surface-2);
 }
-.attack-paths__zoom-toolbar button:disabled {
+.report-graph__toolbar button:disabled {
   color: var(--ink-3);
   cursor: not-allowed;
 }
-.attack-paths__zoom-toolbar .zoom-level {
+.report-graph__toolbar .zoom-level {
   min-width: 44px;
   text-align: center;
   color: var(--ink-2);
 }
-.attack-paths__mermaid {
+.report-graph__canvas {
   background: var(--surface-1);
   border: 1px solid var(--border-2);
   border-radius: 8px;
   padding: var(--space-4);
   overflow-x: auto;
 }
-.attack-paths__mermaid svg {
+.report-graph__canvas svg {
   min-width: 2400px !important;   /* 41 nodes need ~60px each for label readability */
   max-width: none !important;     /* defeat Mermaid's inline style="max-width: NNNpx" */
   height: auto !important;
@@ -990,27 +991,27 @@
 /* Mermaid 10+ renders node labels inside <foreignObject> as HTML <div> nodes,
    not as <text> elements. Target both so labels are visible regardless of the
    renderer Mermaid picks based on the security level. */
-.attack-paths__mermaid svg .nodeLabel,
-.attack-paths__mermaid svg .node .label,
-.attack-paths__mermaid svg .node text,
-.attack-paths__mermaid svg foreignObject div {
+.report-graph__canvas svg .nodeLabel,
+.report-graph__canvas svg .node .label,
+.report-graph__canvas svg .node text,
+.report-graph__canvas svg foreignObject div {
   font-size: 13px !important;
   color: var(--ink) !important;
   fill: var(--ink) !important;
   font-family: var(--font-sans) !important;
 }
-.attack-paths__mermaid svg .edgeLabel,
-.attack-paths__mermaid svg .edgeLabel rect,
-.attack-paths__mermaid svg .edgeLabel foreignObject div {
+.report-graph__canvas svg .edgeLabel,
+.report-graph__canvas svg .edgeLabel rect,
+.report-graph__canvas svg .edgeLabel foreignObject div {
   font-size: 11px !important;
   color: var(--ink-2) !important;
   fill: var(--ink-2) !important;
 }
-.attack-paths__mermaid--focused {
+.report-graph__canvas--focused {
   /* Cap the focused-subgraph container so the SVG doesn't stretch the whole page */
   max-width: 720px;
 }
-.attack-paths__mermaid--focused svg {
+.report-graph__canvas--focused svg {
   /* Defeat the parent's !important min-width for the focused subgraph */
   min-width: unset !important;
   max-width: 100% !important;

@@ -6,9 +6,11 @@ synthesizer's outputs at:
     runs/<run_id>/40-synthesis/report-html/index.html
 
 Open the file in any recent browser (offline — no network needed). The bundle
-contains six tabs (Overview, Findings, Capabilities, Coverage, Attack paths,
+contains six core tabs (Overview, Findings, Capabilities, Coverage, Attack paths,
 Annexes) sourced from the existing `40-synthesis/*.yaml` artifacts plus the
-synthesizer-emitted `report-data.yaml`.
+synthesizer-emitted `report-data.yaml`. A seventh **Threat model** tab appears
+between Coverage and Attack paths only when a threat model exists for the run
+(see [Threat model tab](#threat-model-tab)); it is omitted entirely otherwise.
 
 The Coverage tab renders taxonomy tooltips for every cited control or technique
 ID. Tooltip families include NIST 800-53r5, MITRE ATT&CK, CWE, OWASP (web /
@@ -16,6 +18,50 @@ API / LLM), MITRE D3FEND, and — when `mitre_atlas` is declared for the run —
 **MITRE ATLAS** (adversarial-ML techniques). A bare ID in a tooltip (title
 equals the ID string) means the reference catalog for that family failed to
 load; this is caught by the completeness gate's `taxonomy_titles_resolve` check.
+
+## Threat model tab
+
+When the run has a threat model — either user-supplied or authored by the
+gauntlet's baseline threat-model author — the report adds a **Threat model** tab
+between Coverage and Attack paths. It surfaces the modeled threats and how well
+they are mitigated, in the report's existing design language (it reuses the
+shared `MermaidGraph` component and the `apd-matrix`, `coverage-bar`, and
+`contradiction` classes — no bespoke styling). When no threat model exists (no
+user-supplied TM and none authored), the tab is **omitted entirely** rather than
+rendered empty, and the remaining tabs renumber automatically.
+
+A provenance banner at the top of the scene states whether the model is an
+authored baseline or user-supplied, which agent generated it, and — for an
+authored model — the source artifact it was grounded from.
+
+The scene is composed of up to five blocks:
+
+- **Block A — STRIDE × asset matrix.** A matrix with assets/surfaces as rows and
+  the modeled STRIDE (or LINDDUN) categories as columns. Each cell is `covered`
+  (every threat in the cell is mitigated), `partial` (some mitigated), `gap`
+  (none mitigated), or `silent` (the category was not modeled for that asset).
+  Rows are ordered by descending threat count.
+- **Block B — Threat entries.** A table of every modeled threat: asset, threat,
+  STRIDE/LINDDUN letter, mitigation (or a `— none` marker for gaps), extraction
+  confidence, inferred APD goals, and the source locator.
+- **Block C — Coverage by surface.** Per-surface STRIDE-category coverage from
+  the threat-model evaluator (present categories, absent categories, entry count,
+  and a proportion bar), plus a summary of coverage gaps, contradictions, and
+  silences the evaluator emitted. **Requires the evaluator** — this block is
+  absent when only the author ran (no `threat-model-coverage.yaml`).
+- **Block D — Surface map.** A Mermaid trust-boundary map: assets are nodes
+  badged with their STRIDE letters, grouped into trust-boundary subgraphs when
+  the asset inventory provides boundaries (degrading to a flat node list
+  otherwise), and marked `hot` when an asset has an unmitigated (gap) threat. No
+  edges are fabricated — clusters and nodes only.
+- **Block E — Supplied vs authored.** A comparator shown only when **both** a
+  user-supplied TM and the authored baseline exist. It groups threats into
+  authored-only, supplied-only, and corroborated (present in both, matched
+  case-insensitively on asset + threat).
+
+The completeness gate's `threat_model_scene_coherent` structural check guards the
+scene: it is exempt when the scene is legitimately omitted (no threat model), and
+fails if the scene is marked present but carries no entries or matrix rows.
 
 ## Manual regeneration
 

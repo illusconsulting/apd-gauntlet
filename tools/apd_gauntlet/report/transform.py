@@ -1658,8 +1658,221 @@ def posture_summary_section(
     }
 
 
+_STRIDE_LETTERS = ["S", "T", "R", "I", "D", "E"]
+_LINDDUN_LETTERS = ["L", "I", "N", "D", "D", "U", "N"]
+
+
+def _tm_entries(normalized: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Normalize TM entries into the report-entry shape (block B)."""
+    raw = normalized.get("entries") if isinstance(normalized, dict) else None
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for e in raw:
+        if not isinstance(e, dict):
+            continue
+        refs = e.get("framework_refs") or {}
+        out.append({
+            "asset": str(e.get("asset") or "—"),
+            "threat": str(e.get("threat") or ""),
+            "stride_letter": refs.get("stride_letter"),
+            "linddun_letter": refs.get("linddun_letter"),
+            "mitigation": str(e.get("mitigation") or ""),
+            "confidence": e.get("extraction_confidence"),
+            "source_locator": e.get("source_locator"),
+            "apd_goals": [g for g in (e.get("inferred_apd_goals") or []) if isinstance(g, str)],
+        })
+    return out
+
+
+def _tm_cell_status(cell_entries: list[dict[str, Any]]) -> str:
+    """silent (no entry) | gap (none mitigated) | covered (all mitigated) | partial (some)."""
+    if not cell_entries:
+        return "silent"
+    mitigated = [bool((e.get("mitigation") or "").strip()) for e in cell_entries]
+    if all(mitigated):
+        return "covered"
+    if any(mitigated):
+        return "partial"
+    return "gap"
+
+
+def _tm_stride_matrix(
+    entries: list[dict[str, Any]], methodology: str | None,
+) -> dict[str, Any]:
+    """Asset (rows) × methodology-letter (cols) status matrix (block A)."""
+    linddun = str(methodology or "").lower() == "linddun"
+    key = "linddun_letter" if linddun else "stride_letter"
+    order = _LINDDUN_LETTERS if linddun else _STRIDE_LETTERS
+    by_asset: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for e in entries:
+        letter = e.get(key)
+        if letter not in order:
+            continue
+        by_asset.setdefault(e["asset"], {}).setdefault(letter, []).append(e)
+    # de-dup order while preserving STRIDE/LINDDUN sequence
+    seen: list[str] = []
+    for letter in order:
+        if letter not in seen and any(letter in cells for cells in by_asset.values()):
+            seen.append(letter)
+    letters_present = seen
+    rows: list[dict[str, Any]] = []
+    for asset, cells in by_asset.items():
+        count = sum(len(v) for v in cells.values())
+        rows.append({
+            "asset": asset,
+            "cells": {L: _tm_cell_status(cells.get(L, [])) for L in letters_present},
+            "_count": count,
+        })
+    rows.sort(key=lambda r: (-r["_count"], r["asset"]))
+    for r in rows:
+        del r["_count"]
+    return {"letters_present": letters_present, "rows": rows}
+
+
+def _tm_surface_coverage(coverage: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Per-surface STRIDE-category coverage from the evaluator (block C)."""
+    if not isinstance(coverage, dict):
+        return None
+    raw = coverage.get("surface_coverage")
+    if not isinstance(raw, list):
+        return None
+    rows = []
+    for s in raw:
+        if not isinstance(s, dict):
+            continue
+        rows.append({
+            "surface": str(s.get("surface") or "—"),
+            "present": [c for c in (s.get("categories_present") or []) if isinstance(c, str)],
+            "absent": [c for c in (s.get("categories_absent") or []) if isinstance(c, str)],
+            "entry_count": int(s.get("tm_entry_count") or 0),
+        })
+    summary = coverage.get("summary") if isinstance(coverage.get("summary"), dict) else {}
+    return {"rows": rows, "summary": summary}
+
+
+def _tm_asset_boundary(asset: str, asset_inventory: dict[str, Any]) -> str | None:
+    """Resolve an asset's trust-boundary name from asset-inventory, or None."""
+    boundaries = (
+        asset_inventory.get("trust_boundaries")
+        if isinstance(asset_inventory, dict)
+        else None
+    )
+    if not isinstance(boundaries, list):
+        return None
+    for b in boundaries:
+        if not isinstance(b, dict):
+            continue
+        members = b.get("assets") or b.get("members") or []
+        if isinstance(members, list) and asset in members:
+            name = b.get("name") or b.get("boundary") or b.get("boundary_id")
+            return str(name) if name else None
+    return None
+
+
+def _build_threat_surface_mermaid(
+    entries: list[dict[str, Any]], asset_inventory: dict[str, Any],
+) -> str | None:
+    """Trust-boundary surface map (block D). Assets as nodes badged with their
+    STRIDE letters, grouped into trust-boundary subgraphs when the inventory
+    provides them, ``hot`` when an asset has an unmitigated (gap) threat. No
+    fabricated edges — clusters/nodes only, degrading to a flat list."""
+    if not entries:
+        return None
+    # asset -> {letters:set, has_gap:bool}
+    assets: dict[str, dict[str, Any]] = {}
+    for e in entries:
+        a = e["asset"]
+        rec = assets.setdefault(a, {"letters": set(), "has_gap": False})
+        letter = e.get("stride_letter") or e.get("linddun_letter")
+        if letter:
+            rec["letters"].add(letter)
+        if not (e.get("mitigation") or "").strip():
+            rec["has_gap"] = True
+    inv = asset_inventory if isinstance(asset_inventory, dict) else {}
+    # group by boundary
+    clusters: dict[str | None, list[str]] = {}
+    for a in assets:
+        clusters.setdefault(_tm_asset_boundary(a, inv), []).append(a)
+    has_boundaries = any(k is not None for k in clusters)
+
+    lines = ["graph TD"]
+
+    # STRIDE-then-LINDDUN ordering, de-duplicated (the two alphabets share
+    # letters such as "I"/"D"/"N", so a naive concatenation double-counts).
+    letter_order: list[str] = []
+    for letter in _STRIDE_LETTERS + _LINDDUN_LETTERS:
+        if letter not in letter_order:
+            letter_order.append(letter)
+
+    id_remap: dict[str, str] = {}
+
+    def _node_id(a: str) -> str:
+        # Asset names are adopter/agent-controlled (00-context/asset-inventory
+        # + TM entries); guard the hashed-fallback collision like the asset-graph
+        # builders so two distinct names cannot alias onto one synthetic id.
+        nid = _safe_node_id(a, fallback_seed="tm_surface")
+        existing = next((r for r, s in id_remap.items() if s == nid), None)
+        if existing is not None and existing != a:
+            raise RuntimeError(
+                f"_safe_node_id collision: {existing!r} and {a!r} both → {nid!r}"
+            )
+        id_remap[a] = nid
+        return nid
+
+    def _node(a: str) -> str:
+        rec = assets[a]
+        letters = " ".join(
+            letter for letter in letter_order if letter in rec["letters"]
+        )
+        # Asset names are adopter-controlled, so sanitize the raw name through
+        # _safe_label (matching _build_mermaid / _build_mermaid_path_focused)
+        # BEFORE composing the framework-controlled "[letters]" badge.
+        safe_name = _safe_label(a)
+        label = f"{safe_name} [{letters}]" if letters else safe_name
+        nid = _node_id(a)
+        hot = ":::hot" if rec["has_gap"] else ""
+        return f'  {nid}["{label}"]{hot}'
+
+    if has_boundaries:
+        for boundary, members in clusters.items():
+            bid = _safe_node_id(boundary, fallback_seed="tm_boundary") if boundary else "unbounded"
+            # Trust-boundary names are adopter-controlled; sanitize like labels.
+            blabel = _safe_label(boundary) if boundary else "unbounded"
+            lines.append(f'  subgraph {bid}["{blabel}"]')
+            for a in sorted(members):
+                lines.append("  " + _node(a))
+            lines.append("  end")
+    else:
+        for a in sorted(assets):
+            lines.append(_node(a))
+
+    lines.append("  classDef hot fill:#fbe9e9,stroke:#c0392b,color:#7a1f1f;")
+    return "\n".join(lines)
+
+
+def _tm_comparator_delta(
+    normalized: dict[str, Any] | None, supplied: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Authored-vs-supplied delta keyed on (asset, threat) case-insensitively."""
+    def _index(doc: dict[str, Any] | None) -> dict[tuple[str, str], dict[str, Any]]:
+        out: dict[tuple[str, str], dict[str, Any]] = {}
+        entries = doc.get("entries") if isinstance(doc, dict) else None
+        for e in entries or []:
+            if isinstance(e, dict):
+                key = (str(e.get("asset") or "").lower(), str(e.get("threat") or "").lower())
+                out[key] = {"asset": e.get("asset"), "threat": e.get("threat")}
+        return out
+    a, s = _index(normalized), _index(supplied)
+    authored_only = [v for k, v in a.items() if k not in s]
+    supplied_only = [v for k, v in s.items() if k not in a]
+    corroborated = [v for k, v in a.items() if k in s]
+    return {"authored_only": authored_only, "supplied_only": supplied_only,
+            "corroborated": corroborated}
+
+
 def threat_model_block(artifacts: RunArtifacts) -> dict[str, Any]:
-    """Return the data.threat_model block for the HTML report.
+    """Return the data.threat_model block for the HTML report (scene + provenance).
 
     Recognizes the always-on authored baseline (``generated_by:
     threat_model_author``) and the supplied-TM comparator (the recon-parsed
@@ -1673,19 +1886,32 @@ def threat_model_block(artifacts: RunArtifacts) -> dict[str, Any]:
     present = isinstance(normalized, dict)
     generated_by = normalized.get("generated_by") if isinstance(normalized, dict) else None
     authored = generated_by == "threat_model_author"
-    entries = normalized.get("entries") if isinstance(normalized, dict) else None
-    entry_count = len(entries) if isinstance(entries, list) else 0
+    methodology = normalized.get("methodology") if isinstance(normalized, dict) else None
+    source_artifact = normalized.get("source_artifact") if isinstance(normalized, dict) else None
     supplied_present = isinstance(supplied, dict)
+    # Comparator is the supplied-vs-AUTHORED diff only (spec C6): key on the
+    # authored baseline, NOT mere presence, so a recon-parsed canonical TM +
+    # a supplied sibling is not falsely flagged as a comparator.
+    comparator = authored and supplied_present
+
+    entries = _tm_entries(normalized)
+    grounded = sum(1 for e in entries if e["mitigation"].strip())
     return {
         "present": present,
         "authored": authored,
         "supplied_present": supplied_present,
-        # Comparator is the supplied-vs-AUTHORED diff only (spec C6): key on the
-        # authored baseline, NOT mere presence, so a recon-parsed canonical TM +
-        # a supplied sibling is not falsely flagged as a comparator.
-        "comparator": authored and supplied_present,
-        "entry_count": entry_count,
+        "comparator": comparator,
         "generated_by": generated_by,
+        "methodology": methodology,
+        "source_artifact": source_artifact,
+        "entry_count": len(entries),
+        "grounded_count": grounded,
+        "gap_count": len(entries) - grounded,
+        "entries": entries,
+        "stride_matrix": _tm_stride_matrix(entries, methodology),
+        "surface_coverage": _tm_surface_coverage(artifacts.threat_model_coverage),
+        "surface_mermaid": _build_threat_surface_mermaid(entries, artifacts.asset_inventory),
+        "comparator_delta": _tm_comparator_delta(normalized, supplied) if comparator else None,
     }
 
 
@@ -1781,8 +2007,17 @@ def build_apd_data(
              "authored": False,
              "supplied_present": False,
              "comparator": False,
-             "entry_count": 0,
              "generated_by": None,
+             "methodology": None,
+             "source_artifact": None,
+             "entry_count": 0,
+             "grounded_count": 0,
+             "gap_count": 0,
+             "entries": [],
+             "stride_matrix": {"letters_present": [], "rows": []},
+             "surface_coverage": None,
+             "surface_mermaid": None,
+             "comparator_delta": None,
          }),
     ]
 
@@ -1816,6 +2051,11 @@ def build_apd_data(
     caveat = supplement.get("domain_pack_caveat")
     if caveat:
         out["domain_pack_caveat"] = caveat
+    # The threat-model tab is gated on this flag (app.jsx). Read it off the
+    # already-assembled threat_model section so the placeholder path (a section
+    # transformer fault) still yields ``has_threat_model: False`` rather than
+    # raising on a missing key.
+    out["meta"]["has_threat_model"] = bool((out.get("threat_model") or {}).get("present"))
     out["meta"]["section_errors"] = section_errors
     out["meta"]["warnings"] = warnings
     return out

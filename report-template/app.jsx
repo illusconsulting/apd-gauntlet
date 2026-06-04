@@ -9,20 +9,25 @@ const DEFAULTS = /*EDITMODE-BEGIN*/{
   "findingsLayout": "two-pane"
 }/*EDITMODE-END*/;
 
-const TABS = [
-  { id: "overview",     num: "01", label: "Overview" },
-  { id: "findings",     num: "02", label: "Findings" },
-  { id: "capabilities", num: "03", label: "Capabilities" },
-  { id: "coverage",     num: "04", label: "Coverage" },
-  { id: "attack_paths", num: "05", label: "Attack paths" },
-  { id: "annexes",      num: "06", label: "Annexes" },
-];
-
 function App() {
   const data = window.APD_DATA;
   const [t, setTweak] = useTweaks(DEFAULTS);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedFinding, setSelectedFinding] = useState(null);
+
+  // Tab list is data-driven so the Threat model tab is omitted entirely when no
+  // threat model exists; `num` is derived from index so renumbering is automatic.
+  const BASE_TABS = [
+    { id: "overview", label: "Overview" },
+    { id: "findings", label: "Findings" },
+    { id: "capabilities", label: "Capabilities" },
+    { id: "coverage", label: "Coverage" },
+    ...(data.threat_model && data.threat_model.present
+      ? [{ id: "threat_model", label: "Threat model" }] : []),
+    { id: "attack_paths", label: "Attack paths" },
+    { id: "annexes", label: "Annexes" },
+  ];
+  const TABS = BASE_TABS.map((t, i) => ({ ...t, num: String(i + 1).padStart(2, "0") }));
 
   // Apply tweaks → data attributes on <body>
   useEffect(() => {
@@ -115,6 +120,7 @@ function App() {
         )}
         {activeTab === "capabilities" && <Capabilities data={data} />}
         {activeTab === "coverage" && <Coverage data={data} />}
+        {activeTab === "threat_model" && <ThreatModel data={data} />}
         {activeTab === "attack_paths" && <AttackPaths data={data} />}
         {activeTab === "annexes" && (
           <Annexes data={data} onOpenFinding={onOpenFinding} />

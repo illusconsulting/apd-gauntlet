@@ -52,6 +52,7 @@ window.APD_DATA = {
         "count": 170
       }
     },
+    "has_threat_model": true,
     "section_errors": {},
     "warnings": []
   },
@@ -10411,7 +10412,243 @@ window.APD_DATA = {
     "authored": false,
     "supplied_present": false,
     "comparator": false,
+    "generated_by": "threat_model_recon",
+    "methodology": "stride",
+    "source_artifact": "examples/apd-20260601-claim-event-bus/inputs/threat-model.json",
     "entry_count": 11,
-    "generated_by": "threat_model_recon"
+    "grounded_count": 11,
+    "gap_count": 0,
+    "entries": [
+      {
+        "asset": "claim-ingress-API",
+        "threat": "Pharmacy credential theft via phishing",
+        "stride_letter": "S",
+        "linddun_letter": null,
+        "mitigation": "MFA required on pharmacy portal; rotating short-lived tokens",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[0].threats[0]",
+        "apd_goals": [
+          "authenticity"
+        ]
+      },
+      {
+        "asset": "claim-ingress-API",
+        "threat": "Replay of submitted claim with altered NDC",
+        "stride_letter": "T",
+        "linddun_letter": null,
+        "mitigation": "Payload signing with HMAC over canonical JSON",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[0].threats[1]",
+        "apd_goals": [
+          "integrity"
+        ]
+      },
+      {
+        "asset": "claim-ingress-API",
+        "threat": "Token in CloudFront access logs",
+        "stride_letter": "I",
+        "linddun_letter": null,
+        "mitigation": "CloudFront logging filters strip Authorization header",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[0].threats[2]",
+        "apd_goals": [
+          "confidentiality"
+        ]
+      },
+      {
+        "asset": "claim-ingress-API",
+        "threat": "High-volume duplicate submission DoS",
+        "stride_letter": "D",
+        "linddun_letter": null,
+        "mitigation": "Rate limiting at API gateway",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[0].threats[3]",
+        "apd_goals": [
+          "availability"
+        ]
+      },
+      {
+        "asset": "claim-ingress-API",
+        "threat": "Pharmacy account elevated via missing tenant check",
+        "stride_letter": "E",
+        "linddun_letter": null,
+        "mitigation": "Tenant ID validated on every claim against pharmacy-to-tenant mapping",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[0].threats[4]",
+        "apd_goals": [
+          "authenticity",
+          "integrity"
+        ]
+      },
+      {
+        "asset": "adjudication-to-pricing",
+        "threat": "PHI in transit between adjudication and pricing services",
+        "stride_letter": "I",
+        "linddun_letter": null,
+        "mitigation": "TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[1].threats[0]",
+        "apd_goals": [
+          "confidentiality"
+        ]
+      },
+      {
+        "asset": "audit-log-writer",
+        "threat": "Service account compromise allows audit write impersonation",
+        "stride_letter": "S",
+        "linddun_letter": null,
+        "mitigation": "Service account isolation per writer process",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[2].threats[0]",
+        "apd_goals": [
+          "authenticity"
+        ]
+      },
+      {
+        "asset": "audit-log-writer",
+        "threat": "Audit entry modification after write",
+        "stride_letter": "T",
+        "linddun_letter": null,
+        "mitigation": "Write-once storage on DynamoDB with deny-update IAM policy",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[2].threats[1]",
+        "apd_goals": [
+          "integrity"
+        ]
+      },
+      {
+        "asset": "audit-log-writer",
+        "threat": "Audit entries leak PHI in error fields",
+        "stride_letter": "I",
+        "linddun_letter": null,
+        "mitigation": "Error redaction in audit serializer",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[2].threats[2]",
+        "apd_goals": [
+          "confidentiality"
+        ]
+      },
+      {
+        "asset": "audit-log-writer",
+        "threat": "Audit writer DOS via flood",
+        "stride_letter": "D",
+        "linddun_letter": null,
+        "mitigation": "Per-source rate limit",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[2].threats[3]",
+        "apd_goals": [
+          "availability"
+        ]
+      },
+      {
+        "asset": "audit-log-writer",
+        "threat": "Direct DynamoDB write bypasses audit serializer",
+        "stride_letter": "E",
+        "linddun_letter": null,
+        "mitigation": "IAM policy restricts table writes to audit-writer role",
+        "confidence": "high",
+        "source_locator": "diagrams[0].cells[2].threats[4]",
+        "apd_goals": [
+          "authenticity",
+          "integrity"
+        ]
+      }
+    ],
+    "stride_matrix": {
+      "letters_present": [
+        "S",
+        "T",
+        "I",
+        "D",
+        "E"
+      ],
+      "rows": [
+        {
+          "asset": "audit-log-writer",
+          "cells": {
+            "S": "covered",
+            "T": "covered",
+            "I": "covered",
+            "D": "covered",
+            "E": "covered"
+          }
+        },
+        {
+          "asset": "claim-ingress-API",
+          "cells": {
+            "S": "covered",
+            "T": "covered",
+            "I": "covered",
+            "D": "covered",
+            "E": "covered"
+          }
+        },
+        {
+          "asset": "adjudication-to-pricing",
+          "cells": {
+            "S": "silent",
+            "T": "silent",
+            "I": "covered",
+            "D": "silent",
+            "E": "silent"
+          }
+        }
+      ]
+    },
+    "surface_coverage": {
+      "rows": [
+        {
+          "surface": "claim-ingress-API",
+          "present": [
+            "S",
+            "T",
+            "I",
+            "D",
+            "E"
+          ],
+          "absent": [
+            "R"
+          ],
+          "entry_count": 5
+        },
+        {
+          "surface": "adjudication-to-pricing",
+          "present": [
+            "I"
+          ],
+          "absent": [
+            "S",
+            "T",
+            "R",
+            "D",
+            "E"
+          ],
+          "entry_count": 1
+        },
+        {
+          "surface": "audit-log-writer",
+          "present": [
+            "S",
+            "T",
+            "I",
+            "D",
+            "E"
+          ],
+          "absent": [
+            "R"
+          ],
+          "entry_count": 5
+        }
+      ],
+      "summary": {
+        "total_entries": 11,
+        "contradictions_emitted": 1,
+        "silences_emitted": 1,
+        "coverage_gaps_emitted": 1,
+        "surfaces_examined": 3
+      }
+    },
+    "surface_mermaid": "graph TD\n  adjudication-to-pricing[\"adjudication-to-pricing [I]\"]\n  audit-log-writer[\"audit-log-writer [S T I D E]\"]\n  claim-ingress-API[\"claim-ingress-API [S T I D E]\"]\n  classDef hot fill:#fbe9e9,stroke:#c0392b,color:#7a1f1f;",
+    "comparator_delta": null
   }
 };

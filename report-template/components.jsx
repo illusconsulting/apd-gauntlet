@@ -217,7 +217,71 @@ const TIER_GOALS = {
   auditability: ["authenticity", "non_repudiation", "immutability"],
 };
 
+// ── Shared Mermaid graph (asset graph, threat-model surface map) ────────────
+// One self-contained component: renders a Mermaid `source` into an SVG keyed by
+// `idBase`, with a zoom toolbar (explicit %, 100%, fit-to-width) and
+// ctrl/cmd+wheel zoom. securityLevel:'strict' + flowchart.htmlLabels:false keep
+// adopter-controlled graph source from injecting markup (see AttackPaths notes).
+// `canvasModifier` appends `report-graph__canvas--<modifier>` to the canvas so
+// callers can opt into BEM modifier styling (e.g. "focused" caps the width of a
+// small path-focused subgraph instead of inheriting the asset-graph min-width).
+var GRAPH_ZOOM_MIN = 0.25, GRAPH_ZOOM_MAX = 4.0, GRAPH_ZOOM_STEP = 0.25;
+
+function MermaidGraph({ source, idBase, canvasModifier }) {
+  const ref = React.useRef(null);
+  const baseWidth = React.useRef(null);
+  const [zoom, setZoom] = React.useState(1.0);
+  const zoomRef = React.useRef(1.0);
+
+  function parseSvgNode(svg) {
+    const node = new DOMParser().parseFromString(svg, "image/svg+xml").documentElement;
+    node.removeAttribute("style"); node.removeAttribute("width"); node.removeAttribute("height");
+    return node;
+  }
+  function svgNaturalWidth(n) {
+    const vb = n && n.getAttribute && n.getAttribute("viewBox");
+    if (vb) { const p = vb.trim().split(/\s+|,/); if (p.length >= 4) { const w = parseFloat(p[2]); if (w > 0) return w; } }
+    return null;
+  }
+  function applyZoom(el, z, base) {
+    if (!el) return; const svg = el.querySelector("svg"); if (!svg) return;
+    if (z === null) { const w = el.parentElement ? el.parentElement.clientWidth : el.clientWidth; svg.style.width = w + "px"; }
+    else { svg.style.width = ((base || 2400) * z) + "px"; }
+  }
+  React.useEffect(() => {
+    if (!source || !window.mermaid || !ref.current) return;
+    window.mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "strict", flowchart: { htmlLabels: false } });
+    window.mermaid.render(idBase, source)
+      .then(({ svg }) => { const n = parseSvgNode(svg); baseWidth.current = svgNaturalWidth(n); ref.current.replaceChildren(n); applyZoom(ref.current, zoomRef.current, baseWidth.current); })
+      .catch((e) => { ref.current.textContent = "Graph render failed: " + e.message; });
+  }, [source, idBase]);
+  React.useEffect(() => { zoomRef.current = zoom; applyZoom(ref.current, zoom, baseWidth.current); }, [zoom]);
+  function onWheel(e) {
+    if (!e.ctrlKey && !e.metaKey) return; e.preventDefault();
+    setZoom((z) => { const cur = z === null ? 1.0 : z; const d = e.deltaY > 0 ? -GRAPH_ZOOM_STEP : GRAPH_ZOOM_STEP;
+      return Math.min(GRAPH_ZOOM_MAX, Math.max(GRAPH_ZOOM_MIN, Math.round((cur + d) / GRAPH_ZOOM_STEP) * GRAPH_ZOOM_STEP)); });
+  }
+  const pct = Math.round((zoom === null ? 1.0 : zoom) * 100) + "%";
+  if (!source) return null;
+  const canvasClass = canvasModifier
+    ? `report-graph__canvas report-graph__canvas--${canvasModifier}`
+    : "report-graph__canvas";
+  return (
+    <div className="report-graph__wrapper" onWheel={onWheel}>
+      <div className="report-graph__toolbar">
+        <button onClick={() => setZoom((z) => Math.max(GRAPH_ZOOM_MIN, (z === null ? 1.0 : z) - GRAPH_ZOOM_STEP))} title="Zoom out">−</button>
+        <span className="zoom-level">{pct}</span>
+        <button onClick={() => setZoom((z) => Math.min(GRAPH_ZOOM_MAX, (z === null ? 1.0 : z) + GRAPH_ZOOM_STEP))} title="Zoom in">+</button>
+        <button onClick={() => setZoom(1.0)} title="Reset to 100%">100%</button>
+        <button onClick={() => setZoom(null)} title="Fit to width">fit</button>
+      </div>
+      <div ref={ref} className={canvasClass} />
+    </div>
+  );
+}
+
 Object.assign(window, {
   SeverityPill, DispositionMark, MaturityMark, CopyPill, TaxonomyTag, TagRow, ToastHost, DiagnosticsBanner,
+  MermaidGraph,
   GOAL_LABELS, GOAL_SHORT, TIER_LABELS, TIER_GOALS,
 });

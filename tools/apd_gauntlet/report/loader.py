@@ -124,6 +124,10 @@ class RunArtifacts:
     # transform to expose the authored-vs-supplied comparator. None when absent.
     threat_model_normalized: dict[str, Any] | None = None
     threat_model_supplied: dict[str, Any] | None = None
+    # The evaluator's per-surface STRIDE coverage artifact
+    # (40-synthesis/threat-model-coverage.yaml). Optional; None when the
+    # evaluator did not run. Consumed by the transform's threat-model scene.
+    threat_model_coverage: dict[str, Any] | None = None
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -468,6 +472,8 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     context = run_dir / "00-context"
     tm_normalized = _yaml_optional(context / "threat-model-normalized.yaml")
     tm_supplied = _yaml_optional(context / "threat-model-supplied-normalized.yaml")
+    # The evaluator's coverage artifact lives under 40-synthesis (the synth dir).
+    tm_coverage = _yaml_optional(synth / "threat-model-coverage.yaml")
 
     # Optional artifacts are hashed via the existing single-read helper:
     # they are already loaded above and we tolerate the second read here
@@ -516,4 +522,5 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         run_attacker_positions=_extract_str_list(run_cfg, "attacker_positions"),
         threat_model_normalized=tm_normalized,
         threat_model_supplied=tm_supplied,
+        threat_model_coverage=tm_coverage,
     )

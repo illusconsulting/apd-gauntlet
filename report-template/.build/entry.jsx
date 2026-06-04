@@ -18,6 +18,7 @@ import "../screens/Overview.jsx";
 import "../screens/Findings.jsx";
 import "../screens/Capabilities.jsx";
 import "../screens/Coverage.jsx";
+import "../screens/ThreatModel.jsx";
 import "../screens/Annexes.jsx";
 import "../screens/AttackPaths.jsx";
 import "../app.jsx";

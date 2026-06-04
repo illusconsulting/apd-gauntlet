@@ -547,3 +547,56 @@ def test_threat_model_author_agent_resolves_to_file() -> None:
     assert (AGENTS_DIR / "apd-threat-model-author.md").is_file(), (
         "apd-threat-model-author agentType has no .claude/agents/apd-threat-model-author.md"
     )
+
+
+# ── Task 8: shared MermaidGraph component + graph-CSS rename ──────────────────
+def test_mermaid_graph_is_shared_component() -> None:
+    comp = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "function MermaidGraph(" in comp
+    assert "securityLevel: \"strict\"" in comp and "htmlLabels: false" in comp
+    assert "MermaidGraph" in comp.split("Object.assign(window")[1]  # exported
+    # The component supports an optional BEM canvas modifier so callers can opt
+    # into modifier styling (e.g. the focused subgraph width cap) — preserving the
+    # pre-refactor behavior that the focused canvas carried `--focused`.
+    assert "canvasModifier" in comp
+    assert "report-graph__canvas--${canvasModifier}" in comp
+
+
+def test_attack_paths_uses_shared_mermaid_graph() -> None:
+    ap = (REPO / "report-template" / "screens" / "AttackPaths.jsx").read_text(encoding="utf-8")
+    assert "MermaidGraph" in ap
+    # The bespoke renderer is gone — no duplicate mermaid.render in the screen.
+    assert "window.mermaid.render" not in ap and "window.mermaid\n" not in ap
+    # Behavior preservation: the path-focused graph must keep its `--focused`
+    # width cap by passing the canvas modifier (regression guard — pre-refactor
+    # b213cbf rendered `attack-paths__mermaid--focused`).
+    assert 'canvasModifier="focused"' in ap
+
+
+def test_threat_model_screen_exists_and_renders_blocks() -> None:
+    src = (REPO / "report-template" / "screens" / "ThreatModel.jsx").read_text(encoding="utf-8")
+    assert "function ThreatModel(" in src and "window.ThreatModel = ThreatModel" in src
+    # reuses the report's design language, not bespoke styling
+    assert "section-eyebrow" in src and "section-title" in src
+    assert "apd-matrix" in src and "matrix-cell--" in src        # block A
+    assert "attack-table" in src                                  # blocks B/C
+    assert "coverage-bar" in src                                  # block C
+    assert "MermaidGraph" in src                                  # block D
+    assert "contradiction" in src                                 # block E
+    # conditional blocks
+    assert "surface_coverage" in src and "comparator_delta" in src
+
+
+def test_threat_model_tab_is_conditional_and_routed() -> None:
+    src = (REPO / "report-template" / "app.jsx").read_text(encoding="utf-8")
+    # tab entry present
+    assert 'id: "threat_model"' in src and 'label: "Threat model"' in src
+    # gated on data.threat_model.present (omit when absent)
+    assert "data.threat_model" in src and "present" in src
+    # routed to the screen
+    assert 'activeTab === "threat_model"' in src and "<ThreatModel" in src
+    # placed after coverage, before attack_paths
+    i_cov = src.index('"coverage"')
+    i_tm = src.index('"threat_model"')
+    i_ap = src.index('"attack_paths"')
+    assert i_cov < i_tm < i_ap

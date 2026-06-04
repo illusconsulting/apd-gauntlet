@@ -332,6 +332,19 @@ def audit_report(run_dir: Path) -> AuditResult:
            f"taxonomy_entries={len(taxonomy)} bare_id={len(bare)} sample={sorted(bare)[:5]}",
            klass="structural")
 
+    # Completeness check — threat-model scene coherence (structural; exempt when
+    # the scene is legitimately omitted, matching the gate's empty-state policy).
+    tm = parsed.get("threat_model") or {}
+    if not tm.get("present"):
+        _check(result, "threat_model_scene_coherent", True,
+               "no threat model present — scene omitted (exempt)", klass="structural")
+    else:
+        tm_rows = ((tm.get("stride_matrix") or {}).get("rows")) or []
+        _check(result, "threat_model_scene_coherent",
+               bool(tm.get("entries")) and bool(tm_rows),
+               f"entries={len(tm.get('entries') or [])} matrix_rows={len(tm_rows)}",
+               klass="structural")
+
     result.counts = {
         # deduped + apath = findings_data_js (the total that id_coverage_findings checks).
         "deduped_findings_yaml": len(deduped_f), "apath_findings_yaml": len(apath_f),

@@ -425,3 +425,34 @@ def test_audit_handles_nondict_taxonomy_scalar(tmp_path):
     assert (dst / "40-synthesis" / "report-audit.yaml").is_file()
     tax_check = [c for c in result.checks if c["name"] == "taxonomy_titles_resolve"]
     assert tax_check and tax_check[0]["status"] == "pass"  # no entries -> no bare ids
+
+
+def test_threat_model_scene_coherent_passes_on_example(tmp_path):
+    # Build the report fresh from the committed YAMLs so data.js carries the
+    # populated threat_model block (the shipped data.js is regenerated in a later
+    # task; building here exercises the present-and-coherent path explicitly).
+    dst = _copy_example(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "threat_model_scene_coherent"]
+    assert c and c[0]["status"] == "pass"
+    assert c[0]["klass"] == "structural"
+
+
+def test_threat_model_scene_coherent_exempt_when_absent(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__("threat_model", {"present": False}))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "threat_model_scene_coherent"]
+    assert c and c[0]["status"] == "pass"   # absent → exempt
+
+
+def test_threat_model_scene_coherent_fails_when_present_but_empty(tmp_path):
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d.__setitem__(
+        "threat_model", {"present": True, "entries": [], "stride_matrix": {"rows": []}}))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "threat_model_scene_coherent"]
+    assert c and c[0]["status"] == "fail"
+    assert result.status == "fail"

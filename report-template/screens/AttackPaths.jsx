@@ -1,155 +1,12 @@
 // report-template/screens/AttackPaths.jsx
 /* eslint-disable */
 // Attack Paths screen — Mermaid asset graph + per-pair path list + D3FEND overlay.
-
-// Zoom toolbar for a Mermaid graph container.
-// containerRef  — ref to the scrollable wrapper div
-// zoom          — current zoom level (1.0 = default)
-// setZoom       — state setter
-// ZOOM constants
-var ZOOM_MIN  = 0.25;
-var ZOOM_MAX  = 4.0;
-var ZOOM_STEP = 0.25;
-
-function ZoomToolbar({ zoom, setZoom }) {
-  var pct = Math.round(zoom * 100) + "%";
-  var canDec = zoom > ZOOM_MIN + 1e-9;
-  var canInc = zoom < ZOOM_MAX - 1e-9;
-  function clamp(v) { return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v)); }
-  function snap(v) { return Math.round(v / ZOOM_STEP) * ZOOM_STEP; }
-  return (
-    React.createElement("div", { className: "attack-paths__zoom-toolbar" },
-      React.createElement("button", { onClick: function() { setZoom(function(z) { return snap(clamp(z - ZOOM_STEP)); }); }, disabled: !canDec, title: "Zoom out" }, "−"),
-      React.createElement("span", { className: "zoom-level" }, pct),
-      React.createElement("button", { onClick: function() { setZoom(function(z) { return snap(clamp(z + ZOOM_STEP)); }); }, disabled: !canInc, title: "Zoom in" }, "+"),
-      React.createElement("button", { onClick: function() { setZoom(1.0); }, title: "Reset to 100%" }, "100%"),
-      React.createElement("button", { onClick: function() { setZoom(null); }, title: "Fit to container width" }, "fit")
-    )
-  );
-}
+// The Mermaid render + zoom toolbar live in the shared MermaidGraph component
+// (components.jsx, exported on window).
 
 function AttackPaths({ data }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
-  const mermaidRef = React.useRef(null);
-  const mermaidFocusedRef = React.useRef(null);
-  // baseWidth stores the natural SVG pixel width for each graph (read from viewBox).
-  const assetBaseWidth   = React.useRef(null);
-  const focusedBaseWidth = React.useRef(null);
-
-  // zoom: null means "fit-to-width", a number means explicit scale multiplier.
-  const [assetZoom,   setAssetZoom]   = React.useState(1.0);
-  const [focusedZoom, setFocusedZoom] = React.useState(1.0);
-  // Mirror zoom state in refs so Mermaid async callbacks can read current value.
-  const assetZoomRef   = React.useRef(1.0);
-  const focusedZoomRef = React.useRef(1.0);
-
-  // Helper: parse SVG string, strip Mermaid's inline sizing attributes so our
-  // CSS controls the width, and return the DOM node.
-  function parseSvgNode(svg) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svg, "image/svg+xml");
-    const node = doc.documentElement;
-    // Strip Mermaid's inline sizing so our CSS controls the width.
-    node.removeAttribute("style");
-    node.removeAttribute("width");
-    node.removeAttribute("height");
-    return node;
-  }
-
-  // Extract natural SVG width from viewBox attribute ("0 0 W H") or fallback.
-  function svgNaturalWidth(svgNode) {
-    var vb = svgNode && svgNode.getAttribute && svgNode.getAttribute("viewBox");
-    if (vb) {
-      var parts = vb.trim().split(/\s+|,/);
-      if (parts.length >= 4) { var w = parseFloat(parts[2]); if (w > 0) return w; }
-    }
-    return null;
-  }
-
-  React.useEffect(() => {
-    if (!ap || !window.mermaid || !mermaidRef.current) return;
-    // securityLevel 'strict' makes Mermaid sanitize labels/text via its own
-    // dompurify pass before producing SVG. The asset-graph YAML is
-    // adopter-controlled, so the SVG mermaid produces can in principle
-    // include adversarial markup if we render it raw — 'strict' closes that.
-    // Mermaid 10+ defaults to HTML labels inside <foreignObject>, but under
-    // securityLevel:'strict' it strips the foreignObject children to empty
-    // (invisible labels). flowchart.htmlLabels:false forces SVG <text> nodes
-    // instead — which our CSS targets and which can't host arbitrary HTML.
-    window.mermaid.initialize({
-      startOnLoad: false,
-      theme: "neutral",
-      securityLevel: "strict",
-      flowchart: { htmlLabels: false },
-    });
-    window.mermaid
-      .render("apd-asset-graph", ap.mermaid)
-      .then(({ svg }) => {
-        var node = parseSvgNode(svg);
-        assetBaseWidth.current = svgNaturalWidth(node);
-        mermaidRef.current.replaceChildren(node);
-        // Re-apply current zoom now that the SVG is in the DOM.
-        applyZoom(mermaidRef.current, assetZoomRef.current, assetBaseWidth.current);
-      })
-      .catch((e) => { mermaidRef.current.textContent = "Graph render failed: " + e.message; });
-
-    if (ap.mermaid_path_focused && mermaidFocusedRef.current) {
-      window.mermaid
-        .render("apd-paths-focused", ap.mermaid_path_focused)
-        .then(({ svg }) => {
-          var node = parseSvgNode(svg);
-          focusedBaseWidth.current = svgNaturalWidth(node);
-          mermaidFocusedRef.current.replaceChildren(node);
-          // Re-apply current zoom now that the SVG is in the DOM.
-          applyZoom(mermaidFocusedRef.current, focusedZoomRef.current, focusedBaseWidth.current);
-        })
-        .catch((e) => { mermaidFocusedRef.current.textContent = "Graph render failed: " + e.message; });
-    }
-  }, [ap]);
-
-  // Helper: apply a zoom value to a container's SVG.
-  function applyZoom(containerEl, zoom, defaultBase) {
-    if (!containerEl) return;
-    var svg = containerEl.querySelector("svg");
-    if (!svg) return;
-    if (zoom === null) {
-      var containerW = containerEl.parentElement
-        ? containerEl.parentElement.clientWidth
-        : containerEl.clientWidth;
-      svg.style.width = containerW + "px";
-    } else {
-      // Read natural width from viewBox if not yet cached (e.g. called from ref).
-      var base = defaultBase || 2400;
-      svg.style.width = (base * zoom) + "px";
-    }
-  }
-
-  // Apply zoom to asset graph SVG whenever assetZoom changes.
-  React.useEffect(() => {
-    assetZoomRef.current = assetZoom;
-    applyZoom(mermaidRef.current, assetZoom, assetBaseWidth.current);
-  }, [assetZoom]);
-
-  // Apply zoom to focused graph SVG whenever focusedZoom changes.
-  React.useEffect(() => {
-    focusedZoomRef.current = focusedZoom;
-    applyZoom(mermaidFocusedRef.current, focusedZoom, focusedBaseWidth.current);
-  }, [focusedZoom]);
-
-  // Ctrl/Cmd+wheel zoom handler factory.
-  function makeWheelHandler(zoom, setZoom) {
-    return function(e) {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      setZoom(function(z) {
-        var cur = (z === null) ? 1.0 : z;
-        var delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-        var next = Math.round((cur + delta) / ZOOM_STEP) * ZOOM_STEP;
-        return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-      });
-    };
-  }
 
   if (!ap) {
     return (
@@ -246,25 +103,13 @@ function AttackPaths({ data }) {
 
       <section className="attack-paths__graph">
         <h3 className="attack-paths__section-h">Asset graph</h3>
-        <div
-          className="attack-paths__graph-wrapper"
-          onWheel={makeWheelHandler(assetZoom, setAssetZoom)}
-        >
-          <ZoomToolbar zoom={assetZoom === null ? 1.0 : assetZoom} setZoom={setAssetZoom} />
-          <div ref={mermaidRef} className="attack-paths__mermaid" />
-        </div>
+        <MermaidGraph source={ap.mermaid} idBase="apd-asset-graph" />
       </section>
 
       {ap.mermaid_path_focused && (
         <section className="attack-paths__graph">
           <h3 className="attack-paths__section-h">Path-focused graph</h3>
-          <div
-            className="attack-paths__graph-wrapper"
-            onWheel={makeWheelHandler(focusedZoom, setFocusedZoom)}
-          >
-            <ZoomToolbar zoom={focusedZoom === null ? 1.0 : focusedZoom} setZoom={setFocusedZoom} />
-            <div ref={mermaidFocusedRef} className="attack-paths__mermaid attack-paths__mermaid--focused" />
-          </div>
+          <MermaidGraph source={ap.mermaid_path_focused} idBase="apd-paths-focused" canvasModifier="focused" />
         </section>
       )}
 
