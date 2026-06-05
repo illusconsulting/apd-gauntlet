@@ -646,3 +646,29 @@ def test_no_mermaid_references_remain() -> None:
         cwd=REPO, capture_output=True, text=True,
     ).stdout
     assert out.strip() == "", f"residual mermaid references:\n{out}"
+
+
+def test_start_here_tab_is_first_and_routed() -> None:
+    src = (REPO / "report-template" / "app.jsx").read_text(encoding="utf-8")
+    # tab entry present, carries a sigil instead of a number
+    assert 'id: "start_here"' in src and 'label: "Start here"' in src
+    assert 'sigil: "✦"' in src
+    # the numbering map special-cases the sigil so content tabs keep 01..N
+    assert "t.sigil" in src
+    # routed to the screen
+    assert 'activeTab === "start_here"' in src and "<StartHere" in src
+    # placed first — before Overview (compare the tab-entry literals)
+    assert src.index('id: "start_here"') < src.index('id: "overview"')
+    # Overview remains the default landing tab
+    assert 'useState("overview")' in src
+
+
+def test_start_here_sigil_excluded_from_tab_numbering() -> None:
+    # Content tabs must keep 01..N: the numbering map renders the guide's sigil
+    # as its `num` and increments the counter only for non-sigil tabs. A future
+    # edit that renumbers content tabs (e.g. counting the guide into the index)
+    # would change this shape; the bundle-freshness gate cannot catch a logic
+    # regression here, so pin the map shape.
+    src = (REPO / "report-template" / "app.jsx").read_text(encoding="utf-8")
+    assert "if (t.sigil) return { ...t, num: t.sigil };" in src
+    assert 'String(_tabNum).padStart(2, "0")' in src

@@ -14,6 +14,7 @@ import "./reviewer-stubs.js";
 
 // Side-effect imports register window.<ComponentName>.
 import "../components.jsx";
+import "../screens/StartHere.jsx";
 import "../screens/Overview.jsx";
 import "../screens/Findings.jsx";
 import "../screens/Capabilities.jsx";

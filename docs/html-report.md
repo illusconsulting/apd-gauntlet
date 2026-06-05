@@ -19,6 +19,21 @@ API / LLM), MITRE D3FEND, and — when `mitre_atlas` is declared for the run —
 equals the ID string) means the reference catalog for that family failed to
 load; this is caught by the completeness gate's `taxonomy_titles_resolve` check.
 
+## Start-here reading guide
+
+The report opens with a **Start here** tab (marked `✦`, leftmost in the tab
+bar). It is a reading guide for first-time readers and provides:
+
+- an orientation map — what the report is, the three pillars and nine goals,
+  and a one-line description of every tab;
+- a vocabulary glossary that decodes the severity, disposition, confidence,
+  maturity, and coverage-cell pills in place;
+- a short reading workflow; and
+- per-role focus paths for engineers, auditors, and risk reviewers.
+
+The guide reads the run's own data, so its examples reflect the system under
+review. Overview remains the default landing tab.
+
 ## Interactive graphs
 
 The **Attack paths** asset graph and the **Threat model** surface map are drawn

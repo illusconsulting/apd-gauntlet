@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Format base
 
 ### Added
 
+- HTML report: a new "Start here" reading-guide tab (`✦`, leftmost) that orients first-time readers with an orientation map, a vocabulary glossary, a reading workflow, and per-role focus paths, reading the run's live data for contextual guidance. Overview remains the default tab.
 - **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, an interactive trust-boundary surface map, and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared interactive `GraphView`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
 
 ### Changed

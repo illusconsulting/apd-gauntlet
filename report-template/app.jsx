@@ -16,8 +16,11 @@ function App() {
   const [selectedFinding, setSelectedFinding] = useState(null);
 
   // Tab list is data-driven so the Threat model tab is omitted entirely when no
-  // threat model exists; `num` is derived from index so renumbering is automatic.
+  // threat model exists. The Start-here guide carries a sigil instead of a
+  // number; numeric content tabs are numbered from 01 so existing section
+  // numbers are unchanged.
   const BASE_TABS = [
+    { id: "start_here", label: "Start here", sigil: "✦" },
     { id: "overview", label: "Overview" },
     { id: "findings", label: "Findings" },
     { id: "capabilities", label: "Capabilities" },
@@ -27,7 +30,12 @@ function App() {
     { id: "attack_paths", label: "Attack paths" },
     { id: "annexes", label: "Annexes" },
   ];
-  const TABS = BASE_TABS.map((t, i) => ({ ...t, num: String(i + 1).padStart(2, "0") }));
+  let _tabNum = 0;
+  const TABS = BASE_TABS.map((t) => {
+    if (t.sigil) return { ...t, num: t.sigil };
+    _tabNum += 1;
+    return { ...t, num: String(_tabNum).padStart(2, "0") };
+  });
 
   // Apply tweaks → data attributes on <body>
   useEffect(() => {
@@ -103,6 +111,9 @@ function App() {
 
       {/* Main content */}
       <main className="main" data-screen-label={`${TABS.find(x => x.id === activeTab).num} ${TABS.find(x => x.id === activeTab).label}`}>
+        {activeTab === "start_here" && (
+          <StartHere data={data} onNavigate={setActiveTab} />
+        )}
         {activeTab === "overview" && (
           <Overview
             data={data}
