@@ -47,6 +47,15 @@
           "message": { "type": "string", "minLength": 1 }
         }
       }
+    },
+    "report_audit": {
+      "description": "Per-class completeness counts the audit-report worker lifts from the audit-report CLI output, so the workflow can block on STRUCTURAL completeness only and surface editorial residuals non-blocking. Optional.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "structural_failed": { "type": "integer", "minimum": 0 },
+        "editorial_failed": { "type": "integer", "minimum": 0 }
+      }
     }
   }
 }

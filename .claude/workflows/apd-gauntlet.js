@@ -87,6 +87,19 @@ const RECEIPT = {
         },
       },
     },
+    // F3: per-class completeness counts the audit-report worker lifts from the
+    // CLI's printed `structural_failed=<S> editorial_failed=<E>` line. Optional
+    // (older workers omit it) — the gate falls back to the command exit status.
+    // Lets the workflow block on STRUCTURAL completeness only and surface
+    // editorial residuals non-blocking (like the LLM semantic residual).
+    report_audit: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        structural_failed: { type: 'integer', minimum: 0 },
+        editorial_failed: { type: 'integer', minimum: 0 },
+      },
+    },
   },
 };
 
@@ -160,8 +173,16 @@ function pyStep(cmd, opts) {
     '  outputs: one {path, schema_valid:true} per file the command wrote (or the skip sentinel if you short-circuited)',
     '  counts: {} (or blocked:N if the command reported blocked findings)',
     '  errors: on nonzero exit, [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}]',
+    // F3: the audit-report worker ALSO lifts the per-class completeness counts the
+    // CLI prints (`audit-report: <status> (... structural_failed=<S> editorial_failed=<E>)`)
+    // into a report_audit block so the gate can block on STRUCTURAL failures only.
+    opts.reportAudit
+      ? '  report_audit: parse the command stdout line ' +
+        '`audit-report: <status> (... structural_failed=<S> editorial_failed=<E>)` and ' +
+        'set report_audit:{structural_failed:<S>, editorial_failed:<E>} (integers) in the receipt'
+      : null,
     'NEVER summarize the file contents in prose — return the receipt only.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
   return agent(prompt, {
     schema: RECEIPT,
     phase: opts.phase,
@@ -542,7 +563,7 @@ parallel([
 // the tier-4 findings. After this, the FULL validate covers nist/attack/matrix.
 phase('synthesis-rollup');
 let rl = pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup',
-  outputs: runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml (+ declared-taxonomy coverage files)' });
+  outputs: runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml, metrics.yaml (+ declared-taxonomy coverage files)' });
 if (isErr(rl)) {
   rl = pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup-retry-1',
     outputs: runDir + '/40-synthesis/nist-coverage.yaml' });
@@ -552,9 +573,12 @@ if (isErr(rl)) {
     // build-report's required nist/attack/matrix inputs exist.
     log('rollup: deterministic rollup failed after retry — synthesizer writes coverage as last resort.');
     agent(
-      'Run as the synthesis FALLBACK and write ONLY the coverage rollups ' +
+      'Run as the synthesis FALLBACK and write the coverage rollups ' +
       runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml ' +
-      'from the deduped corpus PLUS attack-path.findings.yaml (apath-*), then STOP.',
+      'AND 40-synthesis/metrics.yaml (the report loader REQUIRES metrics.yaml — without it ' +
+      'build-report cannot run, so a coverage-only last resort would still block the report) ' +
+      'from the deduped corpus PLUS the tier-4 findings (attack-path.findings.yaml apath-* AND ' +
+      '40-threat-model/threat-model.findings.yaml tmeval-*), then STOP.',
       { agentType: 'apd-synthesizer', phase: 'synthesis-rollup', label: 'synthesizer-fallback-rollup' });
   }
 }
@@ -598,6 +622,7 @@ phase('synthesis-audit');
 let critique = null;
 for (let i = 0; i <= 2; i++) {
   const audit = pyStep('audit-report', { phase: 'synthesis-audit', label: 'audit-report-attempt-' + i,
+    reportAudit: true,
     outputs: runDir + '/40-synthesis/report-audit.yaml' });
   const auditorPrompt =
     'Read ONLY 40-synthesis/report-audit.yaml + the rendered advisory-report.md + report-data.yaml ' +
@@ -609,12 +634,21 @@ for (let i = 0; i <= 2; i++) {
   // The auditor is the ONE dispatch WITHOUT {schema} -> agent() returns its critique STRING.
   const auditor = agent(auditorPrompt,
     { agentType: 'apd-report-auditor', phase: 'synthesis-audit', label: 'auditor-attempt-' + i });
-  const structuralOk = audit && audit.status === 'ok';
+  // F3: split the deterministic audit into its STRUCTURAL vs EDITORIAL classes.
+  // structuralOk now keys on the per-class structural_failed count the worker
+  // lifted into report_audit (truthful name); it falls back to the command exit
+  // status for older receipts that omit report_audit. Editorial completeness is
+  // remediated in-loop but, like the LLM semantic residual, is NON-BLOCKING at
+  // the cap — only STRUCTURAL completeness (or an unverifiable report) blocks.
+  const ra = audit && audit.report_audit;
+  const structuralOk = !!audit && (ra ? ra.structural_failed === 0 : audit.status === 'ok');
+  const editorialOk = !ra || ra.editorial_failed === 0;
   const semanticOk = typeof auditor === 'string' && /GATE:\s*pass/i.test(auditor);
-  if (structuralOk && semanticOk) { break; }
+  if (structuralOk && editorialOk && semanticOk) { break; }
   if (i === 2) {
-    // Report completeness gate: a structural failure (or an unverifiable report)
-    // must NEVER ship. The LLM auditor's semantic residual stays non-blocking.
+    // Report completeness gate: a STRUCTURAL failure (or an unverifiable report)
+    // must NEVER ship. The LLM auditor's semantic residual AND any residual
+    // editorial completeness gap stay non-blocking after the remediation cap.
     if (!audit) {
       throw new Error(
         'report completeness gate: audit-report produced no receipt after 2 remediations ' +
@@ -623,11 +657,12 @@ for (let i = 0; i <= 2; i++) {
     }
     if (!structuralOk) {
       throw new Error(
-        'report completeness gate: audit-report still FAILED after 2 remediations — ' +
-        'the HTML report is structurally incomplete (see ' + runDir +
+        'report completeness gate: audit-report still FAILED a STRUCTURAL check after 2 ' +
+        'remediations — the HTML report is structurally incomplete (see ' + runDir +
         '/40-synthesis/report-audit.yaml). Refusing to ship a degraded report.');
     }
-    log('report audit: residual SEMANTIC discrepancies after 2 remediations; surfacing non-blocking.');
+    log('report audit: residual SEMANTIC discrepancies (plus any editorial residual) after 2 ' +
+        'remediations; surfacing non-blocking.');
     break;
   }
   critique = typeof auditor === 'string' ? auditor : '';

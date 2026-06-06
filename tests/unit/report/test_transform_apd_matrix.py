@@ -50,6 +50,7 @@ def test_matrix_new_shape_produces_artifact_component_rows() -> None:
     artifacts.apd_coverage_matrix = legacy
     artifacts.deduped_findings = findings
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     m = apd_matrix(artifacts)
     component_names = {r["component"] for r in m["rows"]}
     # tech_plan.md is by far the most cited artifact in the frozen crapi fixture.
@@ -92,6 +93,7 @@ def test_matrix_old_shape_component_rows() -> None:
     artifacts.apd_coverage_matrix = old_shape
     artifacts.deduped_findings = []
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
 
     m = apd_matrix(artifacts)
     assert len(m["rows"]) == 1

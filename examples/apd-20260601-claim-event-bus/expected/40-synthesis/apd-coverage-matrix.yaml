@@ -1,4 +1,45 @@
 components:
+- name: 00-context/threat-model-normalized.yaml
+  cells:
+    confidentiality:
+      findings:
+      - tmeval-dddd4444
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - tmeval-eeee5555
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings:
+      - tmeval-cccc3333
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
 - name: 40-synthesis/asset-graph.yaml
   cells:
     confidentiality:

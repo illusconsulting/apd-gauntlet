@@ -1,38 +1,32 @@
 schema_version: 1
 generated_by: synthesizer
-defensive_entries:
-  - d3fend_id: D3-AA
-    name: "Agent Authentication"
-    capability_count: 1
-    capability_ids: [auth-cap-53d41613]
-    counters_attack: ["T1078"]
-  - d3fend_id: D3-NTSA
-    name: "Network Traffic Signature Analysis"
-    capability_count: 1
-    capability_ids: [intg-cap-d4ef7325]
-    counters_attack: ["T1557"]
+defensive_entries: []
 counter_coverage:
-  - attack_technique: T1530
-    exposed_by_finding_count: 1
-    exposed_by_finding_ids: [conf-7aa376c5]
-    countered_by_d3fend: []
-    countered_by_capability_ids: []
-    has_capability_coverage: false
-  - attack_technique: T1565
-    exposed_by_finding_count: 1
-    exposed_by_finding_ids: [intg-42a3ebbd]
-    countered_by_d3fend: []
-    countered_by_capability_ids: []
-    has_capability_coverage: false
-  - attack_technique: T1621
-    exposed_by_finding_count: 1
-    exposed_by_finding_ids: [auth-dbba3dea]
-    countered_by_d3fend: []
-    countered_by_capability_ids: []
-    has_capability_coverage: false
-  - attack_technique: T1562
-    exposed_by_finding_count: 1
-    exposed_by_finding_ids: [nonrep-cf99a733]
-    countered_by_d3fend: []
-    countered_by_capability_ids: []
-    has_capability_coverage: false
+- attack_technique: T1530
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-7aa376c5
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1562
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - nonrep-cf99a733
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1565
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - intg-42a3ebbd
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1621
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - auth-dbba3dea
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false

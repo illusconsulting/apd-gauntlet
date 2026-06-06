@@ -25,6 +25,7 @@ def _minimal_artifacts():
     a.asset_inventory = {}
     a.deduped_findings = []
     a.attack_path_findings = []
+    a.threat_model_findings = []
     a.deduped_capabilities = []
     return a
 
@@ -52,6 +53,7 @@ def test_is_empty_run_flag_false_with_capabilities():
 def test_is_empty_run_flag_false_with_attack_path_findings():
     artifacts = _minimal_artifacts()
     artifacts.attack_path_findings = [{"id": "apath-1"}]
+    artifacts.threat_model_findings = []
     meta = meta_block(artifacts)
     assert meta["is_empty_run"] is False
 

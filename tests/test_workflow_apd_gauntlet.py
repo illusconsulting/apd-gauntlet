@@ -436,6 +436,80 @@ def test_report_writer_remediation_reads_report_audit():
     assert 'klass is "editorial"' in src
 
 
+# ---------------------------------------------------------------------------
+# F2 — the rollup last-resort fallback must (re)write metrics.yaml (the report
+# loader requires it; the old last-resort wrote only nist/attack/matrix).
+# ---------------------------------------------------------------------------
+
+
+def test_rollup_last_resort_writes_metrics():
+    src = _text()
+    # Locate the synthesizer rollup last-resort dispatch and assert it lists
+    # metrics.yaml among the files it writes.
+    m = re.search(r"synthesizer-fallback-rollup.*?\}\)", src, re.DOTALL)
+    assert m, "rollup last-resort dispatch (synthesizer-fallback-rollup) not found"
+    # The prompt text precedes the label; search the whole dispatch region.
+    region = src[max(0, m.start() - 800):m.end()]
+    assert "metrics.yaml" in region, (
+        "rollup last-resort must write metrics.yaml (load_run requires it)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F5 — the rollup pyStep advisory `outputs` label must mention metrics.yaml
+# (build_rollups writes it; the label drifted).
+# ---------------------------------------------------------------------------
+
+
+def test_rollup_outputs_label_includes_metrics():
+    src = _text()
+    m = re.search(r"pyStep\('rollup',\s*\{[^}]*?\}\)", src, re.DOTALL)
+    assert m, "rollup pyStep dispatch not found"
+    assert "metrics.yaml" in m.group(0), (
+        "rollup pyStep outputs label must list metrics.yaml"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F3 — per-class completeness gate: the audit receipt carries structural_failed
+# / editorial_failed so the workflow blocks on STRUCTURAL completeness only and
+# surfaces editorial residuals non-blocking.
+# ---------------------------------------------------------------------------
+
+
+def test_receipt_constant_includes_report_audit():
+    src = _text()
+    m = re.search(r"const RECEIPT\s*=.*?^\};", src, re.DOTALL | re.MULTILINE)
+    assert m, "const RECEIPT block not found"
+    block = m.group(0)
+    assert "report_audit" in block, "RECEIPT must carry the optional report_audit block"
+    assert "structural_failed" in block and "editorial_failed" in block
+
+
+def test_audit_dispatch_captures_per_class_counts():
+    src = _text()
+    # The audit-report dispatch must instruct the worker to populate report_audit
+    # with the per-class counts the CLI prints (structural_failed / editorial_failed).
+    assert "structural_failed" in src and "editorial_failed" in src
+    assert "report_audit" in src
+
+
+def test_completeness_gate_keys_on_structural_failed():
+    src = _text()
+    # structuralOk is now computed from the per-class structural_failed count
+    # (not merely the command exit status), so the name is truthful and editorial
+    # residuals do not hard-block.
+    assert "structural_failed" in src
+    assert "structuralOk" in src
+
+
+def test_editorial_residual_is_non_blocking():
+    src = _text()
+    # The i==2 cap must NOT throw on an editorial-only residual; it logs and ships.
+    assert "editorial" in src.lower()
+    assert "non-blocking" in src
+
+
 def test_threat_model_author_phase_in_meta_phases() -> None:
     """C5: the always-on threat-model-author phase is declared in meta.phases."""
     text = _text()

@@ -4,7 +4,7 @@ status: pass
 checks:
 - name: id_coverage_findings
   status: pass
-  detail: yaml=90 data.js=90 missing=[]
+  detail: yaml=93 data.js=93 missing=[]
   klass: structural
 - name: id_coverage_capabilities
   status: pass
@@ -24,25 +24,25 @@ checks:
   klass: structural
 - name: metrics_present
   status: pass
-  detail: missing examples/apd-20260601-claim-event-bus/expected/40-synthesis/metrics.yaml
+  detail: present
   klass: structural
 - name: count_parity_severity
   status: pass
-  detail: 'metrics.yaml={''critical'': 1, ''high'': 9, ''medium'': 80, ''low'': 0,
-    ''info'': 0} data.js={''critical'': 1, ''high'': 9, ''medium'': 80, ''low'': 0,
-    ''info'': 0}'
+  detail: 'metrics.yaml={''critical'': 1, ''high'': 10, ''medium'': 82, ''low'': 0,
+    ''info'': 0} data.js={''critical'': 1, ''high'': 10, ''medium'': 82, ''low'':
+    0, ''info'': 0}'
   klass: structural
 - name: count_parity_totals
   status: pass
-  detail: data.js=90 metrics.yaml=90
+  detail: data.js=93 metrics.yaml=93
   klass: structural
 - name: metrics_internal_consistency
   status: pass
-  detail: total=90 sev_sum=90 tier_sum=90 disp_sum=90
+  detail: total=93 sev_sum=93 tier_sum=93 disp_sum=93
   klass: structural
 - name: data_js_recompute_drift
   status: pass
-  detail: recompute_findings=90 data.js=90
+  detail: recompute_findings=93 data.js=93
   klass: structural
 - name: section_errors_empty
   status: pass
@@ -66,7 +66,7 @@ checks:
   klass: structural
 - name: apd_matrix_nonempty
   status: pass
-  detail: findings_present=True matrix_rows=12
+  detail: findings_present=True matrix_rows=13
   klass: structural
 - name: coverage_rollups_nonempty
   status: pass
@@ -83,7 +83,8 @@ checks:
 counts:
   deduped_findings_yaml: 15
   apath_findings_yaml: 75
-  findings_data_js: 90
+  tmeval_findings_yaml: 3
+  findings_data_js: 93
   capabilities_yaml: 10
   capabilities_data_js: 10
   nist_controls_yaml: 36

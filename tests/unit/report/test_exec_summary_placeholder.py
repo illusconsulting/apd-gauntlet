@@ -16,6 +16,7 @@ def test_build_apd_data_uses_the_constant_when_supplement_absent():
     arts.deduped_findings = []
     arts.deduped_capabilities = []
     arts.attack_path_findings = []
+    arts.threat_model_findings = []
     arts.attack_paths = None
     arts.asset_graph = None
     arts.defense_graph = None

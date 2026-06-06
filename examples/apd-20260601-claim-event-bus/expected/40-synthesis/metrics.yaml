@@ -1,24 +1,24 @@
 schema_version: 1
-findings_total: 90
-findings_pre_dedup: 90
+findings_total: 93
+findings_pre_dedup: 93
 cross_lens_merged_clusters: 0
 linked_clusters: 0
 bySeverity:
   critical: 1
-  high: 9
-  medium: 80
+  high: 10
+  medium: 82
   low: 0
   info: 0
 byDisposition:
-  gap: 8
+  gap: 9
   blocked: 3
-  risk: 4
-  uncertainty: 75
+  risk: 5
+  uncertainty: 76
   ok: 0
 byTier:
-  trustworthiness: 36
+  trustworthiness: 37
   scalability: 4
-  auditability: 50
+  auditability: 52
 capabilities_total: 10
 capabilities_pre_dedup: 10
 capabilitiesByMaturity:

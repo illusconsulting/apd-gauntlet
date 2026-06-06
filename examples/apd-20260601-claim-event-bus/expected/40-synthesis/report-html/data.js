@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-04",
+    "date": "2026-06-06",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -57,28 +57,28 @@ window.APD_DATA = {
     "warnings": []
   },
   "summary": {
-    "findings_total": 90,
-    "findings_pre_dedup": 90,
+    "findings_total": 93,
+    "findings_pre_dedup": 93,
     "cross_lens_merged_clusters": 0,
     "linked_clusters": 0,
     "bySeverity": {
       "critical": 1,
-      "high": 9,
-      "medium": 80,
+      "high": 10,
+      "medium": 82,
       "low": 0,
       "info": 0
     },
     "byDisposition": {
-      "gap": 8,
+      "gap": 9,
       "blocked": 3,
-      "risk": 4,
-      "uncertainty": 75,
+      "risk": 5,
+      "uncertainty": 76,
       "ok": 0
     },
     "byTier": {
-      "trustworthiness": 36,
+      "trustworthiness": 37,
       "scalability": 4,
-      "auditability": 50
+      "auditability": 52
     },
     "capabilities_total": 10,
     "capabilities_pre_dedup": 10,
@@ -4042,6 +4042,120 @@ window.APD_DATA = {
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
+    },
+    {
+      "id": "tmeval-cccc3333",
+      "title": "Threat model omits Repudiation analysis for audit-log-writer",
+      "goal": "non_repudiation",
+      "tier": "auditability",
+      "severity": "medium",
+      "confidence": "high",
+      "disposition": "gap",
+      "summary": "Non-repudiation specialist findings nonrep-cf99a733 and nonrep-62124087 flagged audit-log-writer for missing user attribution and unsigned mutable audit entries. The threat model STRIDE coverage for this surface covers S, T, I, D, E (5 threats) but has no Repudiation entry.",
+      "detail": "The audit-log-writer surface has five STRIDE entries (tm-04b76ff1 through tm-8df8b2f3) covering Spoofing, Tampering, Information Disclosure, Denial of Service, and Elevation of Privilege. The Repudiation category is entirely absent. This is significant because specialist finding nonrep-62124087 identified that audit entries are unsigned and stored in a mutable table — an active non-repudiation risk. A complete STRIDE analysis must explicitly evaluate who can deny having performed an action and how the system refutes such denial.",
+      "rubric_clause": null,
+      "evidence": [
+        {
+          "artifact": "00-context/threat-model-normalized.yaml",
+          "locator": "entries[asset=audit-log-writer]",
+          "excerpt": "5 entries: tm-04b76ff1 (S), tm-9a8c9ce4 (T), tm-99aa91ca (I), tm-6dc432fd (D), tm-8df8b2f3 (E); no R entry"
+        }
+      ],
+      "recommendation": {
+        "posture": "recommended",
+        "summary": "Extend threat model with Repudiation analysis for audit-log-writer",
+        "detail": "Add a Repudiation entry covering: who can deny having written an audit entry, how the write-once property prevents post-hoc denial (th-8 mentions IAM deny-update but not log deletion by a privileged actor), and what cryptographic mechanism — such as HMAC signing — allows the system to refute a denial claim. Reference nonrep-62124087 for the remediation specifics already identified by the specialist."
+      },
+      "mappings": {
+        "nist": [
+          "AU-9",
+          "AU-10"
+        ],
+        "attack": [],
+        "cwe": [],
+        "owasp_api": [],
+        "owasp": [],
+        "d3fend": [],
+        "atlas": []
+      },
+      "lens_perspectives": [],
+      "prerequisite_evidence": []
+    },
+    {
+      "id": "tmeval-dddd4444",
+      "title": "Threat model asserts TLS that conf-7aa376c5 contradicts",
+      "goal": "confidentiality",
+      "tier": "trustworthiness",
+      "severity": "high",
+      "confidence": "high",
+      "disposition": "risk",
+      "summary": "TM entry tm-1a799f16 for adjudication-to-pricing claims mitigation 'TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing'. Confidentiality specialist finding conf-7aa376c5 shows PHI flows in plaintext between producers and consumers at the Kafka broker layer — broker-level encryption only, no envelope encryption.",
+      "detail": "The threat model marks th-6 (adjudication-to-pricing Information Disclosure) as 'Mitigated' based on the assertion that TLS 1.3 is enforced end-to-end on this Kafka topic. However, confidentiality finding conf-7aa376c5 contradicts this: the tech plan describes broker-managed AES-256 at-rest encryption, which grants all platform admins and consumers access to PHI in cleartext within the broker layer. TLS in transit does not prevent PHI exposure after decryption at the broker. The TM's mitigation claim is factually incorrect or describes a control that does not exist in the current implementation. This contradiction means the threat is categorised as 'Mitigated' in the TM when it should remain 'Open' pending implementation of field-level envelope encryption.",
+      "rubric_clause": null,
+      "evidence": [
+        {
+          "artifact": "00-context/threat-model-normalized.yaml",
+          "locator": "entries[entry_id=tm-1a799f16]",
+          "excerpt": "mitigation: TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing"
+        }
+      ],
+      "recommendation": {
+        "posture": "required",
+        "summary": "Reconcile threat model and implementation reality for adjudication-to-pricing",
+        "detail": "Either enforce field-level envelope encryption on the adjudication-to-pricing Kafka topic so the TM's intended mitigated state becomes accurate (see conf-7aa376c5 for the DEK-based remediation approach), or reopen th-6 in the threat model to reflect that the topic currently operates without adequate PHI protection, and raise its severity to Critical given the regulatory exposure of PHI in transit at AAL2 surfaces."
+      },
+      "mappings": {
+        "nist": [
+          "SC-8",
+          "SC-8(1)"
+        ],
+        "attack": [],
+        "cwe": [],
+        "owasp_api": [],
+        "owasp": [],
+        "d3fend": [],
+        "atlas": []
+      },
+      "lens_perspectives": [],
+      "prerequisite_evidence": []
+    },
+    {
+      "id": "tmeval-eeee5555",
+      "title": "Threat model is silent on vendor-API integration surface",
+      "goal": "authenticity",
+      "tier": "auditability",
+      "severity": "medium",
+      "confidence": "high",
+      "disposition": "uncertainty",
+      "summary": "Authenticity specialist finding auth-dbba3dea flagged the member portal authentication surface for weak SMS MFA. The threat model has zero entries for any vendor-API or member-portal integration surface — neither analyzed in scope nor explicitly declared out of scope.",
+      "detail": "The threat model covers three surfaces: claim-ingress-API, adjudication-to-pricing, and audit-log-writer. The member portal and vendor-API integration — where auth-dbba3dea identified SMS OTP fallback lowering authentication assurance to AAL1 for PHI-bearing interactions — are entirely absent from the model. Complete silence is ambiguous: the surface may have been intentionally excluded from this threat model's scope, or it may have been overlooked. Without an explicit out-of-scope annotation or a reference to a separate threat model artifact, reviewers cannot determine whether this gap represents a deliberate scoping decision or an unanalyzed attack surface.",
+      "rubric_clause": null,
+      "evidence": [
+        {
+          "artifact": "00-context/threat-model-normalized.yaml",
+          "locator": "(no entries for surface=vendor-API or member-portal)",
+          "excerpt": "surfaces modelled: claim-ingress-API, adjudication-to-pricing, audit-log-writer; vendor-API absent"
+        }
+      ],
+      "recommendation": {
+        "posture": "consider",
+        "summary": "Clarify whether vendor-API and member-portal surfaces are intentionally out of scope",
+        "detail": "Either add threat-model entries for the member portal authentication surface covering at minimum Spoofing (weak MFA) and Information Disclosure (PHI exposure post-auth), or annotate the threat model with a deliberate out-of-scope note naming the artifact — such as the vendor security review or a separate portal threat model — that covers authentication threats for this surface. This ensures reviewers can distinguish intentional scoping from oversight."
+      },
+      "mappings": {
+        "nist": [
+          "IA-3",
+          "IA-5(1)"
+        ],
+        "attack": [],
+        "cwe": [],
+        "owasp_api": [],
+        "owasp": [],
+        "d3fend": [],
+        "atlas": []
+      },
+      "lens_perspectives": [],
+      "prerequisite_evidence": []
     }
   ],
   "contradictions": [
@@ -4093,10 +4207,10 @@ window.APD_DATA = {
     {
       "family": "SC",
       "title": "System & Communications Protection",
-      "covered": 2,
+      "covered": 1,
       "gapped": 1,
-      "both": 5,
-      "notable": "SC-28, SC-8 strong; SC-5 gapped"
+      "both": 6,
+      "notable": "SC-28 strong; SC-5 gapped"
     },
     {
       "family": "AU",
@@ -4197,6 +4311,20 @@ window.APD_DATA = {
       "immut": "Immut"
     },
     "rows": [
+      {
+        "component": "00-context/threat-model-normalized.yaml",
+        "cells": {
+          "conf": "gapped",
+          "intg": "silent",
+          "avail": "silent",
+          "dist": "silent",
+          "resil": "silent",
+          "ephem": "silent",
+          "auth": "gapped",
+          "nonrep": "gapped",
+          "immut": "silent"
+        }
+      },
       {
         "component": "40-synthesis/asset-graph.yaml",
         "cells": {

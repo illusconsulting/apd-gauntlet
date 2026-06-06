@@ -30,6 +30,7 @@
       "properties": {
         "deduped_findings_yaml": { "type": "integer" },
         "apath_findings_yaml": { "type": "integer" },
+        "tmeval_findings_yaml": { "type": "integer" },
         "findings_data_js": { "type": "integer" },
         "capabilities_yaml": { "type": "integer" },
         "capabilities_data_js": { "type": "integer" },

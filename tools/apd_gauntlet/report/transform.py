@@ -11,6 +11,7 @@ import pathlib
 import re
 from typing import Any
 
+from ..severity import display_severity as _severity_display
 from ..synthesis import coverage_logic as _cl
 from . import taxonomy as _taxonomy
 from .loader import RunArtifacts
@@ -26,6 +27,21 @@ TIER_GOALS: dict[str, list[str]] = {
 }
 
 EXEC_SUMMARY_PLACEHOLDER = "Run summary not provided by synthesizer."
+
+
+def _report_finding_set(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """The full report finding set: deduped findings + tier-4 (apath-* + tmeval-*).
+
+    F1: tmeval-* (threat-model evaluator) findings are first-class alongside
+    apath-* (attack-path analyzer) everywhere the report treats a finding as a
+    finding — the headline list, the 9xN matrix shapes, and the taxonomy id
+    sweep. Single source so the sections cannot drift on which sources count.
+    """
+    return (
+        artifacts.deduped_findings
+        + artifacts.attack_path_findings
+        + artifacts.threat_model_findings
+    )
 
 
 def _crown_jewels_from_inventory(inventory: dict[str, Any]) -> list[str]:
@@ -275,17 +291,11 @@ _CONF_ORDER = {"high": 0, "medium": 1, "low": 2}
 # The report template's canonical token for the informational tier is "info":
 # its CSS classes (.sev--info / .finding-row--info), its findings-screen severity
 # sort map, and summary_rollup's bySeverity.info all key on "info". The finding
-# schema's canonical value is the full word "informational"; emit the template
-# token on the per-finding display payload so informational findings sort, style,
-# and filter correctly instead of falling through to an unstyled, NaN-sorted row.
-# All other severities pass through unchanged.
-_SEVERITY_DISPLAY = {"informational": "info"}
-
-
-def _display_severity(severity: str | None) -> str:
-    """Normalize a finding's severity to the report template's display token."""
-    sev = severity or "informational"
-    return _SEVERITY_DISPLAY.get(sev, sev)
+# schema's canonical value is the full word "informational". The schema-token ->
+# template-token mapping is owned by the shared apd_gauntlet.severity module (F6)
+# so synthesis (metrics) and the report layer can never drift; this is a thin
+# alias preserving the local name and call signature.
+_display_severity = _severity_display  # F6: single shared normalizer
 
 
 def _algorithmic_headline_ranks(findings: list[dict[str, Any]]) -> dict[str, int]:
@@ -332,7 +342,7 @@ def findings_array(
     name-only entries, completely shapeless dicts) surface as structured
     ``data.meta.warnings`` records instead of being silently dropped.
     """
-    all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
+    all_findings = _report_finding_set(artifacts)
     if headline_supplement is not None:
         valid_ids = {f.get("id") for f in all_findings}
         headline_ranks = {
@@ -928,7 +938,7 @@ def _matrix_rows_from_dedup(
     structured ``{section: "apd_matrix", issue: "findings_with_unknown_goal",
     count: <n>}`` entry. Pre-T4-E these findings were silently dropped.
     """
-    all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
+    all_findings = _report_finding_set(artifacts)
 
     if goal_has_caps is None:
         goal_has_caps = {}
@@ -1048,7 +1058,7 @@ def apd_matrix(
             rows.append({"component": comp.get("name", ""), "cells": cells_out})
     elif coverage is not None:
         # Shape B — synthesise rows from goal-keyed tier-bucketed finding ID lists.
-        all_findings = artifacts.deduped_findings + artifacts.attack_path_findings
+        all_findings = _report_finding_set(artifacts)
         finding_by_id: dict[str, dict[str, Any]] = {
             f["id"]: f for f in all_findings if f.get("id")
         }
@@ -1083,7 +1093,7 @@ def apd_matrix(
             rows.append({"component": artifact_name, "cells": row_cells})
     elif goals_map is not None:
         # Shape C — authentik. Goal entries carry explicit finding {id,...} lists.
-        all_findings_c = artifacts.deduped_findings + artifacts.attack_path_findings
+        all_findings_c = _report_finding_set(artifacts)
         finding_by_id_c: dict[str, dict[str, Any]] = {
             f["id"]: f for f in all_findings_c if f.get("id")
         }
@@ -1988,7 +1998,7 @@ def _collect_referenced_ids(
     out: dict[str, set[str]] = {
         "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(), "atlas": set(),
     }
-    for rec in artifacts.deduped_findings + artifacts.attack_path_findings:
+    for rec in _report_finding_set(artifacts):
         cm = rec.get("control_mappings") or {}
         # nist_800_53r5 may be a list of bare ID strings OR a list of dicts
         # per apd-control-mappings discipline. Use the helper for both.

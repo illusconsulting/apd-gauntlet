@@ -121,7 +121,13 @@ def _members_for(doc: dict[str, Any], decision: dict[str, Any]) -> list[str]:
 
 def apply_clusters(run_dir: Path) -> ApplyResult:
     doc = _load_decisions(run_dir)
-    findings_by_id, capabilities = load_corpus(run_dir, include_attack_path=True)
+    # F4: apply-clusters runs BEFORE tier-4 (tmeval/apath). Exclude the tier-4
+    # corpus so a stale 40-synthesis/attack-path.findings.yaml or
+    # 40-threat-model/threat-model.findings.yaml left by a prior partial run is
+    # NOT folded into deduped-findings.yaml on a recovery re-run. apath-*/tmeval-*
+    # are unioned downstream by the rollup (_load_deduped) and the report loader,
+    # so including them here would only risk double-rendering them.
+    findings_by_id, capabilities = load_corpus(run_dir, include_attack_path=False)
     caps_by_id = {c["id"]: c for c in capabilities if "id" in c}
 
     result = ApplyResult()

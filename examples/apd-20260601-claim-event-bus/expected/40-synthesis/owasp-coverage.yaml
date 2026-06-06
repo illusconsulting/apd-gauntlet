@@ -1,33 +1,3 @@
 schema_version: 1
 generated_by: synthesizer
-entries:
-  - taxonomy: owasp_api_top10
-    category_id: API2:2023
-    name: "Broken Authentication"
-    finding_count: 3
-    finding_ids: [conf-e443de8b, auth-dbba3dea, auth-8d386c2f]
-    surfaces:
-      - "member-portal/mfa"
-      - "internal/service-to-service-auth"
-    silent: false
-  - taxonomy: owasp_api_top10
-    category_id: API1:2023
-    name: "Broken Object Level Authorization"
-    finding_count: 0
-    finding_ids: []
-    surfaces: []
-    silent: true
-  - taxonomy: owasp_api_top10
-    category_id: API3:2023
-    name: "Broken Object Property Level Authorization"
-    finding_count: 0
-    finding_ids: []
-    surfaces: []
-    silent: true
-  - taxonomy: owasp_api_top10
-    category_id: API8:2023
-    name: "Security Misconfiguration"
-    finding_count: 0
-    finding_ids: []
-    surfaces: []
-    silent: true
+entries: []

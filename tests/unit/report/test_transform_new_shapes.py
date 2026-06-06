@@ -176,6 +176,7 @@ def test_apd_matrix_goals_shape() -> None:
     artifacts.apd_coverage_matrix = coverage_matrix
     artifacts.deduped_findings = [finding_f1, finding_f2]
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
 
     m = apd_matrix(artifacts)
     rows_by_comp = {r["component"]: r for r in m["rows"]}
@@ -213,6 +214,7 @@ def test_apd_matrix_matrix_shape_uses_dedup_fallback() -> None:
     artifacts.apd_coverage_matrix = coverage_matrix
     artifacts.deduped_findings = [finding_f1, finding_f2]
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     artifacts.deduped_capabilities = [cap]
 
     m = apd_matrix(artifacts)

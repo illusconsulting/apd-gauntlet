@@ -12,14 +12,9 @@ from __future__ import annotations
 import collections
 from typing import Any
 
+from ..severity import normalize_severity as _norm_sev  # F6: single shared normalizer
+
 SCHEMA_VERSION = 1
-
-_INFORMATIONAL_TO_INFO = {"informational": "info"}
-
-
-def _norm_sev(value: Any) -> str:
-    s = str(value or "informational")
-    return _INFORMATIONAL_TO_INFO.get(s, s)
 
 
 def compute_metrics(

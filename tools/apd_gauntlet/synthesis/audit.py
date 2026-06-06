@@ -98,11 +98,19 @@ def audit_report(run_dir: Path) -> AuditResult:
     deduped_f = _yaml_records(synth / "deduped-findings.yaml", "finding")
     deduped_c = _yaml_records(synth / "deduped-capabilities.yaml", "capability")
     apath_f = _yaml_records(synth / "attack-path.findings.yaml", "finding")
+    # F1: tmeval-* findings live under 40-threat-model/ (sibling of synth) and are
+    # first-class report findings unioned alongside apath-*.
+    tmeval_f = _yaml_records(
+        run_dir / "40-threat-model" / "threat-model.findings.yaml", "finding")
     nist = _yaml_records(synth / "nist-coverage.yaml", "controls")
     attack = _yaml_records(synth / "attack-exposure.yaml", "techniques")
 
-    # ID coverage (findings): deduped UNION apath == data.findings ids.
-    yaml_fids = {f.get("id") for f in deduped_f} | {f.get("id") for f in apath_f}
+    # ID coverage (findings): deduped UNION apath UNION tmeval == data.findings ids.
+    yaml_fids = (
+        {f.get("id") for f in deduped_f}
+        | {f.get("id") for f in apath_f}
+        | {f.get("id") for f in tmeval_f}
+    )
     data_fids = {f.get("id") for f in parsed.get("findings", [])}
     missing_fids = sorted(str(x) for x in yaml_fids - data_fids)[:5]
     _check(result, "id_coverage_findings", yaml_fids == data_fids,
@@ -318,7 +326,7 @@ def audit_report(run_dir: Path) -> AuditResult:
 
     # Completeness check #6a — APD matrix (structural; per design spec):
     # the 9xN matrix must have rows whenever findings exist.
-    findings_present = (len(deduped_f) + len(apath_f)) > 0
+    findings_present = (len(deduped_f) + len(apath_f) + len(tmeval_f)) > 0
     apd_matrix = parsed.get("apd_matrix")
     matrix_rows = apd_matrix.get("rows") if isinstance(apd_matrix, dict) else None
     matrix_rows = matrix_rows if isinstance(matrix_rows, list) else []
@@ -370,8 +378,9 @@ def audit_report(run_dir: Path) -> AuditResult:
                klass="structural")
 
     result.counts = {
-        # deduped + apath = findings_data_js (the total that id_coverage_findings checks).
+        # deduped + apath + tmeval = findings_data_js (id_coverage_findings checks this).
         "deduped_findings_yaml": len(deduped_f), "apath_findings_yaml": len(apath_f),
+        "tmeval_findings_yaml": len(tmeval_f),
         "findings_data_js": len(data_fids),
         "capabilities_yaml": len(deduped_c), "capabilities_data_js": len(data_cids),
         "nist_controls_yaml": len(nist_ids),

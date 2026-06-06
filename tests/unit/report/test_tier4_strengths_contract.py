@@ -50,6 +50,7 @@ def _make_minimal_artifacts() -> MagicMock:
     a.report_data = {}
     a.deduped_findings = []
     a.attack_path_findings = []
+    a.threat_model_findings = []
     a.deduped_capabilities = []
     a.nist_coverage = {}
     a.attack_exposure = {}

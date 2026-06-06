@@ -377,6 +377,58 @@ def test_separate_copies_both_unchanged(tmp_path):
     assert not any(f.get("agent") == "synthesizer" for f in result.findings)
 
 
+def test_apply_excludes_preexisting_apath_from_deduped(tmp_path):
+    """F4: apply-clusters runs BEFORE attack-path analysis, so it must not pull
+    apath-* into deduped-findings.yaml even when a stale attack-path.findings.yaml
+    is already present (a corruption-recovery re-run). apath is unioned downstream
+    by the rollup + the report; if apply also emitted it, findings_array would
+    render the apath finding twice.
+    """
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    conf = {
+        "schema_version": 1, "id": "conf-12121212", "agent": "confidentiality",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality", "disposition": "gap",
+        "severity": "medium", "confidence": "medium",
+        "title": "Lens finding present before apath",
+        "summary": "A specialist-lens finding in the corpus.",
+        "detail": "This finding must survive apply-clusters unchanged.",
+        "evidence": [{"artifact": "a.md", "locator": "§1", "excerpt": "x"}],
+        "control_mappings": {"nist_800_53r5": ["SC-8"]},
+        "recommendation": {"posture": "required", "summary": "Fix it.",
+                           "detail": "Detailed remediation for the lens finding."},
+    }
+    apath = {
+        "schema_version": 1, "id": "apath-99999999", "agent": "attack_path_analyzer",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality", "disposition": "risk",
+        "severity": "high", "confidence": "high",
+        "title": "Bottleneck edge to the crown jewel",
+        "summary": "Stale attack-path finding from a prior partial run.",
+        "detail": "Present on disk before apply re-runs in a recovery scenario.",
+        "evidence": [{"artifact": "40-synthesis/attack-paths.yaml", "locator": "paths[0]",
+                       "excerpt": "edge appears in 6 paths"}],
+        "control_mappings": {"nist_800_53r5": ["SC-7"]},
+        "recommendation": {"posture": "required", "summary": "Harden the edge.",
+                           "detail": "Apply egress filtering on the bottleneck edge."},
+    }
+    (run / "10-trustworthiness" / "confidentiality.findings.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "finding": [conf]}, sort_keys=False))
+    # Stale apath file already on disk (the recovery scenario).
+    (run / "40-synthesis" / "attack-path.findings.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "finding": [apath]}, sort_keys=False))
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(yaml.safe_dump(
+        {"schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+         "decisions": [], "contradictions": [], "_members": {}}, sort_keys=False))
+    result = apply_clusters(run)
+    ids = {f["id"] for f in result.findings}
+    assert "conf-12121212" in ids
+    assert "apath-99999999" not in ids, "apath must not be folded into deduped by apply-clusters"
+    deduped = yaml.safe_load((run / "40-synthesis" / "deduped-findings.yaml").read_text())
+    assert "apath-99999999" not in {f["id"] for f in deduped["finding"]}
+
+
 def test_cli_apply_clusters_exits_2_without_decisions(tmp_path):
     """apply-clusters exits with code 2 when cluster-decisions.yaml is absent."""
     run = tmp_path / "run"

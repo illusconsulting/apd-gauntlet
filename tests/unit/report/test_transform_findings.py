@@ -10,7 +10,12 @@ from apd_gauntlet.report.transform import findings_array
 def test_findings_array_includes_attack_path_findings(example_run: pathlib.Path) -> None:
     artifacts = load_run(example_run)
     arr = findings_array(artifacts, headline_supplement=None)
-    assert len(arr) == len(artifacts.deduped_findings) + len(artifacts.attack_path_findings)
+    # F1: the report finding list is deduped + apath + tmeval (all first-class).
+    assert len(arr) == (
+        len(artifacts.deduped_findings)
+        + len(artifacts.attack_path_findings)
+        + len(artifacts.threat_model_findings)
+    )
 
 
 def test_findings_array_carries_required_fields(example_run: pathlib.Path) -> None:

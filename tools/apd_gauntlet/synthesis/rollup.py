@@ -78,11 +78,16 @@ def _load_deduped(run_dir: Path) -> tuple[list[dict[str, Any]], list[dict[str, A
     cdoc = yaml.safe_load((synth / "deduped-capabilities.yaml").read_text(encoding="utf-8")) or {}
     findings = [f for f in (fdoc.get("finding") or []) if isinstance(f, dict)]
     caps = [c for c in (cdoc.get("capability") or []) if isinstance(c, dict)]
-    # Include apath-* (spec Steps 2/8 — apath in the finding corpus for nist/matrix).
-    apath_by_id, _ = load_corpus(run_dir, include_attack_path=True)
+    # Union the tier-4 findings into the finding corpus so nist/attack/matrix
+    # coverage + metrics reflect them (spec Steps 2/8). F1: this now unions BOTH
+    # apath-* (attack-path analyzer) AND tmeval-* (threat-model evaluator) —
+    # previously only apath-*, which silently dropped tmeval-* from coverage and
+    # the report. load_corpus(include_attack_path=True) already indexes both the
+    # 40-synthesis/attack-path.findings.yaml and 40-threat-model/threat-model.findings.yaml.
+    tier4_by_id, _ = load_corpus(run_dir, include_attack_path=True)
     seen = {f.get("id") for f in findings}
-    for fid, rec in apath_by_id.items():
-        if fid.startswith("apath-") and fid not in seen:
+    for fid, rec in tier4_by_id.items():
+        if (fid.startswith("apath-") or fid.startswith("tmeval-")) and fid not in seen:
             findings.append(rec)
     return findings, caps
 

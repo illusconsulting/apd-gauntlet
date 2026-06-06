@@ -47,6 +47,7 @@ def test_findings_array_normalises_nist_case():
         {"id": "f2", "control_mappings": {"nist_800_53r5": ["AC-3"]}},
     ]
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     out = findings_array(artifacts, headline_supplement=None)
     assert out[0]["mappings"]["nist"] == ["AC-3"]
     assert out[1]["mappings"]["nist"] == ["AC-3"]

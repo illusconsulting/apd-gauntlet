@@ -24,4 +24,5 @@ def test_summary_rollup_does_not_recompute_from_findings():
     a.metrics = {"findings_total": 99}
     a.deduped_findings = [{"id": "x", "severity": "high"}]   # ignored by passthrough
     a.attack_path_findings = []
+    a.threat_model_findings = []
     assert summary_rollup(a)["findings_total"] == 99

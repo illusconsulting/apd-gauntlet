@@ -2,12 +2,13 @@ controls:
 - id: SC-8(1)
   family: SC
   title: Transmission Confidentiality and Integrity | Cryptographic Protection
-  finding_count: 4
+  finding_count: 5
   finding_ids:
   - auth-8d386c2f
   - conf-7aa376c5
   - conf-e443de8b
   - intg-42a3ebbd
+  - tmeval-dddd4444
   capability_count: 1
   capability_ids:
   - intg-cap-d4ef7325
@@ -59,7 +60,7 @@ controls:
 - id: IA-3
   family: IA
   title: Device Identification and Authentication
-  finding_count: 47
+  finding_count: 48
   finding_ids:
   - apath-0296f550
   - apath-04e9feaa
@@ -108,6 +109,7 @@ controls:
   - apath-fe81cf8c
   - auth-8d386c2f
   - conf-e443de8b
+  - tmeval-eeee5555
   capability_count: 0
   capability_ids: []
   posture: gapped
@@ -203,7 +205,7 @@ controls:
 - id: IA-5(1)
   family: IA
   title: Authenticator Management | Password-based Authentication
-  finding_count: 47
+  finding_count: 48
   finding_ids:
   - apath-0296f550
   - apath-04e9feaa
@@ -252,6 +254,7 @@ controls:
   - apath-fe81cf8c
   - auth-dbba3dea
   - ephem-eb51a236
+  - tmeval-eeee5555
   capability_count: 0
   capability_ids: []
   posture: gapped
@@ -288,10 +291,11 @@ controls:
 - id: AU-9
   family: AU
   title: Protection of Audit Information
-  finding_count: 2
+  finding_count: 3
   finding_ids:
   - merged-4dd83f6a
   - nonrep-cf99a733
+  - tmeval-cccc3333
   capability_count: 0
   capability_ids: []
   posture: gapped
@@ -344,9 +348,10 @@ controls:
 - id: AU-10
   family: AU
   title: Non-repudiation
-  finding_count: 1
+  finding_count: 2
   finding_ids:
   - merged-4dd83f6a
+  - tmeval-cccc3333
   capability_count: 0
   capability_ids: []
   posture: gapped
@@ -426,6 +431,16 @@ controls:
   capability_count: 0
   capability_ids: []
   posture: gapped
+- id: SC-8
+  family: SC
+  title: Transmission Confidentiality and Integrity
+  finding_count: 1
+  finding_ids:
+  - tmeval-dddd4444
+  capability_count: 1
+  capability_ids:
+  - intg-cap-d4ef7325
+  posture: gapped_and_covered
 - id: AU-2
   family: AU
   title: Event Logging
@@ -481,15 +496,6 @@ controls:
   - conf-cap-89e19793
   - conf-cap-d0590471
   - ephem-cap-32d883ee
-  posture: covered
-- id: SC-8
-  family: SC
-  title: Transmission Confidentiality and Integrity
-  finding_count: 0
-  finding_ids: []
-  capability_count: 1
-  capability_ids:
-  - intg-cap-d4ef7325
   posture: covered
 - id: SI-12
   family: SI

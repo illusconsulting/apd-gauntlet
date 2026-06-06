@@ -23,8 +23,9 @@ def test_parse_data_js_roundtrips_window_assignment(tmp_path):
     data_js = EXAMPLE / "40-synthesis" / "report-html" / "data.js"
     d = parse_data_js(data_js)
     assert "findings" in d and "meta" in d
-    # 15 deduped + 75 apath = 90 findings in the rendered data.
-    assert len(d["findings"]) == 90
+    # 15 deduped + 75 apath + 3 tmeval = 93 findings in the rendered data (F1:
+    # tmeval-* threat-model-evaluator findings are first-class report findings).
+    assert len(d["findings"]) == 93
 
 
 def test_audit_passes_on_committed_example(tmp_path):

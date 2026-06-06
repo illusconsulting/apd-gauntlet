@@ -122,6 +122,7 @@ def test_apd_matrix_plural_components_list_shape() -> None:
     artifacts.apd_coverage_matrix = coverage_matrix
     artifacts.deduped_findings = []
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     m = apd_matrix(artifacts)
     assert len(m["rows"]) == 1
     assert m["rows"][0]["component"] == "claim-event-bus"
@@ -147,6 +148,7 @@ def test_collect_referenced_ids_tolerates_list_of_dicts_nist() -> None:
         },
     ]
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     artifacts.deduped_capabilities = []
     artifacts.nist_coverage = {}
     artifacts.attack_exposure = {}
@@ -175,6 +177,7 @@ def test_findings_array_normalises_list_of_dict_mappings() -> None:
         },
     ]
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     artifacts.deduped_capabilities = []
     out = findings_array(artifacts, headline_supplement=None)
     mappings = out[0]["mappings"]
@@ -239,6 +242,7 @@ def test_apd_matrix_shape_a_skips_non_dict_entries() -> None:
     artifacts.apd_coverage_matrix = coverage_matrix
     artifacts.deduped_findings = []
     artifacts.attack_path_findings = []
+    artifacts.threat_model_findings = []
     m = apd_matrix(artifacts)
     # The string entry must be skipped, the dict entry must be emitted.
     assert len(m["rows"]) == 1

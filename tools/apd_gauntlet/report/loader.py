@@ -130,6 +130,11 @@ class RunArtifacts:
     # (40-synthesis/threat-model-coverage.yaml). Optional; None when the
     # evaluator did not run. Consumed by the transform's threat-model scene.
     threat_model_coverage: dict[str, Any] | None = None
+    # F1: the threat-model evaluator's tmeval-* finding records
+    # (40-threat-model/threat-model.findings.yaml). First-class finding source —
+    # unioned into the report findings list, metrics, and coverage rollups,
+    # mirroring attack_path_findings. Empty when the evaluator emitted none.
+    threat_model_findings: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -472,6 +477,12 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         if (synth / "attack-path.findings.yaml").is_file()
         else []
     )
+    # F1: tmeval-* findings live under 40-threat-model/ (the evaluator's output),
+    # a sibling of synth. Optional — empty when the evaluator emitted no findings.
+    tm_findings_path = run_dir / "40-threat-model" / "threat-model.findings.yaml"
+    tm_findings = (
+        _records(tm_findings_path, "finding") if tm_findings_path.is_file() else []
+    )
     report_data = _yaml_optional(synth / "report-data.yaml")
     context = run_dir / "00-context"
     tm_normalized = _yaml_optional(context / "threat-model-normalized.yaml")
@@ -528,4 +539,5 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         threat_model_normalized=tm_normalized,
         threat_model_supplied=tm_supplied,
         threat_model_coverage=tm_coverage,
+        threat_model_findings=tm_findings,
     )
