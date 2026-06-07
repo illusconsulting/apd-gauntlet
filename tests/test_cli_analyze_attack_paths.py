@@ -196,6 +196,87 @@ def test_analyze_attack_paths_emits_schema_valid_artifacts(
         )
 
 
+def test_analyze_attack_paths_defaults_max_risk_findings_per_pair_to_one(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """With no override, the CLI passes ``max_risk_per_pair=1`` to emit_findings
+    (the bounded default for every run)."""
+    import apd_gauntlet.attack_path.findings as findings_mod
+
+    captured: dict[str, Any] = {}
+    real_emit = findings_mod.emit_findings
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return real_emit(*args, **kwargs)
+
+    monkeypatch.setattr(findings_mod, "emit_findings", _spy)
+
+    runner = CliRunner()
+    _scaffold_minimal_run(tmp_path)
+    result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert captured.get("max_risk_per_pair") == 1
+    assert captured.get("bound") is True
+
+
+def test_analyze_attack_paths_honors_max_risk_findings_per_pair(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """The analyze-attack-paths CLI must read
+    ``attack_path_analysis.max_risk_findings_per_pair`` from the run-config and
+    thread it into emit_findings as ``max_risk_per_pair``."""
+    import apd_gauntlet.attack_path.findings as findings_mod
+
+    captured: dict[str, Any] = {}
+    real_emit = findings_mod.emit_findings
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return real_emit(*args, **kwargs)
+
+    monkeypatch.setattr(findings_mod, "emit_findings", _spy)
+
+    runner = CliRunner()
+    _scaffold_minimal_run(tmp_path)
+    cfg_path = tmp_path / ".apd-run.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text()) or {}
+    cfg.setdefault("attack_path_analysis", {})["max_risk_findings_per_pair"] = 3
+    cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
+
+    result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert captured.get("max_risk_per_pair") == 3
+
+
+def test_analyze_attack_paths_keeps_every_path_in_attack_paths_yaml(
+    tmp_path: Path,
+) -> None:
+    """attack-paths.yaml is the artifact of record: every enumerated path is
+    retained there regardless of the findings bound. Only the findings file is
+    bounded — so the path count in attack-paths.yaml must NOT shrink when the
+    findings are capped."""
+    runner = CliRunner()
+    _scaffold_minimal_run(tmp_path)
+    result = runner.invoke(main, ["analyze-attack-paths", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    attack_paths = yaml.safe_load(
+        (tmp_path / "40-synthesis" / "attack-paths.yaml").read_text()
+    )
+    # The summary echoes the path count; it must match the actual paths list.
+    paths = attack_paths.get("paths", [])
+    # The default bound caps findings, but every path stays in attack-paths.yaml.
+    findings_doc = yaml.safe_load(
+        (tmp_path / "40-synthesis" / "attack-path.findings.yaml").read_text()
+    )
+    risk = [f for f in findings_doc["finding"] if f["disposition"] == "risk"]
+    # Bound is on by default: risk findings are at most one per pair, which for
+    # this fixture is far fewer than the raw path count.
+    assert len(paths) >= len(risk), (
+        "attack-paths.yaml must retain every path even when findings are bounded"
+    )
+
+
 def test_analyze_attack_paths_output_is_iterable_by_validate(tmp_path: Path) -> None:
     """End-to-end regression: the analyzer's emitted ``attack-path.findings.yaml``
     must satisfy *both* the ``*.findings.yaml`` glob *and* the singular

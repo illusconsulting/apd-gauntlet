@@ -23,6 +23,9 @@ from .graph import Graph
 _UNCERTAINTY_SEVERITY = "low"
 _TITLE_MAX = 200
 
+# Feasibility rank for the bounded-selection tiebreak (higher = more feasible).
+_FEASIBILITY_RANK: dict[str, int] = {"low": 0, "medium": 1, "high": 2}
+
 # Priority order for inferring apd_goal across multiple finding-edges on a
 # path. Highest-impact category appears first so that, given a path that
 # crosses several findings of different goals, the emitted finding is labeled
@@ -72,12 +75,23 @@ def emit_findings(
     graph: Graph,
     findings_by_id: dict[str, dict[str, Any]],
     capabilities: list[dict[str, Any]],
+    bound: bool = True,
+    max_risk_per_pair: int = 1,
 ) -> list[dict[str, Any]]:
     """Emit apath-* findings for enumerated paths and qualifying overlays.
 
-    Yields one finding per path (risk or uncertainty disposition) and one
+    Builds one finding per path (risk or uncertainty disposition) and one
     additional finding per overlay whose ``net_new_d3fend`` is non-empty and
     whose ``existing_capability_backing`` is empty (gap disposition).
+
+    When ``bound`` is True (the DEFAULT for all runs) the full per-path stream
+    is then passed through :func:`select_bounded`, which keeps every gap finding,
+    keeps the worst ``max_risk_per_pair`` risk findings per (attacker,
+    crown_jewel) pair, and collapses the suppressed remainder into ONE aggregate
+    uncertainty finding. Set ``bound=False`` to restore the legacy
+    one-finding-per-path behavior. Note that ``attack-paths.yaml`` always keeps
+    every enumerated path as an artifact of record — only the findings file is
+    bounded.
 
     The ``capabilities`` parameter is accepted for API symmetry with the
     analyze-attack-paths CLI; gap-finding eligibility is read directly from
@@ -90,8 +104,179 @@ def emit_findings(
     for overlay in overlays:
         if overlay.get("net_new_d3fend") and not overlay.get("existing_capability_backing"):
             out.append(_finding_from_bottleneck(overlay, graph, findings_by_id))
+    if bound:
+        out, _stats = select_bounded(
+            out, paths, max_risk_per_pair=max_risk_per_pair
+        )
     out.sort(key=lambda f: f["id"])
     return out
+
+
+def _apath_id_for_path(path_id: str) -> str:
+    """Reproduce the emitter's own apath id scheme for a path: the same
+    ``apath-<sha8(path_id)>`` derived in :func:`_finding_from_path`."""
+    return "apath-" + hashlib.sha256(path_id.encode()).hexdigest()[:8]
+
+
+def select_bounded(
+    all_findings: list[dict[str, Any]],
+    paths: list[APath],
+    *,
+    max_risk_per_pair: int = 1,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Bound the per-path finding stream to the worst N risks per pair.
+
+    Discipline (ported as the default for every run):
+
+    * keep ALL gap-disposition findings untouched;
+    * a path is *risk-eligible* when ``feasibility != 'low'`` AND
+      ``severity_sum >= 3`` AND ``mitigation_count == 0``. Risk-eligible paths
+      are grouped by ``(attacker_position, crown_jewel)``; within each group the
+      top ``max_risk_per_pair`` are kept, ranked by ``(severity_sum desc,
+      hop_count asc, feasibility desc, path_id)``. The kept paths' findings are
+      located via the emitter's own id scheme (``apath-<sha8(path_id)>``);
+    * everything else (risk-eligible paths beyond the per-pair cap, plus every
+      non-risk per-path finding such as low-feasibility uncertainties and
+      partial-mitigation findings) is the *suppressed remainder*. It collapses
+      into ONE aggregate uncertainty finding (disposition ``uncertainty``,
+      severity ``low``, confidence ``low``, posture ``consider``) disclosing the
+      suppressed count, the total path count, and the per-pair cap. The
+      aggregate is omitted only when nothing is suppressed.
+
+    Findings whose id maps to no enumerated path (defensive — e.g. a stray
+    record not produced by ``_finding_from_path``) are kept so nothing is
+    silently lost.
+
+    Returns ``(selected, stats)`` where ``stats`` has keys ``gap``,
+    ``risk_pairs``, ``risk_findings``, ``suppressed_into_aggregate``, and
+    ``selected_total``.
+    """
+    findings_by_apath_id = {f.get("id"): f for f in all_findings}
+
+    gap_findings = [f for f in all_findings if f.get("disposition") == "gap"]
+
+    # All apath ids that originate from an enumerated path (the per-path stream).
+    path_finding_ids = {_apath_id_for_path(p.path_id) for p in paths}
+
+    # Group risk-eligible paths by (attacker, jewel).
+    pairs: dict[tuple[str, str], list[APath]] = {}
+    for p in paths:
+        if p.feasibility != "low" and p.severity_sum >= 3 and p.mitigation_count == 0:
+            pairs.setdefault((p.attacker_position, p.crown_jewel), []).append(p)
+
+    kept_risk_ids: list[str] = []
+    for _pair, group in pairs.items():
+        group.sort(
+            key=lambda p: (
+                -p.severity_sum,
+                p.hop_count,
+                -_FEASIBILITY_RANK[p.feasibility],
+                p.path_id,
+            )
+        )
+        for p in group[:max_risk_per_pair]:
+            fid = _apath_id_for_path(p.path_id)
+            if fid in findings_by_apath_id and fid not in kept_risk_ids:
+                kept_risk_ids.append(fid)
+
+    kept_ids: set[str | None] = {f.get("id") for f in gap_findings}
+    kept_ids.update(kept_risk_ids)
+
+    selected: list[dict[str, Any]] = list(gap_findings)
+    for rid in kept_risk_ids:
+        selected.append(findings_by_apath_id[rid])
+
+    # Defensive: keep any finding that is neither a gap, a kept risk, nor a
+    # per-path finding (so an unexpected stray record is never silently lost).
+    for f in all_findings:
+        sid = f.get("id")
+        if sid not in kept_ids and sid not in path_finding_ids:
+            selected.append(f)
+            kept_ids.add(sid)
+
+    # Suppressed remainder = every per-path finding that was not kept.
+    suppressed = sum(1 for pid in path_finding_ids if pid not in kept_ids)
+
+    if suppressed > 0:
+        selected.append(
+            _aggregate_uncertainty_finding(
+                suppressed=suppressed,
+                total_paths=len(paths),
+                max_risk_per_pair=max_risk_per_pair,
+            )
+        )
+
+    stats = {
+        "gap": len(gap_findings),
+        "risk_pairs": len(pairs),
+        "risk_findings": len(kept_risk_ids),
+        "suppressed_into_aggregate": suppressed,
+        "selected_total": len(selected),
+    }
+    return selected, stats
+
+
+def _aggregate_uncertainty_finding(
+    *, suppressed: int, total_paths: int, max_risk_per_pair: int
+) -> dict[str, Any]:
+    """Build the single aggregate uncertainty finding that stands in for all
+    suppressed risk paths. Its id is deterministic in the disclosed counts so
+    re-runs over the same input are stable.
+
+    Schema-valid: low severity, low confidence, posture ``consider`` (which the
+    schema allows to omit recommendation ``detail``), one evidence pointer at
+    ``attack-paths.yaml`` (the artifact of record that retains every path).
+    """
+    short_hash = hashlib.sha256(
+        f"aggregate|{suppressed}|{total_paths}|{max_risk_per_pair}".encode()
+    ).hexdigest()[:8]
+    summary = (
+        f"{suppressed} additional risk-eligible attack path(s) of {total_paths} "
+        f"enumerated were suppressed from the findings file (per-pair cap = "
+        f"{max_risk_per_pair} risk finding(s) per attacker x crown-jewel pair). "
+        "Only the worst path per pair is surfaced as a discrete risk finding."
+    )
+    detail = (
+        f"To keep the advisory signal focused, the analyzer bounds risk findings "
+        f"to the worst {max_risk_per_pair} path(s) per (attacker_position, "
+        f"crown_jewel) pair. {suppressed} lower-ranked risk-eligible path(s) "
+        f"(of {total_paths} total enumerated paths) are collapsed into this "
+        "single aggregate. Every enumerated path — suppressed or not — is "
+        "retained verbatim in 40-synthesis/attack-paths.yaml, the artifact of "
+        "record; consult it to inspect the full set."
+    )
+    return {
+        "schema_version": 1,
+        "id": f"apath-{short_hash}",
+        "agent": "attack_path_analyzer",
+        "apd_tier": "trustworthiness",
+        "apd_goal": "authenticity",
+        "disposition": "uncertainty",
+        "severity": "low",
+        "confidence": "low",
+        "title": "Suppressed risk attack paths collapsed into one aggregate",
+        "summary": summary,
+        "detail": detail,
+        "evidence": [
+            {
+                "artifact": "40-synthesis/attack-paths.yaml",
+                "locator": "paths",
+                "excerpt": (
+                    f"{suppressed} of {total_paths} enumerated paths suppressed "
+                    f"from findings (per-pair cap={max_risk_per_pair})"
+                ),
+            }
+        ],
+        "control_mappings": {"nist_800_53r5": ["CA-3", "SA-8"]},
+        "cross_references": [],
+        "recommendation": {
+            "posture": "consider",
+            "summary": (
+                "Review 40-synthesis/attack-paths.yaml for the full path set; "
+                "raise max_risk_findings_per_pair if more per-pair detail is wanted."
+            ),
+        },
+    }
 
 
 def _truncate_title(title: str) -> str:

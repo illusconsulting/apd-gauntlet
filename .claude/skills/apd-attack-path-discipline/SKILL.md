@@ -39,6 +39,15 @@ Every edge must cite one of:
 - A code-evidence-index cross-service call
 - A trust boundary declared in asset-inventory or domain-pack defaults
 
+**Edge endpoint orientation.** A finding/capability edge is oriented
+deterministically toward the compromised/data node, never by node-iteration
+order. TARGET (`to_node`) prefers a named asset that realizes a crown jewel
+(so the `data_resides_on` hop carries into the jewel), else any named asset,
+else the crown jewel, else an identity. SOURCE (`from_node`) prefers a named
+attacker position, else a distinct asset/identity. Never emit
+`attacker_position -> attacker_position`; if no sensible distinct
+`(source, target)` can form, DROP the edge rather than invent one.
+
 ### 3. Confidence floors severity
 
 - Paths whose feasibility floor is `low` MUST cap at `disposition: uncertainty`
@@ -59,6 +68,14 @@ Every edge must cite one of:
   `truncated_pairs > 0` and the report says so explicitly.
 - Never claim "all paths" — output language is always "top-N paths under K
   hops."
+- **Findings are bounded (always on).** `attack-paths.yaml` keeps every
+  enumerated path, but the findings file emits only the worst
+  `max_risk_findings_per_pair` (default 1) risk finding per
+  `(attacker_position, crown_jewel)` pair — risk-eligible = `feasibility !=
+  low`, `severity_sum >= 3`, no on-path mitigation — keeps all gap findings,
+  and collapses the suppressed remainder into ONE aggregate uncertainty
+  finding (`severity: low`, `confidence: low`, `posture: consider`). Do not
+  emit one risk finding per path.
 
 ### 5. Block on missing crown jewels
 

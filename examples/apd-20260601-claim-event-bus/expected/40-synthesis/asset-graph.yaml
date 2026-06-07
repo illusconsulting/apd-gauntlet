@@ -227,6 +227,17 @@ edges:
     locator: tb-55667788
   confidence: high
   traversal_cost: 2
+- edge_id: edge-47ab0bcb
+  edge_type: compromisable_via_finding
+  from: asset-5e6f7a8b
+  to: asset-1a2b3c4d
+  provenance:
+    source: artifact
+    artifact: specialist findings
+    locator: tmeval-eeee5555
+  confidence: high
+  traversal_cost: 4
+  finding_id: tmeval-eeee5555
 - edge_id: edge-4b6f06ec
   edge_type: network_reachable
   from: atk-accb3a4c
@@ -478,17 +489,6 @@ edges:
     locator: tm-b9c3c1b5
   confidence: high
   traversal_cost: 2
-- edge_id: edge-f0f89452
-  edge_type: compromisable_via_finding
-  from: asset-1a2b3c4d
-  to: asset-5e6f7a8b
-  provenance:
-    source: artifact
-    artifact: specialist findings
-    locator: tmeval-eeee5555
-  confidence: high
-  traversal_cost: 4
-  finding_id: tmeval-eeee5555
 - edge_id: edge-f29aefbf
   edge_type: network_reachable
   from: atk-e0a03f74

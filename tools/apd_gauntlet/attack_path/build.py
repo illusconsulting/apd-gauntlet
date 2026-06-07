@@ -573,12 +573,98 @@ def _wire_realized_crown_jewels(g: Graph) -> None:
         )
 
 
+def _named_node_hits(g: Graph, text: str, node_names: dict[str, str]) -> list[str]:
+    """Return distinct node_ids whose (lower-cased) name appears in ``text``,
+    ordered deterministically by (first text-offset, node_id).
+
+    Recording each hit's earliest text offset lets the endpoint resolver break
+    ties by where the node is mentioned, independent of dict-iteration order.
+    """
+    hits: list[tuple[int, str]] = []
+    seen: set[str] = set()
+    for name, nid in node_names.items():
+        offset = text.find(name)
+        if offset >= 0 and nid not in seen:
+            hits.append((offset, nid))
+            seen.add(nid)
+    hits.sort(key=lambda pair: (pair[0], pair[1]))
+    return [nid for _offset, nid in hits]
+
+
+def _resolve_edge_endpoints(g: Graph, hits: list[str]) -> tuple[str, str] | None:
+    """Deterministically orient an edge from named-node hits.
+
+    SOURCE = the acting/upstream node, TARGET = the compromised/data node.
+
+    TARGET (``to_node``) preference, most-specific first:
+      1. a named ASSET that REALIZES a crown jewel (has an outbound
+         ``data_resides_on`` edge to a jewel — the #84 wiring) — preferred so
+         that hop carries into the jewel;
+      2. else any named ASSET (the realizing/data asset);
+      3. else a named ``crown_jewel`` (terminal target when no asset is named);
+      4. else a named ``identity``.
+
+    SOURCE (``from_node``) preference, most-specific first:
+      1. a named ``attacker_position``;
+      2. else a named ASSET or ``identity`` DISTINCT from the chosen target.
+
+    Within each candidate class ties break deterministically by the hit order
+    (text-offset, node_id) established in :func:`_named_node_hits`.
+
+    Returns ``(from_node, to_node)`` or ``None`` when no sensible, distinct
+    (source, target) pair can form — e.g. only attacker positions are named, so
+    the only possible edge would be attacker->attacker. In that case the edge is
+    DROPPED (never invent nodes; never emit attacker->attacker).
+    """
+    by_type: dict[str, list[str]] = {}
+    for nid in hits:  # hits are already in deterministic order
+        by_type.setdefault(g.get_node(nid).node_type, []).append(nid)
+
+    target: str | None = None
+    # 1. a named asset that realizes a crown jewel (outbound data_resides_on->jewel)
+    for nid in by_type.get("asset", []):
+        if any(
+            e.edge_type == "data_resides_on"
+            and g.get_node(e.to_node).node_type == "crown_jewel"
+            for e in g.outgoing(nid)
+        ):
+            target = nid
+            break
+    # 2-4. any named asset, else crown_jewel, else identity
+    if target is None:
+        for node_type in ("asset", "crown_jewel", "identity"):
+            if by_type.get(node_type):
+                target = by_type[node_type][0]
+                break
+    if target is None:
+        return None  # only attacker positions named -> nothing to compromise
+
+    source: str | None = None
+    if by_type.get("attacker_position"):
+        source = by_type["attacker_position"][0]
+    else:
+        for node_type in ("asset", "identity"):
+            for nid in by_type.get(node_type, []):
+                if nid != target:
+                    source = nid
+                    break
+            if source is not None:
+                break
+    if source is None or source == target:
+        return None  # no distinct upstream node; never emit X->X
+    return source, target
+
+
 def _add_finding_edges(g: Graph, findings: list[dict[str, Any]]) -> None:
     """Wire a `compromisable_via_finding` edge per finding whose detail or
     evidence excerpts name at least two graph nodes (case-insensitive).
 
-    Findings whose text doesn't name two nodes are dropped at this layer —
-    the analyzer reports them separately as "unwired" risks.
+    Endpoints are oriented by the shared deterministic resolver
+    (:func:`_resolve_edge_endpoints`): SOURCE = acting/upstream node (preferring
+    a named attacker position), TARGET = compromised/data node (preferring the
+    realizing asset so the #84 ``data_resides_on`` hop carries into the jewel).
+    Findings whose text doesn't name a sensible (source, target) pair are dropped
+    at this layer — the analyzer reports them separately as "unwired" risks.
     """
     node_names = _node_name_index(g)
     for f in findings:
@@ -587,38 +673,39 @@ def _add_finding_edges(g: Graph, findings: list[dict[str, Any]]) -> None:
             str(ev.get("excerpt", "")) for ev in f.get("evidence", []) if isinstance(ev, dict)
         )
         text = " ".join(text_parts).lower()
-        hits: list[str] = []
-        for name, nid in node_names.items():
-            if name in text and nid not in hits:
-                hits.append(nid)
-        if len(hits) >= 2:
-            cost = _SEVERITY_TO_COST.get(f.get("severity", "medium"), 4)
-            g.add_edge(
-                Edge(
-                    edge_id=stable_id(
-                        "edge",
-                        hits[0],
-                        hits[1],
-                        "compromisable_via_finding",
-                        f["id"],
-                    ),
-                    edge_type="compromisable_via_finding",
-                    from_node=hits[0],
-                    to_node=hits[1],
-                    provenance={
-                        "source": "artifact",
-                        "artifact": "specialist findings",
-                        "locator": f["id"],
-                    },
-                    confidence=f.get("confidence", "medium"),
-                    traversal_cost=cost,
-                    finding_id=f["id"],
-                )
+        hits = _named_node_hits(g, text, node_names)
+        endpoints = _resolve_edge_endpoints(g, hits)
+        if endpoints is None:
+            continue
+        from_node, to_node = endpoints
+        cost = _SEVERITY_TO_COST.get(f.get("severity", "medium"), 4)
+        g.add_edge(
+            Edge(
+                edge_id=stable_id(
+                    "edge",
+                    from_node,
+                    to_node,
+                    "compromisable_via_finding",
+                    f["id"],
+                ),
+                edge_type="compromisable_via_finding",
+                from_node=from_node,
+                to_node=to_node,
+                provenance={
+                    "source": "artifact",
+                    "artifact": "specialist findings",
+                    "locator": f["id"],
+                },
+                confidence=f.get("confidence", "medium"),
+                traversal_cost=cost,
+                finding_id=f["id"],
             )
+        )
 
 
 def _add_capability_edges(g: Graph, capabilities: list[dict[str, Any]]) -> None:
-    """Mirror of `_add_finding_edges` for capabilities."""
+    """Mirror of `_add_finding_edges` for capabilities; uses the SAME
+    deterministic endpoint resolver (:func:`_resolve_edge_endpoints`)."""
     node_names = _node_name_index(g)
     for c in capabilities:
         text_parts = [str(c.get("description", "")), str(c.get("scope", ""))]
@@ -626,33 +713,33 @@ def _add_capability_edges(g: Graph, capabilities: list[dict[str, Any]]) -> None:
             str(ev.get("excerpt", "")) for ev in c.get("evidence", []) if isinstance(ev, dict)
         )
         text = " ".join(text_parts).lower()
-        hits: list[str] = []
-        for name, nid in node_names.items():
-            if name in text and nid not in hits:
-                hits.append(nid)
-        if len(hits) >= 2:
-            g.add_edge(
-                Edge(
-                    edge_id=stable_id(
-                        "edge",
-                        hits[0],
-                        hits[1],
-                        "mitigated_by_capability",
-                        c["id"],
-                    ),
-                    edge_type="mitigated_by_capability",
-                    from_node=hits[0],
-                    to_node=hits[1],
-                    provenance={
-                        "source": "artifact",
-                        "artifact": "specialist capabilities",
-                        "locator": c["id"],
-                    },
-                    confidence=c.get("confidence", "medium"),
-                    traversal_cost=1,
-                    capability_id=c["id"],
-                )
+        hits = _named_node_hits(g, text, node_names)
+        endpoints = _resolve_edge_endpoints(g, hits)
+        if endpoints is None:
+            continue
+        from_node, to_node = endpoints
+        g.add_edge(
+            Edge(
+                edge_id=stable_id(
+                    "edge",
+                    from_node,
+                    to_node,
+                    "mitigated_by_capability",
+                    c["id"],
+                ),
+                edge_type="mitigated_by_capability",
+                from_node=from_node,
+                to_node=to_node,
+                provenance={
+                    "source": "artifact",
+                    "artifact": "specialist capabilities",
+                    "locator": c["id"],
+                },
+                confidence=c.get("confidence", "medium"),
+                traversal_cost=1,
+                capability_id=c["id"],
             )
+        )
 
 
 def _add_threat_model_edges(g: Graph, tm: dict[str, Any]) -> None:

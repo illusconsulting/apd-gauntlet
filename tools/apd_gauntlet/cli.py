@@ -746,6 +746,12 @@ def analyze_attack_paths(run_dir: Path) -> None:
         max_paths_per_pair=int(tuning.get("max_paths_per_pair", 50)),
         bottleneck_threshold=int(tuning.get("bottleneck_threshold", 5)),
     )
+    # Findings are bounded by default for every run: at most
+    # max_risk_findings_per_pair (default 1) risk findings per (attacker,
+    # crown_jewel) pair, with the suppressed remainder collapsed into one
+    # aggregate uncertainty finding. attack-paths.yaml keeps every path.
+    max_risk_per_pair = int(tuning.get("max_risk_findings_per_pair", 1))
+    fan_out_warn = int(tuning.get("fan_out_warn_threshold", 500))
 
     try:
         result = build_graph(run_dir)
@@ -797,7 +803,20 @@ def analyze_attack_paths(run_dir: Path) -> None:
         graph=graph,
         findings_by_id=findings_by_id,
         capabilities=capabilities,
+        bound=True,
+        max_risk_per_pair=max_risk_per_pair,
     )
+
+    # Density warning (no hard ceiling): a large raw path count signals a
+    # dense graph whose findings are now bounded but whose enumeration may be
+    # worth tuning. attack-paths.yaml still retains every path.
+    if len(all_paths) > fan_out_warn:
+        click.echo(
+            "analyze-attack-paths: WARNING - high path fan-out "
+            f"({len(all_paths)} paths > {fan_out_warn}); findings are bounded "
+            "to max_risk_findings_per_pair, but consider lowering max_hop / "
+            "max_paths_per_pair if enumeration is slow."
+        )
 
     _write_asset_graph(synth / "asset-graph.yaml", graph, result.sources_used)
     _write_attack_paths(

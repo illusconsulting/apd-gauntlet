@@ -11,11 +11,16 @@ Covers:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 
 from apd_gauntlet.attack_path.enumerate import Path as APath
-from apd_gauntlet.attack_path.findings import emit_findings, severity_for_risk
+from apd_gauntlet.attack_path.findings import (
+    emit_findings,
+    select_bounded,
+    severity_for_risk,
+)
 from apd_gauntlet.attack_path.graph import Edge, Graph, Node
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
@@ -334,3 +339,269 @@ def test_inference_picks_worst_case_goal_across_multiple_finding_edges() -> None
     )
     assert any(f["apd_goal"] == "confidentiality" for f in results)
     assert not any(f["apd_goal"] == "authenticity" for f in results)
+
+
+# ---------------------------------------------------------------------------
+# WS4: bounded per-pair risk-finding emission (PR4)
+#
+# emit_findings(bound=True) keeps all gaps, keeps the worst N risk findings
+# per (attacker, crown_jewel) pair, and collapses the suppressed remainder
+# into ONE aggregate uncertainty finding.
+# ---------------------------------------------------------------------------
+
+
+def _apath_id_for(path_id: str) -> str:
+    return "apath-" + hashlib.sha256(path_id.encode()).hexdigest()[:8]
+
+
+def _risk_path(
+    path_id: str,
+    attacker: str,
+    jewel: str,
+    severity_sum: int,
+    hop_count: int = 2,
+    feasibility: str = "high",
+) -> APath:
+    """A risk-eligible path: feasibility != low, severity_sum >= 3, no mitigation."""
+    return APath(
+        path_id=path_id,
+        attacker_position=attacker,
+        crown_jewel=jewel,
+        edges=("edge-aaaaaaaa", "edge-cccccccc"),
+        hop_count=hop_count,
+        feasibility=feasibility,  # type: ignore[arg-type]
+        severity_sum=severity_sum,
+        mitigation_count=0,
+    )
+
+
+def _two_pairs_three_risk_paths_each() -> list[APath]:
+    """2 (attacker, jewel) pairs, 3 risk paths each, with distinct severity sums
+    so the worst-per-pair is unambiguous."""
+    paths: list[APath] = []
+    for atk, jwl, tag in (
+        ("atk-aaaaaaaa", "jewel-aaaaaaaa", "A"),
+        ("atk-bbbbbbbb", "jewel-bbbbbbbb", "B"),
+    ):
+        paths.append(_risk_path(f"path-{tag}1aaaaa", atk, jwl, severity_sum=6))
+        paths.append(_risk_path(f"path-{tag}2bbbbb", atk, jwl, severity_sum=4))
+        paths.append(_risk_path(f"path-{tag}3ccccc", atk, jwl, severity_sum=3))
+    return paths
+
+
+def test_select_bounded_keeps_worst_risk_per_pair_by_default() -> None:
+    """3 risk paths per pair across 2 pairs -> exactly 2 risk findings (the
+    worst-severity path per pair) at the default max_risk_per_pair=1."""
+    paths = _two_pairs_three_risk_paths_each()
+    # Build the full per-path stream first (each path -> a risk finding).
+    g = _g()  # graph not actually traversed for these synthetic paths' ids
+    all_findings = [
+        {
+            "id": _apath_id_for(p.path_id),
+            "disposition": "risk",
+            "severity": "high",
+            "_path_id": p.path_id,
+        }
+        for p in paths
+    ]
+    selected, stats = select_bounded(all_findings, paths, max_risk_per_pair=1)
+    del g
+    risk = [f for f in selected if f["disposition"] == "risk"]
+    assert len(risk) == 2, "one worst-risk finding per pair"
+    # The kept finding per pair must be the severity_sum=6 path.
+    kept_ids = {f["id"] for f in risk}
+    assert _apath_id_for("path-A1aaaaa") in kept_ids
+    assert _apath_id_for("path-B1aaaaa") in kept_ids
+    assert stats["risk_pairs"] == 2
+    assert stats["risk_findings"] == 2
+
+
+def test_select_bounded_collapses_suppressed_into_single_aggregate() -> None:
+    """The 4 suppressed risk paths (2 pairs x 3 - 2 kept) collapse into ONE
+    aggregate uncertainty finding disclosing the suppressed count."""
+    paths = _two_pairs_three_risk_paths_each()
+    all_findings = [
+        {
+            "id": _apath_id_for(p.path_id),
+            "disposition": "risk",
+            "severity": "high",
+        }
+        for p in paths
+    ]
+    selected, stats = select_bounded(all_findings, paths, max_risk_per_pair=1)
+    aggregates = [
+        f
+        for f in selected
+        if f["disposition"] == "uncertainty"
+        and f.get("recommendation", {}).get("posture") == "consider"
+    ]
+    assert len(aggregates) == 1, "exactly one aggregate uncertainty finding"
+    agg = aggregates[0]
+    assert agg["severity"] == "low"
+    assert agg["confidence"] == "low"
+    assert stats["suppressed_into_aggregate"] == 4
+    # The aggregate must disclose suppressed + total counts somewhere readable.
+    blob = (agg["summary"] + agg["detail"]).lower()
+    assert "4" in blob and "6" in blob  # 4 suppressed of 6 total paths
+
+
+def test_select_bounded_keeps_all_gap_findings() -> None:
+    """Gap-disposition findings are never suppressed regardless of the knob."""
+    paths = _two_pairs_three_risk_paths_each()
+    gaps = [
+        {"id": "apath-gap00001", "disposition": "gap", "severity": "high"},
+        {"id": "apath-gap00002", "disposition": "gap", "severity": "medium"},
+    ]
+    risks = [
+        {
+            "id": _apath_id_for(p.path_id),
+            "disposition": "risk",
+            "severity": "high",
+        }
+        for p in paths
+    ]
+    selected, stats = select_bounded(gaps + risks, paths, max_risk_per_pair=1)
+    kept_gaps = [f for f in selected if f["disposition"] == "gap"]
+    assert len(kept_gaps) == 2
+    assert stats["gap"] == 2
+
+
+def test_select_bounded_knob_two_keeps_two_per_pair() -> None:
+    """max_risk_per_pair=2 keeps the top 2 risk findings per pair (4 total)."""
+    paths = _two_pairs_three_risk_paths_each()
+    all_findings = [
+        {
+            "id": _apath_id_for(p.path_id),
+            "disposition": "risk",
+            "severity": "high",
+        }
+        for p in paths
+    ]
+    selected, stats = select_bounded(all_findings, paths, max_risk_per_pair=2)
+    risk = [f for f in selected if f["disposition"] == "risk"]
+    assert len(risk) == 4
+    assert stats["risk_findings"] == 4
+    assert stats["suppressed_into_aggregate"] == 2
+
+
+def test_emit_findings_bound_default_on_bounds_risk_stream() -> None:
+    """emit_findings(bound=True) is the DEFAULT: a graph yielding many risk
+    paths per pair emits only the worst per pair plus one aggregate."""
+    # Three high-feasibility, severity_sum>=3, no-mitigation paths for ONE pair.
+    g = _g()
+    paths = [
+        APath(
+            path_id="path-r1aaaaaa",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=6,
+            mitigation_count=0,
+        ),
+        APath(
+            path_id="path-r2bbbbbb",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=4,
+            mitigation_count=0,
+        ),
+        APath(
+            path_id="path-r3cccccc",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=3,
+            mitigation_count=0,
+        ),
+    ]
+    bounded = emit_findings(
+        paths=paths,
+        overlays=[],
+        graph=g,
+        findings_by_id=_findings_by_id(),
+        capabilities=[],
+    )
+    risk = [f for f in bounded if f["disposition"] == "risk"]
+    assert len(risk) == 1, "default bound keeps only worst risk per pair"
+    aggregates = [
+        f
+        for f in bounded
+        if f["disposition"] == "uncertainty"
+        and f.get("recommendation", {}).get("posture") == "consider"
+    ]
+    assert len(aggregates) == 1
+
+
+def test_emit_findings_bound_false_yields_one_per_path() -> None:
+    """bound=False restores the legacy one-finding-per-path behavior."""
+    g = _g()
+    paths = [
+        APath(
+            path_id="path-r1aaaaaa",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=6,
+            mitigation_count=0,
+        ),
+        APath(
+            path_id="path-r2bbbbbb",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=4,
+            mitigation_count=0,
+        ),
+    ]
+    unbounded = emit_findings(
+        paths=paths,
+        overlays=[],
+        graph=g,
+        findings_by_id=_findings_by_id(),
+        capabilities=[],
+        bound=False,
+    )
+    risk = [f for f in unbounded if f["disposition"] == "risk"]
+    assert len(risk) == 2, "bound=False yields one finding per path"
+
+
+def test_select_bounded_aggregate_validates_against_schema() -> None:
+    """The aggregate uncertainty finding must be schema-valid like any other."""
+    validator = _build_finding_validator()
+    g = _g()
+    paths = [
+        APath(
+            path_id=f"path-{tag}",
+            attacker_position="atk-aaaaaaaa",
+            crown_jewel="jewel-aaaaaaaa",
+            edges=("edge-aaaaaaaa", "edge-bbbbbbbb", "edge-cccccccc"),
+            hop_count=3,
+            feasibility="high",
+            severity_sum=sev,
+            mitigation_count=0,
+        )
+        for tag, sev in (("a1aaaaaa", 6), ("a2bbbbbb", 4), ("a3cccccc", 3))
+    ]
+    bounded = emit_findings(
+        paths=paths,
+        overlays=[],
+        graph=g,
+        findings_by_id=_findings_by_id(),
+        capabilities=[],
+    )
+    for f in bounded:
+        errors = list(validator.iter_errors(f))
+        assert errors == [], (
+            f"finding {f['id']} failed validation: {[e.message for e in errors]}"
+        )

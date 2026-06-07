@@ -4,7 +4,7 @@ status: pass
 checks:
 - name: id_coverage_findings
   status: pass
-  detail: yaml=93 data.js=93 missing=[]
+  detail: yaml=19 data.js=19 missing=[]
   klass: structural
 - name: id_coverage_capabilities
   status: pass
@@ -28,21 +28,21 @@ checks:
   klass: structural
 - name: count_parity_severity
   status: pass
-  detail: 'metrics.yaml={''critical'': 1, ''high'': 10, ''medium'': 82, ''low'': 0,
-    ''info'': 0} data.js={''critical'': 1, ''high'': 10, ''medium'': 82, ''low'':
-    0, ''info'': 0}'
+  detail: 'metrics.yaml={''critical'': 1, ''high'': 10, ''medium'': 7, ''low'': 1,
+    ''info'': 0} data.js={''critical'': 1, ''high'': 10, ''medium'': 7, ''low'': 1,
+    ''info'': 0}'
   klass: structural
 - name: count_parity_totals
   status: pass
-  detail: data.js=93 metrics.yaml=93
+  detail: data.js=19 metrics.yaml=19
   klass: structural
 - name: metrics_internal_consistency
   status: pass
-  detail: total=93 sev_sum=93 tier_sum=93 disp_sum=93
+  detail: total=19 sev_sum=19 tier_sum=19 disp_sum=19
   klass: structural
 - name: data_js_recompute_drift
   status: pass
-  detail: recompute_findings=93 data.js=93
+  detail: recompute_findings=19 data.js=19
   klass: structural
 - name: section_errors_empty
   status: pass
@@ -82,9 +82,9 @@ checks:
   klass: structural
 counts:
   deduped_findings_yaml: 15
-  apath_findings_yaml: 75
+  apath_findings_yaml: 1
   tmeval_findings_yaml: 3
-  findings_data_js: 93
+  findings_data_js: 19
   capabilities_yaml: 10
   capabilities_data_js: 10
   nist_controls_yaml: 36

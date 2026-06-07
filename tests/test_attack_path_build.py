@@ -15,7 +15,7 @@ from apd_gauntlet.attack_path.build import (
     _wire_realized_crown_jewels,
     build_graph,
 )
-from apd_gauntlet.attack_path.graph import Graph, Node, stable_id
+from apd_gauntlet.attack_path.graph import Edge, Graph, Node, stable_id
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "attack_path" / "minimal-run"
 
@@ -443,3 +443,258 @@ def test_minimal_run_phi_store_wires_via_classification_alias() -> None:
     jewel_id = stable_id("jewel", "phi_store")
     inbound = [e for e in graph._edges.values() if e.to_node == jewel_id]
     assert inbound, "phi_store should have at least one inbound data_resides_on edge"
+
+
+# ---------------------------------------------------------------------------
+# WS3: deterministic finding/capability edge endpoint orientation (PR4)
+#
+# Both _add_finding_edges and _add_capability_edges must orient the edge
+# attacker/upstream -> data/compromised asset, never collapsing to
+# attacker->attacker because of dict-iteration order.
+# ---------------------------------------------------------------------------
+
+
+def _g_with_atk_asset_jewel():
+    """Graph with one attacker_position, one realizing asset, and a crown_jewel
+    plus the #84 data_resides_on wiring (asset -> jewel)."""
+    g = Graph()
+    g.add_node(
+        Node(
+            node_id=stable_id("atk", "agent-fleet"),
+            node_type="attacker_position",
+            name="agent-fleet",
+            provenance={"source": "domain_default"},
+            confidence="high",
+        )
+    )
+    g.add_node(
+        Node(
+            node_id=stable_id("asset", "PII-workspace"),
+            node_type="asset",
+            name="PII-workspace",
+            provenance={"source": "asset_inventory"},
+            confidence="high",
+            data_classifications=("pii",),
+        )
+    )
+    g.add_node(
+        Node(
+            node_id=stable_id("jewel", "pii_store"),
+            node_type="crown_jewel",
+            name="pii_store",
+            provenance={"source": "domain_default"},
+            confidence="high",
+        )
+    )
+    # #84 wiring: realizing asset -> jewel
+    g.add_edge(
+        Edge(
+            edge_id=stable_id(
+                "edge",
+                stable_id("asset", "PII-workspace"),
+                stable_id("jewel", "pii_store"),
+                "data_resides_on",
+            ),
+            edge_type="data_resides_on",
+            from_node=stable_id("asset", "PII-workspace"),
+            to_node=stable_id("jewel", "pii_store"),
+            provenance={"source": "asset_inventory"},
+            confidence="high",
+            traversal_cost=1,
+        )
+    )
+    return g
+
+
+def test_finding_edge_orients_attacker_to_asset_never_attacker_to_attacker():
+    """A finding naming an attacker_position + an asset resolves
+    source=attacker, target=asset — never attacker->attacker, and from != to."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    g = _g_with_atk_asset_jewel()
+    findings = [
+        {
+            "id": "conf-11111111",
+            "detail": "agent-fleet can reach PII-workspace through a weak boundary",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    _add_finding_edges(g, findings)
+    comp = [
+        e for e in g._edges.values() if e.edge_type == "compromisable_via_finding"
+    ]
+    assert len(comp) == 1
+    e = comp[0]
+    assert e.from_node == stable_id("atk", "agent-fleet"), "source must be attacker"
+    assert e.to_node == stable_id("asset", "PII-workspace"), "target must be realizing asset"
+    assert e.from_node != e.to_node
+
+
+def test_finding_edge_prefers_realizing_asset_over_jewel_for_84_hop():
+    """When both a named asset and a named crown_jewel are present, the
+    resolver targets the realizing ASSET so the existing #84 data_resides_on
+    hop carries into the jewel (rather than jumping straight to the jewel)."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    g = _g_with_atk_asset_jewel()
+    findings = [
+        {
+            "id": "conf-22222222",
+            "detail": "agent-fleet exfiltrates from PII-workspace into pii_store",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    _add_finding_edges(g, findings)
+    comp = [
+        e for e in g._edges.values() if e.edge_type == "compromisable_via_finding"
+    ]
+    assert len(comp) == 1
+    # Target the asset, NOT the jewel — the data_resides_on hop carries into jewel.
+    assert comp[0].to_node == stable_id("asset", "PII-workspace")
+    # #84 wiring still intact.
+    resides = [e for e in g._edges.values() if e.edge_type == "data_resides_on"]
+    assert resides and resides[0].to_node == stable_id("jewel", "pii_store")
+
+
+def test_finding_edge_targets_jewel_when_no_asset_named():
+    """Fall back to the crown_jewel node only when no asset is named."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    g = _g_with_atk_asset_jewel()
+    findings = [
+        {
+            "id": "conf-33333333",
+            "detail": "agent-fleet directly compromises the pii_store target",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    _add_finding_edges(g, findings)
+    comp = [
+        e for e in g._edges.values() if e.edge_type == "compromisable_via_finding"
+    ]
+    assert len(comp) == 1
+    assert comp[0].from_node == stable_id("atk", "agent-fleet")
+    assert comp[0].to_node == stable_id("jewel", "pii_store")
+
+
+def test_finding_edge_endpoint_resolution_is_deterministic():
+    """Same inputs across two fresh graphs produce identical edge ids/endpoints."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    findings = [
+        {
+            "id": "conf-44444444",
+            "detail": "agent-fleet reaches PII-workspace and the pii_store",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    g1 = _g_with_atk_asset_jewel()
+    g2 = _g_with_atk_asset_jewel()
+    _add_finding_edges(g1, findings)
+    _add_finding_edges(g2, findings)
+    e1 = next(e for e in g1._edges.values() if e.edge_type == "compromisable_via_finding")
+    e2 = next(e for e in g2._edges.values() if e.edge_type == "compromisable_via_finding")
+    assert (e1.edge_id, e1.from_node, e1.to_node) == (
+        e2.edge_id,
+        e2.from_node,
+        e2.to_node,
+    )
+
+
+def test_finding_edge_dropped_when_only_attacker_positions_named():
+    """Two attacker positions and nothing else: no sensible (source,target)
+    can form (would be attacker->attacker), so the edge is DROPPED."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    g = Graph()
+    g.add_node(
+        Node(
+            node_id=stable_id("atk", "alpha"),
+            node_type="attacker_position",
+            name="alpha-attacker",
+            provenance={"source": "domain_default"},
+            confidence="high",
+        )
+    )
+    g.add_node(
+        Node(
+            node_id=stable_id("atk", "beta"),
+            node_type="attacker_position",
+            name="beta-attacker",
+            provenance={"source": "domain_default"},
+            confidence="high",
+        )
+    )
+    findings = [
+        {
+            "id": "conf-55555555",
+            "detail": "alpha-attacker and beta-attacker both observed",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    _add_finding_edges(g, findings)
+    comp = [
+        e for e in g._edges.values() if e.edge_type == "compromisable_via_finding"
+    ]
+    assert comp == [], "attacker->attacker must never be emitted; drop instead"
+
+
+def test_capability_edge_orients_attacker_to_asset():
+    """Capability edges use the SAME resolver: attacker -> realizing asset."""
+    from apd_gauntlet.attack_path.build import _add_capability_edges
+
+    g = _g_with_atk_asset_jewel()
+    caps = [
+        {
+            "id": "cap-66666666",
+            "description": "control mitigates agent-fleet access to PII-workspace",
+            "scope": "",
+            "confidence": "high",
+        }
+    ]
+    _add_capability_edges(g, caps)
+    mit = [
+        e for e in g._edges.values() if e.edge_type == "mitigated_by_capability"
+    ]
+    assert len(mit) == 1
+    assert mit[0].from_node == stable_id("atk", "agent-fleet")
+    assert mit[0].to_node == stable_id("asset", "PII-workspace")
+    assert mit[0].from_node != mit[0].to_node
+
+
+def test_finding_edge_two_assets_picks_data_target_distinct_source():
+    """No attacker named, two assets (one realizing the jewel): the realizing
+    asset is the target; the other asset is the distinct source. from != to."""
+    from apd_gauntlet.attack_path.build import _add_finding_edges
+
+    g = _g_with_atk_asset_jewel()
+    g.add_node(
+        Node(
+            node_id=stable_id("asset", "ingress-gw"),
+            node_type="asset",
+            name="ingress-gw",
+            provenance={"source": "asset_inventory"},
+            confidence="high",
+        )
+    )
+    findings = [
+        {
+            "id": "conf-77777777",
+            "detail": "ingress-gw forwards into PII-workspace",
+            "severity": "high",
+            "confidence": "high",
+        }
+    ]
+    _add_finding_edges(g, findings)
+    comp = [
+        e for e in g._edges.values() if e.edge_type == "compromisable_via_finding"
+    ]
+    assert len(comp) == 1
+    assert comp[0].to_node == stable_id("asset", "PII-workspace")
+    assert comp[0].from_node == stable_id("asset", "ingress-gw")
+    assert comp[0].from_node != comp[0].to_node

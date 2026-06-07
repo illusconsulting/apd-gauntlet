@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-06",
+    "date": "2026-06-07",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -57,28 +57,28 @@ window.APD_DATA = {
     "warnings": []
   },
   "summary": {
-    "findings_total": 93,
-    "findings_pre_dedup": 93,
+    "findings_total": 19,
+    "findings_pre_dedup": 19,
     "cross_lens_merged_clusters": 0,
     "linked_clusters": 0,
     "bySeverity": {
       "critical": 1,
       "high": 10,
-      "medium": 82,
-      "low": 0,
+      "medium": 7,
+      "low": 1,
       "info": 0
     },
     "byDisposition": {
       "gap": 9,
       "blocked": 3,
       "risk": 5,
-      "uncertainty": 76,
+      "uncertainty": 2,
       "ok": 0
     },
     "byTier": {
-      "trustworthiness": 37,
+      "trustworthiness": 8,
       "scalability": 4,
-      "auditability": 52
+      "auditability": 7
     },
     "capabilities_total": 10,
     "capabilities_pre_dedup": 10,
@@ -819,3219 +819,31 @@ window.APD_DATA = {
       "headline_rank": 1
     },
     {
-      "id": "apath-0296f550",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-0f12760d)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-0f12760d",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-04e9feaa",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-db0038bd)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-db0038bd",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-06539b72",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-110084a0)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-110084a0",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-0716ca6a",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
+      "id": "apath-d066312b",
+      "title": "Suppressed risk attack paths collapsed into one aggregate",
       "goal": "authenticity",
       "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
+      "severity": "low",
+      "confidence": "low",
       "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
+      "summary": "75 additional risk-eligible attack path(s) of 75 enumerated were suppressed from the findings file (per-pair cap = 1 risk finding(s) per attacker x crown-jewel pair). Only the worst path per pair is surfaced as a discrete risk finding.",
+      "detail": "To keep the advisory signal focused, the analyzer bounds risk findings to the worst 1 path(s) per (attacker_position, crown_jewel) pair. 75 lower-ranked risk-eligible path(s) (of 75 total enumerated paths) are collapsed into this single aggregate. Every enumerated path — suppressed or not — is retained verbatim in 40-synthesis/attack-paths.yaml, the artifact of record; consult it to inspect the full set.",
       "rubric_clause": null,
       "evidence": [
         {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-5da3ef2d)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
           "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-5da3ef2d",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
+          "locator": "paths",
+          "excerpt": "75 of 75 enumerated paths suppressed from findings (per-pair cap=1)"
         }
       ],
       "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
+        "posture": "consider",
+        "summary": "Review 40-synthesis/attack-paths.yaml for the full path set; raise max_risk_findings_per_pair if more per-pair detail is wanted."
       },
       "mappings": {
         "nist": [
           "CA-3",
           "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-0cb06fd8",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-653937f5)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-653937f5",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-0f57fafb",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d85a6bea)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d85a6bea",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-12399256",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-33307cbf)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-33307cbf",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-1c0e64f8",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-1cba6d30)",
-          "excerpt": "external_internet --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-1cba6d30",
-          "excerpt": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-226b6e83",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-029bb1f8)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-029bb1f8",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-22d3d657",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-df6f089b)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-df6f089b",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-232ef06a",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-e1ffabb7)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-e1ffabb7",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-25706221",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-64622465)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-64622465",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-2c167cd1",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-0f2e2ec6)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-0f2e2ec6",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-2eb7ee75",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-eb2df0b5)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-eb2df0b5",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-2fcea3b8",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-624eb526)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-624eb526",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-2fdca38d",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-c81abf97)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-c81abf97",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-30fce793",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-a35f1bf6)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-a35f1bf6",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-331fc0a7",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-2c4e2248)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-2c4e2248",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-35d5bd61",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-96049a71)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-96049a71",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-3630102f",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-5796db5a)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-5796db5a",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-37b28e0d",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d0e7a036)",
-          "excerpt": "external_internet --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d0e7a036",
-          "excerpt": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-3b13ae18",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-054a954b)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-054a954b",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-4003e860",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-1c8ebf2d)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-1c8ebf2d",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-418aa63c",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-1582e7dd)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-1582e7dd",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-446ec1de",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-124a8df8)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-124a8df8",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-4a490493",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-b372431a)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-b372431a",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-4aa0dd15",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-9c79936a)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-9c79936a",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-516ce2aa",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-51e9f0ec)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-51e9f0ec",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-5cb96f7d",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-435e395f)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-435e395f",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-5e251f96",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-92208e9e)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-92208e9e",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-609449f9",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-933e5d35)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-933e5d35",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-6f605664",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-b068ba48)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-b068ba48",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-72457f5d",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-3700ac90)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-3700ac90",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-745b69f4",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-e80b432f)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-e80b432f",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-7569fb49",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-a7acb679)",
-          "excerpt": "external_internet --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-a7acb679",
-          "excerpt": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-75c2a6b4",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-9314985f)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-9314985f",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-76aa8ed5",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-c34f74f3)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-c34f74f3",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-7a8e91b3",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-575eea43)",
-          "excerpt": "external_internet --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-575eea43",
-          "excerpt": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-7aa19ceb",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-a08f052c)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-a08f052c",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-7d515623",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-b5bd8bd2)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-b5bd8bd2",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-84fd0937",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-6d1212df)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-6d1212df",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-8a4e3430",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-ed2bc188)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-ed2bc188",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-8be738d2",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d132b7a7)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d132b7a7",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-8e9bf559",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-2efebc82)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-2efebc82",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-9039b100",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-66bf81b1)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-66bf81b1",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-905f8501",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-77fb16e8)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-77fb16e8",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-9196643c",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-72af5d91)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-72af5d91",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-92ea1ebc",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-bb137713)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-bb137713",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-94778e74",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-5c859920)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-5c859920",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-970bee62",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-8a10acec)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-8a10acec",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-9aee8370",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-4a223504)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-4a223504",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-9d04b1b7",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-c7af1885)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-c7af1885",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-ab5aab1c",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-b8aa6e65)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-b8aa6e65",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-ac4b6b18",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-091eb787)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-091eb787",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-ae81361e",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-46b6e50a)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-46b6e50a",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-b2fd2fa6",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-64d45d5c)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-64d45d5c",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-b864ee15",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d813593c)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d813593c",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-b9b9a350",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-6f458333)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-6f458333",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-c37ca124",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-49b5b04b)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-49b5b04b",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-c446a85c",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-881cea37)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-881cea37",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-c701e56b",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-2ef7c35f)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-2ef7c35f",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-c93bce2a",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d1b8e45a)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d1b8e45a",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-cb6abb8f",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-1ddc26b2)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-1ddc26b2",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-d081cadd",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-d182c6dc)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-d182c6dc",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-d1728e0e",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-a509a1f6)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-a509a1f6",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-d8eabe75",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-1f9d8e59)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-1f9d8e59",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-e25bab18",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-17c53ecb)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-17c53ecb",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-e4f0a653",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> adjudication-service -> adjudication-service --[trusts/high]--> member-record-store -> member-record-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-b98dfc6a)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-b98dfc6a",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-e8e477e9",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 6 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[trusts/high]--> pharmacy-edge-gateway -> pharmacy-edge-gateway --[trusts/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-26a5d056)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-26a5d056",
-          "excerpt": "Path from external_internet to phi_store in 6 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 6 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-e9271e0e",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-4b7506ed)",
-          "excerpt": "external_internet --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-4b7506ed",
-          "excerpt": "Path from external_internet to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-e96acb0d",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-9e540001)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-9e540001",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-eb7dd218",
-      "title": "Attack path with partial mitigation: compromised_pharmacy_credential -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-bab80189)",
-          "excerpt": "compromised_pharmacy_credential --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-bab80189",
-          "excerpt": "Path from compromised_pharmacy_credential to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-f1428603",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-3be27c87)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-3be27c87",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-fafe730c",
-      "title": "Attack path with partial mitigation: compromised_vendor_integration -> phi_store in 3 hop(s)",
-      "goal": "authenticity",
-      "tier": "trustworthiness",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0.",
-      "detail": "Path: compromised_vendor_integration --[network_reachable/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 0. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-a5b32741)",
-          "excerpt": "compromised_vendor_integration --[network_reachable/high]--> audit-log-writer"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-a5b32741",
-          "excerpt": "Path from compromised_vendor_integration to phi_store in 3 hop(s); feasibility=high; severity_sum=0; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 3 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "CA-3",
-          "SA-8"
-        ],
-        "attack": [],
-        "cwe": [],
-        "owasp_api": [],
-        "owasp": [],
-        "d3fend": [],
-        "atlas": []
-      },
-      "lens_perspectives": [],
-      "prerequisite_evidence": []
-    },
-    {
-      "id": "apath-fe81cf8c",
-      "title": "Attack path with partial mitigation: external_internet -> phi_store in 4 hop(s)",
-      "goal": "authenticity",
-      "tier": "auditability",
-      "severity": "medium",
-      "confidence": "high",
-      "disposition": "uncertainty",
-      "summary": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0.",
-      "detail": "Path: external_internet --[network_reachable/high]--> claim-ingress-api -> claim-ingress-api --[compromisable_via_finding/high]--> audit-log-writer -> audit-log-writer --[trusts/high]--> audit-log-store -> audit-log-store --[data_resides_on/high]--> phi_store. Feasibility floor = high. Severity sum = 2. Mitigations along path = 0.",
-      "rubric_clause": null,
-      "evidence": [
-        {
-          "artifact": "40-synthesis/asset-graph.yaml",
-          "locator": "edges (path path-344ae95b)",
-          "excerpt": "external_internet --[network_reachable/high]--> claim-ingress-api"
-        },
-        {
-          "artifact": "40-synthesis/attack-paths.yaml",
-          "locator": "path-344ae95b",
-          "excerpt": "Path from external_internet to phi_store in 4 hop(s); feasibility=high; severity_sum=2; mitigations on path=0."
-        }
-      ],
-      "recommendation": {
-        "posture": "recommended",
-        "summary": "Reduce path feasibility by adding capability coverage on the highest-confidence edge or removing a low-confidence reachability assumption",
-        "detail": "Path has 4 hops with feasibility floor high. Adding a capability on any high-confidence compromisable edge or strengthening identity controls along this path closes the kill-chain."
-      },
-      "mappings": {
-        "nist": [
-          "IA-3",
-          "IA-5(1)"
         ],
         "attack": [],
         "cwe": [],
@@ -4326,7 +1138,7 @@ window.APD_DATA = {
         }
       },
       {
-        "component": "40-synthesis/asset-graph.yaml",
+        "component": "40-synthesis/attack-paths.yaml",
         "cells": {
           "conf": "silent",
           "intg": "silent",
@@ -4657,14 +1469,14 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-0ec04856",
           "type": "trusts",
           "source": "asset-3c4d5e6f",
           "target": "asset-8b9c0d1e",
-          "bottleneck": false
+          "bottleneck": true
         },
         {
           "id": "edge-1457b95a",
@@ -4678,7 +1490,7 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-1c7d8d1d",
@@ -4692,14 +1504,14 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-27e4ec84",
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-2a479259",
@@ -4723,11 +1535,18 @@ window.APD_DATA = {
           "bottleneck": true
         },
         {
+          "id": "edge-47ab0bcb",
+          "type": "compromisable_via_finding",
+          "source": "asset-5e6f7a8b",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": true
+        },
+        {
           "id": "edge-4b6f06ec",
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-4f04c048",
@@ -4741,7 +1560,7 @@ window.APD_DATA = {
           "type": "trusts",
           "source": "asset-3c4d5e6f",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-5b51f5a8",
@@ -4762,14 +1581,14 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-67b87381",
           "type": "trusts",
           "source": "asset-8b9c0d1e",
           "target": "asset-3c4d5e6f",
-          "bottleneck": false
+          "bottleneck": true
         },
         {
           "id": "edge-6dbad8bd",
@@ -4783,7 +1602,7 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-2d392558",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-78b786a1",
@@ -4804,7 +1623,7 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-8af9f7aa",
@@ -4846,21 +1665,21 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-2d392558",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-af0b27e9",
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-bd61022c",
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-c41dcef1",
@@ -4881,14 +1700,14 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-2d392558",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-d6d18ce6",
           "type": "network_reachable",
           "source": "atk-2d392558",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-dceeaa66",
@@ -4909,21 +1728,14 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-e6170ee9",
           "type": "network_reachable",
           "source": "atk-2d392558",
           "target": "asset-1a2b3c4d",
-          "bottleneck": true
-        },
-        {
-          "id": "edge-f0f89452",
-          "type": "compromisable_via_finding",
-          "source": "asset-1a2b3c4d",
-          "target": "asset-5e6f7a8b",
-          "bottleneck": true
+          "bottleneck": false
         },
         {
           "id": "edge-f29aefbf",
@@ -5018,6 +1830,16 @@ window.APD_DATA = {
           "confidence": "high"
         },
         {
+          "id": "asset-8b9c0d1e",
+          "type": "asset",
+          "label": "pde-submission-service",
+          "provenance": {
+            "artifact": "domains/pbm/domain.yaml",
+            "locator": "crown_jewels[].pattern=pde_submission_pipeline"
+          },
+          "confidence": "low"
+        },
+        {
           "id": "atk-2d392558",
           "type": "attacker_position",
           "label": "compromised_vendor_integration",
@@ -5060,6 +1882,13 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-0ec04856",
+          "type": "trusts",
+          "source": "asset-3c4d5e6f",
+          "target": "asset-8b9c0d1e",
           "bottleneck": false
         },
         {
@@ -5112,6 +1941,13 @@ window.APD_DATA = {
           "bottleneck": false
         },
         {
+          "id": "edge-47ab0bcb",
+          "type": "compromisable_via_finding",
+          "source": "asset-5e6f7a8b",
+          "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
           "id": "edge-4b6f06ec",
           "type": "network_reachable",
           "source": "atk-accb3a4c",
@@ -5123,13 +1959,6 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-e0a03f74",
           "target": "asset-5e6f7a8b",
-          "bottleneck": false
-        },
-        {
-          "id": "edge-5074ec19",
-          "type": "trusts",
-          "source": "asset-3c4d5e6f",
-          "target": "asset-1a2b3c4d",
           "bottleneck": false
         },
         {
@@ -5151,6 +1980,13 @@ window.APD_DATA = {
           "type": "network_reachable",
           "source": "atk-accb3a4c",
           "target": "asset-1a2b3c4d",
+          "bottleneck": false
+        },
+        {
+          "id": "edge-67b87381",
+          "type": "trusts",
+          "source": "asset-8b9c0d1e",
+          "target": "asset-3c4d5e6f",
           "bottleneck": false
         },
         {
@@ -5294,13 +2130,6 @@ window.APD_DATA = {
           "bottleneck": false
         },
         {
-          "id": "edge-f0f89452",
-          "type": "compromisable_via_finding",
-          "source": "asset-1a2b3c4d",
-          "target": "asset-5e6f7a8b",
-          "bottleneck": false
-        },
-        {
           "id": "edge-f29aefbf",
           "type": "network_reachable",
           "source": "atk-e0a03f74",
@@ -5338,575 +2167,45 @@ window.APD_DATA = {
         "crown_jewel_name": "phi_store",
         "paths": [
           {
-            "path_id": "path-1ddc26b2",
-            "hop_count": 4,
+            "path_id": "path-1ada4385",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-6e130fc8",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-6e130fc8",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-6e130fc8",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-6f458333",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-e6170ee9",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-e6170ee9",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-e6170ee9",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-92208e9e",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-d6d18ce6",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-d6d18ce6",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-d6d18ce6",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-bb137713",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-9bf0cb8d",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-9bf0cb8d",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-9bf0cb8d",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-d85a6bea",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-cd042314",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-cd042314",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-cd042314",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-0f12760d",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-6e130fc8",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-6e130fc8",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-6e130fc8",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-5c859920",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-e6170ee9",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-e6170ee9",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-e6170ee9",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-624eb526",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-6e130fc8",
+              "edge-867e7d3e",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-6e130fc8",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-6e130fc8",
+                "edge_id": "edge-867e7d3e",
                 "from_id": "atk-2d392558",
                 "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -5924,11 +2223,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -5936,33 +2235,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -5974,36 +2249,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-8a10acec",
-            "hop_count": 6,
+            "path_id": "path-28639f10",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-9bf0cb8d",
+              "edge-78b786a1",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-9bf0cb8d",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-9bf0cb8d",
+                "edge_id": "edge-78b786a1",
                 "from_id": "atk-2d392558",
                 "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6021,11 +2305,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -6033,33 +2317,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -6071,230 +2331,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-933e5d35",
-            "hop_count": 6,
+            "path_id": "path-2c821529",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-9bf0cb8d",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-9bf0cb8d",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-9bf0cb8d",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-a08f052c",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-cd042314",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-cd042314",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-cd042314",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-a35f1bf6",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-d6d18ce6",
+              "edge-1457b95a",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-d6d18ce6",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-d6d18ce6",
+                "edge_id": "edge-1457b95a",
                 "from_id": "atk-2d392558",
                 "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6312,11 +2387,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -6324,33 +2399,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -6362,36 +2413,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-b068ba48",
-            "hop_count": 6,
+            "path_id": "path-4bf9db48",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-cd042314",
+              "edge-99707e24",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-cd042314",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-cd042314",
+                "edge_id": "edge-99707e24",
                 "from_id": "atk-2d392558",
                 "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6409,11 +2469,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -6421,33 +2481,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -6459,133 +2495,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-b8aa6e65",
-            "hop_count": 6,
+            "path_id": "path-e585d2cd",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-d6d18ce6",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-f4e846c9",
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-d6d18ce6",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-d6d18ce6",
+                "edge_id": "edge-f4e846c9",
                 "from_id": "atk-2d392558",
                 "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
                 "to_id": "asset-5e6f7a8b",
                 "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-c81abf97",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-e6170ee9",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-e6170ee9",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-e6170ee9",
-                "from_id": "atk-2d392558",
-                "from_name": "compromised_vendor_integration",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6603,11 +2551,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -6615,33 +2563,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -6935,7 +2859,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-9bf0cb8d",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -6951,7 +2874,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -7004,7 +2927,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-6e130fc8",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -7020,7 +2942,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -7073,7 +2995,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-d6d18ce6",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -7089,7 +3010,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -7142,7 +3063,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-cd042314",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -7158,7 +3078,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -7211,7 +3131,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-e6170ee9",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -7227,12 +3146,972 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-02621d38",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-cd042314",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-cd042314",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-349ed5b3",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-d6d18ce6",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-d6d18ce6",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
                 "is_bottleneck": true
               },
               {
                 "edge_id": "edge-dd4a931c",
                 "from_id": "asset-1a2b3c4d",
                 "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-3db0a547",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-d6d18ce6",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-d6d18ce6",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-4d3f1119",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-9bf0cb8d",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-9bf0cb8d",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-88e551bf",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-e6170ee9",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-e6170ee9",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-bc155c6f",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-cd042314",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-cd042314",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-bff16166",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-e6170ee9",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-e6170ee9",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-c53dc1a5",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-6e130fc8",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-6e130fc8",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-ddaa8bca",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-9bf0cb8d",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-9bf0cb8d",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-e522f8ab",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-6e130fc8",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-6e130fc8",
+                "from_id": "atk-2d392558",
+                "from_name": "compromised_vendor_integration",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
                 "to_id": "asset-3c4d5e6f",
                 "to_name": "adjudication-service",
                 "edge_type": "trust_boundary",
@@ -7276,381 +4155,45 @@ window.APD_DATA = {
         "crown_jewel_name": "phi_store",
         "paths": [
           {
-            "path_id": "path-653937f5",
-            "hop_count": 4,
+            "path_id": "path-4d156d6c",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-67448007",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-67448007",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-67448007",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-6d1212df",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-4b6f06ec",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-4b6f06ec",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-4b6f06ec",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-9c79936a",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-88ca3e5d",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-88ca3e5d",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-88ca3e5d",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-bab80189",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-20d89553",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-20d89553",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-20d89553",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-df6f089b",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-af0b27e9",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-af0b27e9",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-af0b27e9",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-054a954b",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-af0b27e9",
+              "edge-1c7d8d1d",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-af0b27e9",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-af0b27e9",
+                "edge_id": "edge-1c7d8d1d",
                 "from_id": "atk-accb3a4c",
                 "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -7668,11 +4211,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -7680,33 +4223,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -7718,133 +4237,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-1582e7dd",
-            "hop_count": 6,
+            "path_id": "path-71952af7",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-4b6f06ec",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-c41dcef1",
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-4b6f06ec",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-4b6f06ec",
+                "edge_id": "edge-c41dcef1",
                 "from_id": "atk-accb3a4c",
                 "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
                 "to_id": "asset-5e6f7a8b",
                 "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-1c8ebf2d",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-67448007",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-67448007",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-67448007",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -7862,11 +4293,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -7874,33 +4305,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -7912,133 +4319,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-435e395f",
-            "hop_count": 6,
+            "path_id": "path-a078d3bb",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-af0b27e9",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-9a22b4a2",
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-af0b27e9",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-af0b27e9",
+                "edge_id": "edge-9a22b4a2",
                 "from_id": "atk-accb3a4c",
                 "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
                 "to_id": "asset-5e6f7a8b",
                 "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-51e9f0ec",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-88ca3e5d",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-88ca3e5d",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-88ca3e5d",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -8056,11 +4375,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -8068,33 +4387,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -8106,36 +4401,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-881cea37",
-            "hop_count": 6,
+            "path_id": "path-a6e1bb6e",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-20d89553",
+              "edge-dceeaa66",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-20d89553",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-20d89553",
+                "edge_id": "edge-dceeaa66",
                 "from_id": "atk-accb3a4c",
                 "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -8153,11 +4457,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -8165,33 +4469,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -8203,327 +4483,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-96049a71",
-            "hop_count": 6,
+            "path_id": "path-bce8d25b",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-20d89553",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-20d89553",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-20d89553",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-b372431a",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-88ca3e5d",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-88ca3e5d",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-88ca3e5d",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-d813593c",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-67448007",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-67448007",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-67448007",
-                "from_id": "atk-accb3a4c",
-                "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-db0038bd",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-4b6f06ec",
+              "edge-33cbe3d9",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-4b6f06ec",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-4b6f06ec",
+                "edge_id": "edge-33cbe3d9",
                 "from_id": "atk-accb3a4c",
                 "from_name": "compromised_pharmacy_credential",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -8541,11 +4539,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -8553,33 +4551,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -8873,7 +4847,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-4b6f06ec",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -8889,7 +4862,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -8942,7 +4915,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-af0b27e9",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -8958,7 +4930,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -9011,7 +4983,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-88ca3e5d",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -9027,7 +4998,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -9080,7 +5051,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-67448007",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -9096,7 +5066,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -9149,7 +5119,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-20d89553",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -9162,6 +5131,966 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-0e2cc09b",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-88ca3e5d",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-88ca3e5d",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-1f1be954",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-4b6f06ec",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-4b6f06ec",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-266f3ab1",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-4b6f06ec",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-4b6f06ec",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-625e48c6",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-af0b27e9",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-af0b27e9",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-6862c9e4",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-67448007",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-67448007",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-6c664a81",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-67448007",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-67448007",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-847fcd0f",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-af0b27e9",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-af0b27e9",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-a46546ce",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-20d89553",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-20d89553",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-bd5dc0c0",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-20d89553",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-20d89553",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-cef99a0e",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-88ca3e5d",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-88ca3e5d",
+                "from_id": "atk-accb3a4c",
+                "from_name": "compromised_pharmacy_credential",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
@@ -9214,575 +6143,45 @@ window.APD_DATA = {
         "crown_jewel_name": "phi_store",
         "paths": [
           {
-            "path_id": "path-091eb787",
-            "hop_count": 4,
+            "path_id": "path-30aa43dd",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-bd61022c",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-bd61022c",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-bd61022c",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-344ae95b",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-07946d39",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-07946d39",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-07946d39",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-3be27c87",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-17783b27",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-17783b27",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-17783b27",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-a509a1f6",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-decfffea",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-decfffea",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-decfffea",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-c34f74f3",
-            "hop_count": 4,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-27e4ec84",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-27e4ec84",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-27e4ec84",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-110084a0",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-07946d39",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-07946d39",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-07946d39",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-26a5d056",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-27e4ec84",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-27e4ec84",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-27e4ec84",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-2ef7c35f",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-07946d39",
+              "edge-f29aefbf",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-07946d39",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-07946d39",
+                "edge_id": "edge-f29aefbf",
                 "from_id": "atk-e0a03f74",
                 "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -9800,11 +6199,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -9812,33 +6211,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -9850,133 +6225,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-46b6e50a",
-            "hop_count": 6,
+            "path_id": "path-75e4e247",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-decfffea",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-631176ba",
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-decfffea",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-47ab0bcb",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-decfffea",
+                "edge_id": "edge-631176ba",
                 "from_id": "atk-e0a03f74",
                 "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
                 "to_id": "asset-5e6f7a8b",
                 "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-5796db5a",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-bd61022c",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-bd61022c",
-              "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-bd61022c",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -9994,11 +6281,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -10006,33 +6293,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -10044,36 +6307,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-72af5d91",
-            "hop_count": 6,
+            "path_id": "path-75f72b59",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-17783b27",
+              "edge-4f04c048",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-17783b27",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-17783b27",
+                "edge_id": "edge-4f04c048",
                 "from_id": "atk-e0a03f74",
                 "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -10091,11 +6363,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -10103,33 +6375,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -10141,230 +6389,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-9314985f",
-            "hop_count": 6,
+            "path_id": "path-89179e11",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-17783b27",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-17783b27",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-17783b27",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-b5bd8bd2",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-bd61022c",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "bottleneck_edges": [
-              "edge-bd61022c",
-              "edge-8af9f7aa",
-              "edge-94c86287",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
-            ],
-            "edges_detailed": [
-              {
-                "edge_id": "edge-bd61022c",
-                "from_id": "atk-e0a03f74",
-                "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "network_reachable",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-8af9f7aa",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-2b3c4d5e",
-                "to_name": "pharmacy-edge-gateway",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-94c86287",
-                "from_id": "asset-2b3c4d5e",
-                "from_name": "pharmacy-edge-gateway",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
-                "to_id": "jewel-358e9430",
-                "to_name": "phi_store",
-                "edge_type": "data_resides_on",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              }
-            ]
-          },
-          {
-            "path_id": "path-d132b7a7",
-            "hop_count": 6,
-            "feasibility": "high",
-            "severity_sum": 2,
-            "mitigation_count": 0,
-            "edges": [
-              "edge-decfffea",
+              "edge-f2a4568b",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-decfffea",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-decfffea",
+                "edge_id": "edge-f2a4568b",
                 "from_id": "atk-e0a03f74",
                 "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -10382,11 +6445,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -10394,33 +6457,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -10432,36 +6471,45 @@ window.APD_DATA = {
             ]
           },
           {
-            "path_id": "path-d1b8e45a",
-            "hop_count": 6,
+            "path_id": "path-96c29211",
+            "hop_count": 5,
             "feasibility": "high",
             "severity_sum": 2,
             "mitigation_count": 0,
             "edges": [
-              "edge-27e4ec84",
+              "edge-cb1c4890",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-27e4ec84",
+              "edge-47ab0bcb",
               "edge-dd4a931c",
-              "edge-5074ec19",
-              "edge-f0f89452",
-              "edge-37b95b02",
-              "edge-989fc99a"
+              "edge-5b51f5a8",
+              "edge-f3c575df"
             ],
             "edges_detailed": [
               {
-                "edge_id": "edge-27e4ec84",
+                "edge_id": "edge-cb1c4890",
                 "from_id": "atk-e0a03f74",
                 "from_name": "external_internet",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-5e6f7a8b",
+                "to_name": "audit-log-writer",
                 "edge_type": "network_reachable",
                 "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-47ab0bcb",
+                "from_id": "asset-5e6f7a8b",
+                "from_name": "audit-log-writer",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "compromisable_via_finding",
+                "finding_id": "tmeval-eeee5555",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -10479,11 +6527,11 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-5074ec19",
+                "edge_id": "edge-5b51f5a8",
                 "from_id": "asset-3c4d5e6f",
                 "from_name": "adjudication-service",
-                "to_id": "asset-1a2b3c4d",
-                "to_name": "claim-ingress-api",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
                 "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
@@ -10491,33 +6539,9 @@ window.APD_DATA = {
                 "is_bottleneck": true
               },
               {
-                "edge_id": "edge-f0f89452",
-                "from_id": "asset-1a2b3c4d",
-                "from_name": "claim-ingress-api",
-                "to_id": "asset-5e6f7a8b",
-                "to_name": "audit-log-writer",
-                "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-37b95b02",
-                "from_id": "asset-5e6f7a8b",
-                "from_name": "audit-log-writer",
-                "to_id": "asset-6f7a8b9c",
-                "to_name": "audit-log-store",
-                "edge_type": "trust_boundary",
-                "finding_id": null,
-                "capability_id": null,
-                "confidence": "high",
-                "is_bottleneck": true
-              },
-              {
-                "edge_id": "edge-989fc99a",
-                "from_id": "asset-6f7a8b9c",
-                "from_name": "audit-log-store",
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
                 "to_id": "jewel-358e9430",
                 "to_name": "phi_store",
                 "edge_type": "data_resides_on",
@@ -10811,7 +6835,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-bd61022c",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -10827,7 +6850,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -10880,7 +6903,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-27e4ec84",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -10896,7 +6918,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -10949,7 +6971,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-17783b27",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -10965,7 +6986,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -11018,7 +7039,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-decfffea",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -11034,7 +7054,7 @@ window.APD_DATA = {
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",
-                "is_bottleneck": true
+                "is_bottleneck": false
               },
               {
                 "edge_id": "edge-dd4a931c",
@@ -11087,7 +7107,6 @@ window.APD_DATA = {
               "edge-f3c575df"
             ],
             "bottleneck_edges": [
-              "edge-07946d39",
               "edge-dd4a931c",
               "edge-5b51f5a8",
               "edge-f3c575df"
@@ -11100,6 +7119,966 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-06e1b64c",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-17783b27",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-17783b27",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-0afaab97",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-decfffea",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-decfffea",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-1205d587",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-bd61022c",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-bd61022c",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-15202959",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-27e4ec84",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-27e4ec84",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-35771f32",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-decfffea",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-decfffea",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-9985cc0e",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-07946d39",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-07946d39",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-a58f9934",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-17783b27",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-17783b27",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-a7584bdb",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-27e4ec84",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-27e4ec84",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-c26b08c6",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-07946d39",
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-dd4a931c",
+              "edge-0ec04856",
+              "edge-67b87381",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-07946d39",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-dd4a931c",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-0ec04856",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-8b9c0d1e",
+                "to_name": "pde-submission-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-67b87381",
+                "from_id": "asset-8b9c0d1e",
+                "from_name": "pde-submission-service",
+                "to_id": "asset-3c4d5e6f",
+                "to_name": "adjudication-service",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-5b51f5a8",
+                "from_id": "asset-3c4d5e6f",
+                "from_name": "adjudication-service",
+                "to_id": "asset-7a8b9c0d",
+                "to_name": "member-record-store",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-f3c575df",
+                "from_id": "asset-7a8b9c0d",
+                "from_name": "member-record-store",
+                "to_id": "jewel-358e9430",
+                "to_name": "phi_store",
+                "edge_type": "data_resides_on",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              }
+            ]
+          },
+          {
+            "path_id": "path-e5de83f1",
+            "hop_count": 6,
+            "feasibility": "high",
+            "severity_sum": 0,
+            "mitigation_count": 0,
+            "edges": [
+              "edge-bd61022c",
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "bottleneck_edges": [
+              "edge-8af9f7aa",
+              "edge-94c86287",
+              "edge-dd4a931c",
+              "edge-5b51f5a8",
+              "edge-f3c575df"
+            ],
+            "edges_detailed": [
+              {
+                "edge_id": "edge-bd61022c",
+                "from_id": "atk-e0a03f74",
+                "from_name": "external_internet",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "network_reachable",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": false
+              },
+              {
+                "edge_id": "edge-8af9f7aa",
+                "from_id": "asset-1a2b3c4d",
+                "from_name": "claim-ingress-api",
+                "to_id": "asset-2b3c4d5e",
+                "to_name": "pharmacy-edge-gateway",
+                "edge_type": "trust_boundary",
+                "finding_id": null,
+                "capability_id": null,
+                "confidence": "high",
+                "is_bottleneck": true
+              },
+              {
+                "edge_id": "edge-94c86287",
+                "from_id": "asset-2b3c4d5e",
+                "from_name": "pharmacy-edge-gateway",
+                "to_id": "asset-1a2b3c4d",
+                "to_name": "claim-ingress-api",
+                "edge_type": "trust_boundary",
                 "finding_id": null,
                 "capability_id": null,
                 "confidence": "high",

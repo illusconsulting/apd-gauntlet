@@ -60,53 +60,8 @@ controls:
 - id: IA-3
   family: IA
   title: Device Identification and Authentication
-  finding_count: 48
+  finding_count: 3
   finding_ids:
-  - apath-0296f550
-  - apath-04e9feaa
-  - apath-06539b72
-  - apath-0cb06fd8
-  - apath-0f57fafb
-  - apath-22d3d657
-  - apath-2fcea3b8
-  - apath-2fdca38d
-  - apath-30fce793
-  - apath-35d5bd61
-  - apath-3630102f
-  - apath-3b13ae18
-  - apath-4003e860
-  - apath-418aa63c
-  - apath-4a490493
-  - apath-4aa0dd15
-  - apath-516ce2aa
-  - apath-5cb96f7d
-  - apath-5e251f96
-  - apath-609449f9
-  - apath-6f605664
-  - apath-75c2a6b4
-  - apath-76aa8ed5
-  - apath-7aa19ceb
-  - apath-7d515623
-  - apath-84fd0937
-  - apath-8be738d2
-  - apath-9196643c
-  - apath-92ea1ebc
-  - apath-94778e74
-  - apath-970bee62
-  - apath-ab5aab1c
-  - apath-ac4b6b18
-  - apath-ae81361e
-  - apath-b864ee15
-  - apath-b9b9a350
-  - apath-c446a85c
-  - apath-c701e56b
-  - apath-c93bce2a
-  - apath-cb6abb8f
-  - apath-d1728e0e
-  - apath-e8e477e9
-  - apath-eb7dd218
-  - apath-f1428603
-  - apath-fe81cf8c
   - auth-8d386c2f
   - conf-e443de8b
   - tmeval-eeee5555
@@ -205,53 +160,8 @@ controls:
 - id: IA-5(1)
   family: IA
   title: Authenticator Management | Password-based Authentication
-  finding_count: 48
+  finding_count: 3
   finding_ids:
-  - apath-0296f550
-  - apath-04e9feaa
-  - apath-06539b72
-  - apath-0cb06fd8
-  - apath-0f57fafb
-  - apath-22d3d657
-  - apath-2fcea3b8
-  - apath-2fdca38d
-  - apath-30fce793
-  - apath-35d5bd61
-  - apath-3630102f
-  - apath-3b13ae18
-  - apath-4003e860
-  - apath-418aa63c
-  - apath-4a490493
-  - apath-4aa0dd15
-  - apath-516ce2aa
-  - apath-5cb96f7d
-  - apath-5e251f96
-  - apath-609449f9
-  - apath-6f605664
-  - apath-75c2a6b4
-  - apath-76aa8ed5
-  - apath-7aa19ceb
-  - apath-7d515623
-  - apath-84fd0937
-  - apath-8be738d2
-  - apath-9196643c
-  - apath-92ea1ebc
-  - apath-94778e74
-  - apath-970bee62
-  - apath-ab5aab1c
-  - apath-ac4b6b18
-  - apath-ae81361e
-  - apath-b864ee15
-  - apath-b9b9a350
-  - apath-c446a85c
-  - apath-c701e56b
-  - apath-c93bce2a
-  - apath-cb6abb8f
-  - apath-d1728e0e
-  - apath-e8e477e9
-  - apath-eb7dd218
-  - apath-f1428603
-  - apath-fe81cf8c
   - auth-dbba3dea
   - ephem-eb51a236
   - tmeval-eeee5555
@@ -358,76 +268,18 @@ controls:
 - id: CA-3
   family: CA
   title: Information Exchange
-  finding_count: 30
+  finding_count: 1
   finding_ids:
-  - apath-0716ca6a
-  - apath-12399256
-  - apath-1c0e64f8
-  - apath-226b6e83
-  - apath-232ef06a
-  - apath-25706221
-  - apath-2c167cd1
-  - apath-2eb7ee75
-  - apath-331fc0a7
-  - apath-37b28e0d
-  - apath-446ec1de
-  - apath-72457f5d
-  - apath-745b69f4
-  - apath-7569fb49
-  - apath-7a8e91b3
-  - apath-8a4e3430
-  - apath-8e9bf559
-  - apath-9039b100
-  - apath-905f8501
-  - apath-9aee8370
-  - apath-9d04b1b7
-  - apath-b2fd2fa6
-  - apath-c37ca124
-  - apath-d081cadd
-  - apath-d8eabe75
-  - apath-e25bab18
-  - apath-e4f0a653
-  - apath-e9271e0e
-  - apath-e96acb0d
-  - apath-fafe730c
+  - apath-d066312b
   capability_count: 0
   capability_ids: []
   posture: gapped
 - id: SA-8
   family: SA
   title: Security and Privacy Engineering Principles
-  finding_count: 30
+  finding_count: 1
   finding_ids:
-  - apath-0716ca6a
-  - apath-12399256
-  - apath-1c0e64f8
-  - apath-226b6e83
-  - apath-232ef06a
-  - apath-25706221
-  - apath-2c167cd1
-  - apath-2eb7ee75
-  - apath-331fc0a7
-  - apath-37b28e0d
-  - apath-446ec1de
-  - apath-72457f5d
-  - apath-745b69f4
-  - apath-7569fb49
-  - apath-7a8e91b3
-  - apath-8a4e3430
-  - apath-8e9bf559
-  - apath-9039b100
-  - apath-905f8501
-  - apath-9aee8370
-  - apath-9d04b1b7
-  - apath-b2fd2fa6
-  - apath-c37ca124
-  - apath-d081cadd
-  - apath-d8eabe75
-  - apath-e25bab18
-  - apath-e4f0a653
-  - apath-e9271e0e
-  - apath-e96acb0d
-  - apath-fafe730c
+  - apath-d066312b
   capability_count: 0
   capability_ids: []
   posture: gapped

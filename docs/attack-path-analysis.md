@@ -168,6 +168,7 @@ in `.apd-run.yaml`:
 | `max_hop` | `8` | `2`–`12` | A complex backplane where critical paths legitimately span many trust boundaries (e.g., contractor laptop → VPN → jumpbox → app server → DB) | The graph is small and all interesting paths are short; raising the bound just inflates redundant traversals |
 | `max_paths_per_pair` | `50` | `1`–`200` | You want a richer top-N view per (attacker, jewel) pair for an audit deliverable | Smoke-test runs or quick triage — `5` or `10` keeps the output focused |
 | `bottleneck_threshold` | `5` | `2`–`50` | Sparse graphs where the default produces zero bottlenecks; lower it to `2` or `3` to surface edges appearing on a handful of paths | Dense graphs where almost every edge appears on many paths — raise it so only true chokepoints emerge |
+| `max_risk_findings_per_pair` | `1` | `1`–`N` | An audit deliverable that wants the top few distinct risk paths per (attacker, jewel) pair, not just the single worst | Keep at `1` for focused triage — the worst path per pair carries the signal |
 
 The output is **always** top-N per pair: paths are sorted by descending
 `severity_sum`, then ascending `hop_count`, then descending feasibility,
@@ -175,6 +176,43 @@ and truncated at `max_paths_per_pair`. When truncation happens the
 `attack-path-report.md` headline summary calls it out explicitly
 ("**3** pair(s) truncated at `max_paths_per_pair=25`"); the analyzer
 never claims an exhaustive enumeration.
+
+### Bounded findings (always on)
+
+`attack-paths.yaml` is the **artifact of record**: it keeps *every*
+enumerated path. The **findings file is bounded** so the advisory does
+not drown in one risk finding per path. The bound is on for every run:
+
+- every **gap** finding is kept;
+- a path is **risk-eligible** when `feasibility != low`,
+  `severity_sum >= 3`, and it carries no on-path mitigation. Risk-eligible
+  paths are grouped by `(attacker_position, crown_jewel)` and the worst
+  `max_risk_findings_per_pair` (default **1**) per pair is emitted as a
+  discrete risk finding, ranked by `severity_sum` desc, `hop_count` asc,
+  feasibility desc, then `path_id`;
+- the suppressed remainder collapses into **one aggregate uncertainty
+  finding** (`severity: low`, `confidence: low`, `posture: consider`) that
+  discloses how many paths were suppressed out of the total.
+
+So a run with hundreds of paths still yields a focused findings file while
+`attack-paths.yaml` retains the full set for audit.
+
+### Finding/capability edge orientation
+
+A `compromisable_via_finding` (or `mitigated_by_capability`) edge is wired
+only when a finding's text names at least two graph nodes. The endpoints
+are oriented deterministically, never by dict-iteration order:
+
+- **target** (`to_node`) is the compromised/data node — prefer a named
+  asset that realizes a crown jewel (so the existing `data_resides_on` hop
+  carries into the jewel), else any named asset, else the crown jewel, else
+  an identity;
+- **source** (`from_node`) is the acting/upstream node — prefer a named
+  attacker position, else a distinct asset or identity.
+
+The analyzer **never** emits `attacker_position -> attacker_position`; if no
+sensible, distinct `(source, target)` pair can form, the edge is dropped
+rather than invented.
 
 ## Reading the outputs
 
