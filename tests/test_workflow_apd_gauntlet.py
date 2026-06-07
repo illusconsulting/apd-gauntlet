@@ -420,8 +420,10 @@ def test_completeness_gate_throws_on_structural_failure():
 def test_completeness_gate_blocks_on_missing_audit_receipt():
     src = _text()
     assert "if (!audit)" in src
-    assert "cannot verify report completeness" in src
-    assert "Refusing to ship an unverified report" in src
+    # A missing audit receipt is a null receipt = an INTERRUPTED dispatch, so it now
+    # halts via the interruption bail (which throws the resume error) rather than
+    # shipping an unverified report. Block-on-missing behavior is preserved.
+    assert "bailIfInterrupted(audit, 'synthesis-audit')" in src
 
 
 def test_semantic_residual_remains_non_blocking():
@@ -746,3 +748,41 @@ def test_start_here_sigil_excluded_from_tab_numbering() -> None:
     src = (REPO / "report-template" / "app.jsx").read_text(encoding="utf-8")
     assert "if (t.sigil) return { ...t, num: t.sigil };" in src
     assert 'String(_tabNum).padStart(2, "0")' in src
+
+
+# ── PR1: run-stopper robustness (args normalization + interruption resilience) ──
+
+def test_args_normalized_and_validated() -> None:
+    """PR1a: runner tolerates args-as-string and fails with ACTIONABLE errors
+    (not `.join of undefined`) when run_id/domains are missing/malformed."""
+    text = _text()
+    assert re.search(r"typeof args === ['\"]string['\"]", text), "must guard the string-args case"
+    assert "JSON.parse(args)" in text, "must JSON.parse string args"
+    assert "args.run_id is required" in text, "must name a missing run_id"
+    assert "args.domains must be a non-empty array" in text, "must name a missing domains list"
+
+
+def test_interruption_helpers_present() -> None:
+    """PR1b: explicit interrupted-receipt classifier + bail helper."""
+    text = _text()
+    assert "function isInterrupted(" in text
+    assert "function bailIfInterrupted(" in text
+
+
+def test_intake_bails_on_interruption() -> None:
+    """PR1b: the first dispatch (intake) bails fast on interruption so an en-masse
+    cancellation surfaces a clear resume message instead of cascading."""
+    text = _text()
+    assert "const intakeReceipt = llmStep('apd-intake'" in text
+    assert "bailIfInterrupted(intakeReceipt, 'intake')" in text
+
+
+def test_report_stage_interruption_distinct_from_completeness_gate() -> None:
+    """PR1b: an interrupted build/audit dispatch yields the RESUME error, not the
+    misleading 'completeness gate FAILED'; the genuine structural throw remains."""
+    text = _text()
+    assert "bailIfInterrupted(build, 'synthesis-build')" in text
+    assert "bailIfInterrupted(audit, 'synthesis-audit')" in text
+    assert "run interrupted at phase" in text, "distinct resume error must exist"
+    assert "plan-run" in text, "resume error should point to the foreground plan-run path"
+    assert "still FAILED a STRUCTURAL check" in text, "genuine structural gate must remain"

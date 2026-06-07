@@ -277,6 +277,17 @@ interactive, in-session operation — it is not meant to be driven headlessly.
 > `apd-report-auditor`, `apd-domain-auditor`) as foreground agents, in the phase
 > order below. Foreground subagents are not interrupted.
 
+For the supported foreground-drive path, run `apd-gauntlet plan-run <run-dir>`:
+it reads the run's `.apd-run.yaml`, validates it, and emits the exact ordered
+phase → step checklist the runner would execute (honoring the run-config gates),
+with each step tagged `CLI` (run it via Bash) or `AGENT` (dispatch it as a
+foreground agent). Work the list top to bottom; pass `--json` for a
+machine-readable list of step records.
+
+```sh
+apd-gauntlet plan-run runs/apd-20260601-claim-event-bus
+```
+
 The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
 run end-to-end and branches only on the receipts its dispatched agents return.
 It:

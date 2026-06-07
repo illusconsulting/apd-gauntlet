@@ -342,6 +342,43 @@ def summarize_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
         click.echo(render_summary(stats))
 
 
+@main.command("plan-run")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+@click.option("--json", "as_json", is_flag=True, help="Emit the plan as a JSON list of steps.")
+def plan_run_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
+    """Emit the deterministic FOREGROUND drive-checklist for a run.
+
+    Reads RUN_DIR/.apd-run.yaml, validates it against run-config.schema.json, and
+    prints the exact ordered phase->step list the apd-gauntlet.js runner executes
+    (honoring the run-config gates) so operators can drive each step in-session.
+    """
+    from jsonschema import Draft202012Validator
+
+    from .plan_run import build_plan, render_markdown
+
+    config_path = run_dir / ".apd-run.yaml"
+    if not config_path.is_file():
+        click.echo(f"No .apd-run.yaml under {run_dir}", err=True)
+        raise SystemExit(1)
+
+    schema_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"
+    )
+    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    errors = list(Draft202012Validator(schema).iter_errors(cfg))
+    if errors:
+        for e in errors:
+            click.echo(f"Schema error: {e.message}", err=True)
+        raise SystemExit(1)
+
+    plan = build_plan(cfg)
+    if as_json:
+        click.echo(_stdjson.dumps(plan, indent=2))
+    else:
+        click.echo(render_markdown(plan, cfg))
+
+
 @main.command("refresh-mitre")
 @click.option(
     "--out",

@@ -103,7 +103,32 @@ const RECEIPT = {
   },
 };
 
-// args IS .apd-run.yaml (run-config.schema.json). String concat only — no FS.
+// args IS the run's .apd-run.yaml (run-config.schema.json). Normalize + validate
+// up front so a mis-marshalled invocation (e.g. the named-workflow path delivering
+// args as a JSON STRING) fails with an ACTIONABLE error instead of a cryptic
+// `.join of undefined` mid-dispatch. `args` is a reassignable binding.
+if (typeof args === 'string') {
+  try { args = JSON.parse(args); }
+  catch (e) {
+    throw new Error('apd-gauntlet: args arrived as a string that is not valid JSON (' +
+      e.message + '). Pass the run-config as an object, or a JSON string of ' +
+      'run-config.schema.json.');
+  }
+}
+if (!args || typeof args !== 'object' || Array.isArray(args)) {
+  throw new Error('apd-gauntlet: args must be the run .apd-run.yaml as an object; got ' +
+    (Array.isArray(args) ? 'array' : typeof args) + '.');
+}
+if (typeof args.run_id !== 'string' || !args.run_id) {
+  throw new Error('apd-gauntlet: args.run_id is required (the runs/<id> directory name). ' +
+    'Got: ' + JSON.stringify(args.run_id) + '. Did you pass the parsed .apd-run.yaml?');
+}
+if (!Array.isArray(args.domains) || args.domains.length === 0) {
+  throw new Error('apd-gauntlet: args.domains must be a non-empty array of domain-pack ' +
+    'names (e.g. ["pbm"]). Got: ' + JSON.stringify(args.domains) + '.');
+}
+
+// String concat only — no FS.
 const runDir = 'runs/' + args.run_id;
 
 // ---------------------------------------------------------------------------
@@ -216,6 +241,24 @@ function llmStep(agentType, instruction, opts) {
 // Decide whether a fallback to the legacy synthesizer is warranted.
 function isErr(r) { return !r || r.status === 'error'; }
 
+// A null/undefined receipt means the DISPATCH did not complete — e.g. a subagent
+// was interrupted/cancelled. This is the failure mode when the runner is driven
+// headlessly via the background Workflow primitive (foreground dispatches are not
+// interrupted). It is DISTINCT from a genuine CLI/agent error, which returns a
+// receipt with status:'error'. The run is NOT lost: every finished phase is on
+// disk and re-invoking the runner replays completed phases via the per-agent
+// idempotency guards. See docs/running-the-gauntlet.md Step 2.
+function isInterrupted(r) { return r === null || r === undefined; }
+function bailIfInterrupted(r, phaseName) {
+  if (!isInterrupted(r)) return;
+  throw new Error(
+    'apd-gauntlet: run interrupted at phase "' + phaseName + '" — a dispatched subagent ' +
+    'did not complete. The run is NOT lost: finished phases are on disk under ' + runDir +
+    '. RE-INVOKE the runner to resume (idempotency guards replay completed phases). If the ' +
+    'background Workflow primitive keeps interrupting dispatches, drive the run in the ' +
+    'FOREGROUND: `apd-gauntlet plan-run ' + runDir + '` (docs/running-the-gauntlet.md Step 2).');
+}
+
 // ===========================================================================
 // PHASE 0 — setup
 // ===========================================================================
@@ -268,7 +311,7 @@ pyStep('validate-domain', {
 // PHASE 1 — intake
 // ===========================================================================
 phase('intake');
-llmStep('apd-intake',
+const intakeReceipt = llmStep('apd-intake',
   'Analyze ' + runDir + '/inputs and emit 00-context/context-brief.md PLUS ' +
   '00-context/asset-inventory.yaml (ALWAYS emit the inventory: populate it from the artifacts when ' +
   'crown_jewels are declared in the run-config or the apd-domain skill, otherwise emit a schema-valid ' +
@@ -276,6 +319,7 @@ llmStep('apd-intake',
   '— the rollup and HTML-report build read it as a required input).',
   { phase: 'intake', label: 'intake', validateScope: runDir + '/00-context',
     outputs: runDir + '/00-context/context-brief.md, ' + runDir + '/00-context/asset-inventory.yaml' });
+bailIfInterrupted(intakeReceipt, 'intake');
 
 // ===========================================================================
 // PHASE 1.5 — code-recon (gate on args.code_recon)
@@ -617,6 +661,12 @@ if (isErr(build) && !fellBack) {
   }
 }
 
+// If build-report's dispatch was INTERRUPTED (null receipt — distinct from a real
+// exit-1, which carries status:'error'), the report cannot exist; bail with the
+// resume guidance rather than entering the audit loop and emitting a misleading
+// "completeness gate FAILED" on a wiped run.
+bailIfInterrupted(build, 'synthesis-build');
+
 // 5g audit loop — gate + auto-remediate, cap N=2 (3 attempts total).
 phase('synthesis-audit');
 let critique = null;
@@ -650,10 +700,10 @@ for (let i = 0; i <= 2; i++) {
     // must NEVER ship. The LLM auditor's semantic residual AND any residual
     // editorial completeness gap stay non-blocking after the remediation cap.
     if (!audit) {
-      throw new Error(
-        'report completeness gate: audit-report produced no receipt after 2 remediations ' +
-        '(dispatch/skip error) — cannot verify report completeness. ' +
-        'Refusing to ship an unverified report.');
+      // A null audit receipt = an INTERRUPTED dispatch, not a genuine structural
+      // failure. Surface the resume guidance instead of a misleading completeness
+      // verdict on a report that may simply not have been built yet.
+      bailIfInterrupted(audit, 'synthesis-audit');
     }
     if (!structuralOk) {
       throw new Error(
