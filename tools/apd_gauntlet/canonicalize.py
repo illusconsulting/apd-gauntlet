@@ -21,7 +21,7 @@ This deliberately leaves alone:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +45,10 @@ class CanonicalizeCollision(Exception):
 class CanonicalizeResult:
     records_canonicalized: int
     cross_refs_rewritten: int
+    # Per-file parse failures (path, error message) for files skipped because
+    # their YAML could not be loaded. A single malformed file no longer aborts
+    # the whole pass; it is skipped, recorded here, and surfaced to the caller.
+    parse_errors: list[tuple[str, str]] = field(default_factory=list)
 
 
 def _first_locator(record: dict[str, Any]) -> str | None:
@@ -132,11 +136,21 @@ def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
     seen_new_ids: set[str] = set()
     pending: list[tuple[Path, str, list[dict[str, Any]]]] = []
     records_canonicalized = 0
+    parse_errors: list[tuple[str, str]] = []
 
     # Pass 1 — global: recompute ids file-by-file (deterministic file order).
+    # A single unparseable/unreadable file must NOT abort the whole pass: skip
+    # it (leave it untouched on disk), record the error, and keep going. A
+    # CanonicalizeCollision is a real hard error and is left to propagate.
     for root_key, glob in _KINDS:
         for path in sorted(run_dir.rglob(glob)):
-            records, n_changed = _recompute_ids_for_file(path, root_key, id_map, seen_new_ids)
+            try:
+                records, n_changed = _recompute_ids_for_file(
+                    path, root_key, id_map, seen_new_ids
+                )
+            except (yaml.YAMLError, OSError) as exc:
+                parse_errors.append((str(path), str(exc)))
+                continue
             if records is None:
                 continue
             pending.append((path, root_key, records))
@@ -152,4 +166,4 @@ def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
             encoding="utf-8",
         )
 
-    return CanonicalizeResult(records_canonicalized, cross_refs_rewritten)
+    return CanonicalizeResult(records_canonicalized, cross_refs_rewritten, parse_errors)

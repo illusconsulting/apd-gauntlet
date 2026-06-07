@@ -23,7 +23,7 @@ enumeration is meaningless without at least one (attacker, jewel) pair.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +41,56 @@ class BuilderBlocked(Exception):
 class BuildResult:
     graph: Graph
     sources_used: list[str]
+    orphan_crown_jewels: list[str] = field(default_factory=list)
+
+
+# Generic domain suffixes stripped from a crown-jewel pattern to recover its
+# semantic head (e.g. ``phi_store`` -> ``phi``, ``tool_execution_capability``
+# -> ``tool_execution``). Order matters only in that the FIRST matching suffix
+# is removed; patterns carry at most one such suffix in practice.
+_GENERIC_JEWEL_SUFFIXES = (
+    "_store",
+    "_capability",
+    "_credentials",
+    "_secrets",
+    "_keys",
+    "_engine",
+    "_plane",
+    "_loop",
+    "_pipeline",
+    "_data",
+)
+
+
+def _normalize_token(value: str) -> str:
+    return value.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _jewel_candidate_tokens(pattern: str) -> set[str]:
+    """Derive the set of normalized tokens a crown-jewel pattern may match
+    against an asset's controlled ``data_classifications`` vocabulary.
+
+    The candidate set is conservative and exact-match-only downstream:
+      - the full normalized pattern (``pii_profile_store``);
+      - the pattern with one trailing generic domain suffix stripped, recovering
+        the semantic head (``pii_profile``);
+      - that head split on ``_`` into its component tokens (``pii``, ``profile``).
+
+    Because matching downstream is EXACT against a controlled enum
+    (``phi``/``pii``/``pci``/``secret``/...), splitting on ``_`` cannot
+    over-connect: a token like ``profile`` simply never appears in the enum, so
+    only genuinely meaningful heads (``pii``, ``phi``, ``secret``) connect.
+    """
+    full = _normalize_token(pattern)
+    candidates: set[str] = {full}
+    head = full
+    for suffix in _GENERIC_JEWEL_SUFFIXES:
+        if head.endswith(suffix) and len(head) > len(suffix):
+            head = head[: -len(suffix)]
+            break
+    candidates.add(head)
+    candidates.update(part for part in head.split("_") if part)
+    return candidates
 
 
 _SEVERITY_TO_COST = {
@@ -85,7 +135,7 @@ def build_graph(run_dir: Path) -> BuildResult:
     _add_inventory_nodes(g, inventory)
     sources.append("asset_inventory")
     _add_attacker_positions(g, attacker_position_data, run_cfg, domain_cfg)
-    _add_crown_jewels(g, crown_jewel_names, domain_cfg)
+    _add_crown_jewels(g, crown_jewel_names, domain_cfg, inventory=inventory)
     _wire_realized_crown_jewels(g)  # link assets that realize a same-named crown jewel
 
     _add_inventory_trust_edges(g, inventory)
@@ -104,7 +154,27 @@ def build_graph(run_dir: Path) -> BuildResult:
         _add_code_evidence_edges(g, code_idx)
         sources.append("code_evidence_index")
 
-    return BuildResult(graph=g, sources_used=sources)
+    # Re-derive the authoritative orphan set AFTER all wiring (classification
+    # alias + realizes field in _add_crown_jewels, name realization in
+    # _wire_realized_crown_jewels). A declared crown jewel with zero inbound
+    # edges is a silent orphan sink — surfaced, never fatal.
+    orphans = _orphan_crown_jewels(g)
+
+    return BuildResult(graph=g, sources_used=sources, orphan_crown_jewels=orphans)
+
+
+def _orphan_crown_jewels(g: Graph) -> list[str]:
+    """Return the names of crown-jewel nodes that have ZERO inbound edges.
+
+    Such jewels are unreachable sinks: the deterministic floor can enumerate no
+    path that terminates on them. This is a diagnostic, not a blocking error.
+    """
+    inbound: set[str] = {e.to_node for e in g._edges.values()}
+    return [
+        jewel.name
+        for jewel in g.nodes_by_type("crown_jewel")
+        if jewel.node_id not in inbound
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -180,11 +250,11 @@ def _load_domain(run_dir: Path, run_cfg: dict[str, Any]) -> dict[str, Any]:
         if loaded is None:
             continue
         names.append(str(loaded.get("name", dom_id)))
-        for field, key in (("crown_jewels", "pattern"), ("attacker_positions", "position")):
-            seen = {e[key] for e in merged[field] if isinstance(e, dict) and key in e}
-            for item in loaded.get(field, []) or []:
+        for fld, key in (("crown_jewels", "pattern"), ("attacker_positions", "position")):
+            seen = {e[key] for e in merged[fld] if isinstance(e, dict) and key in e}
+            for item in loaded.get(fld, []) or []:
                 if isinstance(item, dict) and item.get(key) not in seen:
-                    merged[field].append(item)
+                    merged[fld].append(item)
                     seen.add(item.get(key))
     if not names:
         return {}
@@ -291,14 +361,59 @@ def _add_attacker_positions(
         )
 
 
+def _asset_realizes_index(inventory: dict[str, Any]) -> dict[str, set[str]]:
+    """Map asset_id -> set of normalized crown-jewel patterns the asset's
+    OPTIONAL ``realizes_crown_jewels`` inventory field declares it realizes.
+
+    Backward-compatible: the field is absent in existing inventories, yielding an
+    empty map. Keyed by ``asset_id`` so it joins directly against graph nodes.
+    """
+    out: dict[str, set[str]] = {}
+    for a in inventory.get("assets", []) or []:
+        if not isinstance(a, dict):
+            continue
+        declared = a.get("realizes_crown_jewels")
+        if not isinstance(declared, list):
+            continue
+        asset_id = a.get("asset_id")
+        if not isinstance(asset_id, str):
+            continue
+        out.setdefault(asset_id, set()).update(
+            _normalize_token(str(p)) for p in declared if isinstance(p, str)
+        )
+    return out
+
+
 def _add_crown_jewels(
-    g: Graph, jewel_names: list[str], domain: dict[str, Any]
-) -> None:
+    g: Graph,
+    jewel_names: list[str],
+    domain: dict[str, Any],
+    *,
+    inventory: dict[str, Any] | None = None,
+) -> list[str]:
+    """Add crown-jewel nodes and wire ``data_resides_on`` edges from realizing
+    assets. Returns the names of jewels left with ZERO inbound edges (orphans).
+
+    Three wiring paths, all emitting the same deterministic edge_id so they
+    coexist idempotently with ``_wire_realized_crown_jewels``:
+
+    1. Classification alias: an asset whose normalized ``data_classifications``
+       (a controlled enum) EXACTLY equals one of the jewel pattern's candidate
+       tokens (full pattern, semantic head with a generic suffix stripped, and
+       that head split on ``_``). Exact-match against a controlled vocab keeps
+       this from connecting every asset to every jewel.
+    2. Explicit ``realizes_crown_jewels`` inventory field naming the pattern.
+    3. Legacy ``target_classification`` (naive ``_store``/``_pipeline``/
+       ``_engine`` strip) — kept working for backward compatibility.
+    """
+    inv = inventory or {}
+    realizes = _asset_realizes_index(inv)
     domain_patterns = {
         j["pattern"]
         for j in domain.get("crown_jewels", [])
         if isinstance(j, dict) and "pattern" in j
     }
+    orphans: list[str] = []
     for name in jewel_names:
         jewel_id = stable_id("jewel", name)
         source = "domain_default" if name in domain_patterns else "run_config"
@@ -311,26 +426,53 @@ def _add_crown_jewels(
                 confidence="high",
             )
         )
-        # Wire `data_resides_on` from any asset whose data_classifications
-        # contain the jewel's target classification (e.g. "phi" for "phi_store").
-        target_classification = (
+
+        candidate_tokens = _jewel_candidate_tokens(name)
+        normalized_pattern = _normalize_token(name)
+        # Legacy naive head, preserved so prior behavior never regresses.
+        legacy_target = (
             name.replace("_store", "").replace("_pipeline", "").replace("_engine", "")
         )
+        wired = False
         for asset in g.nodes_by_type("asset"):
-            if target_classification in (asset.data_classifications or ()):
-                g.add_edge(
-                    Edge(
-                        edge_id=stable_id(
-                            "edge", asset.node_id, jewel_id, "data_resides_on"
-                        ),
-                        edge_type="data_resides_on",
-                        from_node=asset.node_id,
-                        to_node=jewel_id,
-                        provenance={"source": "asset_inventory"},
-                        confidence=asset.confidence,
-                        traversal_cost=1,
-                    )
-                )
+            asset_classes = {
+                _normalize_token(c) for c in (asset.data_classifications or ())
+            }
+            classification_match = bool(asset_classes & candidate_tokens)
+            legacy_match = legacy_target in (asset.data_classifications or ())
+            explicit_match = normalized_pattern in realizes.get(asset.node_id, set())
+            if (classification_match or legacy_match or explicit_match) and (
+                _add_data_resides_edge(g, asset, jewel_id)
+            ):
+                wired = True
+        if not wired:
+            orphans.append(name)
+    return orphans
+
+
+def _add_data_resides_edge(g: Graph, asset: Node, jewel_id: str) -> bool:
+    """Add a ``data_resides_on`` edge asset->jewel, idempotently.
+
+    Returns True if an edge with the deterministic id now exists (whether this
+    call created it or a prior pass did), False is unreachable here but keeps the
+    caller's intent explicit. The deterministic edge_id lets this coexist with
+    ``_wire_realized_crown_jewels`` without tripping add_edge's duplicate guard.
+    """
+    edge_id = stable_id("edge", asset.node_id, jewel_id, "data_resides_on")
+    if edge_id in g._edges:
+        return True
+    g.add_edge(
+        Edge(
+            edge_id=edge_id,
+            edge_type="data_resides_on",
+            from_node=asset.node_id,
+            to_node=jewel_id,
+            provenance={"source": "asset_inventory"},
+            confidence=asset.confidence,
+            traversal_cost=1,
+        )
+    )
+    return True
 
 
 # --------------------------------------------------------------------------- #

@@ -5,7 +5,7 @@
 // (components.jsx, exported on window). Clicking a node highlights its path(s);
 // clicking an "Enumerated paths" row cross-highlights the graph (two-way link).
 
-function AttackPaths({ data }) {
+function AttackPaths({ data, onOpenFinding }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
 
@@ -36,8 +36,10 @@ function AttackPaths({ data }) {
   const findEdges = gs.finding_derived_edge_count || 0;
   const capEdges  = gs.capability_derived_edge_count || 0;
 
-  // Edge type chip helpers.
-  function EdgeTypeChip({ type }) {
+  // Edge type chip. When `onActivate` is supplied (finding-derived edges, given a
+  // finding id + a navigation handler) the chip becomes a button that opens the
+  // associated finding in the Findings view; otherwise it is a static label.
+  function EdgeTypeChip({ type, onActivate }) {
     const styles = {
       trust_boundary:          { background: "var(--paper-2)", color: "var(--ink-3)", border: "1px solid var(--rule)" },
       compromisable_via_finding: { background: "color-mix(in srgb, var(--sev-high) 15%, var(--paper))", color: "var(--sev-high)", border: "1px solid var(--sev-high)" },
@@ -50,8 +52,17 @@ function AttackPaths({ data }) {
     };
     const style = styles[type] || styles.trust_boundary;
     const label = labels[type] || type;
+    const clickable = typeof onActivate === "function";
     return (
-      <span style={{
+      <span
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        title={clickable ? "Open this finding in the Findings view" : undefined}
+        onClick={clickable ? (e) => { e.stopPropagation(); onActivate(); } : undefined}
+        onKeyDown={clickable ? (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onActivate(); }
+        } : undefined}
+        style={{
         ...style,
         fontFamily: "var(--font-mono)",
         fontSize: "10px",
@@ -59,27 +70,9 @@ function AttackPaths({ data }) {
         borderRadius: "3px",
         whiteSpace: "nowrap",
         letterSpacing: "0.03em",
+        cursor: clickable ? "pointer" : "default",
+        textDecoration: clickable ? "underline" : "none",
       }}>{label}</span>
-    );
-  }
-
-  function RefPill({ id }) {
-    if (!id) return null;
-    return (
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "10px",
-          padding: "1px 5px",
-          borderRadius: "3px",
-          background: "var(--accent-soft)",
-          color: "var(--accent)",
-          border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
-          whiteSpace: "nowrap",
-          cursor: "default",
-        }}
-        title={id}
-      >{id}</span>
     );
   }
 
@@ -152,7 +145,14 @@ function AttackPaths({ data }) {
                 <span className="attack-pair__count">{pair.paths.length} path{pair.paths.length === 1 ? "" : "s"}</span>
               </summary>
               <ul className="attack-pair__paths">
-                {pair.paths.map((p) => (
+                {pair.paths.map((p) => {
+                  // Distinct findings this path traverses (finding-derived edges).
+                  const pathFindingIds = [...new Set(
+                    (p.edges_detailed || [])
+                      .map((e) => e.finding_id)
+                      .filter(Boolean)
+                  )];
+                  return (
                   <li
                     key={p.path_id}
                     className={`attack-path attack-path--${p.feasibility || "unknown"}`}
@@ -176,6 +176,21 @@ function AttackPaths({ data }) {
                       <span>hop {p.hop_count}</span>
                       <span>sev sum {p.severity_sum}</span>
                       <span>{p.mitigation_count} mitigations</span>
+                      {pathFindingIds.length > 0 && (
+                        <span
+                          title={`${pathFindingIds.length} associated finding${pathFindingIds.length === 1 ? "" : "s"}: ${pathFindingIds.join(", ")}`}
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "10px",
+                            padding: "1px 6px",
+                            borderRadius: "3px",
+                            background: "color-mix(in srgb, var(--sev-high) 15%, var(--paper))",
+                            color: "var(--sev-high)",
+                            border: "1px solid var(--sev-high)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >⚑ {pathFindingIds.length} finding{pathFindingIds.length === 1 ? "" : "s"}</span>
+                      )}
                     </div>
                     <ol className="attack-path__edges">
                       {(p.edges_detailed && p.edges_detailed.length > 0
@@ -203,9 +218,18 @@ function AttackPaths({ data }) {
                               <span style={{ fontSize: "var(--text-sm)", color: "var(--ink)" }}>
                                 {ed.to_name}
                               </span>
-                              {ed.edge_type && <EdgeTypeChip type={ed.edge_type} />}
-                              {ed.finding_id && <RefPill id={ed.finding_id} />}
-                              {ed.capability_id && <RefPill id={ed.capability_id} />}
+                              {ed.edge_type && (
+                                <EdgeTypeChip
+                                  type={ed.edge_type}
+                                  onActivate={
+                                    ed.edge_type === "compromisable_via_finding" && ed.finding_id && onOpenFinding
+                                      ? () => onOpenFinding(ed.finding_id)
+                                      : undefined
+                                  }
+                                />
+                              )}
+                              {ed.finding_id && <CopyPill value={ed.finding_id} />}
+                              {ed.capability_id && <CopyPill value={ed.capability_id} />}
                             </div>
                           ) : (
                             <span className="mono" style={{ fontSize: "var(--text-xs)" }}>{ed.edge_id}</span>
@@ -217,7 +241,8 @@ function AttackPaths({ data }) {
                       ))}
                     </ol>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </details>
           );

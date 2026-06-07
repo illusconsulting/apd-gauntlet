@@ -60,8 +60,19 @@ best-effort `id`, but do **not** hand-tune it — tooling is the source of truth
 - **`context-brief.md` as evidence** — evidence `artifact` values must be **input
   artifacts** (e.g. `tech_plan.md`, a `.proto`, an IaC file), never the intake
   brief.
-- **Over-length** — `title` ≤ 200 characters; each evidence `excerpt` ≤ 25
-  whitespace-separated tokens.
+- **Over-length** — `title` ≤ 200 characters (the validator rejects longer);
+  each evidence `excerpt` ≤ 25 whitespace-separated tokens. Write a tight title
+  that names the component and concern; push any longer detail into `summary` /
+  `detail`.
+- **Unquoted YAML scalars** — QUOTE any scalar (`title`/`summary`/`locator`/
+  `excerpt`/`detail` one-liners) that contains a colon-space `": "`, an em-dash,
+  or a leading special char (`-`, `?`, `:`, `&`, `*`, `#`, `@`, `[`, `{`, `>`,
+  `|`, `%`, `!`). An unquoted colon breaks YAML parsing AND aborts
+  canonicalization.
+- **Invented output paths** — write each record to the canonical tier path your
+  contract specifies; do NOT nest new directories. Example: tmeval findings go to
+  `40-threat-model/threat-model.findings.yaml`, NOT
+  `20-findings/40-threat-model/...`.
 
 > Note: the `finding:`/`capability:` example blocks elsewhere in this skill show a single record under the root key for brevity. The list form above is the canonical multi-record shape; both the single-record and list forms validate, but agents should emit the list form.
 

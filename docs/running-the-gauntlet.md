@@ -263,6 +263,20 @@ repo root, run the `apd-gauntlet` workflow runner against the run directory:
 The specialists run as subagents of your Claude Code session, so this is an
 interactive, in-session operation — it is not meant to be driven headlessly.
 
+> **Run it in the foreground.** The runner dispatches each specialist as a
+> subagent of the live session. Driving it through the background `Workflow`
+> primitive can interrupt those dispatches mid-flight (the subagents are
+> cancelled and no phase output is written), leaving an empty run directory.
+> If the background path is unavailable or keeps interrupting, drive the runner
+> in the foreground instead: run the deterministic CLI phases yourself
+> (`build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
+> `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the
+> LLM specialists/judges (`apd-intake`, `apd-code-recon`,
+> `apd-threat-model-author`, the nine lenses, `apd-cluster-adjudicator`,
+> `apd-threat-model-evaluator`, `apd-attack-path-analyzer`, `apd-report-writer`,
+> `apd-report-auditor`, `apd-domain-auditor`) as foreground agents, in the phase
+> order below. Foreground subagents are not interrupted.
+
 The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
 run end-to-end and branches only on the receipts its dispatched agents return.
 It:

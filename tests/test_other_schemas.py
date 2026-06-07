@@ -235,6 +235,59 @@ def test_asset_graph_valid_fixture_validates() -> None:
     assert errors == [], errors
 
 
+def test_asset_graph_edge_accepts_threat_model_inferred_provenance() -> None:
+    """Issue #85: edges built from an AUTHORED baseline threat model carry
+    `provenance.source: 'threat_model_inferred'` (emitted by
+    attack_path/build.py for `generated_by: threat_model_author`). The
+    asset-graph schema's source enum must include that value or those edges
+    fail validation."""
+    schema = json.loads((SCHEMA_DIR / "asset-graph.schema.json").read_text())
+    source_enum = schema["properties"]["nodes"]["items"]["properties"][
+        "provenance"
+    ]["properties"]["source"]["enum"]
+    assert "threat_model_inferred" in source_enum
+
+    doc = {
+        "schema_version": 1,
+        "generated_by": "attack_path_analyzer",
+        "nodes": [
+            {
+                "node_id": "atk-aaaaaaaa",
+                "node_type": "attacker_position",
+                "name": "external",
+                "provenance": {"source": "domain_default"},
+                "confidence": "high",
+            },
+            {
+                "node_id": "asset-bbbbbbbb",
+                "node_type": "asset",
+                "name": "API Gateway",
+                "asset_type": "service",
+                "provenance": {"source": "artifact"},
+                "confidence": "high",
+            },
+        ],
+        "edges": [
+            {
+                "edge_id": "edge-11111111",
+                "edge_type": "network_reachable",
+                "from": "atk-aaaaaaaa",
+                "to": "asset-bbbbbbbb",
+                "provenance": {
+                    "source": "threat_model_inferred",
+                    "artifact": "00-context/threat-model-normalized.yaml",
+                    "locator": "entries[0]",
+                },
+                "confidence": "high",
+                "traversal_cost": 2,
+            },
+        ],
+    }
+    validator = Draft202012Validator(schema, registry=_build_registry())
+    errors = list(validator.iter_errors(doc))
+    assert errors == [], [e.message for e in errors]
+
+
 def test_domain_accepts_crown_jewels_and_attacker_positions():
     """Domain with all three attack-path arrays should validate."""
     validator = _validator_for("domain")

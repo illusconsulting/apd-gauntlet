@@ -22,6 +22,11 @@
             "type": "array",
             "items": { "type": "string", "enum": ["phi", "pii", "pci", "phi_subset", "secret", "public", "internal", "confidential"] }
           },
+          "realizes_crown_jewels": {
+            "type": "array",
+            "description": "Optional: abstract crown-jewel pattern tokens this asset realizes (e.g. 'tool_execution_capability'). Wires data_resides_on edges in attack-path analysis.",
+            "items": { "type": "string", "minLength": 1 }
+          },
           "provenance": {
             "type": "object",
             "required": ["source"],

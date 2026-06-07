@@ -28,7 +28,7 @@
             "required": ["source"],
             "additionalProperties": false,
             "properties": {
-              "source":   { "type": "string", "enum": ["artifact", "domain_default", "threat_model", "code_evidence", "run_config", "asset_inventory"] },
+              "source":   { "type": "string", "enum": ["artifact", "domain_default", "threat_model", "threat_model_inferred", "code_evidence", "run_config", "asset_inventory"] },
               "artifact": { "type": "string" },
               "locator":  { "type": "string" }
             }

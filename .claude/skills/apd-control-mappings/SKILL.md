@@ -7,6 +7,10 @@ description: Reference for emitting NIST SP 800-53r5 control mappings and MITRE 
 
 Every finding and capability emits NIST SP 800-53r5 control mappings. ATT&CK technique mappings are emitted only when the agent can write a specific one-sentence rationale.
 
+## Where mappings go (structural rule)
+
+ALL taxonomy mappings go UNDER the `control_mappings` block — never at the finding/capability root. Allowed keys: `nist_800_53r5`, `mitre_attack`, `cwe`, `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`, `atlas`. The MITRE ATLAS key on a record is exactly **`atlas`** — NOT `mitre_atlas` (`mitre_atlas` is only the `.apd-run.yaml` declaration name).
+
 ## NIST 800-53r5 mapping guidance
 
 The control families below are the primary candidates for each APD goal. This is not an exhaustive crosswalk — agents apply judgment based on the specific finding, and should consult the full catalog when a non-listed control is more apt.
@@ -244,7 +248,8 @@ A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, o
 ### CWE (on findings, optional)
 
 - Map only when the finding describes a specific weakness pattern that matches a CWE entry's **Demonstrative Examples** or **Observed Examples**.
-- Use **base** or **variant** abstractions only. **Pillar** and **category** entries (e.g., CWE-693 "Protection Mechanism Failure") are too abstract for actionable mapping and must not be used.
+- Cite only **concrete** CWE weaknesses that resolve in the bundled CWE catalog. Use **base** or **variant** abstractions only. **Pillar** and **category** entries are too abstract for actionable mapping and must not be used — e.g., CWE-693 "Protection Mechanism Failure" (Pillar) or CWE-320 "Key Management Errors" (Category); use a concrete child like CWE-324 instead.
+- A bare or unresolvable taxonomy id fails the report completeness audit (`taxonomy_titles_resolve`). Every id you emit must resolve to a title in the bundled catalog.
 - Each `cwe` mapping is just the ID string (no rationale field on the schema — but the finding's `detail` text must justify the weakness-pattern match. Reviewers should be able to read the detail and see why CWE-79 applies.)
 - One finding may carry multiple CWE IDs when the weakness composes.
 

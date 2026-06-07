@@ -718,6 +718,12 @@ def analyze_attack_paths(run_dir: Path) -> None:
         return
 
     graph = result.graph
+    if result.orphan_crown_jewels:
+        click.echo(
+            "analyze-attack-paths: WARNING - crown jewels with no inbound edges "
+            "(no asset realizes them; they will enumerate 0 paths): "
+            + ", ".join(result.orphan_crown_jewels)
+        )
     attackers = graph.nodes_by_type("attacker_position")
     jewels = graph.nodes_by_type("crown_jewel")
 
@@ -1081,9 +1087,16 @@ def canonicalize_cmd(run_dir: Path) -> None:
     except CanonicalizeCollision as exc:
         click.echo(f"canonicalize: blocked - {exc}", err=True)
         raise SystemExit(1) from None
+    for path, msg in result.parse_errors:
+        click.echo(f"canonicalize: SKIPPED unparseable file {path}: {msg}", err=True)
     click.echo(
         f"canonicalize: {result.records_canonicalized} records recanonicalized, "
         f"{result.cross_refs_rewritten} cross-refs rewritten"
+        + (
+            f", {len(result.parse_errors)} files skipped (unparseable)"
+            if result.parse_errors
+            else ""
+        )
     )
 
 

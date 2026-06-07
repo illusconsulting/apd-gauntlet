@@ -178,6 +178,19 @@ def _check_envelopes(run_dir: pathlib.Path, report: ValidationReport) -> None:
 
 CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
 
+# Issue #86: tier-4 analyzers legitimately cite their own derived synthesis
+# outputs as evidence (paths relative to the run root, exactly as the agents
+# emit them). These are always-known artifacts and must not be flagged as
+# "not in intake brief". Keep this set narrow — do NOT broaden the artifact
+# check beyond these specific analyzer-derived files.
+ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
+    "40-synthesis/asset-graph.yaml",          # attack-path analyzer
+    "40-synthesis/attack-paths.yaml",         # attack-path analyzer
+    "40-synthesis/defense-graph.yaml",        # attack-path analyzer
+    "40-synthesis/deduped-findings.yaml",     # threat-model evaluator + attack-path analyzer
+    "40-synthesis/deduped-capabilities.yaml",  # threat-model evaluator + attack-path analyzer
+})
+
 # Whole-document rollup files in 40-synthesis/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
 # Note: attack-path.findings.yaml is NOT listed here — post-C-20 it matches the
@@ -571,6 +584,13 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     known_artifacts: set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}
     if _code_evidence_index_path(run_dir).exists():
         known_artifacts.add(CODE_EVIDENCE_INDEX_FILENAME)
+    # Issue #86: allow tier-4 analyzers to cite their own synthesis outputs as
+    # evidence. Only union them when the artifact check is actually active
+    # (known_artifacts non-empty); adding them when no brief/artifacts are
+    # declared would resurrect the check that the no-brief path intentionally
+    # skips (see the `if known_artifacts` guard below).
+    if known_artifacts:
+        known_artifacts |= ANALYZER_DERIVED_ARTIFACTS
     tech_plan_artifacts: set[str] = {
         a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"
     }

@@ -132,7 +132,9 @@ function App() {
         {activeTab === "capabilities" && <Capabilities data={data} />}
         {activeTab === "coverage" && <Coverage data={data} />}
         {activeTab === "threat_model" && <ThreatModel data={data} />}
-        {activeTab === "attack_paths" && <AttackPaths data={data} />}
+        {activeTab === "attack_paths" && (
+          <AttackPaths data={data} onOpenFinding={onOpenFinding} />
+        )}
         {activeTab === "annexes" && (
           <Annexes data={data} onOpenFinding={onOpenFinding} />
         )}

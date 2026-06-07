@@ -31,6 +31,48 @@ def test_unknown_artifact_caught(tmp_path):
     assert "not in intake brief" in result.output.lower()
 
 
+def test_analyzer_derived_artifacts_accepted(tmp_path):
+    """Issue #86: tier-4 analyzers may cite their own derived synthesis outputs.
+
+    A finding whose evidence cites 40-synthesis/asset-graph.yaml and
+    40-synthesis/deduped-findings.yaml must NOT be flagged as "not in intake
+    brief", even though those paths are absent from the context-brief artifacts.
+    """
+    dst = _copy_clean_run(tmp_path)
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    # Repoint the single tech_plan.md evidence entry at an analyzer-derived
+    # synthesis output, and append a second analyzer-derived citation.
+    assert "artifact: tech_plan.md" in text  # guard against a no-op replace
+    text = text.replace(
+        "    - artifact: tech_plan.md\n",
+        "    - artifact: 40-synthesis/asset-graph.yaml\n"
+        '      locator: "conf-7aa376c5"\n'
+        '      excerpt: "deduped finding record"\n'
+        "    - artifact: 40-synthesis/deduped-findings.yaml\n",
+    )
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert "not in intake brief" not in result.output.lower(), result.output
+
+
+def test_unknown_artifact_still_caught_alongside_analyzer_derived(tmp_path):
+    """Issue #86 guard: the carve-out is narrow — a genuinely-unknown artifact
+    cited in evidence STILL fails, even when analyzer-derived paths are allowed.
+    """
+    dst = _copy_clean_run(tmp_path)
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    text = text.replace("artifact: tech_plan.md", "artifact: 40-synthesis/not-a-real-file.yaml")
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "not in intake brief" in result.output.lower()
+    assert "not-a-real-file.yaml" in result.output
+
+
 def test_dangling_cross_reference_caught(tmp_path):
     dst = _copy_clean_run(tmp_path)
     f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"

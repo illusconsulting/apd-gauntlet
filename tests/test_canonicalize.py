@@ -207,6 +207,55 @@ def test_canonicalize_leaves_id_untouched_when_no_locator(tmp_path):
     assert out["finding"][0]["id"] == "fabricated-no-locator"
 
 
+def test_canonicalize_skips_unparseable_file_and_reports_it(tmp_path):
+    """A single unparseable YAML file must NOT abort the whole pass.
+
+    The malformed file is skipped (left untouched on disk) and surfaced in
+    ``result.parse_errors``; every valid file is still canonicalized.
+    """
+    run = tmp_path / "run"
+    # Valid in-scope findings file.
+    valid_path = run / "10-trustworthiness" / "confidentiality.findings.yaml"
+    _write(valid_path, {
+        "findings": [{"finding": _finding("confidentiality", "PHI in topic", "§4.2")}],
+    })
+    # Malformed YAML findings file (unquoted colon-bearing scalar makes the
+    # value a mapping where a list/value is expected -> yaml.YAMLError on load).
+    bad_path = run / "10-trustworthiness" / "integrity.findings.yaml"
+    bad_path.parent.mkdir(parents=True, exist_ok=True)
+    bad_path.write_text(
+        "finding:\n  - title: broken: unquoted colon: scalar\n    agent: integrity\n",
+        encoding="utf-8",
+    )
+    bad_before = bad_path.read_bytes()
+
+    # Must NOT raise.
+    result = canonicalize_run(run)
+
+    # Valid file IS canonicalized (id recomputed deterministically).
+    rec = yaml.safe_load(valid_path.read_text())["finding"][0]
+    assert rec["id"] == compute_id("conf", "PHI in topic", "§4.2")
+
+    # Malformed file left untouched on disk (not rewritten).
+    assert bad_path.read_bytes() == bad_before
+
+    # Malformed file surfaced in parse_errors; valid file is not.
+    assert len(result.parse_errors) == 1
+    err_path, err_msg = result.parse_errors[0]
+    assert err_path == str(bad_path)
+    assert err_msg  # non-empty message
+
+
+def test_canonicalize_parse_errors_empty_when_all_parse(tmp_path):
+    """When every file parses cleanly, parse_errors is empty (no behavior change)."""
+    run = tmp_path / "run"
+    _write(run / "10-trustworthiness" / "confidentiality.findings.yaml", {
+        "findings": [{"finding": _finding("confidentiality", "PHI in topic", "§4.2")}],
+    })
+    result = canonicalize_run(run)
+    assert result.parse_errors == []
+
+
 def test_canonicalize_normalizes_plural_capabilities_root(tmp_path):
     """A genuine 'capabilities:' plural root key is now correctly normalized."""
     run = tmp_path / "run"
