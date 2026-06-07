@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from . import linters
+from .report import taxonomy as _taxonomy
 
 REPO = pathlib.Path(__file__).resolve().parent.parent.parent
 SCHEMAS_DIR = REPO / "schemas"
@@ -174,6 +175,21 @@ def _check_envelopes(run_dir: pathlib.Path, report: ValidationReport) -> None:
                         f"'{root_key}' with bare records (run 'apd-gauntlet canonicalize')",
                     )
                 )
+
+
+# G7: every *.findings.yaml / *.capabilities.yaml must live DIRECTLY under one of
+# these canonical run subdirs. The three tier dirs mirror the runTier tier names
+# (trustworthiness / scalability / auditability), plus the two tier-4 output dirs
+# (40-synthesis for the synthesizer + attack-path analyzer; 40-threat-model for the
+# threat-model evaluator). A record file anywhere else (e.g. a phantom
+# 20-findings/40-threat-model/ path) is rejected by run_cross_file_pass.
+CANONICAL_RECORD_DIRS: frozenset[str] = frozenset({
+    "10-trustworthiness",
+    "20-scalability",
+    "30-auditability",
+    "40-synthesis",
+    "40-threat-model",
+})
 
 
 CODE_EVIDENCE_INDEX_FILENAME = "code-evidence-index.yaml"
@@ -398,6 +414,10 @@ def run_semantic_pass(
     tech_plan_artifacts = tech_plan_artifacts or set()
     report = ValidationReport()
     seen_files: set[pathlib.Path] = set()
+    # G6: build the {cwe_id: abstraction} index once from the single bundled-catalog
+    # loader, then enforce concrete-CWE resolution per finding (reachable here at the
+    # tier gate, not only the late report-audit).
+    cwe_index = _taxonomy.cwe_abstractions()
     for path, kind, record in _iter_records(run_dir):
         if "_parse_error" in record:
             continue
@@ -406,6 +426,8 @@ def run_semantic_pass(
         report.records_seen += 1
         if kind == "finding":
             for msg in linters.check_excerpt_length(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_cwe_resolves(record, cwe_index):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_finding_id(record):
                 report.errors.append(Violation(path, rid, msg))
@@ -576,9 +598,36 @@ def _validate_domain_improvements_cross_refs(
             report.errors.append(Violation(path, rid, msg))
 
 
+def _check_record_file_locations(
+    run_dir: pathlib.Path, report: ValidationReport
+) -> None:
+    """G7: every *.findings.yaml / *.capabilities.yaml must live DIRECTLY under a
+    canonical run subdir (``CANONICAL_RECORD_DIRS``). A record file at any other
+    relative location — e.g. a phantom ``20-findings/40-threat-model/`` path, or a
+    file nested one level too deep — is an ERROR. The synthesizer-fallback
+    ``merged.findings.yaml`` and the per-lens / attack-path / threat-model files all
+    live directly under a canonical dir, so canonical runs are unaffected.
+    """
+    for _kind, (_schema, _root_key, glob) in RECORD_KINDS.items():
+        for path in sorted(run_dir.rglob(glob)):
+            rel = path.relative_to(run_dir)
+            parent = rel.parent.as_posix()  # the single dir the file sits in
+            if parent not in CANONICAL_RECORD_DIRS:
+                report.errors.append(
+                    Violation(
+                        path,
+                        None,
+                        f"non-canonical location {parent!r}: {glob} files must live "
+                        f"directly under one of "
+                        f"{sorted(CANONICAL_RECORD_DIRS)}",
+                    )
+                )
+
+
 def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 3: cross-file ID and artifact resolution."""
     report = ValidationReport()
+    _check_record_file_locations(run_dir, report)
     brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
     artifacts_meta = brief.get("artifacts") or []
     known_artifacts: set[str] = {a["filename"] for a in artifacts_meta if "filename" in a}

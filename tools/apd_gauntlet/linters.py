@@ -230,6 +230,49 @@ def check_tmeval_contradiction_cross_reference(record: dict[str, Any]) -> list[s
     return errors
 
 
+# G6: a CWE id is too coarse to be actionable when it is a CWE "category" or
+# "pillar" abstraction (e.g. CWE-840 "Business Logic Errors"). Concrete
+# abstractions (base/class/variant/compound) and even an unknown-abstraction
+# concrete node are acceptable; only these two coarse buckets are blocked.
+_COARSE_CWE_ABSTRACTIONS: frozenset[str] = frozenset({"category", "pillar"})
+
+
+def check_cwe_resolves(
+    record: dict[str, Any], cwe_index: dict[str, str]
+) -> list[str]:
+    """Every ``control_mappings.cwe`` id must resolve to a CONCRETE catalog node.
+
+    ERROR when an id is ABSENT from the bundled CWE catalog OR has an
+    ``abstraction`` of ``category`` / ``pillar`` — both are too coarse to be an
+    actionable mapping. A ``base`` / ``class`` / ``variant`` / ``compound`` id is
+    accepted (CWE-79 base → ok; CWE-840 category → error; CWE-9999999 absent →
+    error).
+
+    ``cwe_index`` is the ``{cwe_id: abstraction}`` map from
+    ``report.taxonomy.cwe_abstractions()``. Returns one error string per
+    offending id; ``[]`` when no ``cwe`` list is present.
+    """
+    errors: list[str] = []
+    control_mappings = record.get("control_mappings") or {}
+    cwe_ids = control_mappings.get("cwe") or []
+    for cid in cwe_ids:
+        if cid not in cwe_index:
+            errors.append(
+                f"control_mappings.cwe {cid!r} is not in the bundled CWE catalog; "
+                f"cite a concrete CWE weakness (base/class/variant), not an absent "
+                f"or invented id"
+            )
+            continue
+        abstraction = cwe_index[cid]
+        if abstraction in _COARSE_CWE_ABSTRACTIONS:
+            errors.append(
+                f"control_mappings.cwe {cid!r} is a CWE {abstraction} "
+                f"(too coarse to be actionable); cite a concrete child weakness "
+                f"(base/class/variant) instead"
+            )
+    return errors
+
+
 def check_capability_maturity_evidence(
     record: dict[str, Any], tech_plan_artifacts: set[str]
 ) -> list[str]:

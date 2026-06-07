@@ -36,6 +36,71 @@ _KINDS: tuple[tuple[str, str], ...] = (
     ("capability", "*.capabilities.yaml"),
 )
 
+# Taxonomy sub-keys allowed UNDER ``control_mappings`` per record kind. Mirrors
+# the ``control_mappings`` ``properties`` allow-sets in finding.schema.json /
+# capability.schema.json (the additionalProperties:false gate). Only these keys
+# are lifted from the record root into control_mappings during normalization —
+# lifting a key the destination schema does not allow would merely relocate the
+# schema violation, so out-of-scope keys are deliberately left at the root.
+_CONTROL_MAPPING_KEYS_BY_KIND: dict[str, frozenset[str]] = {
+    "finding": frozenset(
+        {"nist_800_53r5", "mitre_attack", "cwe", "owasp_top10",
+         "owasp_api_top10", "owasp_llm_top10", "atlas"}
+    ),
+    "capability": frozenset(
+        {"nist_800_53r5", "mitre_attack", "mitre_attack_mitigations", "d3fend"}
+    ),
+}
+
+
+def _normalize_control_mappings(record: dict[str, Any], kind: str = "finding") -> bool:
+    """Self-heal two common specialist-output frictions on one record, in place.
+
+    Returns ``True`` iff the record was mutated.
+
+    (a) A root-level ``mitre_atlas`` key is the ATLAS-taxonomy data under the
+        wrong name/place; move it to ``control_mappings.atlas`` (only when
+        ``atlas`` is an allowed control_mappings key for ``kind``).
+    (b) Each recognized taxonomy key sitting at the record ROOT — ``cwe``,
+        ``atlas``, ``owasp_top10``, ``owasp_api_top10``, ``owasp_llm_top10``,
+        ``mitre_attack``, ``nist_800_53r5`` — that ``kind``'s schema allows under
+        ``control_mappings`` is LIFTED into ``control_mappings``.
+
+    Loss-preventing: if the destination sub-key already holds a NON-EMPTY value,
+    do NOT overwrite it; LEAVE the root key in place so the schema's
+    ``additionalProperties:false`` gate still fires and a human resolves the
+    conflict. (An empty/absent destination is safe to fill.) Only keys allowed
+    for ``kind`` are ever touched — out-of-scope root keys are left untouched.
+    """
+    allowed = _CONTROL_MAPPING_KEYS_BY_KIND.get(kind, frozenset())
+    mutated = False
+
+    def _lift(root_key: str, dest_key: str) -> None:
+        nonlocal mutated
+        if dest_key not in allowed:
+            return  # lifting would just relocate the schema violation.
+        if root_key not in record:
+            return
+        cm = record.get("control_mappings")
+        if not isinstance(cm, dict):
+            cm = {}
+        existing = cm.get(dest_key)
+        if existing:  # non-empty destination -> loss-preventing, leave root key.
+            return
+        cm[dest_key] = record.pop(root_key)
+        record["control_mappings"] = cm
+        mutated = True
+
+    # (a) misnamed root mitre_atlas -> control_mappings.atlas
+    _lift("mitre_atlas", "atlas")
+
+    # (b) recognized taxonomy keys lifted from the root (same-name dest).
+    for key in ("cwe", "atlas", "owasp_top10", "owasp_api_top10",
+                "owasp_llm_top10", "mitre_attack", "nist_800_53r5"):
+        _lift(key, key)
+
+    return mutated
+
 
 class CanonicalizeCollision(Exception):
     """Two distinct in-scope records would receive the same canonical id."""
@@ -78,8 +143,15 @@ def _recompute_ids_for_file(
     records = extract_records(doc, root_key)
     in_scope = 0
     n_changed = 0
+    normalized = False
     for rec in records:
-        # schema_version is persisted only when the file is written back (>=1 in-scope record).
+        # G4: deterministic control-mappings self-heal runs on EVERY record,
+        # regardless of agent prefix — apath-*/tmeval-* records (whose agents are
+        # out-of-scope for id recompute) must be normalized too. A file whose
+        # only change is a normalization is still written back (see return).
+        if _normalize_control_mappings(rec, root_key):
+            normalized = True
+        # schema_version is persisted only when the file is written back.
         rec.setdefault("schema_version", 1)
         prefix = _PREFIX_BY_AGENT.get(rec.get("agent") or "", "")
         if not prefix:
@@ -106,7 +178,11 @@ def _recompute_ids_for_file(
         if old_id:
             id_map[old_id] = new_id
         rec["id"] = new_id
-    return (records if in_scope else None), n_changed
+    # Write the file back when it has >=1 in-scope record (id recompute /
+    # schema_version persistence) OR when a normalization mutated any record —
+    # the latter covers files of purely out-of-scope records (e.g. attack-path,
+    # threat-model) that nonetheless needed a control-mappings self-heal.
+    return (records if (in_scope or normalized) else None), n_changed
 
 
 def _rewrite_cross_refs(records: list[dict[str, Any]], id_map: dict[str, str]) -> int:

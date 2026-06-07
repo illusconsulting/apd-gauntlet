@@ -39,16 +39,20 @@ def _register_cached(fn: Callable[[], dict[str, Any]]) -> Callable[[], dict[str,
 
 @_register_cached
 @lru_cache(maxsize=1)
-def cwe_titles() -> dict[str, str]:
-    """Return {CWE-NNN: title} for all entries in cwe.json.
+def _cwe_catalog() -> dict[str, dict[str, str]]:
+    """Single CWE loader: {CWE-NNN: {"title": ..., "abstraction": ...}}.
+
+    The one place cwe.json is parsed; ``cwe_titles`` and ``cwe_abstractions``
+    are thin projections of this so the title map and the abstraction map can
+    never drift. ``abstraction`` is "" when the source carries none.
 
     Handles two shapes:
     - Flat dict: {"CWE-NNN": title_str, ...}
-    - Flat dict: {"CWE-NNN": {"title": ..., "name": ..., ...}, ...}
-    - Envelope: {"entries": [{cwe_id: "CWE-NNN", name: "...", ...}, ...], ...}
+    - Flat dict: {"CWE-NNN": {"title": ..., "name": ..., "abstraction": ...}, ...}
+    - Envelope: {"entries": [{cwe_id: "CWE-NNN", name: ..., abstraction: ...}], ...}
     """
     raw = json.loads((_PKG_DATA / "cwe.json").read_text(encoding="utf-8"))
-    out: dict[str, str] = {}
+    out: dict[str, dict[str, str]] = {}
     if isinstance(raw, dict):
         # Envelope shape: {"entries": [...], ...}
         entries = raw.get("entries")
@@ -57,19 +61,48 @@ def cwe_titles() -> dict[str, str]:
                 if not isinstance(entry, dict):
                     continue
                 cid = entry.get("cwe_id", "")
+                if not cid:
+                    continue
                 title = entry.get("name", entry.get("title", cid)) or cid
-                if cid:
-                    out[cid] = title
+                out[cid] = {
+                    "title": title,
+                    "abstraction": str(entry.get("abstraction") or ""),
+                }
             return out
         # Flat dict shape: {"CWE-NNN": str | dict, ...}
         for cid, v in raw.items():
             if not cid or not cid.startswith("CWE-"):
                 continue
             if isinstance(v, dict):
-                out[cid] = v.get("title", v.get("name", cid)) or cid
+                out[cid] = {
+                    "title": v.get("title", v.get("name", cid)) or cid,
+                    "abstraction": str(v.get("abstraction") or ""),
+                }
             else:
-                out[cid] = str(v)
+                out[cid] = {"title": str(v), "abstraction": ""}
     return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
+def cwe_titles() -> dict[str, str]:
+    """Return {CWE-NNN: title} for all entries in cwe.json (projection of the
+    single :func:`_cwe_catalog` loader). Kept lru-cached/registered so callers
+    relying on ``cwe_titles.cache_clear()`` / ``invalidate_all`` still work."""
+    return {cid: e["title"] for cid, e in _cwe_catalog().items()}
+
+
+@_register_cached
+@lru_cache(maxsize=1)
+def cwe_abstractions() -> dict[str, str]:
+    """Return {CWE-NNN: abstraction} for all entries in cwe.json.
+
+    Abstraction is one of category/pillar/class/base/variant/compound (or "" when
+    the source carries none). Projection of the single :func:`_cwe_catalog`
+    loader so it cannot drift from :func:`cwe_titles`. Consumed by the G6
+    CWE-resolves guardrail in ``linters.check_cwe_resolves``.
+    """
+    return {cid: e["abstraction"] for cid, e in _cwe_catalog().items()}
 
 
 @_register_cached
@@ -247,15 +280,17 @@ def invalidate_if_modified(
     """
     target = catalog_dir or _DATA
     cleared: list[str] = []
-    # Mapping of catalog filename -> loader to invalidate.
-    catalog_to_loader: dict[str, Callable[[], dict[str, Any]]] = {
-        "nist-controls.json":            nist_control_titles,
-        "mitre-attack-techniques.json":  attack_technique_titles,
-        "cwe.json":                      cwe_titles,
-        "d3fend.json":                   d3fend_titles,
-        "atlas-techniques.json":         atlas_titles,
+    # Mapping of catalog filename -> loader(s) to invalidate. cwe.json backs three
+    # caches (_cwe_catalog parse + the cwe_titles / cwe_abstractions projections);
+    # clear all three so a projection cannot survive a refreshed source.
+    catalog_to_loaders: dict[str, tuple[Callable[[], dict[str, Any]], ...]] = {
+        "nist-controls.json":            (nist_control_titles,),
+        "mitre-attack-techniques.json":  (attack_technique_titles,),
+        "cwe.json":                      (_cwe_catalog, cwe_titles, cwe_abstractions),
+        "d3fend.json":                   (d3fend_titles,),
+        "atlas-techniques.json":         (atlas_titles,),
     }
-    for filename, loader in catalog_to_loader.items():
+    for filename, loaders in catalog_to_loaders.items():
         path = target / filename
         if not path.is_file():
             continue
@@ -268,7 +303,8 @@ def invalidate_if_modified(
             _LAST_SEEN_MTIMES[path] = current
             continue  # warm-up
         if current != previous:
-            loader.cache_clear()  # type: ignore[attr-defined]
+            for loader in loaders:
+                loader.cache_clear()  # type: ignore[attr-defined]
             _LAST_SEEN_MTIMES[path] = current
             cleared.append(filename)
     return cleared
