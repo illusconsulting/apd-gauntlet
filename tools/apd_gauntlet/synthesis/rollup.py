@@ -249,6 +249,21 @@ def _read_records(path: Path, *keys: str) -> list[dict[str, Any]]:
     return []
 
 
+def _count_unresolved_merges(path: Path) -> int:
+    """Count unresolved authored-merge groups from rejected-records.yaml.
+
+    apply-clusters logs exactly one "fewer than 2 resolvable members" group row
+    per merge decision it could not apply (members absent or mixed kinds), so
+    counting those rows yields the unresolved-merge count without re-plumbing
+    ApplyResult through the rollup.
+    """
+    rows = _read_records(path, "rejected")
+    return sum(
+        1 for r in rows
+        if "fewer than 2 resolvable members" in str(r.get("reason", ""))
+    )
+
+
 def build_rollups(run_dir: Path) -> RollupResult:
     findings, caps = _load_deduped(run_dir)
     inventory = yaml.safe_load(
@@ -280,9 +295,16 @@ def build_rollups(run_dir: Path) -> RollupResult:
     sev_dis = _read_records(
         synth / "severity-disagreements.yaml",
         "severity_disagreements", "disagreements", "severity_disagreement")
+    # PR3: surface apply-clusters' unresolved authored merges (non-blocking + loud).
+    # Counted from rejected-records.yaml: each dropped merge group logs one
+    # "fewer than 2 resolvable members" group row, so that string is the count.
+    unresolved = _count_unresolved_merges(synth / "rejected-records.yaml")
     # findings already UNION apath-* (via _load_deduped); compute_metrics is the
     # single canonical report summary block.
-    result.metrics = compute_metrics(findings, caps, contradictions, sev_dis)
+    result.metrics = compute_metrics(
+        findings, caps, contradictions, sev_dis,
+        unresolved_authored_merges=unresolved,
+    )
 
     _write(run_dir, result)
     return result

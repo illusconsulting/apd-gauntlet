@@ -206,6 +206,16 @@ def audit_report(run_dir: Path) -> AuditResult:
            sev_sum == total and tier_sum == total and disp_sum == total,
            f"total={total} sev_sum={sev_sum} tier_sum={tier_sum} disp_sum={disp_sum}")
 
+    # PR3 (editorial, non-blocking): apply-clusters drops an authored merge whose
+    # members are absent or span mixed kinds rather than raising. The drop is
+    # logged to rejected-records.yaml and counted in metrics.unresolved_authored_merges
+    # — surface it here so the auditor sees authored merges that did not apply.
+    unresolved = int(metrics_doc.get("unresolved_authored_merges", 0) or 0)
+    _check(result, "authored_merges_applied", unresolved == 0,
+           f"unresolved_authored_merges={unresolved} "
+           "(see 40-synthesis/rejected-records.yaml)",
+           klass="editorial")
+
     # data.js <-> recomputed drift.
     try:
         recomputed = build_apd_data(load_run(run_dir), run_dir=run_dir)

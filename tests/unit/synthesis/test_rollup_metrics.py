@@ -29,3 +29,28 @@ def test_build_rollups_emits_metrics_yaml(tmp_path: pathlib.Path):
     assert metrics["contradictions"] == 1
     assert metrics["severity_disagreements"] == 1
     assert sum(metrics["capabilitiesByMaturity"].values()) == metrics["capabilities_total"]
+    # PR3: the example has no unresolved authored merges.
+    assert metrics["unresolved_authored_merges"] == 0
+
+
+def test_metrics_counts_unresolved_authored_merges_from_rejected(tmp_path: pathlib.Path):
+    """build_rollups surfaces unresolved_authored_merges by counting the
+    'fewer than 2 resolvable members' reject rows in rejected-records.yaml."""
+    run = tmp_path / "run"
+    shutil.copytree(EXAMPLE, run)
+    synth = run / "40-synthesis"
+    # Inject a rejected-records.yaml carrying one unresolved-merge group row.
+    rejected = {
+        "schema_version": 1, "generated_by": "synthesizer",
+        "rejected": [
+            {"id": "conf-cap-deadbeef", "category": "failed_validation",
+             "reason": "merge member not found in corpus during apply-clusters"},
+            {"id": "cluster-ghost-0001", "category": "failed_validation",
+             "reason": "merge group cluster-ghost-0001 had fewer than 2 resolvable "
+                       "members; skipped"},
+        ],
+    }
+    (synth / "rejected-records.yaml").write_text(yaml.safe_dump(rejected, sort_keys=False))
+    build_rollups(run)
+    metrics = yaml.safe_load((synth / "metrics.yaml").read_text())
+    assert metrics["unresolved_authored_merges"] == 1

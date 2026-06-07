@@ -13,7 +13,7 @@
     "schema_version": { "type": "integer", "const": 1 },
     "id": {
       "type": "string",
-      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$"
+      "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$"
     },
     "agent": { "$ref": "finding.schema.json#/properties/agent" },
     "apd_tier": { "$ref": "finding.schema.json#/properties/apd_tier" },
@@ -78,6 +78,19 @@
       "type": "array",
       "items": { "type": "string", "minLength": 5 }
     },
-    "related_concerns": { "$ref": "finding.schema.json#/properties/related_concerns" }
+    "related_concerns": { "$ref": "finding.schema.json#/properties/related_concerns" },
+    "merged_from": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$" }
+    },
+    "cross_references": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$" }
+    },
+    "linked_perspectives": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$" }
+    },
+    "lens_perspectives": { "$ref": "finding.schema.json#/properties/lens_perspectives" }
   }
 }

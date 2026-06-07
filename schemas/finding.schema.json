@@ -144,6 +144,10 @@
           "detail":  { "type": "string" }
         }
       }
+    },
+    "linked_perspectives": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" }
     }
   },
   "allOf": [

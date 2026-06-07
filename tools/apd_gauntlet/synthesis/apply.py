@@ -48,6 +48,11 @@ class ApplyResult:
     severity_disagreements: list[dict[str, Any]] = field(default_factory=list)
     contradictions: list[dict[str, Any]] = field(default_factory=list)
     rejected: list[dict[str, Any]] = field(default_factory=list)
+    # PR3: authored merge decisions that resolved to <2 members in EITHER index
+    # (member ids absent, or a mixed finding+capability cluster). Non-blocking +
+    # LOUD — the source records are still written to rejected-records.yaml; this
+    # counter exists so the drop is countable rather than silent.
+    unresolved_authored_merges: int = 0
 
 
 def _sha8(title: str, first_locator: str) -> str:
@@ -95,6 +100,99 @@ def _union_attack(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [seen[k] for k in sorted(seen)]
 
 
+def _max_maturity(records: list[dict[str, Any]]) -> str:
+    """Return the HIGHEST maturity across ``records`` by _MATURITY_RANK.
+
+    A capability confirmed at a higher maturity by any lens is itself at that
+    maturity (mirrors the merged-finding "highest severity/confidence wins"
+    rule). Falls back to ``implemented`` for unknown values.
+    """
+    ranks = [_MATURITY_RANK.get(str(r.get("maturity", "implemented")), 1) for r in records]
+    return _MATURITY_BY_RANK[max(ranks)] if ranks else "implemented"
+
+
+def _union_objs(
+    records: list[dict[str, Any]], mapping_key: str, dedup_key: str
+) -> list[dict[str, Any]]:
+    """Union object-array control mappings (``mitre_attack_mitigations``,
+    ``d3fend``) across sources, de-duped by ``dedup_key`` and sorted by it.
+    Keeps the first source object per key so its rationale survives.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    for r in sorted(records, key=lambda x: x["id"]):
+        for item in (r.get("control_mappings") or {}).get(mapping_key) or []:
+            if isinstance(item, dict) and item.get(dedup_key):
+                seen.setdefault(item[dedup_key], item)
+    return [seen[k] for k in sorted(seen)]
+
+
+def _merge_capabilities(
+    decision: dict[str, Any],
+    c_src: list[dict[str, Any]],
+    members: list[str],
+) -> dict[str, Any]:
+    """Build ONE merged capability from a cross-lens CAPABILITY cluster.
+
+    Mirrors the finding-merge contract but for the capability schema:
+      * id   = "cap-merged-" + sha8(merged_title | primary first-locator)
+      * primary = sorted-first source by id (deterministic regardless of order)
+      * maturity = HIGHEST of sources (a capability confirmed at a higher level
+        by any lens is itself at that level)
+      * scope  = "; ".join of the unique, non-empty source scopes (the schema
+        requires a non-empty scope string)
+      * evidence = de-duped union over sources, sorted by id
+      * control_mappings unions ONLY the capability-allowed keys.
+    """
+    primary = min(c_src, key=lambda r: r["id"])
+    title = decision.get("merged_title", "")
+    description = (
+        decision.get("merged_summary")
+        or decision.get("merged_detail")
+        or primary.get("description", "")
+    )
+    # Unique, order-preserving (by source id) non-empty scopes.
+    scopes: list[str] = []
+    for s in sorted(c_src, key=lambda r: r["id"]):
+        sc = str(s.get("scope", "")).strip()
+        if sc and sc not in scopes:
+            scopes.append(sc)
+    scope = "; ".join(scopes)
+    evidence: list[dict[str, Any]] = []
+    for s in sorted(c_src, key=lambda r: r["id"]):
+        for ev in s.get("evidence") or []:
+            if ev not in evidence:
+                evidence.append(ev)
+    control_mappings: dict[str, Any] = {
+        "nist_800_53r5": _sorted_union(c_src, ("control_mappings", "nist_800_53r5")),
+    }
+    attack = _union_attack(c_src)
+    if attack:
+        control_mappings["mitre_attack"] = attack
+    # mitre_attack_mitigations + d3fend are object arrays keyed by id/technique;
+    # union by that key, keeping the first source object so rationale survives.
+    mits = _union_objs(c_src, "mitre_attack_mitigations", "id")
+    if mits:
+        control_mappings["mitre_attack_mitigations"] = mits
+    d3 = _union_objs(c_src, "d3fend", "technique")
+    if d3:
+        control_mappings["d3fend"] = d3
+    return {
+        "schema_version": 1,
+        "id": "cap-merged-" + _sha8(title, _first_locator(primary)),
+        "agent": "synthesizer",
+        "apd_tier": primary.get("apd_tier"),
+        "apd_goal": primary.get("apd_goal"),
+        "title": title,
+        "description": description,
+        "maturity": _max_maturity(c_src),
+        "scope": scope,
+        "evidence": evidence,
+        "merged_from": sorted(members),
+        "lens_perspectives": decision.get("lens_perspectives", {}),
+        "control_mappings": control_mappings,
+    }
+
+
 def _load_decisions(run_dir: Path) -> dict[str, Any]:
     path = run_dir / "40-synthesis" / "cluster-decisions.yaml"
     if not path.is_file():
@@ -132,14 +230,28 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
 
     result = ApplyResult()
     consumed: set[str] = set()
+    consumed_caps: set[str] = set()
+    merged_caps: list[dict[str, Any]] = []
     cross_refs: dict[str, list[str]] = {}
 
     for decision in doc.get("decisions") or []:
         disp = decision.get("disposition")
         members = _members_for(doc, decision)
         if disp == "merge":
-            sources = [findings_by_id[m] for m in members if m in findings_by_id]
-            if len(sources) < 2:
+            # PR3: resolve members against BOTH indexes so authored CAPABILITY
+            # merges are no longer silently dropped (only findings_by_id was
+            # consulted before, so every kind:capability cluster failed).
+            f_src = [findings_by_id[m] for m in members if m in findings_by_id]
+            c_src = [caps_by_id[m] for m in members if m in caps_by_id]
+            if len(c_src) >= 2 and not f_src:
+                # CAPABILITY merge.
+                consumed_caps.update(members)
+                merged_caps.append(_merge_capabilities(decision, c_src, members))
+                continue
+            if not (len(f_src) >= 2 and not c_src):
+                # UNRESOLVED: mixed kinds, or <2 resolvable in either index.
+                # Keep the existing reject rows AND make the drop countable
+                # (non-blocking + loud — never raise).
                 for m in members:
                     result.rejected.append({
                         "id": m, "category": "failed_validation",
@@ -152,7 +264,10 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
                         f"merge group {group_id} had fewer than 2 resolvable members; skipped"
                     ),
                 })
+                result.unresolved_authored_merges += 1
                 continue
+            # FINDING merge (logic unchanged below).
+            sources = f_src
             consumed.update(members)
             title = decision.get("merged_title", "")
             # primary = sorted-first member by id, so the merged record is deterministic
@@ -225,7 +340,9 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
         # separate: no-op; both records flow through unchanged below.
 
     # Emit all non-consumed findings unchanged (tier order then id within tier),
-    # attaching reciprocal cross_references for linked records.
+    # attaching reciprocal cross_references for linked records. A linked record
+    # ALSO gets a ``linked_perspectives`` marker (the metric marker) so the
+    # rollup can count linked clusters.
     for rec in _ordered_records(findings_by_id):
         if rec["id"] in consumed:
             continue
@@ -233,6 +350,7 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
         refs = sorted(set(cross_refs.get(rec["id"], [])))
         if refs:
             out["cross_references"] = sorted(set(out.get("cross_references", [])) | set(refs))
+            out["linked_perspectives"] = refs
         result.findings.append(out)
 
     # Contradictions (C5/I3) + stale-capability downgrade (I4).
@@ -273,7 +391,22 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
                     "to_maturity": new_maturity,
                 })
 
-    result.capabilities = list(caps_by_id.values())
+    # Emit capabilities: (a) skip the ones consumed by a CAPABILITY merge,
+    # (b) preserve the stale-downgrade mutations above, (c) attach reciprocal
+    # cross_references + the linked_perspectives marker for linked caps,
+    # (d) append the merged capabilities. Deterministic order (by id).
+    emitted_caps: list[dict[str, Any]] = []
+    for cid in sorted(caps_by_id):
+        if cid in consumed_caps:
+            continue
+        cap = dict(caps_by_id[cid])
+        refs = sorted(set(cross_refs.get(cid, [])))
+        if refs:
+            cap["cross_references"] = sorted(set(cap.get("cross_references", [])) | set(refs))
+            cap["linked_perspectives"] = refs
+        emitted_caps.append(cap)
+    emitted_caps.extend(merged_caps)
+    result.capabilities = emitted_caps
 
     _write_outputs(run_dir, result)
     return result

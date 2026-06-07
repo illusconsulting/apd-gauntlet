@@ -437,3 +437,274 @@ def test_cli_apply_clusters_exits_2_without_decisions(tmp_path):
     # No cluster-decisions.yaml written.
     result = CliRunner().invoke(main, ["apply-clusters", str(run)])
     assert result.exit_code == 2
+
+
+# --- PR3: cross-lens CAPABILITY merge + link (kind-aware apply) ---------------
+
+
+def _capability(cap_id, *, agent, goal, tier, maturity, scope, evidence,
+                title=None, description=None, nist=None, **extra):
+    return {
+        "schema_version": 1, "id": cap_id, "agent": agent,
+        "apd_tier": tier, "apd_goal": goal, "maturity": maturity,
+        "title": title or f"{goal.capitalize()} capability for cross-lens merge test",
+        "description": description
+        or f"{goal} control is in place and exercised against the relevant assets.",
+        "scope": scope,
+        "evidence": evidence,
+        "control_mappings": {"nist_800_53r5": nist or ["SC-28"]},
+        **extra,
+    }
+
+
+def _scaffold_two_capability_run(tmp_path):
+    """A run whose authored cluster groups two CAPABILITY records for a merge."""
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    cap_a = _capability(
+        "conf-cap-11111111", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="implemented",
+        scope="PHI columns in the RDS claims tables at rest",
+        evidence=[{"artifact": "tech_plan.md", "locator": "§5.1",
+                   "excerpt": "field-level encryption at rest"}],
+        nist=["SC-28"],
+    )
+    cap_b = _capability(
+        "conf-cap-22222222", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="tested",
+        scope="TLS on every PHI transport hop in flight",
+        evidence=[{"artifact": "tech_plan.md", "locator": "§5.2",
+                   "excerpt": "TLS 1.3 enforced on all hops"}],
+        nist=["SC-8"],
+    )
+    (run / "10-trustworthiness" / "confidentiality.capabilities.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "capability": [cap_a, cap_b]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-cap-0001", "disposition": "merge",
+            "merged_title": "PHI is encrypted at rest and in transit end to end",
+            "merged_summary": "Envelope encryption at rest plus TLS in transit cover PHI.",
+            "merged_detail": "Both lenses confirm complementary PHI protection layers together.",
+            "lens_perspectives": {
+                "at_rest": {"summary": "Envelope encryption protects PHI columns.",
+                            "detail": "Field-level envelope encryption on RDS PHI columns."},
+                "in_transit": {"summary": "TLS protects PHI on every hop.",
+                               "detail": "TLS 1.3 enforced on all PHI transport hops."},
+            },
+        }],
+        "contradictions": [],
+        "_members": {"cluster-cap-0001": ["conf-cap-11111111", "conf-cap-22222222"]},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+    return run
+
+
+def _registry_for_schemas():
+    from referencing import Registry, Resource
+    resources = []
+    for p in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        s = json.loads(p.read_text())
+        if s.get("$id"):
+            resources.append((s["$id"], Resource.from_contents(s)))
+    return Registry().with_resources(resources)
+
+
+def test_capability_merge_builds_one_cap_merged_record(tmp_path):
+    run = _scaffold_two_capability_run(tmp_path)
+    result = apply_clusters(run)
+    merged = [c for c in result.capabilities if c["id"].startswith("cap-merged-")]
+    assert len(merged) == 1, [c["id"] for c in result.capabilities]
+    m = merged[0]
+    # highest maturity of {implemented, tested} = tested
+    assert m["maturity"] == "tested"
+    assert m["merged_from"] == ["conf-cap-11111111", "conf-cap-22222222"]  # sorted
+    assert set(m["lens_perspectives"].keys()) == {"at_rest", "in_transit"}
+    # evidence union over both sources
+    locs = {e["locator"] for e in m["evidence"]}
+    assert locs == {"§5.1", "§5.2"}
+    # control_mappings union (capability-allowed keys only)
+    assert m["control_mappings"]["nist_800_53r5"] == ["SC-28", "SC-8"]
+    assert m["agent"] == "synthesizer"
+    # sources are consumed: no longer present as standalone capabilities
+    out_ids = {c["id"] for c in result.capabilities}
+    assert "conf-cap-11111111" not in out_ids and "conf-cap-22222222" not in out_ids
+    # No rejects, no unresolved
+    assert result.rejected == []
+    assert result.unresolved_authored_merges == 0
+
+
+def test_capability_merge_validates_against_schema(tmp_path):
+    run = _scaffold_two_capability_run(tmp_path)
+    result = apply_clusters(run)
+    merged = next(c for c in result.capabilities if c["id"].startswith("cap-merged-"))
+    cap_schema = json.loads((SCHEMA_DIR / "capability.schema.json").read_text())
+    v = Draft202012Validator(cap_schema, registry=_registry_for_schemas())
+    errors = list(v.iter_errors(merged))
+    assert errors == [], [e.message for e in errors]
+
+
+def test_capability_link_adds_reciprocal_cross_refs_and_marker(tmp_path):
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    cap_a = _capability(
+        "conf-cap-aaaaaaaa", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="implemented",
+        scope="PHI columns at rest in the primary datastore today",
+        evidence=[{"artifact": "a.md", "locator": "§1", "excerpt": "encryption at rest"}],
+    )
+    cap_b = _capability(
+        "conf-cap-bbbbbbbb", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="implemented",
+        scope="PHI transport encryption across service hops today",
+        evidence=[{"artifact": "b.md", "locator": "§2", "excerpt": "encryption in transit"}],
+    )
+    (run / "10-trustworthiness" / "confidentiality.capabilities.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "capability": [cap_a, cap_b]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-cap-link-0001", "disposition": "link",
+            "links": [{"from": "conf-cap-aaaaaaaa", "to": "conf-cap-bbbbbbbb"}],
+        }],
+        "contradictions": [],
+        "_members": {},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+    result = apply_clusters(run)
+    by_id = {c["id"]: c for c in result.capabilities}
+    assert "conf-cap-bbbbbbbb" in by_id["conf-cap-aaaaaaaa"]["cross_references"]
+    assert "conf-cap-aaaaaaaa" in by_id["conf-cap-bbbbbbbb"]["cross_references"]
+    # link marker (the metric marker) set on both
+    assert by_id["conf-cap-aaaaaaaa"]["linked_perspectives"] == ["conf-cap-bbbbbbbb"]
+    assert by_id["conf-cap-bbbbbbbb"]["linked_perspectives"] == ["conf-cap-aaaaaaaa"]
+    # linked capabilities still validate against the schema
+    cap_schema = json.loads((SCHEMA_DIR / "capability.schema.json").read_text())
+    v = Draft202012Validator(cap_schema, registry=_registry_for_schemas())
+    for c in (by_id["conf-cap-aaaaaaaa"], by_id["conf-cap-bbbbbbbb"]):
+        assert list(v.iter_errors(c)) == [], c["id"]
+
+
+def test_link_finding_sets_linked_perspectives_marker(tmp_path):
+    """The finding link branch also sets the linked_perspectives metric marker."""
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    f_a = {
+        "schema_version": 1, "id": "conf-a1a1a1a1", "agent": "confidentiality",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality", "disposition": "gap",
+        "severity": "medium", "confidence": "medium",
+        "title": "Finding A for link marker test",
+        "summary": "Summary A.", "detail": "Detail A for the marker test here.",
+        "evidence": [{"artifact": "a.md", "locator": "§1", "excerpt": "A excerpt"}],
+        "control_mappings": {"nist_800_53r5": ["SC-8"]},
+        "recommendation": {"posture": "required", "summary": "Fix A.", "detail": "Detail fix A."},
+    }
+    f_b = dict(f_a, id="conf-b2b2b2b2", title="Finding B for link marker test",
+               evidence=[{"artifact": "b.md", "locator": "§2", "excerpt": "B excerpt"}])
+    (run / "10-trustworthiness" / "confidentiality.findings.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "finding": [f_a, f_b]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-link-marker", "disposition": "link",
+            "links": [{"from": "conf-a1a1a1a1", "to": "conf-b2b2b2b2"}],
+        }],
+        "contradictions": [], "_members": {},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+    result = apply_clusters(run)
+    by_id = {f["id"]: f for f in result.findings}
+    assert by_id["conf-a1a1a1a1"]["linked_perspectives"] == ["conf-b2b2b2b2"]
+    assert by_id["conf-b2b2b2b2"]["linked_perspectives"] == ["conf-a1a1a1a1"]
+
+
+def test_unresolved_authored_merge_is_counted_not_silent(tmp_path):
+    """A merge whose members resolve in NEITHER index increments the
+    unresolved_authored_merges counter AND still logs reject rows (loud)."""
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    # A single real capability so the corpus is non-empty, but the merge members
+    # reference ids that exist in NEITHER index.
+    cap = _capability(
+        "conf-cap-99999999", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="implemented",
+        scope="some real capability present in the corpus today",
+        evidence=[{"artifact": "x.md", "locator": "§1", "excerpt": "present"}],
+    )
+    (run / "10-trustworthiness" / "confidentiality.capabilities.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "capability": [cap]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-ghost-0001", "disposition": "merge",
+            "merged_title": "Merge of two records that do not exist in the corpus",
+            "merged_summary": "These members are absent.",
+            "merged_detail": "Neither member id resolves in findings or capabilities.",
+        }],
+        "contradictions": [],
+        "_members": {"cluster-ghost-0001": ["conf-cap-deadbeef", "conf-cap-feedface"]},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+    result = apply_clusters(run)
+    assert result.unresolved_authored_merges == 1
+    # The existing reject rows are still emitted (loud, not silent).
+    reasons = " ".join(r["reason"] for r in result.rejected)
+    assert "fewer than 2 resolvable members" in reasons
+    # No merged record produced.
+    assert not any(c["id"].startswith("cap-merged-") for c in result.capabilities)
+    assert not any(f.get("agent") == "synthesizer" for f in result.findings)
+
+
+def test_cli_apply_clusters_warns_on_unresolved_merge(tmp_path):
+    """The CLI emits a stderr WARNING naming the unresolved-merge count."""
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    cap = _capability(
+        "conf-cap-99999999", agent="confidentiality", goal="confidentiality",
+        tier="trustworthiness", maturity="implemented",
+        scope="some real capability present in the corpus today",
+        evidence=[{"artifact": "x.md", "locator": "§1", "excerpt": "present"}],
+    )
+    (run / "10-trustworthiness" / "confidentiality.capabilities.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "capability": [cap]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-ghost-0001", "disposition": "merge",
+            "merged_title": "Merge of two records that do not exist in the corpus",
+            "merged_summary": "These members are absent.",
+            "merged_detail": "Neither member id resolves in findings or capabilities.",
+        }],
+        "contradictions": [],
+        "_members": {"cluster-ghost-0001": ["conf-cap-deadbeef", "conf-cap-feedface"]},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+    res = CliRunner().invoke(main, ["apply-clusters", str(run)])
+    assert res.exit_code == 0, res.output
+    assert "WARNING" in res.stderr
+    assert "1" in res.stderr
+    assert "rejected-records.yaml" in res.stderr
+
+
+def test_capability_merge_outputs_reproducible(tmp_path):
+    run = _scaffold_two_capability_run(tmp_path)
+    apply_clusters(run)
+    out1 = (run / "40-synthesis" / "deduped-capabilities.yaml").read_text()
+    apply_clusters(run)
+    out2 = (run / "40-synthesis" / "deduped-capabilities.yaml").read_text()
+    assert out1 == out2

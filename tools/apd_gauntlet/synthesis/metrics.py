@@ -22,6 +22,7 @@ def compute_metrics(
     capabilities: list[dict[str, Any]],
     contradictions: list[dict[str, Any]],
     severity_disagreements: list[dict[str, Any]],
+    unresolved_authored_merges: int = 0,
 ) -> dict[str, Any]:
     """Return the canonical report summary block.
 
@@ -44,7 +45,12 @@ def compute_metrics(
             c.get("lens_perspectives") and c.get("id", "").startswith("cap-merged")
         )
     )
-    linked_clusters = sum(1 for f in findings if f.get("linked_perspectives"))
+    # PR3: linked_clusters counts records carrying a non-empty linked_perspectives
+    # marker across BOTH findings AND capabilities (apply-clusters now sets the
+    # marker on linked capabilities too; previously findings only).
+    linked_clusters = sum(
+        1 for r in (*findings, *capabilities) if r.get("linked_perspectives")
+    )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -52,6 +58,7 @@ def compute_metrics(
         "findings_pre_dedup": len(findings),
         "cross_lens_merged_clusters": cross_lens_merged,
         "linked_clusters": linked_clusters,
+        "unresolved_authored_merges": unresolved_authored_merges,
         "bySeverity": {
             "critical": by_sev.get("critical", 0),
             "high":     by_sev.get("high", 0),

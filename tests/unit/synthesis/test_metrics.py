@@ -73,3 +73,38 @@ def test_pre_dedup_fields_mirror_totals():
     m = compute_metrics(findings, caps, [], [])
     assert m["findings_pre_dedup"] == m["findings_total"] == 1
     assert m["capabilities_pre_dedup"] == m["capabilities_total"] == 1
+
+
+# --- PR3: cap-merged capabilities + linked findings AND capabilities ----------
+
+
+def test_cross_lens_merged_counts_cap_merged_capability():
+    """A real cap-merged-<sha8> capability with lens_perspectives is counted."""
+    caps = [
+        {"id": "cap-merged-abcd1234", "maturity": "tested",
+         "lens_perspectives": {"at_rest": {"summary": "x", "detail": "y"}}},
+        {"id": "conf-cap-11111111", "maturity": "implemented"},
+    ]
+    assert compute_metrics([], caps, [], [])["cross_lens_merged_clusters"] == 1
+
+
+def test_linked_clusters_counts_findings_and_capabilities():
+    """linked_clusters counts records with linked_perspectives across BOTH
+    findings and capabilities (previously findings only)."""
+    findings = [{"id": "conf-aaaaaaaa", "severity": "high",
+                 "linked_perspectives": ["conf-bbbbbbbb"]},
+                {"id": "conf-bbbbbbbb", "severity": "low",
+                 "linked_perspectives": ["conf-aaaaaaaa"]}]
+    caps = [{"id": "conf-cap-11111111", "maturity": "tested",
+             "linked_perspectives": ["conf-cap-22222222"]},
+            {"id": "conf-cap-22222222", "maturity": "tested"}]
+    m = compute_metrics(findings, caps, [], [])
+    assert m["linked_clusters"] == 3  # 2 findings + 1 capability
+
+
+def test_unresolved_authored_merges_surfaced_in_metrics():
+    """compute_metrics surfaces the unresolved_authored_merges count."""
+    m = compute_metrics([], [], [], [], unresolved_authored_merges=2)
+    assert m["unresolved_authored_merges"] == 2
+    # Defaults to 0 when not supplied (backwards compatible).
+    assert compute_metrics([], [], [], [])["unresolved_authored_merges"] == 0

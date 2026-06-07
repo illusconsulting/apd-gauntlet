@@ -1180,6 +1180,13 @@ def apply_clusters_cmd(run_dir: Path) -> None:
     except AdjudicationMissing as exc:
         click.echo(f"apply-clusters: blocked - {exc}", err=True)
         raise SystemExit(2) from None
+    if result.unresolved_authored_merges:
+        click.echo(
+            f"apply-clusters: WARNING - {result.unresolved_authored_merges} authored "
+            "merge decision(s) could not be applied (members absent or mixed kinds); "
+            "the source records are logged in 40-synthesis/rejected-records.yaml",
+            err=True,
+        )
     click.echo(
         f"apply-clusters: wrote {len(result.findings)} findings, "
         f"{len(result.capabilities)} capabilities, "

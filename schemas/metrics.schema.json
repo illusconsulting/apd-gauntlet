@@ -17,6 +17,7 @@
     "findings_pre_dedup": { "type": "integer", "minimum": 0 },
     "cross_lens_merged_clusters": { "type": "integer", "minimum": 0 },
     "linked_clusters": { "type": "integer", "minimum": 0 },
+    "unresolved_authored_merges": { "type": "integer", "minimum": 0 },
     "bySeverity": {
       "type": "object", "additionalProperties": false,
       "required": ["critical", "high", "medium", "low", "info"],
