@@ -118,7 +118,7 @@ This is intentionally hard to do — the framework's nine-goal structure is part
 
 ## When to add an activation-gated optional agent
 
-The framework's nine-goal symmetry is closed, but new *cross-cutting* analyses that consume the deduped specialist outputs (or that enrich the intake) do not require a new goal. These are added as **activation-gated optional agents**: they sit at tier 0 (intake-enrichment) or tier 4 (synthesis-augmentation), the orchestrator dispatches them only when their preconditions are met, and they emit a finding-prefix the synthesizer recognizes.
+The framework's nine-goal symmetry is closed, but new *cross-cutting* analyses that consume the deduped specialist outputs (or that enrich the intake) do not require a new goal. These are added as **activation-gated optional agents**: they sit at tier 0 (intake-enrichment) or tier 4 (synthesis-augmentation), the `apd-gauntlet` workflow runner dispatches them — as foreground subagents of the live session, like every other specialist — only when their preconditions are met, and they emit a finding-prefix the synthesizer recognizes.
 
 The optional agents already in v1.x follow this pattern (one always-on tier-0 context-builder, `apd-threat-model-author`, is listed alongside them for completeness — it runs on every run rather than on a precondition):
 
@@ -138,7 +138,7 @@ Workflow for adding a new activation-gated agent:
 2. **Author the agent file** under `.claude/agents/apd-<name>.md`. Use the existing `apd-attack-path-analyzer` as a structural template — frontmatter, Required reading, Inputs and output, Discipline, Self-check.
 3. **Author the discipline skill** under `.claude/skills/apd-<name>-discipline/SKILL.md` parallel to `apd-attack-path-discipline` and `apd-threat-model-methodologies`. The discipline skill captures the never-invent rules, confidence floors, and emit/block decisions specific to the agent's analysis.
 4. **Extend `finding.schema.json` additively.** Add the new agent name to the `agent` enum; extend the `id` pattern with a new prefix; mirror the extension on `cross_references` and `merged_from`. Bump the framework version but not the schema_version (additive change).
-5. **Wire activation into the orchestrator.** Document the activation table in the agent's operator doc (e.g., `docs/attack-path-analysis.md`). The orchestrator dispatches when the precondition table evaluates to "run"; emits a skip artifact when it evaluates to "skipped silently"; or emits a `disposition: blocked` finding when it evaluates to "blocked".
+5. **Wire activation into the runner.** Document the activation table in the agent's operator doc (e.g., `docs/attack-path-analysis.md`). The `apd-gauntlet` workflow runner dispatches the agent (as a foreground subagent) when the precondition table evaluates to "run"; emits a skip artifact when it evaluates to "skipped silently"; or emits a `disposition: blocked` finding when it evaluates to "blocked".
 6. **Write the operator doc** at `docs/<feature>.md` and link it from `docs/architecture.md` (the agents table and the topology list), from `docs/running-the-gauntlet.md` (a peer section to "Code reconnaissance" and "Threat model evaluation"), and from this guide (the activation-gated-agent worked-example table above).
 7. **Add a test stub** asserting the agent file lints clean (`tests/test_lint_agent_apd_<name>.py`) and the discipline skill file lints clean (`tests/test_skill_apd_<name>_discipline.py`).
 

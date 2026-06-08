@@ -37,7 +37,11 @@ Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / A
 
 ## Install
 
+Install into an isolated environment — a virtual environment or `pipx` — so the
+`apd-gauntlet` console script stays off system Python and on your `PATH`:
+
 ```bash
+python3 -m venv .venv && . .venv/bin/activate   # or: pipx install apd-gauntlet
 pip install apd-gauntlet
 apd-gauntlet --version    # prints the installed version, confirming the CLI is on your PATH
 ```
@@ -96,6 +100,14 @@ In Claude Code, from the repo root, run the `apd-gauntlet` workflow runner again
 ```text
 > Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
 ```
+
+> **Run it in the foreground.** The specialists run as subagents of your live
+> Claude Code session — drive the runner in-session, not in the background
+> (`run_in_background`) or headlessly, which can interrupt the dispatches and
+> leave an empty run directory. Confirm scaffolding with the
+> [Preflight checklist](docs/running-the-gauntlet.md#preflight-confirm-scaffolding-is-in-place)
+> and read the full foreground statement in
+> [docs/running-the-gauntlet.md](docs/running-the-gauntlet.md).
 
 The runner (`.claude/workflows/apd-gauntlet.js`) phases the run end-to-end: it builds the `apd-domain` skill from the active pack(s) — including per-goal sidecars that each lens agent reads instead of the full cross-goal skill — runs intake, dispatches the nine specialist agents by tier, then runs the decomposed synthesis and the report-completeness audit. The completeness audit enforces eight checks before writing the HTML report; if any check fails the run blocks rather than shipping a degraded report. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
 

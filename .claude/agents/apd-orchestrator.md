@@ -1,16 +1,20 @@
 ---
 name: apd-orchestrator
-description: Deprecated — superseded by the apd-gauntlet workflow runner (.claude/workflows/apd-gauntlet.js, invoked via the Workflow tool). This agent no longer orchestrates runs; retained as a historical-topology reference.
+description: Deprecated — superseded by the apd-gauntlet workflow runner (.claude/workflows/apd-gauntlet.js, invoked via the Workflow tool from a live foreground/in-session Claude Code session; never driven in the background or headlessly, which can interrupt the subagent dispatches). This agent no longer orchestrates runs; retained as a historical-topology reference.
 tools: Read, Glob, Grep, Write, Agent
 ---
 
 # APD Gauntlet Orchestrator (DEPRECATED)
 
 **DEPRECATED.** The APD gauntlet is now run by the deterministic workflow
-runner `.claude/workflows/apd-gauntlet.js` (invoke it via the Workflow tool).
-This agent no longer orchestrates runs — the runner dispatches intake, the tier
-specialists, the decomposed synthesis pipeline, and the gated report audit
-directly, with native auto-resume. See
+runner `.claude/workflows/apd-gauntlet.js` (invoke it via the Workflow tool from
+a live, **foreground / in-session** Claude Code session — the dispatched
+specialists are subagents of that session, so the runner must not be driven in
+the background or headlessly, which can interrupt the dispatches and leave an
+empty or partial run directory; see `docs/running-the-gauntlet.md`). This agent
+no longer orchestrates runs — the runner dispatches intake, the tier specialists,
+the decomposed synthesis pipeline, and the gated report audit directly, with
+native auto-resume. See
 `docs/superpowers/specs/2026-05-29-apd-token-resilience-design.md` §4 for the
 architecture and §7 for the decomposed Phase 5.
 

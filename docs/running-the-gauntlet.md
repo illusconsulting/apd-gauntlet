@@ -11,7 +11,12 @@ Operator guide. How to set up a run, run the gauntlet, and interpret the outputs
 
 ## Install
 
+Install the CLI into an isolated environment so the `apd-gauntlet` console script
+stays off your system Python and on your `PATH` — a virtual environment (matching
+the contributor setup in `CONTRIBUTING.md`) or `pipx`:
+
 ```bash
+python3 -m venv .venv && . .venv/bin/activate   # or: pipx install apd-gauntlet
 pip install apd-gauntlet
 apd-gauntlet --version
 ```
@@ -24,6 +29,7 @@ apd-gauntlet init-run <run-id> --inputs DIR --domain pbm [--domain api-security]
 apd-gauntlet build-domain-skill <pack...>        # compile one or more packs into the apd-domain skill
 apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
 apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml against the schema
+apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
@@ -251,6 +257,36 @@ operator guide, including the discipline rules (no invented nodes or
 edges, D3FEND must counter ATT&CK, bounded enumeration with explicit
 truncation).
 
+## Preflight: confirm scaffolding is in place
+
+Before you launch a run, confirm every piece of scaffolding your `.apd-run.yaml`
+implies is present. Each check maps to a command you already have — there is no
+separate preflight tool. Items tagged *(conditional)* apply only when the run
+config declares the relevant feature.
+
+When Claude walks you through this list, it will recommend an isolated install
+(an activated virtual environment, or `pipx`) at the first step — unless the CLI
+is already isolated and on `PATH`. That is a nudge, not a gate.
+
+| Check | Command / signal | When |
+|---|---|---|
+| CLI installed in an isolated env; version matches `plugin.json` | `apd-gauntlet --version` | always |
+| Run scaffolded (`runs/<id>/` + `.apd-run.yaml`) | output of `init-run` (Step 1) | always |
+| Run-config valid | `apd-gauntlet validate-run-config runs/<id>/.apd-run.yaml` | always |
+| Domain pack(s) valid | `apd-gauntlet validate-domain <pack…>` | always |
+| `apd-domain` skill built (with per-goal sidecars) | `apd-gauntlet build-domain-skill <pack…>` | always |
+| Agent frontmatter clean | `apd-gauntlet lint-agents` | always |
+| Declared taxonomy catalogs present | `apd-gauntlet refresh-{mitre,mitre-mobile,cwe,owasp,d3fend,atlas}` as the `taxonomies:` list requires | conditional |
+| CBM reachable + codebase indexed | codebase-memory-mcp `index_status` / server registered | if `code_recon: enabled`/`auto` |
+| Threat-model file exists at declared path | inspect `inputs/` against the `threat_model:` path | if `threat_model:` declared |
+| `crown_jewels` + `attacker_positions` declared | inspect `.apd-run.yaml` (or the active pack's `domain.yaml`) | if you want attack-path output |
+| Dry-run the gated phase order | `apd-gauntlet plan-run runs/<id>` | recommended last step |
+
+The final check — `plan-run` — doubles as your confidence check and as the entry
+point to the supported foreground-drive path described in Step 2: it reads
+`.apd-run.yaml`, validates it, and prints the exact ordered phase → step checklist
+the runner would execute, honoring the run-config gates.
+
 ## Step 2: Run the gauntlet
 
 The run must already be scaffolded (Step 1's `init-run`). In Claude Code, from the
@@ -260,22 +296,29 @@ repo root, run the `apd-gauntlet` workflow runner against the run directory:
 > Run the apd-gauntlet workflow on runs/apd-20260601-claim-event-bus/
 ```
 
-The specialists run as subagents of your Claude Code session, so this is an
-interactive, in-session operation — it is not meant to be driven headlessly.
+Work through [Preflight](#preflight-confirm-scaffolding-is-in-place) first to
+confirm the run is ready. The specialists run as subagents of your Claude Code
+session, so this is an interactive, **in-session (foreground)** operation — it is
+not meant to be driven headlessly.
 
-> **Run it in the foreground.** The runner dispatches each specialist as a
-> subagent of the live session. Driving it through the background `Workflow`
-> primitive can interrupt those dispatches mid-flight (the subagents are
-> cancelled and no phase output is written), leaving an empty run directory.
-> If the background path is unavailable or keeps interrupting, drive the runner
-> in the foreground instead: run the deterministic CLI phases yourself
+> **Run it in the foreground (in-session).** The runner dispatches each specialist
+> as a subagent of your live Claude Code session. Both supported drive modes are
+> foreground: (1) prompt Claude to run the workflow in your session, as above; or
+> (2) drive it explicitly with `apd-gauntlet plan-run` (below). Do **not** launch
+> the runner in the background (`run_in_background`) or headlessly — a background
+> launch can interrupt the specialist dispatches mid-flight (the subagents are
+> cancelled and no phase output is written), leaving an empty or partial run
+> directory. If a run is interrupted, **re-invoke it in the foreground**; the
+> runner is resumable and idempotency guards replay completed phases.
+>
+> For the explicit foreground drive, run the deterministic CLI phases yourself
 > (`build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
-> `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the
-> LLM specialists/judges (`apd-intake`, `apd-code-recon`,
-> `apd-threat-model-author`, the nine lenses, `apd-cluster-adjudicator`,
-> `apd-threat-model-evaluator`, `apd-attack-path-analyzer`, `apd-report-writer`,
-> `apd-report-auditor`, `apd-domain-auditor`) as foreground agents, in the phase
-> order below. Foreground subagents are not interrupted.
+> `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the LLM
+> specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
+> the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
+> `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`,
+> `apd-domain-auditor`) as foreground agents, in the phase order below —
+> `apd-gauntlet plan-run` emits this exact list for you.
 
 For the supported foreground-drive path, run `apd-gauntlet plan-run <run-dir>`:
 it reads the run's `.apd-run.yaml`, validates it, and emits the exact ordered

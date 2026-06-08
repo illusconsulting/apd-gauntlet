@@ -32,7 +32,7 @@
 
 export const meta = {
   name: 'apd-gauntlet',
-  description: 'Deterministic APD gauntlet runner (replaces apd-orchestrator); receipt-only dispatch + decomposed synthesis + gated report audit + synthesizer fallback.',
+  description: 'Deterministic APD gauntlet runner (replaces apd-orchestrator); receipt-only dispatch + decomposed synthesis + gated report audit + synthesizer fallback. Runs INTERACTIVE/FOREGROUND — specialists are subagents of the launching session; do not drive it in the background or headlessly (a background launch can interrupt dispatches). See docs/running-the-gauntlet.md.',
   phases: [
     'setup', 'intake', 'code-recon', 'threat-model-author', 'tm-recon',
     'canonicalize',

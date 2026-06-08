@@ -44,6 +44,10 @@ Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file wit
 
 A twenty-first file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 20.
 
+## Execution model: foreground / in-session
+
+The runner is **interactive**: every specialist it dispatches runs as a subagent of the live Claude Code session that launched the run. Drive it in the **foreground / in-session** — either by prompting Claude to run the `apd-gauntlet` workflow, or via the explicit `apd-gauntlet plan-run` drive checklist. A background (`run_in_background`) or headless launch can interrupt the specialist dispatches mid-flight, cancelling the subagents and leaving an empty or partial run directory. The runner is resumable: re-invoke it in the foreground and idempotency guards replay completed phases. See [Running the gauntlet](running-the-gauntlet.md) for the operator-facing foreground statement and the preflight checklist.
+
 ## Tier topology
 
 ### Tier-0 (intake)
