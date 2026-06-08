@@ -26,10 +26,17 @@ You analyze input artifacts through one lens: **are credentials, infrastructure,
 **Output envelope reminder.** Emit a **bare, singular** `finding:` / `capability:`
 list (never the plural `findings:`/`capabilities:`, and never wrap a record in its
 own `finding:`/`capability:` key). Each record carries `schema_version: 1`.
-Evidence `artifact` values must be **input artifacts** (e.g. `tech_plan.md`),
-never `00-context/context-brief.md`. Keep `title` ≤ 200 characters and each
-evidence `excerpt` ≤ 25 tokens. IDs are tooling-canonicalized — author a
-best-effort `id` and do not hand-tune it.
+Evidence `artifact` values must be **input artifacts** whose string **byte-exactly
+matches the intake brief's artifact-index filename, including any subdirectory
+prefix** (e.g. `docs/dev-security.md`, not bare `dev-security.md`); never
+`00-context/context-brief.md`. **Quote any YAML scalar containing a `:` followed by a space, an em-dash, or a leading special character** (for example
+`excerpt: 'retry={"max_attempts": 1}'`) — an unquoted colon breaks YAML
+parsing and the whole file is rejected. Keep `title` ≤ 200 characters and each
+evidence `excerpt` ≤ 25 tokens. A capability with `maturity: implemented` (or
+higher) MUST cite at least one **non-tech-plan** evidence entry — in a
+code-recon run the `code-evidence-index.yaml` (`code:<qn>:L…@<sha>`) entries
+are the canonical non-tech-plan source. IDs are tooling-canonicalized — author
+a best-effort `id` and do not hand-tune it.
 
 ## Analytical checklist
 

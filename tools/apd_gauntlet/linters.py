@@ -14,6 +14,22 @@ _PREFIX_BY_AGENT = {
     "synthesizer": "merged",
 }
 
+# The nine specialist lenses and the APD tier each belongs to. Non-lens agents
+# (synthesizer, threat_model_evaluator, attack_path_analyzer) are intentionally
+# absent — their records legitimately carry any goal/tier, so check_lens_consistency
+# exempts them.
+_GOAL_TIER = {
+    "confidentiality": "trustworthiness",
+    "integrity": "trustworthiness",
+    "availability": "trustworthiness",
+    "distributed": "scalability",
+    "resilient": "scalability",
+    "ephemeral": "scalability",
+    "authenticity": "auditability",
+    "non_repudiation": "auditability",
+    "immutability": "auditability",
+}
+
 
 def compute_id(prefix: str, title: str, first_locator: str) -> str:
     """Deterministic id: first 8 hex chars of SHA-256 over title + '|' + locator."""
@@ -75,6 +91,39 @@ def check_excerpt_length(record: dict[str, Any]) -> list[str]:
         n = len(excerpt.split())
         if n > 25:
             errors.append(f"evidence[{i}].excerpt has {n} tokens (max 25)")
+    return errors
+
+
+def check_lens_consistency(record: dict[str, Any]) -> list[str]:
+    """For a SPECIALIST-LENS record (agent is one of the nine lenses), the
+    ``agent`` must equal ``apd_goal`` and ``apd_tier`` must be that goal's tier.
+
+    This closes a silent-noncompliance gap: the JSON schema validates agent,
+    apd_goal, and apd_tier independently against their enums, so a confidentiality
+    agent could emit ``apd_goal: authenticity`` (a cross-lens relabel) or a wrong
+    tier and still pass schema validation. Lens agents must stay in their own goal
+    and route adjacent concerns via ``related_concerns`` instead of relabelling.
+
+    Non-lens agents (synthesizer, threat_model_evaluator, attack_path_analyzer)
+    are exempt — they are not in ``_GOAL_TIER`` and legitimately carry any
+    goal/tier — so this returns no errors for them.
+    """
+    agent = record.get("agent") or ""
+    expected_tier = _GOAL_TIER.get(agent)
+    if expected_tier is None:
+        return []
+    errors: list[str] = []
+    goal = record.get("apd_goal") or ""
+    if goal != agent:
+        errors.append(
+            f"lens agent '{agent}' must equal apd_goal '{goal}' — keep findings "
+            f"in your own goal and route cross-lens concerns via related_concerns"
+        )
+    tier = record.get("apd_tier") or ""
+    if tier != expected_tier:
+        errors.append(
+            f"apd_tier '{tier}' does not match lens '{agent}' (expected '{expected_tier}')"
+        )
     return errors
 
 

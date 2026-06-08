@@ -451,6 +451,8 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_finding_id(record):
                 report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_lens_consistency(record):
+                report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_hedge_words_in_attack_rationale(record):
                 report.warnings.append(Violation(path, rid, msg))
             for msg in linters.check_tmeval_evidence_pointer(record):
@@ -461,6 +463,8 @@ def run_semantic_pass(
             for msg in linters.check_excerpt_length(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_capability_id(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_lens_consistency(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_capability_maturity_evidence(record, tech_plan_artifacts):
                 report.errors.append(Violation(path, rid, msg))
