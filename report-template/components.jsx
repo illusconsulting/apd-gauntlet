@@ -64,6 +64,38 @@ function TaxonomyTag({ id }) {
     setPos({ x: r.left, y: r.bottom + 6 });
     setHover(true);
   };
+  // When the taxonomy entry carries an authoritative URL (ATT&CK techniques/
+  // sub-techniques and D3FEND techniques — computed server-side in transform.py),
+  // the tag becomes a link that opens that specific page in a new tab.
+  const url = entry && entry.url;
+  const tooltip = hover && entry && (
+    <span
+      className="tag-tooltip"
+      style={{ left: pos.x + "px", top: pos.y + "px" }}
+    >
+      <span className="tag-tooltip__family">{entry.family}</span>
+      {entry.title}
+    </span>
+  );
+  if (url) {
+    return (
+      <a
+        ref={ref}
+        className="tag tag--link"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`Open ${id} on the authoritative site`}
+        style={{ cursor: "pointer", color: "inherit", textDecoration: "none" }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={onEnter}
+        onMouseLeave={() => setHover(false)}
+      >
+        {id}
+        {tooltip}
+      </a>
+    );
+  }
   return (
     <span
       ref={ref}
@@ -72,15 +104,7 @@ function TaxonomyTag({ id }) {
       onMouseLeave={() => setHover(false)}
     >
       {id}
-      {hover && entry && (
-        <span
-          className="tag-tooltip"
-          style={{ left: pos.x + "px", top: pos.y + "px" }}
-        >
-          <span className="tag-tooltip__family">{entry.family}</span>
-          {entry.title}
-        </span>
-      )}
+      {tooltip}
     </span>
   );
 }

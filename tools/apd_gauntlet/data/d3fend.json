@@ -20,6 +20,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "AgentAuthentication",
       "d3fend_id": "D3-AA",
       "name": "Agent Authentication"
     },
@@ -41,6 +42,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "Application-basedProcessIsolation",
       "d3fend_id": "D3-ABPI",
       "name": "Application-based Process Isolation"
     },
@@ -51,6 +53,7 @@
         "T1562.003",
         "T1564.008"
       ],
+      "d3f_local": "ApplicationConfigurationHardening",
       "d3fend_id": "D3-ACH",
       "name": "Application Configuration Hardening"
     },
@@ -71,6 +74,7 @@
         "T1546.005",
         "T1548.003"
       ],
+      "d3f_local": "ApplicationExceptionMonitoring",
       "d3fend_id": "D3-AEM",
       "name": "Application Exception Monitoring"
     },
@@ -94,6 +98,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "AccountLocking",
       "d3fend_id": "D3-AL",
       "name": "Account Locking"
     },
@@ -124,6 +129,7 @@
         "T1556.009",
         "T1615"
       ],
+      "d3f_local": "AccessModeling",
       "d3fend_id": "D3-AM",
       "name": "Access Modeling"
     },
@@ -138,6 +144,7 @@
         "T1546.003",
         "T1546.008"
       ],
+      "d3f_local": "AdministrativeNetworkActivityAnalysis",
       "d3fend_id": "D3-ANAA",
       "name": "Administrative Network Activity Analysis"
     },
@@ -164,6 +171,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "AuthenticationCacheInvalidation",
       "d3fend_id": "D3-ANCI",
       "name": "Authentication Cache Invalidation"
     },
@@ -242,6 +250,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "ApplicationProtocolCommandAnalysis",
       "d3fend_id": "D3-APCA",
       "name": "Application Protocol Command Analysis"
     },
@@ -273,6 +282,7 @@
         "T1574.010",
         "T1649"
       ],
+      "d3f_local": "AssetVulnerabilityEnumeration",
       "d3fend_id": "D3-AVE",
       "name": "Asset Vulnerability Enumeration"
     },
@@ -280,6 +290,7 @@
       "counters_attack": [
         "T1542.003"
       ],
+      "d3f_local": "BootloaderAuthentication",
       "d3fend_id": "D3-BA",
       "name": "Bootloader Authentication"
     },
@@ -292,6 +303,7 @@
         "T1573.002",
         "T1649"
       ],
+      "d3f_local": "CertificateAnalysis",
       "d3fend_id": "D3-CA",
       "name": "Certificate Analysis"
     },
@@ -313,6 +325,7 @@
         "T1557.001",
         "T1570"
       ],
+      "d3f_local": "ConnectionAttemptAnalysis",
       "d3fend_id": "D3-CAA",
       "name": "Connection Attempt Analysis"
     },
@@ -320,6 +333,7 @@
       "counters_attack": [
         "T1649"
       ],
+      "d3f_local": "Certificate-basedAuthentication",
       "d3fend_id": "D3-CBAN",
       "name": "Certificate-based Authentication"
     },
@@ -346,6 +360,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "CredentialCompromiseScopeAnalysis",
       "d3fend_id": "D3-CCSA",
       "name": "Credential Compromise Scope Analysis"
     },
@@ -372,6 +387,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "ChangeDefaultPassword",
       "d3fend_id": "D3-CDP",
       "name": "Change Default Password"
     },
@@ -379,6 +395,7 @@
       "counters_attack": [
         "T1649"
       ],
+      "d3f_local": "CertificateRotation",
       "d3fend_id": "D3-CERO",
       "name": "Certificate Rotation"
     },
@@ -484,6 +501,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "ContentFiltering",
       "d3fend_id": "D3-CF",
       "name": "Content Filtering"
     },
@@ -510,6 +528,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "CredentialHardening",
       "d3fend_id": "D3-CH",
       "name": "Credential Hardening"
     },
@@ -569,6 +588,7 @@
         "T1615",
         "T1666"
       ],
+      "d3f_local": "ConfigurationInventory",
       "d3fend_id": "D3-CI",
       "name": "Configuration Inventory"
     },
@@ -576,6 +596,7 @@
       "counters_attack": [
         "T1525"
       ],
+      "d3f_local": "ContainerImageAnalysis",
       "d3fend_id": "D3-CIA",
       "name": "Container Image Analysis"
     },
@@ -681,6 +702,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "ContentModification",
       "d3fend_id": "D3-CM",
       "name": "Content Modification"
     },
@@ -688,6 +710,7 @@
       "counters_attack": [
         "T1649"
       ],
+      "d3f_local": "CertificatePinning",
       "d3fend_id": "D3-CP",
       "name": "Certificate Pinning"
     },
@@ -806,6 +829,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "ContentQuarantine",
       "d3fend_id": "D3-CQ",
       "name": "Content Quarantine"
     },
@@ -832,6 +856,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "CredentialRevocation",
       "d3fend_id": "D3-CR",
       "name": "Credential Revocation"
     },
@@ -858,6 +883,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "CredentialRotation",
       "d3fend_id": "D3-CRO",
       "name": "Credential Rotation"
     },
@@ -865,6 +891,7 @@
       "counters_attack": [
         "T1505.001"
       ],
+      "d3f_local": "CredentialScrubbing",
       "d3fend_id": "D3-CS",
       "name": "Credential Scrubbing"
     },
@@ -943,6 +970,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "Client-serverPayloadProfiling",
       "d3fend_id": "D3-CSPP",
       "name": "Client-server Payload Profiling"
     },
@@ -969,6 +997,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "CredentialTransmissionScoping",
       "d3fend_id": "D3-CTS",
       "name": "Credential Transmission Scoping"
     },
@@ -1013,6 +1042,7 @@
         "T1574.008",
         "T1574.009"
       ],
+      "d3f_local": "DynamicAnalysis",
       "d3fend_id": "D3-DA",
       "name": "Dynamic Analysis"
     },
@@ -1024,6 +1054,7 @@
         "T1098.003",
         "T1136.002"
       ],
+      "d3f_local": "DomainAccountMonitoring",
       "d3fend_id": "D3-DAM",
       "name": "Domain Account Monitoring"
     },
@@ -1031,6 +1062,7 @@
       "counters_attack": [
         "T1082"
       ],
+      "d3f_local": "DecoyEnvironment",
       "d3fend_id": "D3-DE",
       "name": "Decoy Environment"
     },
@@ -1039,6 +1071,7 @@
         "T1564.005",
         "T1619"
       ],
+      "d3f_local": "DiskEncryption",
       "d3fend_id": "D3-DENCR",
       "name": "Disk Encryption"
     },
@@ -1144,6 +1177,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "DecoyFile",
       "d3fend_id": "D3-DF",
       "name": "Decoy File"
     },
@@ -1179,6 +1213,7 @@
         "T1566.002",
         "T1614.001"
       ],
+      "d3f_local": "DataInventory",
       "d3fend_id": "D3-DI",
       "name": "Data Inventory"
     },
@@ -1186,6 +1221,7 @@
       "counters_attack": [
         "T1619"
       ],
+      "d3f_local": "DiskErasure",
       "d3fend_id": "D3-DKE",
       "name": "Disk Erasure"
     },
@@ -1193,6 +1229,7 @@
       "counters_attack": [
         "T1619"
       ],
+      "d3f_local": "DiskFormatting",
       "d3fend_id": "D3-DKF",
       "name": "Disk Formatting"
     },
@@ -1201,6 +1238,7 @@
         "T1561.001",
         "T1561.002"
       ],
+      "d3f_local": "DiskPartitioning",
       "d3fend_id": "D3-DKP",
       "name": "Disk Partitioning"
     },
@@ -1208,6 +1246,7 @@
       "counters_attack": [
         "T1505.001"
       ],
+      "d3f_local": "DomainLogicValidation",
       "d3fend_id": "D3-DLV",
       "name": "Domain Logic Validation"
     },
@@ -1222,6 +1261,7 @@
         "T1213.002",
         "T1491.002"
       ],
+      "d3f_local": "DecoyNetworkResource",
       "d3fend_id": "D3-DNR",
       "name": "Decoy Network Resource"
     },
@@ -1230,6 +1270,7 @@
         "T1071.004",
         "T1568"
       ],
+      "d3f_local": "DNSAllowlisting",
       "d3fend_id": "D3-DNSAL",
       "name": "DNS Allowlisting"
     },
@@ -1238,6 +1279,7 @@
         "T1071.004",
         "T1568"
       ],
+      "d3f_local": "DNSDenylisting",
       "d3fend_id": "D3-DNSDL",
       "name": "DNS Denylisting"
     },
@@ -1247,6 +1289,7 @@
         "T1071.004",
         "T1568"
       ],
+      "d3f_local": "DNSTrafficAnalysis",
       "d3fend_id": "D3-DNSTA",
       "name": "DNS Traffic Analysis"
     },
@@ -1254,6 +1297,7 @@
       "counters_attack": [
         "T1190"
       ],
+      "d3f_local": "DatabaseQueryStringAnalysis",
       "d3fend_id": "D3-DQSA",
       "name": "Database Query String Analysis"
     },
@@ -1264,6 +1308,7 @@
         "T1562.003",
         "T1564.008"
       ],
+      "d3f_local": "DisableRemoteAccess",
       "d3fend_id": "D3-DRA",
       "name": "Disable Remote Access"
     },
@@ -1271,6 +1316,7 @@
       "counters_attack": [
         "T1033"
       ],
+      "d3f_local": "DomainTrustPolicy",
       "d3fend_id": "D3-DTP",
       "name": "Domain Trust Policy"
     },
@@ -1297,6 +1343,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "DecoyUserCredential",
       "d3fend_id": "D3-DUC",
       "name": "Decoy User Credential"
     },
@@ -1354,6 +1401,7 @@
         "T1574.008",
         "T1574.009"
       ],
+      "d3f_local": "ExecutableAllowlisting",
       "d3fend_id": "D3-EAL",
       "name": "Executable Allowlisting"
     },
@@ -1411,6 +1459,7 @@
         "T1574.008",
         "T1574.009"
       ],
+      "d3f_local": "ExecutableDenylisting",
       "d3fend_id": "D3-EDL",
       "name": "Executable Denylisting"
     },
@@ -1421,6 +1470,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "EmailFiltering",
       "d3fend_id": "D3-EF",
       "name": "Email Filtering"
     },
@@ -1465,6 +1515,7 @@
         "T1574.008",
         "T1574.009"
       ],
+      "d3f_local": "EmulatedFileAnalysis",
       "d3fend_id": "D3-EFA",
       "name": "Emulated File Analysis"
     },
@@ -1478,6 +1529,7 @@
         "T1578.003",
         "T1578.004"
       ],
+      "d3f_local": "EndpointHealthBeacon",
       "d3fend_id": "D3-EHB",
       "name": "Endpoint Health Beacon"
     },
@@ -1490,6 +1542,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "EmailRemoval",
       "d3fend_id": "D3-ER",
       "name": "Email Removal"
     },
@@ -1595,6 +1648,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "FileAnalysis",
       "d3fend_id": "D3-FA",
       "name": "File Analysis"
     },
@@ -1605,6 +1659,7 @@
         "T1542.002",
         "T1542.004"
       ],
+      "d3f_local": "FirmwareBehaviorAnalysis",
       "d3fend_id": "D3-FBA",
       "name": "Firmware Behavior Analysis"
     },
@@ -1613,6 +1668,7 @@
         "T1071.002",
         "T1570"
       ],
+      "d3f_local": "FileCarving",
       "d3fend_id": "D3-FC",
       "name": "File Carving"
     },
@@ -1621,6 +1677,7 @@
         "T1074.001",
         "T1218.001"
       ],
+      "d3f_local": "FileCreationAnalysis",
       "d3fend_id": "D3-FCA",
       "name": "File Creation Analysis"
     },
@@ -1726,6 +1783,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "FileEncryption",
       "d3fend_id": "D3-FE",
       "name": "File Encryption"
     },
@@ -1736,6 +1794,7 @@
         "T1542.002",
         "T1542.004"
       ],
+      "d3f_local": "FirmwareEmbeddedMonitoringCode",
       "d3fend_id": "D3-FEMC",
       "name": "Firmware Embedded Monitoring Code"
     },
@@ -1841,6 +1900,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "FileEviction",
       "d3fend_id": "D3-FEV",
       "name": "File Eviction"
     },
@@ -1848,6 +1908,7 @@
       "counters_attack": [
         "T1564.009"
       ],
+      "d3f_local": "FileFormatVerification",
       "d3fend_id": "D3-FFV",
       "name": "File Format Verification"
     },
@@ -1953,6 +2014,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "FileIntegrityMonitoring",
       "d3fend_id": "D3-FIM",
       "name": "File Integrity Monitoring"
     },
@@ -1961,6 +2023,7 @@
         "T1071.004",
         "T1568"
       ],
+      "d3f_local": "ForwardResolutionDomainDenylisting",
       "d3fend_id": "D3-FRDDL",
       "name": "Forward Resolution Domain Denylisting"
     },
@@ -1971,6 +2034,7 @@
         "T1542.002",
         "T1542.004"
       ],
+      "d3f_local": "FirmwareVerification",
       "d3fend_id": "D3-FV",
       "name": "Firmware Verification"
     },
@@ -2013,6 +2077,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "Hardware-basedProcessIsolation",
       "d3fend_id": "D3-HBPI",
       "name": "Hardware-based Process Isolation"
     },
@@ -2020,6 +2085,7 @@
       "counters_attack": [
         "T1619"
       ],
+      "d3f_local": "Hardware-basedWriteProtection",
       "d3fend_id": "D3-HBWP",
       "name": "Hardware-based Write Protection"
     },
@@ -2037,6 +2103,7 @@
         "T1200",
         "T1619"
       ],
+      "d3f_local": "HardwareComponentInventory",
       "d3fend_id": "D3-HCI",
       "name": "Hardware Component Inventory"
     },
@@ -2050,6 +2117,7 @@
         "T1566.002",
         "T1566.003"
       ],
+      "d3f_local": "HomoglyphDetection",
       "d3fend_id": "D3-HD",
       "name": "Homoglyph Detection"
     },
@@ -2070,6 +2138,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "HostReboot",
       "d3fend_id": "D3-HR",
       "name": "Host Reboot"
     },
@@ -2090,6 +2159,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "HostShutdown",
       "d3fend_id": "D3-HS",
       "name": "Host Shutdown"
     },
@@ -2100,6 +2170,7 @@
         "T1566.002",
         "T1566.003"
       ],
+      "d3f_local": "IdentifierActivityAnalysis",
       "d3fend_id": "D3-IAA",
       "name": "Identifier Activity Analysis"
     },
@@ -2109,6 +2180,7 @@
         "T1123",
         "T1125"
       ],
+      "d3f_local": "InputDeviceAnalysis",
       "d3fend_id": "D3-IDA",
       "name": "Input Device Analysis"
     },
@@ -2122,6 +2194,7 @@
         "T1123",
         "T1125"
       ],
+      "d3f_local": "IOPortRestriction",
       "d3fend_id": "D3-IOPR",
       "name": "IO Port Restriction"
     },
@@ -2129,6 +2202,7 @@
       "counters_attack": [
         "T1197"
       ],
+      "d3f_local": "IPCTrafficAnalysis",
       "d3fend_id": "D3-IPCTA",
       "name": "IPC Traffic Analysis"
     },
@@ -2141,6 +2215,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "InboundSessionVolumeAnalysis",
       "d3fend_id": "D3-ISVA",
       "name": "Inbound Session Volume Analysis"
     },
@@ -2153,6 +2228,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "InboundTrafficFiltering",
       "d3fend_id": "D3-ITF",
       "name": "Inbound Traffic Filtering"
     },
@@ -2173,6 +2249,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "Kernel-basedProcessIsolation",
       "d3fend_id": "D3-KBPI",
       "name": "Kernel-based Process Isolation"
     },
@@ -2182,6 +2259,7 @@
         "T1087.001",
         "T1136.001"
       ],
+      "d3f_local": "LocalAccountMonitoring",
       "d3fend_id": "D3-LAM",
       "name": "Local Account Monitoring"
     },
@@ -2288,6 +2366,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "LocalFilePermissions",
       "d3fend_id": "D3-LFP",
       "name": "Local File Permissions"
     },
@@ -2301,6 +2380,7 @@
         "T1578.003",
         "T1578.004"
       ],
+      "d3f_local": "LogicalLinkMapping",
       "d3fend_id": "D3-LLM",
       "name": "Logical Link Mapping"
     },
@@ -2314,6 +2394,7 @@
         "T1211",
         "T1212"
       ],
+      "d3f_local": "MemoryBoundaryTracking",
       "d3fend_id": "D3-MBT",
       "name": "Memory Boundary Tracking"
     },
@@ -2340,6 +2421,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "Multi-factorAuthentication",
       "d3fend_id": "D3-MFA",
       "name": "Multi-factor Authentication"
     },
@@ -2353,6 +2435,7 @@
         "T1578.003",
         "T1578.004"
       ],
+      "d3f_local": "NetworkNodeInventory",
       "d3fend_id": "D3-NNI",
       "name": "Network Node Inventory"
     },
@@ -2367,6 +2450,7 @@
         "T1213.002",
         "T1491.002"
       ],
+      "d3f_local": "NetworkResourceAccessMediation",
       "d3fend_id": "D3-NRAM",
       "name": "Network Resource Access Mediation"
     },
@@ -2445,6 +2529,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "NetworkTrafficCommunityDeviation",
       "d3fend_id": "D3-NTCD",
       "name": "Network Traffic Community Deviation"
     },
@@ -2523,6 +2608,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "NetworkTrafficFiltering",
       "d3fend_id": "D3-NTF",
       "name": "Network Traffic Filtering"
     },
@@ -2537,6 +2623,7 @@
         "T1556.009",
         "T1615"
       ],
+      "d3f_local": "NetworkTrafficPolicyMapping",
       "d3fend_id": "D3-NTPM",
       "name": "Network Traffic Policy Mapping"
     },
@@ -2615,6 +2702,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "NetworkTrafficSignatureAnalysis",
       "d3fend_id": "D3-NTSA",
       "name": "Network Traffic Signature Analysis"
     },
@@ -2634,6 +2722,7 @@
         "T1546.005",
         "T1548.003"
       ],
+      "d3f_local": "OperationalProcessMonitoring",
       "d3fend_id": "D3-OPM",
       "name": "Operational Process Monitoring"
     },
@@ -2671,6 +2760,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "OutboundTrafficFiltering",
       "d3fend_id": "D3-OTF",
       "name": "Outbound Traffic Filtering"
     },
@@ -2680,6 +2770,7 @@
         "T1110.002",
         "T1110.003"
       ],
+      "d3f_local": "One-timePassword",
       "d3fend_id": "D3-OTP",
       "name": "One-time Password"
     },
@@ -2693,6 +2784,7 @@
         "T1211",
         "T1212"
       ],
+      "d3f_local": "ProcessCodeSegmentVerification",
       "d3fend_id": "D3-PCSV",
       "name": "Process Code Segment Verification"
     },
@@ -2771,6 +2863,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "PerHostDownload-UploadRatioAnalysis",
       "d3fend_id": "D3-PHDURA",
       "name": "Per Host Download-Upload Ratio Analysis"
     },
@@ -2791,6 +2884,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "ProcessLineageAnalysis",
       "d3fend_id": "D3-PLA",
       "name": "Process Lineage Analysis"
     },
@@ -2804,6 +2898,7 @@
         "T1578.003",
         "T1578.004"
       ],
+      "d3f_local": "PhysicalLinkMapping",
       "d3fend_id": "D3-PLM",
       "name": "Physical Link Mapping"
     },
@@ -2882,6 +2977,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "ProtocolMetadataAnomalyDetection",
       "d3fend_id": "D3-PMAD",
       "name": "Protocol Metadata Anomaly Detection"
     },
@@ -2891,6 +2987,7 @@
         "T1110.002",
         "T1110.003"
       ],
+      "d3f_local": "PasswordRotation",
       "d3fend_id": "D3-PR",
       "name": "Password Rotation"
     },
@@ -2911,6 +3008,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "ProcessSuspension",
       "d3fend_id": "D3-PS",
       "name": "Process Suspension"
     },
@@ -2953,6 +3051,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "ProcessSpawnAnalysis",
       "d3fend_id": "D3-PSA",
       "name": "Process Spawn Analysis"
     },
@@ -2971,6 +3070,7 @@
         "T1218.013",
         "T1620"
       ],
+      "d3f_local": "ProcessSegmentExecutionPrevention",
       "d3fend_id": "D3-PSEP",
       "name": "Process Segment Execution Prevention"
     },
@@ -2991,6 +3091,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "ProcessSelf-ModificationDetection",
       "d3fend_id": "D3-PSMD",
       "name": "Process Self-Modification Detection"
     },
@@ -3011,6 +3112,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "ProcessTermination",
       "d3fend_id": "D3-PT",
       "name": "Process Termination"
     },
@@ -3020,6 +3122,7 @@
         "T1110.002",
         "T1110.003"
       ],
+      "d3f_local": "PasswordAuthentication",
       "d3fend_id": "D3-PWA",
       "name": "Password Authentication"
     },
@@ -3079,6 +3182,7 @@
         "T1615",
         "T1666"
       ],
+      "d3f_local": "RestoreConfiguration",
       "d3fend_id": "D3-RC",
       "name": "Restore Configuration"
     },
@@ -3107,6 +3211,7 @@
         "T1564.005",
         "T1614.001"
       ],
+      "d3f_local": "RestoreDatabase",
       "d3fend_id": "D3-RD",
       "name": "Restore Database"
     },
@@ -3117,6 +3222,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "RestoreEmail",
       "d3fend_id": "D3-RE",
       "name": "Restore Email"
     },
@@ -3222,6 +3328,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "RestoreFile",
       "d3fend_id": "D3-RF",
       "name": "Restore File"
     },
@@ -3327,6 +3434,7 @@
         "T1574.012",
         "T1649"
       ],
+      "d3f_local": "RemoteFileAccessMediation",
       "d3fend_id": "D3-RFAM",
       "name": "Remote File Access Mediation"
     },
@@ -3344,6 +3452,7 @@
         "T1200",
         "T1619"
       ],
+      "d3f_local": "RadiationHardening",
       "d3fend_id": "D3-RH",
       "name": "Radiation Hardening"
     },
@@ -3370,6 +3479,7 @@
         "T1606",
         "T1606.001"
       ],
+      "d3f_local": "ReissueCredential",
       "d3fend_id": "D3-RIC",
       "name": "Reissue Credential"
     },
@@ -3377,6 +3487,7 @@
       "counters_attack": [
         "T1562.003"
       ],
+      "d3f_local": "RegistryKeyDeletion",
       "d3fend_id": "D3-RKD",
       "name": "Registry Key Deletion"
     },
@@ -3389,6 +3500,7 @@
         "T1578.003",
         "T1578.004"
       ],
+      "d3f_local": "RestoreNetworkAccess",
       "d3fend_id": "D3-RNA",
       "name": "Restore Network Access"
     },
@@ -3426,6 +3538,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "RelayPatternAnalysis",
       "d3fend_id": "D3-RPA",
       "name": "Relay Pattern Analysis"
     },
@@ -3434,6 +3547,7 @@
         "T1071.004",
         "T1568"
       ],
+      "d3f_local": "ReverseResolutionIPDenylisting",
       "d3fend_id": "D3-RRID",
       "name": "Reverse Resolution IP Denylisting"
     },
@@ -3465,6 +3579,7 @@
         "T1574.010",
         "T1649"
       ],
+      "d3f_local": "RestoreSoftware",
       "d3fend_id": "D3-RS",
       "name": "Restore Software"
     },
@@ -3472,6 +3587,7 @@
       "counters_attack": [
         "T1558.003"
       ],
+      "d3f_local": "RPCTrafficAnalysis",
       "d3fend_id": "D3-RTA",
       "name": "RPC Traffic Analysis"
     },
@@ -3550,6 +3666,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "RemoteTerminalSessionDetection",
       "d3fend_id": "D3-RTSD",
       "name": "Remote Terminal Session Detection"
     },
@@ -3573,6 +3690,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "RestoreUserAccountAccess",
       "d3fend_id": "D3-RUAA",
       "name": "Restore User Account Access"
     },
@@ -3591,6 +3709,7 @@
         "T1218.013",
         "T1620"
       ],
+      "d3f_local": "SegmentAddressOffsetRandomization",
       "d3fend_id": "D3-SAOR",
       "name": "Segment Address Offset Randomization"
     },
@@ -3604,6 +3723,7 @@
         "T1574.010",
         "T1649"
       ],
+      "d3f_local": "ServiceBinaryVerification",
       "d3fend_id": "D3-SBV",
       "name": "Service Binary Verification"
     },
@@ -3650,6 +3770,7 @@
         "T1548.004",
         "T1555.003"
       ],
+      "d3f_local": "SystemCallAnalysis",
       "d3fend_id": "D3-SCA",
       "name": "System Call Analysis"
     },
@@ -3708,6 +3829,7 @@
         "T1562.001",
         "T1621"
       ],
+      "d3f_local": "SystemCallFiltering",
       "d3fend_id": "D3-SCF",
       "name": "System Call Filtering"
     },
@@ -3727,6 +3849,7 @@
         "T1564.005",
         "T1614.001"
       ],
+      "d3f_local": "SystemConfigurationPermissions",
       "d3fend_id": "D3-SCP",
       "name": "System Configuration Permissions"
     },
@@ -3736,6 +3859,7 @@
         "T1053.005",
         "T1562.001"
       ],
+      "d3f_local": "SystemDaemonMonitoring",
       "d3fend_id": "D3-SDM",
       "name": "System Daemon Monitoring"
     },
@@ -3751,6 +3875,7 @@
         "T1556.003",
         "T1574.006"
       ],
+      "d3f_local": "SystemFileAnalysis",
       "d3fend_id": "D3-SFA",
       "name": "System File Analysis"
     },
@@ -3762,6 +3887,7 @@
         "T1211",
         "T1212"
       ],
+      "d3f_local": "StackFrameCanaryValidation",
       "d3fend_id": "D3-SFCV",
       "name": "Stack Frame Canary Validation"
     },
@@ -3770,6 +3896,7 @@
         "T1542.001",
         "T1542.004"
       ],
+      "d3f_local": "SystemFirmwareVerification",
       "d3fend_id": "D3-SFV",
       "name": "System Firmware Verification"
     },
@@ -3781,6 +3908,7 @@
         "T1562.009",
         "T1574.011"
       ],
+      "d3f_local": "SystemInitConfigAnalysis",
       "d3fend_id": "D3-SICA",
       "name": "System Init Config Analysis"
     },
@@ -3789,6 +3917,7 @@
         "T1036.004",
         "T1053"
       ],
+      "d3f_local": "ScheduledJobAnalysis",
       "d3fend_id": "D3-SJA",
       "name": "Scheduled Job Analysis"
     },
@@ -3799,6 +3928,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "SenderMTAReputationAnalysis",
       "d3fend_id": "D3-SMRA",
       "name": "Sender MTA Reputation Analysis"
     },
@@ -3808,6 +3938,7 @@
         "T1110.002",
         "T1110.003"
       ],
+      "d3f_local": "StrongPasswordPolicy",
       "d3fend_id": "D3-SPP",
       "name": "Strong Password Policy"
     },
@@ -3818,6 +3949,7 @@
         "T1566.001",
         "T1566.002"
       ],
+      "d3f_local": "SenderReputationAnalysis",
       "d3fend_id": "D3-SRA",
       "name": "Sender Reputation Analysis"
     },
@@ -3829,6 +3961,7 @@
         "T1211",
         "T1212"
       ],
+      "d3f_local": "ShadowStackComparisons",
       "d3fend_id": "D3-SSC",
       "name": "Shadow Stack Comparisons"
     },
@@ -3843,6 +3976,7 @@
         "T1563.001",
         "T1563.002"
       ],
+      "d3f_local": "SessionTermination",
       "d3fend_id": "D3-ST",
       "name": "Session Termination"
     },
@@ -3874,6 +4008,7 @@
         "T1574.010",
         "T1649"
       ],
+      "d3f_local": "SoftwareUpdate",
       "d3fend_id": "D3-SU",
       "name": "Software Update"
     },
@@ -3905,6 +4040,7 @@
         "T1574.010",
         "T1649"
       ],
+      "d3f_local": "SoftwareInventory",
       "d3fend_id": "D3-SWI",
       "name": "Software Inventory"
     },
@@ -3912,6 +4048,7 @@
       "counters_attack": [
         "T1562.010"
       ],
+      "d3f_local": "SystemVulnerabilityAssessment",
       "d3fend_id": "D3-SYSVA",
       "name": "System Vulnerability Assessment"
     },
@@ -3925,6 +4062,7 @@
         "T1558",
         "T1558.001"
       ],
+      "d3f_local": "TokenBinding",
       "d3fend_id": "D3-TB",
       "name": "Token Binding"
     },
@@ -3938,6 +4076,7 @@
         "T1558",
         "T1558.001"
       ],
+      "d3f_local": "Token-basedAuthentication",
       "d3fend_id": "D3-TBA",
       "name": "Token-based Authentication"
     },
@@ -3945,6 +4084,7 @@
       "counters_attack": [
         "T1505.001"
       ],
+      "d3f_local": "TrustedLibrary",
       "d3fend_id": "D3-TL",
       "name": "Trusted Library"
     },
@@ -3955,6 +4095,7 @@
         "T1566.002",
         "T1566.003"
       ],
+      "d3f_local": "URLAnalysis",
       "d3fend_id": "D3-UA",
       "name": "URL Analysis"
     },
@@ -3978,6 +4119,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "UserAccountPermissions",
       "d3fend_id": "D3-UAP",
       "name": "User Account Permissions"
     },
@@ -4056,6 +4198,7 @@
         "T1573.001",
         "T1573.002"
       ],
+      "d3f_local": "UserGeolocationLogonPatternAnalysis",
       "d3fend_id": "D3-UGLPA",
       "name": "User Geolocation Logon Pattern Analysis"
     },
@@ -4079,6 +4222,7 @@
         "T1531",
         "T1548.005"
       ],
+      "d3f_local": "UnlockAccount",
       "d3fend_id": "D3-ULA",
       "name": "Unlock Account"
     },
@@ -4089,6 +4233,7 @@
         "T1566.002",
         "T1566.003"
       ],
+      "d3f_local": "URLReputationAnalysis",
       "d3fend_id": "D3-URA",
       "name": "URL Reputation Analysis"
     },
@@ -4097,6 +4242,7 @@
         "T1546.004",
         "T1564.002"
       ],
+      "d3f_local": "UserSessionInitConfigAnalysis",
       "d3fend_id": "D3-USICA",
       "name": "User Session Init Config Analysis"
     },
@@ -4104,6 +4250,7 @@
       "counters_attack": [
         "T1505.001"
       ],
+      "d3f_local": "VariableInitialization",
       "d3fend_id": "D3-VI",
       "name": "Variable Initialization"
     },
@@ -4111,6 +4258,7 @@
       "counters_attack": [
         "T1125"
       ],
+      "d3f_local": "VideoSurveillance",
       "d3fend_id": "D3-VS",
       "name": "Video Surveillance"
     },
@@ -4125,6 +4273,7 @@
         "T1556",
         "T1621"
       ],
+      "d3f_local": "WebSessionAccessMediation",
       "d3fend_id": "D3-WSAM",
       "name": "Web Session Access Mediation"
     }

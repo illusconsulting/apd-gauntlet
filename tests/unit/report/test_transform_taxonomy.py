@@ -78,3 +78,79 @@ def test_taxonomy_resolves_referenced_atlas_technique() -> None:
     # Sub-technique resolves with the parent-prefixed title.
     assert tax["AML.T0051.000"]["family"] == "MITRE ATLAS"
     assert ":" in tax["AML.T0051.000"]["title"]
+
+
+def _artifacts_with_defense_graph(overlays: list[dict[str, Any]]) -> RunArtifacts:
+    return RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p",
+        domain_pack_version="1", subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=[], deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths=None, asset_graph=None,
+        defense_graph={"bottleneck_overlays": overlays},
+        attack_path_findings=[], report_data=None,
+        metrics=EMPTY_METRICS,
+    )
+
+
+def test_taxonomy_resolves_d3fend_from_attack_path_overlays() -> None:
+    """D3FEND ids appear ONLY in attack-path overlays (candidate_d3fend objects +
+    net_new_d3fend strings), not in finding control_mappings. The taxonomy dict
+    must still resolve their titles so the report's hover tooltips work the way
+    ATT&CK technique tooltips do."""
+    artifacts = _artifacts_with_defense_graph([
+        {
+            "edge_id": "edge-x",
+            "exposed_attack_techniques": ["T1555"],
+            "candidate_d3fend": [
+                {"d3fend_id": "D3-CF", "counters": ["T1555"], "rationale": "x"},
+            ],
+            "net_new_d3fend": ["D3-CF"],  # net_new items are STRINGS
+        },
+    ])
+    tax = taxonomy_dict(artifacts)
+    assert "D3-CF" in tax, "D3FEND id from overlay must be in the taxonomy dict"
+    assert tax["D3-CF"]["family"] == "MITRE D3FEND"
+    assert tax["D3-CF"]["title"] == "Content Filtering"
+    # the overlay's exposed ATT&CK technique resolves too
+    assert tax.get("T1555", {}).get("family") == "MITRE ATT&CK"
+
+
+def test_attack_taxonomy_entries_carry_authoritative_url() -> None:
+    """ATT&CK technique + sub-technique tags deep-link to attack.mitre.org; other
+    families (e.g. CWE) are left unlinked (feature scope: ATT&CK + D3FEND)."""
+    artifacts = _artifacts_with_findings([
+        {
+            "id": "conf-00000001",
+            "control_mappings": {
+                "mitre_attack": [{"technique": "T1555"}, {"technique": "T1555.004"}],
+                "cwe": ["CWE-79"],
+            },
+            "evidence": [{"artifact": "plan.md", "locator": "§1"}],
+        }
+    ])
+    tax = taxonomy_dict(artifacts)
+    assert tax["T1555"]["url"] == "https://attack.mitre.org/techniques/T1555/"
+    assert tax["T1555.004"]["url"] == "https://attack.mitre.org/techniques/T1555/004/"
+    assert "url" not in tax.get("CWE-79", {})  # CWE not linked (scope)
+
+
+def test_d3fend_taxonomy_entries_carry_authoritative_url() -> None:
+    """D3FEND tags deep-link via the AUTHORITATIVE ontology IRI local name
+    (d3f_local) — hyphens + acronym casing preserved, NOT a PascalCase strip."""
+    artifacts = _artifacts_with_defense_graph([
+        {"edge_id": "e",
+         "candidate_d3fend": [
+             {"d3fend_id": "D3-CF", "counters": ["T1555"], "rationale": "x"},
+             {"d3fend_id": "D3-PHDURA", "counters": ["T1020"], "rationale": "y"},
+         ],
+         "net_new_d3fend": ["D3-CF"]},
+    ])
+    tax = taxonomy_dict(artifacts)
+    assert tax["D3-CF"]["url"] == "https://d3fend.mitre.org/technique/d3f:ContentFiltering/"
+    # hyphenated local name preserved (authoritative IRI, NOT name-PascalCase)
+    assert tax["D3-PHDURA"]["url"] == (
+        "https://d3fend.mitre.org/technique/d3f:PerHostDownload-UploadRatioAnalysis/"
+    )

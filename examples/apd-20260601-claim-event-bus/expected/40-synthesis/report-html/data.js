@@ -8331,19 +8331,23 @@ window.APD_DATA = {
     },
     "T1530": {
       "family": "MITRE ATT&CK",
-      "title": "Data from Cloud Storage"
+      "title": "Data from Cloud Storage",
+      "url": "https://attack.mitre.org/techniques/T1530/"
     },
     "T1562": {
       "family": "MITRE ATT&CK",
-      "title": "Impair Defenses"
+      "title": "Impair Defenses",
+      "url": "https://attack.mitre.org/techniques/T1562/"
     },
     "T1565": {
       "family": "MITRE ATT&CK",
-      "title": "Data Manipulation"
+      "title": "Data Manipulation",
+      "url": "https://attack.mitre.org/techniques/T1565/"
     },
     "T1621": {
       "family": "MITRE ATT&CK",
-      "title": "Multi-Factor Authentication Request Generation"
+      "title": "Multi-Factor Authentication Request Generation",
+      "url": "https://attack.mitre.org/techniques/T1621/"
     }
   },
   "threat_model": {

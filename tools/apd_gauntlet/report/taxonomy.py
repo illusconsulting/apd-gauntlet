@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
@@ -187,6 +188,57 @@ def d3fend_titles() -> dict[str, str]:
                 else did
             )
     return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
+def d3fend_local_names() -> dict[str, str]:
+    """Map D3FEND technique id (D3-XX) -> ontology IRI local name (D3-CF ->
+    ContentFiltering). AUTHORITATIVE URL label: hyphens + acronym casing preserved
+    (D3-MFA -> Multi-factorAuthentication). Captured from the def_tech IRI by
+    refresh_d3fend and stored as `d3f_local` in d3fend.json."""
+    raw = json.loads((_PKG_DATA / "d3fend.json").read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    if isinstance(raw, dict):
+        for entry in (raw.get("entries") or []):
+            if isinstance(entry, dict):
+                did, local = entry.get("d3fend_id"), entry.get("d3f_local")
+                if did and local:
+                    out[did] = local
+    return out
+
+
+_ATTACK_TECH_RE = re.compile(r"^T(\d{4})(?:\.(\d{3}))?$")
+
+
+def attack_technique_url(technique_id: str) -> str | None:
+    """Authoritative attack.mitre.org URL for an ATT&CK technique/sub-technique id
+    (T1555 -> .../techniques/T1555/, T1555.004 -> .../techniques/T1555/004/).
+    None for anything that is not a technique id."""
+    m = _ATTACK_TECH_RE.match(technique_id or "")
+    if not m:
+        return None
+    base, sub = m.group(1), m.group(2)
+    return f"https://attack.mitre.org/techniques/T{base}/" + (f"{sub}/" if sub else "")
+
+
+def d3fend_url(d3fend_id: str) -> str | None:
+    """Authoritative d3fend.mitre.org URL for a D3FEND technique id.
+
+    Uses the ontology IRI local name (`d3f_local` in d3fend.json), which preserves
+    hyphens + acronym casing (D3-MFA -> d3f:Multi-factorAuthentication, D3-PHDURA ->
+    d3f:PerHostDownload-UploadRatioAnalysis). Falls back to a best-effort label
+    derived from the display name ONLY when the local name is absent (e.g. an older
+    d3fend.json without the field)."""
+    local = d3fend_local_names().get(d3fend_id or "")
+    if not local:
+        name = d3fend_titles().get(d3fend_id or "")
+        if not name or name == d3fend_id:
+            return None
+        local = re.sub(r"[^A-Za-z0-9]", "", name)
+        if not local:
+            return None
+    return f"https://d3fend.mitre.org/technique/d3f:{local}/"
 
 
 @_register_cached

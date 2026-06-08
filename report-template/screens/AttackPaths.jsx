@@ -297,17 +297,25 @@ function AttackPaths({ data, onOpenFinding }) {
             <div className="overlay-card__row">
               <div className="overlay-card__label">Candidate D3FEND</div>
               <div className="tagrow">
-                {(o.candidate_d3fend || []).map((d) => (
-                  <TaxonomyTag key={d.d3fend_id} id={d.d3fend_id} />
-                ))}
+                {(o.candidate_d3fend || []).map((d) => {
+                  // net_new_d3fend items are bare id STRINGS; candidate_d3fend
+                  // items are {d3fend_id,...} OBJECTS. Normalize both so the tag
+                  // renders the id (and TaxonomyTag can resolve its hover title).
+                  const did = typeof d === "string" ? d : d.d3fend_id;
+                  return <TaxonomyTag key={did} id={did} />;
+                })}
               </div>
             </div>
             <div className="overlay-card__row">
               <div className="overlay-card__label">Net-new D3FEND</div>
               <div className="tagrow">
-                {(o.net_new_d3fend || []).map((d) => (
-                  <TaxonomyTag key={d.d3fend_id} id={d.d3fend_id} />
-                ))}
+                {(o.net_new_d3fend || []).map((d) => {
+                  // net_new_d3fend items are bare id STRINGS; candidate_d3fend
+                  // items are {d3fend_id,...} OBJECTS. Normalize both so the tag
+                  // renders the id (and TaxonomyTag can resolve its hover title).
+                  const did = typeof d === "string" ? d : d.d3fend_id;
+                  return <TaxonomyTag key={did} id={did} />;
+                })}
                 {!o.net_new_d3fend?.length && <span className="mono" style={{ color: "var(--ink-3)" }}>(all candidates backed)</span>}
               </div>
             </div>

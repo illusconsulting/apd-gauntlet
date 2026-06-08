@@ -239,3 +239,24 @@ def test_refresh_d3fend_writes_to_data_dir(
     ).hexdigest()
     assert data["source_url"]
     assert "entries" in data and len(data["entries"]) >= 1
+
+
+def test_projection_captures_d3f_local_from_iri() -> None:
+    """project_d3fend_json captures the ontology IRI local name as d3f_local (the
+    authoritative URL label), preserving the casing from the def_tech IRI."""
+    payload = {
+        "results": {
+            "bindings": [
+                {
+                    "def_tech": {
+                        "value": "http://d3fend.mitre.org/ontologies/d3fend.owl#NetworkTrafficFiltering"
+                    },
+                    "def_tech_label": {"value": "Network Traffic Filtering"},
+                    "off_tech_id": {"value": "T1078"},
+                }
+            ]
+        }
+    }
+    projected = project_d3fend_json(json.dumps(payload).encode())
+    by_id = {e["d3fend_id"]: e for e in projected["entries"]}
+    assert by_id["D3-NTF"]["d3f_local"] == "NetworkTrafficFiltering"

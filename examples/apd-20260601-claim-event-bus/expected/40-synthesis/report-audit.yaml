@@ -40,6 +40,10 @@ checks:
   status: pass
   detail: total=19 sev_sum=19 tier_sum=19 disp_sum=19
   klass: structural
+- name: authored_merges_applied
+  status: pass
+  detail: unresolved_authored_merges=0 (see 40-synthesis/rejected-records.yaml)
+  klass: editorial
 - name: data_js_recompute_drift
   status: pass
   detail: recompute_findings=19 data.js=19

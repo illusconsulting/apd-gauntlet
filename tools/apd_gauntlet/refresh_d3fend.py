@@ -128,6 +128,7 @@ def project_d3fend_json(json_bytes: bytes) -> dict[str, Any]:
             {
                 "d3fend_id": d3fend_id,
                 "name": name,
+                "d3f_local": _iri_strip_to_last_segment(def_tech_iri),
                 "counters_attack_set": set(),
             },
         )
@@ -155,6 +156,7 @@ def project_d3fend_json(json_bytes: bytes) -> dict[str, Any]:
             {
                 "d3fend_id": d3fend_id,
                 "name": name,
+                "d3f_local": _iri_strip_to_last_segment(iri),
                 "counters_attack_set": set(),
             },
         )

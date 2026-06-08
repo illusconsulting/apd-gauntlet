@@ -2088,6 +2088,27 @@ def _collect_referenced_ids(
             for sub_id in (entry.get("sub_techniques") or []):
                 if isinstance(sub_id, str):
                     out["attack"].add(sub_id)
+
+    # Attack-path D3FEND overlays (defense-graph bottleneck_overlays). D3FEND ids
+    # appear ONLY here — candidate_d3fend (objects) + net_new_d3fend (id strings) —
+    # not in any finding/capability control_mappings, so collect them (plus the
+    # overlays' exposed ATT&CK ids) here. Without this, refs["d3fend"] is empty and
+    # the taxonomy dict resolves no D3FEND titles, so the report cannot render a
+    # hover tooltip for a D3FEND tag the way it does for an ATT&CK technique.
+    for o in ((artifacts.defense_graph or {}).get("bottleneck_overlays") or []):
+        if not isinstance(o, dict):
+            continue
+        for c in (o.get("candidate_d3fend") or []):
+            did = c.get("d3fend_id") if isinstance(c, dict) else c
+            if isinstance(did, str) and did:
+                out["d3fend"].add(did)
+        for d in (o.get("net_new_d3fend") or []):
+            did = d.get("d3fend_id") if isinstance(d, dict) else d
+            if isinstance(did, str) and did:
+                out["d3fend"].add(did)
+        for t in (o.get("exposed_attack_techniques") or []):
+            if isinstance(t, str) and t:
+                out["attack"].add(t)
     return out
 
 
@@ -2127,6 +2148,9 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         if not tid:
             continue
         out[tid] = {"family": _ATTACK_FAMILY_DISPLAY, "title": attack.get(tid, tid)}
+        _url = _taxonomy.attack_technique_url(tid)
+        if _url:
+            out[tid]["url"] = _url
 
     # CWE: titles from taxonomy module; fall back to id if absent.
     cwe = _taxonomy.cwe_titles()
@@ -2141,6 +2165,9 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         if not did:
             continue
         out[did] = {"family": _D3FEND_FAMILY_DISPLAY, "title": d3.get(did, did)}
+        _url = _taxonomy.d3fend_url(did)
+        if _url:
+            out[did]["url"] = _url
 
     # MITRE ATLAS: titles from taxonomy module; fall back to id if absent.
     atlas = _taxonomy.atlas_titles()
