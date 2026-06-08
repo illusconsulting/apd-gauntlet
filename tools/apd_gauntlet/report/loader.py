@@ -276,9 +276,46 @@ def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
     return ""
 
 
+# Repo-root ``domains/`` directory, relative to this module
+# (tools/apd_gauntlet/report/loader.py → repo_root/domains). Used as the
+# default source for domain-pack versions when the run uses the multi-domain
+# ``domains: [...]`` list shape (which carries no inline version).
+_DOMAINS_DIR = pathlib.Path(__file__).resolve().parents[3] / "domains"
+
+
+def _pack_versions_from_domains(
+    run_cfg: dict[str, Any],
+    domains_dir: pathlib.Path,
+) -> str:
+    """Combine the declared domains' pack versions, read from
+    ``<domains_dir>/<name>/domain.yaml`` and joined with ``+`` in declared
+    order (e.g. ``1.0.0+1.0.0`` for ``[agentic-ai, api-security]``).
+
+    Returns ``""`` when there are no declared domains or any pack file is
+    missing / versionless, so the caller falls through to ``"unknown"``.
+    """
+    names = _extract_str_list(run_cfg, "domains")
+    if not names:
+        return ""
+    versions: list[str] = []
+    for name in names:
+        try:
+            meta = yaml.safe_load(
+                (domains_dir / name / "domain.yaml").read_text(encoding="utf-8")
+            )
+        except (OSError, yaml.YAMLError):
+            return ""
+        version = meta.get("version") if isinstance(meta, dict) else None
+        if not version:
+            return ""
+        versions.append(str(version))
+    return "+".join(versions)
+
+
 def _extract_domain_pack_version(
     run_cfg: dict[str, Any],
     findings_doc: dict[str, Any] | None = None,
+    domains_dir: pathlib.Path | None = None,
 ) -> str:
     """Extract domain pack version with cascading fallbacks.
 
@@ -288,7 +325,10 @@ def _extract_domain_pack_version(
       3. ``findings_doc._meta.domain_pack_version`` (PR-T4-G addition —
          synthesizer-emitted metadata)
       4. ``findings_doc.domain_pack.version`` (legacy frontmatter shape)
-      5. ``"unknown"`` (final build-time fallback so the rendered report
+      5. ``<domains_dir>/<name>/domain.yaml`` versions for the run's
+         ``domains: [...]`` list, joined with ``+`` (only when *domains_dir*
+         is provided — the live build passes the repo ``domains/`` dir)
+      6. ``"unknown"`` (final build-time fallback so the rendered report
          never shows an empty version string)
     """
     domain_pack = run_cfg.get("domain_pack")
@@ -311,6 +351,10 @@ def _extract_domain_pack_version(
             legacy_version = findings_dp.get("version", "")
             if legacy_version:
                 return str(legacy_version)
+    if domains_dir is not None:
+        from_packs = _pack_versions_from_domains(run_cfg, domains_dir)
+        if from_packs:
+            return from_packs
     return "unknown"
 
 
@@ -348,17 +392,57 @@ def _is_path_slug(value: str) -> bool:
     return bool(re.search(r"-Documents-GitHub-|-Documents-|-Users-", value))
 
 
-def _humanise_slug(slug: str) -> str:
-    """Extract a human-readable name from a filesystem path slug.
+# Directory names that commonly PARENT a repository inside a slugged CBM
+# project path. The repo name is whatever follows the LAST of these segments.
+# Matched case-insensitively against the hyphen-split slug.
+_DEV_CONTAINER_DIRS = frozenset({
+    "github", "gitlab", "bitbucket", "gitea", "sourcehut",
+    "documents", "desktop", "src", "source", "repos", "repositories",
+    "projects", "project", "code", "workspace", "workspaces", "dev",
+})
 
-    ``Users-alice-Documents-GitHub-MyProject`` -> ``MyProject``
+
+def _prettify_repo_name(name: str) -> str:
+    """Turn a repo directory name into a display title.
+
+    ``open-notebook`` -> ``Open Notebook``; ``data-formulator`` ->
+    ``Data Formulator``; ``MyProject`` -> ``MyProject`` and ``ChainGuard`` ->
+    ``ChainGuard`` (existing CamelCase is preserved, lowercase words are
+    capitalised).
     """
-    # Last hyphen-separated segment that starts with a capital letter, or just last segment.
-    parts = slug.split("-")
-    for part in reversed(parts):
-        if part and part[0].isupper():
-            return part
-    return parts[-1] if parts else slug
+    segs = [s for s in name.replace("_", "-").split("-") if s]
+    if not segs:
+        return name
+    return " ".join(s[:1].upper() + s[1:] if s.islower() else s for s in segs)
+
+
+def _humanise_slug(slug: str) -> str:
+    """Extract a human-readable project name from a filesystem path slug.
+
+    The CBM project slug joins every path component with hyphens, e.g.
+    ``Users-alice-Documents-GitHub-open-notebook``. The repository name is
+    everything AFTER the last well-known repo-parent directory (GitHub,
+    Documents, src, repos, …), rejoined and prettified — which correctly
+    recovers multi-word lowercase repo names that the old "last capitalised
+    segment" heuristic mis-resolved to the parent dir (e.g. ``GitHub``):
+
+    ``Users-alice-Documents-GitHub-open-notebook`` -> ``Open Notebook``
+    ``Users-alice-Documents-GitHub-MyProject``     -> ``MyProject``
+
+    Falls back to the prettified last segment when no known parent dir is
+    present.
+    """
+    parts = [p for p in slug.split("-") if p]
+    if not parts:
+        return slug
+    last_container = -1
+    for i, part in enumerate(parts):
+        if part.lower() in _DEV_CONTAINER_DIRS:
+            last_container = i
+    repo_parts = parts[last_container + 1:] if last_container >= 0 else []
+    if not repo_parts:
+        repo_parts = [parts[-1]]
+    return _prettify_repo_name("-".join(repo_parts))
 
 
 def _extract_subject(run_cfg: dict[str, Any]) -> str:
@@ -512,7 +596,9 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
             or findings_doc.get("framework_version", "")
         ),
         domain_pack_name=_extract_domain_pack_name(run_cfg),
-        domain_pack_version=_extract_domain_pack_version(run_cfg, findings_doc),
+        domain_pack_version=_extract_domain_pack_version(
+            run_cfg, findings_doc, domains_dir=_DOMAINS_DIR
+        ),
         subject=_extract_subject(run_cfg),
         # Use T4-F's cached docs (nist_doc + attack_exposure_doc) to feed
         # T4-G's _resolve_date fallback chain — no third read needed.

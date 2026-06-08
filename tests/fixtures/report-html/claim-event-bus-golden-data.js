@@ -3,7 +3,7 @@ window.APD_DATA = {
     "framework_version": "1.4.0",
     "domain_pack": {
       "name": "pbm",
-      "version": "unknown"
+      "version": "1.0.0"
     },
     "run_id": "apd-20260601-claim-event-bus",
     "synthesizer_version": "1.4.0",
@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-07",
+    "date": "2026-06-08",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [

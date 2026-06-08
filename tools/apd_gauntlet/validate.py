@@ -207,6 +207,26 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
     "40-synthesis/deduped-capabilities.yaml",  # threat-model evaluator + attack-path analyzer
 })
 
+# FW-3: 00-context generated run-context artifacts. Specialists — especially
+# the tier-4 threat-model evaluator (which MUST cite the normalized threat
+# model) and attack-path analyzer — legitimately cite these derived context
+# files as evidence and must not be flagged "not in intake brief". Each is
+# allow-listed ONLY when it actually exists on disk (mirrors the
+# code-evidence-index existence guard below — never grant an implicit pass to a
+# context file the run did not produce). Both the bare basename and the
+# ``00-context/``-prefixed form agents emit are accepted. Excluded by design:
+# context-brief.md (cite the underlying artifact, not the brief's summary) and
+# code-evidence-index.yaml (handled by its own existence guard in
+# run_cross_file_pass).
+CONTEXT_DERIVED_STEMS: tuple[str, ...] = (
+    "threat-model-normalized.yaml",
+    "threat-model-authored.md",
+    "threat-model-skeleton.yaml",
+    "threat-model-supplied-normalized.yaml",
+    "asset-inventory.yaml",
+    "code-architecture-brief.md",
+)
+
 # Whole-document rollup files in 40-synthesis/ that get schema-validated by the
 # CLI. Each entry maps the on-disk filename to the schema in schemas/.
 # Note: attack-path.findings.yaml is NOT listed here — post-C-20 it matches the
@@ -640,6 +660,11 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     # skips (see the `if known_artifacts` guard below).
     if known_artifacts:
         known_artifacts |= ANALYZER_DERIVED_ARTIFACTS
+        ctx_dir = run_dir / "00-context"
+        for stem in CONTEXT_DERIVED_STEMS:
+            if (ctx_dir / stem).exists():
+                known_artifacts.add(stem)
+                known_artifacts.add(f"00-context/{stem}")
     tech_plan_artifacts: set[str] = {
         a["filename"] for a in artifacts_meta if a.get("type") == "tech_plan"
     }
@@ -657,6 +682,28 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
             finding_ids.add(rid)
         else:
             capability_ids.add(rid)
+
+    # FW-3: tier-4 findings (tmeval/apath) cross-reference MERGED finding ids
+    # that exist only in the post-synthesis deduped corpus — whose filename
+    # (deduped-findings.yaml, a hyphen) is deliberately NOT matched by the
+    # ``*.findings.yaml`` record glob. Fold those ids into the resolution
+    # universe when the deduped file is present so a post-synthesis whole-run
+    # validate does not falsely flag a legitimate merged cross-reference.
+    # Pre-synthesis the file is absent, so this is a no-op and the raw-set gate
+    # is unchanged. (Resolution-only: these records are not schema-validated
+    # here, and adding ids can only clear false "not found" errors.)
+    deduped_findings_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
+    if deduped_findings_path.exists():
+        try:
+            deduped_doc = yaml.safe_load(
+                deduped_findings_path.read_text(encoding="utf-8")
+            ) or {}
+        except yaml.YAMLError:
+            deduped_doc = {}
+        deduped_recs = deduped_doc.get("finding") or deduped_doc.get("findings") or []
+        for rec in deduped_recs:
+            if isinstance(rec, dict) and rec.get("id"):
+                finding_ids.add(rec["id"])
 
     # Verify cross_references, merged_from, and evidence artifacts.
     seen_files: set[pathlib.Path] = set()

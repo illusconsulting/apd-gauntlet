@@ -88,6 +88,97 @@ def test_dangling_cross_reference_caught(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# FW-3: 00-context generated artifacts + post-synthesis merged cross-refs
+# ---------------------------------------------------------------------------
+
+
+def test_context_derived_artifacts_accepted(tmp_path):
+    """FW-3: specialists (esp. the tier-4 threat-model evaluator, which MUST
+    cite the normalized threat model) may cite 00-context generated artifacts as
+    evidence — in both ``00-context/``-prefixed and bare form — without being
+    flagged 'not in intake brief'."""
+    dst = _copy_clean_run(tmp_path)
+    # The carve-out is existence-gated: the cited 00-context artifacts must
+    # actually be present (mirrors the code-evidence-index guard).
+    ctx = dst / "00-context"
+    (ctx / "threat-model-normalized.yaml").write_text(
+        "schema_version: 1\nentries: []\n", encoding="utf-8"
+    )
+    (ctx / "asset-inventory.yaml").write_text(
+        "schema_version: 1\ngenerated_by: intake\n"
+        "assets: []\nidentities: []\ntrust_boundaries: []\n",
+        encoding="utf-8",
+    )
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    assert "artifact: tech_plan.md" in text  # guard against a no-op replace
+    text = text.replace(
+        "    - artifact: tech_plan.md\n",
+        "    - artifact: 00-context/threat-model-normalized.yaml\n"
+        '      locator: "entries[entry_id=tm-0001]"\n'
+        '      excerpt: "normalized threat model entry"\n'
+        "    - artifact: asset-inventory.yaml\n",
+    )
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert "not in intake brief" not in result.output.lower(), result.output
+
+
+def test_context_derived_carveout_is_existence_gated(tmp_path):
+    """FW-3 guard: a 00-context artifact that does NOT exist on disk is still
+    flagged — the carve-out never grants an implicit pass to an absent file."""
+    dst = _copy_clean_run(tmp_path)  # 00-context has only context-brief.md
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    text = text.replace(
+        "artifact: tech_plan.md", "artifact: 00-context/threat-model-normalized.yaml"
+    )
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "not in intake brief" in result.output.lower()
+
+
+def test_context_derived_carveout_still_narrow(tmp_path):
+    """FW-3 guard: the 00-context carve-out does NOT whitelist context-brief.md
+    (cite the underlying artifact, not the brief) nor arbitrary 00-context files."""
+    dst = _copy_clean_run(tmp_path)
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    text = text.replace("artifact: tech_plan.md", "artifact: 00-context/context-brief.md")
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert "not in intake brief" in result.output.lower()
+
+
+def test_merged_cross_reference_resolved_from_deduped(tmp_path):
+    """FW-3: tier-4 findings legitimately cross-reference MERGED ids that live
+    only in 40-synthesis/deduped-findings.yaml — whose hyphenated filename is not
+    matched by the ``*.findings.yaml`` record glob. When that corpus is present,
+    those ids must resolve (not be flagged 'not found')."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-findings.yaml").write_text(
+        "finding:\n- id: merged-abcd1234\n", encoding="utf-8"
+    )
+    f = dst / "10-trustworthiness" / "confidentiality.findings.yaml"
+    text = f.read_text()
+    text = text.replace(
+        "evidence:", "cross_references:\n    - merged-abcd1234\n  evidence:", 1
+    )
+    f.write_text(text)
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(dst)])
+    assert "merged-abcd1234" not in result.output, result.output
+    assert "not found" not in result.output.lower(), result.output
+
+
+# ---------------------------------------------------------------------------
 # C-21: Phase C artifact pickup
 # ---------------------------------------------------------------------------
 

@@ -60,6 +60,14 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         _step("intake", "AGENT", "apd-intake",
               "00-context/context-brief.md, 00-context/asset-inventory.yaml")
     )
+    # 2b — FW-2: schema-gate 00-context right after intake so an invalid
+    # asset-inventory (e.g. a data_classifications value outside the enum) is
+    # caught here, not 9 specialists later at the pre-synthesis whole-run gate.
+    plan.append(
+        _step("intake", "CLI", f"validate {run_dir} --schema-only --errors-only",
+              "00-context schema gate (asset-inventory + brief frontmatter)",
+              gate=f"validate {run_dir} --schema-only --errors-only")
+    )
 
     # 3 — code-recon (present unless disabled; default "auto" => present)
     if str(cfg.get("code_recon") or "auto") != "disabled":

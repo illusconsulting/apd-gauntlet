@@ -112,7 +112,12 @@ def _resolve_attacker_positions(artifacts: RunArtifacts) -> list[str]:
 def _count_artifact_types(run_dir: pathlib.Path | None) -> tuple[int, list[str]]:
     if run_dir is None or not (run_dir / "inputs").exists():
         return 0, []
-    entries = sorted((run_dir / "inputs").iterdir())
+    # Recurse: inputs/ groups artifacts into subdirs (deploy/, ci/, docs/, …).
+    # A non-recursive iterdir() under-counts (subdirs counted as one "file"
+    # entry each) — walk every file so the total matches the real corpus.
+    entries = sorted(
+        p for p in (run_dir / "inputs").rglob("*") if p.is_file()
+    )
     suffixes = collections.Counter(p.suffix.lstrip(".") or "file" for p in entries)
     types = [
         f"{k}×{v}" if v > 1 else k

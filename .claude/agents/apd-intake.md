@@ -44,7 +44,8 @@ identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
   - `asset_id: asset-<sha8>` (deterministic ID from name + locator)
   - `name`: the canonical name as used in artifacts
   - `asset_type` ∈ {service, data_store, secret_store, queue, network, external_dependency, compute}
-  - `data_classifications[]`: PHI / PII / PCI / secret / internal / etc.
+  - `data_classifications[]`: one or more of EXACTLY the schema enum — `phi`, `pii`, `pci`, `phi_subset`, `secret`, `public`, `internal`, `confidential`. Do NOT invent values (e.g. `research_content`, `user_content`, `chat_history`, `embeddings`): map sensitive user/research content to `confidential`, regulated health data to `phi`/`phi_subset`, payment data to `pci`, secrets/keys to `secret`. Values outside this enum are rejected by the asset-inventory schema.
+  - `realizes_crown_jewels[]` (OPTIONAL): when an asset is the concrete realization of a declared run-config `crown_jewels` token (or an `apd-domain` crown-jewel pattern), list the matching token string(s) here verbatim — e.g. `realizes_crown_jewels: ["model_provider_credentials"]`. Populate this for every crown-jewel asset so the crown-jewel→asset mapping is explicit from intake and the `apd-attack-path-analyzer` floor resolves without back-filling the inventory.
   - `provenance.source` ∈ {artifact, domain_default, threat_model, code_evidence}, plus `artifact` and `locator` when applicable
   - `confidence` ∈ {high, medium, low} — high for IaC-declared, medium for prose-described, low for inferred
 

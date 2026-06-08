@@ -321,6 +321,19 @@ const intakeReceipt = llmStep('apd-intake',
     outputs: runDir + '/00-context/context-brief.md, ' + runDir + '/00-context/asset-inventory.yaml' });
 bailIfInterrupted(intakeReceipt, 'intake');
 
+// FW-2: schema-gate 00-context immediately after intake so an invalid
+// asset-inventory (e.g. a data_classifications value outside the schema enum,
+// or malformed context-brief frontmatter) surfaces HERE, in the intake phase —
+// not 9 specialists later at the pre-Phase-5 whole-run gate. Only 00-context
+// exists at this point, so a whole-run --schema-only pass is effectively the
+// 00-context schema gate. Read-only receipt, mirroring the tier gates.
+pyStep('validate', {
+  phase: 'intake', label: 'intake-schema-gate',
+  cliArgs: '--schema-only --errors-only',
+  outputs: runDir + '/00-context schema gate (asset-inventory + brief frontmatter)',
+  validateScope: runDir,
+});
+
 // ===========================================================================
 // PHASE 1.5 — code-recon (gate on args.code_recon)
 // ===========================================================================

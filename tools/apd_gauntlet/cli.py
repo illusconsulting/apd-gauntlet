@@ -1154,6 +1154,13 @@ def canonicalize_cmd(run_dir: Path) -> None:
             else ""
         )
     )
+    # FW-1: an unparseable specialist file must be a HARD signal, not a quiet
+    # note buried in a zero-exit summary. The pass still canonicalizes every
+    # parseable file first (the malformed one is skipped, not aborted), then we
+    # exit nonzero so standalone/CI callers and the runner surface it at the
+    # canonicalize step rather than as a confusing downstream tier-gate error.
+    if result.parse_errors:
+        raise SystemExit(1)
 
 
 @main.command("cluster-candidates")
@@ -1279,6 +1286,29 @@ def draft_domain_improvements_cmd(run_dir, domains_dir, out, ids, types, packs) 
         click.echo(f"  RETARGETED {dimpr_id}: {note}")
     if res.patch_written:
         click.echo(f"Wrote patch to {out_path}")
+
+
+@main.command("mint-improvement-id")
+@click.option("--type", "improvement_type", required=True, help="improvement_type")
+@click.option("--target-pack", "target_pack", required=True, help="target_pack name")
+@click.option("--target-file", "target_file", required=True, help="target_file within the pack")
+@click.option("--ref", "primary_ref", required=True, help="evidence[0].ref (the primary ref)")
+def mint_improvement_id_cmd(  # type: ignore[no-untyped-def]
+    improvement_type, target_pack, target_file, primary_ref
+) -> None:
+    """Print the canonical dimpr-<sha8> id for a domain-improvement record.
+
+    FW-5: the apd-domain-auditor is an execution-light (Read/Glob/Grep/Write)
+    judgment agent that cannot hand-compute the sha256 the validator recomputes.
+    This wraps the SAME ``compute_improvement_id`` the linter uses, so the
+    at-capture id is GUARANTEED to match the gate — the auditor calls it once it
+    has chosen the 4-tuple (improvement_type|target_pack|target_file|evidence[0].ref).
+    """
+    from .linters import compute_improvement_id
+
+    click.echo(
+        compute_improvement_id(improvement_type, target_pack, target_file, primary_ref)
+    )
 
 
 @main.command("audit-report")
