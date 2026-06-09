@@ -1,0 +1,24 @@
+schema_version: 1
+generated_by: synthesizer
+controls:
+  - masvs_id: MASVS-STORAGE-1
+    name: "The app securely stores sensitive data."
+    category: MASVS-STORAGE
+    category_title: "Storage"
+    finding_count: 1
+    finding_ids: [conf-a1b2c3d4]
+    surfaces:
+      - "android/shared-preferences"
+    capability_count: 1
+    capability_ids: [conf-cap-1a2b3c4d]
+    posture: gapped_and_covered
+  - masvs_id: MASVS-CRYPTO-2
+    name: "The app uses cryptographic primitives appropriately."
+    category: MASVS-CRYPTO
+    category_title: "Cryptography"
+    finding_count: 0
+    finding_ids: []
+    surfaces: []
+    capability_count: 0
+    capability_ids: []
+    posture: silent

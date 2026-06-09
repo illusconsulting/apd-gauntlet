@@ -188,7 +188,10 @@ def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version, fu
     default=None,
     help=(
         "Comma-separated taxonomies "
-        "(cwe,mitre_attack,d3fend,owasp_top10,owasp_api_top10,owasp_llm_top10)."
+        "(cwe,mitre_attack,d3fend,owasp_top10,owasp_api_top10,owasp_llm_top10,"
+        "mitre_atlas,masvs,maswe). "
+        "Selected packs may auto-seed taxonomies (e.g. mobile-applications -> "
+        "masvs,maswe); these merge with any supplied here."
     ),
 )
 @click.option(
@@ -601,6 +604,15 @@ def refresh_atlas_cmd() -> None:
 
     path = refresh_atlas()
     click.echo(f"Wrote {path}")
+
+
+@main.command("refresh-mas")
+def refresh_mas_cmd() -> None:
+    """Refresh OWASP MASVS v2.1.0 + MASWE mobile reference catalogs."""
+    from .refresh_mas import refresh_masvs, refresh_maswe
+
+    click.echo(f"Wrote {refresh_masvs()}")
+    click.echo(f"Wrote {refresh_maswe()}")
 
 
 @main.command("parse-threat-model")

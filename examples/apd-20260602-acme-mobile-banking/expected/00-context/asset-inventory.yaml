@@ -1,0 +1,12 @@
+schema_version: 1
+generated_by: intake
+assets: []
+identities: []
+trust_boundaries: []
+extraction_summary:
+  asset_count: 0
+  identity_count: 0
+  trust_boundary_count: 0
+  high_confidence_count: 0
+  medium_confidence_count: 0
+  low_confidence_count: 0

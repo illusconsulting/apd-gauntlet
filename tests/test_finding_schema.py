@@ -132,3 +132,19 @@ def test_finding_id_pattern_accepts_apath_prefix():
     validator = _build_validator(schema)
     errors = list(validator.iter_errors(data["finding"]))
     assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_accepts_optional_masvs_and_maswe():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "valid" / "finding-with-mas.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_rejects_invalid_maswe_format():
+    schema = _load_schema()
+    data = _load_yaml(FIXTURES / "invalid" / "finding-with-invalid-maswe.yaml")
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(data["finding"]))
+    assert errors, "Expected validation errors for malformed MASWE id, got none"

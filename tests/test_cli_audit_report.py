@@ -534,3 +534,210 @@ def test_metrics_present_fails_when_metrics_yaml_absent(tmp_path):
     c = [x for x in result.checks if x["name"] == "metrics_present"][0]
     assert c["status"] == "fail"
     assert result.status == "fail"
+
+
+# ---------------------------------------------------------------------------
+# id_coverage_masvs / id_coverage_maswe (OWASP MAS — subset of taxonomy keys)
+# ---------------------------------------------------------------------------
+
+def test_id_coverage_mas_exempt_when_no_mas_findings(tmp_path):
+    """The shipped example cites no MAS ids, so both checks pass vacuously."""
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    names = {c["name"] for c in result.checks}
+    assert "id_coverage_masvs" in names
+    assert "id_coverage_maswe" in names
+    masvs = [c for c in result.checks if c["name"] == "id_coverage_masvs"][0]
+    maswe = [c for c in result.checks if c["name"] == "id_coverage_maswe"][0]
+    assert masvs["status"] == "pass" and masvs["klass"] == "structural", masvs
+    assert maswe["status"] == "pass" and maswe["klass"] == "structural", maswe
+
+
+def test_id_coverage_masvs_fails_on_cited_id_missing_from_taxonomy(tmp_path):
+    """A finding citing a MASVS id with no matching taxonomy entry FAILS."""
+    dst = _copy_example(tmp_path)
+
+    def _add(d):
+        d["findings"][0].setdefault("mappings", {})["masvs"] = ["MASVS-STORAGE-1"]
+        # Deliberately do NOT add MASVS-STORAGE-1 to d["taxonomy"].
+    _mutate_data_js(dst, _add)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "id_coverage_masvs"][0]
+    assert c["status"] == "fail", c
+    assert "MASVS-STORAGE-1" in c["detail"]
+    assert result.status == "fail"
+
+
+def test_id_coverage_maswe_fails_on_cited_id_missing_from_taxonomy(tmp_path):
+    """A finding citing a MASWE id with no matching taxonomy entry FAILS."""
+    dst = _copy_example(tmp_path)
+
+    def _add(d):
+        d["findings"][0].setdefault("mappings", {})["maswe"] = ["MASWE-0001"]
+    _mutate_data_js(dst, _add)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "id_coverage_maswe"][0]
+    assert c["status"] == "fail", c
+    assert "MASWE-0001" in c["detail"]
+
+
+def test_id_coverage_masvs_passes_when_cited_id_present_in_taxonomy(tmp_path):
+    """Citing a MASVS id that IS a taxonomy key keeps the check green."""
+    dst = _copy_example(tmp_path)
+
+    def _add(d):
+        d["findings"][0].setdefault("mappings", {})["masvs"] = ["MASVS-STORAGE-1"]
+        d["taxonomy"]["MASVS-STORAGE-1"] = {
+            "family": "OWASP MASVS", "title": "The app securely stores sensitive data."}
+    _mutate_data_js(dst, _add)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "id_coverage_masvs"][0]
+    assert c["status"] == "pass", c
+
+
+# ---------------------------------------------------------------------------
+# coverage_rollups_nonempty — MAS extension (active + cited => rows required)
+# ---------------------------------------------------------------------------
+
+def test_coverage_rollups_mas_exempt_when_inactive(tmp_path):
+    """No 'masvs'/'maswe' in meta.active_taxonomies => MAS does not gate the check."""
+    dst = _copy_example(tmp_path)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"][0]
+    assert c["status"] == "pass", c
+
+
+def test_coverage_rollups_mas_exempt_when_active_but_no_findings(tmp_path):
+    """MASVS active but ZERO findings cite a MASVS id => exempt (no empty-rows penalty)."""
+    dst = _copy_example(tmp_path)
+    _mutate_data_js(dst, lambda d: d["meta"].__setitem__("active_taxonomies", ["masvs", "maswe"]))
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"][0]
+    assert c["status"] == "pass", c
+
+
+def test_coverage_rollups_fail_when_masvs_active_cited_but_rows_empty(tmp_path):
+    """MASVS active + a finding cites a MASVS id, but masvs_coverage rows are empty => FAIL."""
+    dst = _copy_example(tmp_path)
+
+    def _mut(d):
+        d["meta"]["active_taxonomies"] = ["masvs", "maswe"]
+        d["findings"][0].setdefault("mappings", {})["masvs"] = ["MASVS-STORAGE-1"]
+        d["taxonomy"]["MASVS-STORAGE-1"] = {"family": "OWASP MASVS", "title": "Secure storage."}
+        d["masvs_coverage"] = []  # rendered rollup dropped
+    _mutate_data_js(dst, _mut)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"][0]
+    assert c["status"] == "fail", c
+    assert "masvs" in c["detail"]
+    assert result.status == "fail"
+
+
+def test_coverage_rollups_fail_when_maswe_active_cited_but_rows_empty(tmp_path):
+    """MASWE active + a finding cites a MASWE id, but maswe_coverage rows are empty => FAIL."""
+    dst = _copy_example(tmp_path)
+
+    def _mut(d):
+        d["meta"]["active_taxonomies"] = ["masvs", "maswe"]
+        d["findings"][0].setdefault("mappings", {})["maswe"] = ["MASWE-0001"]
+        d["taxonomy"]["MASWE-0001"] = {
+            "family": "OWASP MASWE", "title": "Sensitive data stored unencrypted."}
+        d["maswe_coverage"] = []
+    _mutate_data_js(dst, _mut)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"][0]
+    assert c["status"] == "fail", c
+    assert "maswe" in c["detail"]
+
+
+def test_coverage_rollups_pass_when_mas_active_cited_and_rows_present(tmp_path):
+    """MASVS+MASWE active + cited + non-empty rendered rows => PASS."""
+    dst = _copy_example(tmp_path)
+
+    def _mut(d):
+        d["meta"]["active_taxonomies"] = ["masvs", "maswe"]
+        cm = d["findings"][0].setdefault("mappings", {})
+        cm["masvs"] = ["MASVS-STORAGE-1"]
+        cm["maswe"] = ["MASWE-0001"]
+        d["taxonomy"]["MASVS-STORAGE-1"] = {"family": "OWASP MASVS", "title": "Secure storage."}
+        d["taxonomy"]["MASWE-0001"] = {
+            "family": "OWASP MASWE", "title": "Sensitive data unencrypted."}
+        d["masvs_coverage"] = [{"masvs_id": "MASVS-STORAGE-1", "finding_count": 1}]
+        d["maswe_coverage"] = [{"maswe_id": "MASWE-0001", "finding_count": 1}]
+    _mutate_data_js(dst, _mut)
+    result = audit_report(dst)
+    c = [x for x in result.checks if x["name"] == "coverage_rollups_nonempty"][0]
+    assert c["status"] == "pass", c
+
+
+def test_completeness_gate_emits_all_mas_checks_and_stays_green(tmp_path):
+    """The committed example cites no MAS ids and declares no active MAS taxonomy,
+    so the new checks are emitted AND pass, leaving overall status pass."""
+    dst = _copy_example(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    result = audit_report(dst)
+    failed = [c for c in result.checks if c["status"] == "fail"]
+    assert result.status == "pass", failed
+    names = {c["name"] for c in result.checks}
+    for expected in ("id_coverage_masvs", "id_coverage_maswe", "coverage_rollups_nonempty"):
+        assert expected in names, f"missing check {expected}"
+    # Every check still carries a valid klass.
+    for c in result.checks:
+        assert c["klass"] in ("structural", "editorial"), c
+
+
+# ---------------------------------------------------------------------------
+# Shipped mobile-example audit (MAS-enabled run) — build then audit
+# ---------------------------------------------------------------------------
+
+MOBILE = REPO / "examples" / "apd-20260602-acme-mobile-banking" / "expected"
+
+
+def _copy_mobile(tmp_path):
+    dst = tmp_path / "mobile"
+    shutil.copytree(MOBILE, dst)
+    return dst
+
+
+def test_mobile_example_audit_passes_after_build_with_mas_coverage(tmp_path):
+    """Build the mobile report fresh from the committed YAMLs, then audit — the
+    MAS-enabled run must pass the completeness gate with MAS id-coverage present.
+    report-html/ is gitignored, so the audit MUST build-report first (CI lesson)."""
+    dst = _copy_mobile(tmp_path)
+    build = CliRunner().invoke(main, ["build-report", str(dst), "--quiet"])
+    assert build.exit_code == 0, build.output
+    result = audit_report(dst)
+    failed = [c for c in result.checks if c["status"] == "fail"]
+    assert result.status == "pass", failed
+    names = {c["name"] for c in result.checks}
+    # The MAS id-coverage gate checks must be present (they guard against bare,
+    # unresolved ids leaking into the report).
+    assert "id_coverage_masvs" in names
+    assert "id_coverage_maswe" in names
+    masvs_check = [c for c in result.checks if c["name"] == "id_coverage_masvs"][0]
+    maswe_check = [c for c in result.checks if c["name"] == "id_coverage_maswe"][0]
+    assert masvs_check["status"] == "pass", masvs_check
+    assert maswe_check["status"] == "pass", maswe_check
+    # The id-coverage gate passes vacuously when no MAS id is cited, so assert the
+    # SUBSTANTIVE evidence directly: the rendered data.js findings must carry the
+    # mobile run's MAS mappings (a regression that drops MAS rendering fails here).
+    parsed = parse_data_js(dst / "40-synthesis" / "report-html" / "data.js")
+    rendered_masvs: set[str] = set()
+    rendered_maswe: set[str] = set()
+    for f in parsed.get("findings", []):
+        mappings = f.get("mappings") or {}
+        rendered_masvs.update(mappings.get("masvs") or [])
+        rendered_maswe.update(mappings.get("maswe") or [])
+    assert {"MASVS-CRYPTO-2", "MASVS-STORAGE-1", "MASVS-AUTH-1"} <= rendered_masvs, \
+        f"mobile run lost MASVS mappings in data.js: {sorted(rendered_masvs)}"
+    assert {"MASWE-0014", "MASWE-0006", "MASWE-0042"} <= rendered_maswe, \
+        f"mobile run lost MASWE mappings in data.js: {sorted(rendered_maswe)}"
+    # And the populated coverage rollups must carry rows for those same ids.
+    synth = dst / "40-synthesis"
+    masvs_cov = yaml.safe_load((synth / "masvs-coverage.yaml").read_text())
+    maswe_cov = yaml.safe_load((synth / "maswe-coverage.yaml").read_text())
+    cov_masvs = {row["masvs_id"] for row in masvs_cov.get("controls", [])}
+    cov_maswe = {row["maswe_id"] for row in maswe_cov.get("entries", [])}
+    assert {"MASVS-CRYPTO-2", "MASVS-STORAGE-1", "MASVS-AUTH-1"} <= cov_masvs, cov_masvs
+    assert {"MASWE-0014", "MASWE-0006", "MASWE-0042"} <= cov_maswe, cov_maswe

@@ -126,6 +126,12 @@ def test_wrapper_reject_path(schema_name, bad_doc, description):
 # Accept tests — notes field allowed on annex wrappers (Fix 2)
 # ---------------------------------------------------------------------------
 
+def test_mas_coverage_rollups_wired_into_synthesis_rollups():
+    """The two OWASP MAS coverage rollups (v1.7) are wired to their single-file schemas."""
+    assert SYNTHESIS_ROLLUPS["masvs-coverage.yaml"] == "masvs-coverage.schema.json"
+    assert SYNTHESIS_ROLLUPS["maswe-coverage.yaml"] == "maswe-coverage.schema.json"
+
+
 def test_severity_disagreements_accepts_notes():
     """A doc with severity_disagreements=[] and notes=str validates (legacy-run compat)."""
     doc = {"severity_disagreements": [], "notes": "No disagreements this run."}

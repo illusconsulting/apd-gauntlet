@@ -36,3 +36,32 @@ def test_scaffold_run_writes_domains_list(tmp_path):
     cfg = (run_dir / ".apd-run.yaml").read_text()
     assert "domains:\n  - pbm\n  - api-security\n" in cfg
     assert "domain: " not in cfg
+
+
+def test_resolve_pack_taxonomies_unions_in_stable_order(tmp_path):
+    """_resolve_pack_taxonomies reads each pack's domain.yaml taxonomies and unions
+    them in declared-pack order, deduping, ignoring packs without the field."""
+    from apd_gauntlet.init_run import _resolve_pack_taxonomies
+
+    domains_dir = tmp_path / "domains"
+    (domains_dir / "alpha").mkdir(parents=True)
+    (domains_dir / "alpha" / "domain.yaml").write_text(
+        "name: alpha\ntaxonomies:\n  - masvs\n  - maswe\n"
+    )
+    (domains_dir / "beta").mkdir(parents=True)
+    (domains_dir / "beta" / "domain.yaml").write_text(
+        "name: beta\ntaxonomies:\n  - maswe\n  - cwe\n"
+    )
+    (domains_dir / "gamma").mkdir(parents=True)
+    (domains_dir / "gamma" / "domain.yaml").write_text("name: gamma\n")
+
+    out = _resolve_pack_taxonomies(["alpha", "beta", "gamma"], domains_dir)
+    assert out == ["masvs", "maswe", "cwe"]
+
+
+def test_resolve_pack_taxonomies_missing_pack_dir_returns_empty(tmp_path):
+    """A selected pack with no domain.yaml contributes nothing (no crash)."""
+    from apd_gauntlet.init_run import _resolve_pack_taxonomies
+
+    out = _resolve_pack_taxonomies(["nope"], tmp_path / "domains")
+    assert out == []

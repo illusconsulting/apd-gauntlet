@@ -48,6 +48,7 @@ apd-gauntlet refresh-cwe                         # refresh MITRE CWE reference d
 apd-gauntlet refresh-owasp                       # refresh OWASP Top 10 / API Top 10 / LLM Top 10 reference data
 apd-gauntlet refresh-d3fend                      # refresh MITRE D3FEND reference data
 apd-gauntlet refresh-atlas                       # refresh MITRE ATLAS technique-title reference data (AML.T####)
+apd-gauntlet refresh-mas                         # refresh OWASP MASVS + MASWE mobile taxonomy reference data
 ```
 
 `build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
@@ -142,6 +143,16 @@ taxonomies:
 ```
 
 Refresh the bundled ATLAS data with `apd-gauntlet refresh-atlas`. When `mitre_atlas` is declared, the rollup phase includes an atlas-coverage summary. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
+
+Selecting the `mobile-applications` pack (`--domain mobile-applications`) auto-seeds the OWASP **MASVS** and **MASWE** mobile taxonomies into `.apd-run.yaml`'s `taxonomies:` list (declared as `taxonomies: [masvs, maswe]` in the pack's `domain.yaml`), so you do not name them explicitly:
+
+```yaml
+taxonomies:
+  - masvs   # auto-seeded by the mobile-applications pack
+  - maswe   # auto-seeded by the mobile-applications pack
+```
+
+Refresh the bundled MAS reference data with `apd-gauntlet refresh-mas`. When `masvs`/`maswe` are declared, the rollup phase includes MASVS and MASWE coverage summaries. See [docs/taxonomy-mappings.md](taxonomy-mappings.md) for the full operator guide.
 
 ### Threat model evaluation (v1.3+)
 
@@ -276,7 +287,7 @@ is already isolated and on `PATH`. That is a nudge, not a gate.
 | Domain pack(s) valid | `apd-gauntlet validate-domain <pack…>` | always |
 | `apd-domain` skill built (with per-goal sidecars) | `apd-gauntlet build-domain-skill <pack…>` | always |
 | Agent frontmatter clean | `apd-gauntlet lint-agents` | always |
-| Declared taxonomy catalogs present | `apd-gauntlet refresh-{mitre,mitre-mobile,cwe,owasp,d3fend,atlas}` as the `taxonomies:` list requires | conditional |
+| Declared taxonomy catalogs present | `apd-gauntlet refresh-{mitre,mitre-mobile,cwe,owasp,d3fend,atlas,mas}` as the `taxonomies:` list requires | conditional |
 | CBM reachable + codebase indexed | codebase-memory-mcp `index_status` / server registered | if `code_recon: enabled`/`auto` |
 | Threat-model file exists at declared path | inspect `inputs/` against the `threat_model:` path | if `threat_model:` declared |
 | `crown_jewels` + `attacker_positions` declared | inspect `.apd-run.yaml` (or the active pack's `domain.yaml`) | if you want attack-path output |

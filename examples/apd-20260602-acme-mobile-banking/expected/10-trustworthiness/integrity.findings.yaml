@@ -9,7 +9,7 @@ finding:
   confidence: high
   title: Daily transfer limit enforced only client-side; backend accepts any amount
   summary: The app refuses transfers above the member's daily limit, but the backend records whatever amount the client submits — the limit is not a control.
-  detail: 'This is the pack''s central-tension Critical: client-side enforcement of a server-side control is not a control. The client reads dailyLimit and blocks oversized transfers, but a patched or instrumented client (or a direct API call) submits any amount and the backend honors it. Per MASVS-AUTH-1, the authorization/business-rule decision must be enforced server-side; CWE-602 (client-side enforcement of server-side security) and CWE-603 describe the class. The finding of record is the missing server-side limit check; routes to the api-security pack for the endpoint-side enforcement in a multi-domain run.'
+  detail: 'This is the pack''s central-tension Critical: client-side enforcement of a server-side control is not a control. The client reads dailyLimit and blocks oversized transfers, but a patched or instrumented client (or a direct API call) submits any amount and the backend honors it. Per MASVS-AUTH-1, the authorization/business-rule decision must be enforced server-side, and per MASVS-AUTH-2 the authorization must be enforced on the server side rather than only locally on the device; CWE-602 (client-side enforcement of server-side security) and CWE-603 describe the class, and MASWE-0042 (authorization enforced only locally instead of on the server-side) names the weakness. The finding of record is the missing server-side limit check; routes to the api-security pack for the endpoint-side enforcement in a multi-domain run.'
   evidence:
   - artifact: tech_plan.md
     locator: §5 Transfers and limits
@@ -22,6 +22,11 @@ finding:
     cwe:
     - CWE-602
     - CWE-603
+    masvs:
+    - MASVS-AUTH-1
+    - MASVS-AUTH-2
+    maswe:
+    - MASWE-0042
   recommendation:
     posture: required
     summary: Enforce the daily transfer limit on the backend; treat the client check as UX only.

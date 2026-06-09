@@ -232,11 +232,24 @@ def test_skip_sentinel_convention_documented() -> None:
 PLUGIN_MANIFEST = REPO / "plugin.json"
 
 
-def test_plugin_manifest_version_is_1_6_0() -> None:
-    """plugin.json must report version 1.6.0 (matches pyproject; closes skew gap)."""
+def test_plugin_manifest_version_matches_pyproject() -> None:
+    """plugin.json, pyproject.toml, and tools/apd_gauntlet/__init__ must agree (no skew)."""
+    import re
+
     manifest = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8"))
-    assert manifest["version"] == "1.6.0", (
-        f"plugin.json version is {manifest['version']!r}; expected '1.6.0'"
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    py_version = re.search(r'(?m)^version = "([^"]+)"', pyproject).group(1)
+    init_text = (REPO / "tools" / "apd_gauntlet" / "__init__.py").read_text(encoding="utf-8")
+    init_version = re.search(r'__version__ = "([^"]+)"', init_text).group(1)
+
+    assert manifest["version"] == py_version, (
+        f"plugin.json version is {manifest['version']!r}; pyproject is {py_version!r}"
+    )
+    assert init_version == py_version, (
+        f"__init__ version is {init_version!r}; pyproject is {py_version!r}"
+    )
+    assert py_version == "1.7.0", (
+        f"expected the 1.7.0 release version; pyproject reports {py_version!r}"
     )
 
 

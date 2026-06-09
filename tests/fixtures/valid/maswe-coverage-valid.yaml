@@ -1,0 +1,20 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+  - maswe_id: MASWE-0006
+    name: "Sensitive data stored in unencrypted shared storage"
+    category: MASVS-STORAGE
+    status: new
+    parent_masvs: [MASVS-STORAGE-1, MASVS-STORAGE-2]
+    finding_count: 1
+    finding_ids: [conf-a1b2c3d4]
+    surfaces:
+      - "android/shared-preferences"
+  - maswe_id: MASWE-0001
+    name: "Hardcoded cryptographic key"
+    category: MASVS-CRYPTO
+    status: draft
+    parent_masvs: []
+    finding_count: 0
+    finding_ids: []
+    surfaces: []

@@ -17,7 +17,7 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10", "mitre_atlas"]
+        "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10", "mitre_atlas", "masvs", "maswe"]
       }
     },
     "threat_model": {

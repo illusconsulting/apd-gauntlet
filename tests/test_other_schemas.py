@@ -363,3 +363,132 @@ def test_defense_graph_valid_fixture_validates() -> None:
         "defense-graph.schema.json",
     )
     assert errors == [], errors
+
+
+def test_masvs_coverage_schema_accepts_valid_sample():
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "masvs-coverage.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "valid" / "masvs-coverage-valid.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors == [], [e.message for e in errors]
+
+
+def test_masvs_coverage_schema_rejects_bad_control_id():
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "masvs-coverage.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "invalid" / "masvs-coverage-invalid.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors, "bad masvs_id / posture must be rejected"
+
+
+def test_maswe_coverage_schema_accepts_valid_sample():
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "maswe-coverage.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "valid" / "maswe-coverage-valid.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors == [], [e.message for e in errors]
+
+
+def test_maswe_coverage_schema_rejects_bad_weakness_id():
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "maswe-coverage.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "invalid" / "maswe-coverage-invalid.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors, "bad maswe_id / parent_masvs must be rejected"
+
+
+def test_masvs_coverage_schema_is_valid_metaschema_and_accepts_minimal_doc():
+    import json
+
+    import jsonschema
+    from apd_gauntlet.validate import build_registry
+
+    schema = json.loads((SCHEMA_DIR / "masvs-coverage.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(schema)
+    doc = {
+        "schema_version": 1,
+        "generated_by": "synthesizer",
+        "controls": [{
+            "masvs_id": "MASVS-STORAGE-1",
+            "name": "The app securely stores sensitive data.",
+            "category": "MASVS-STORAGE",
+            "category_title": "Storage",
+            "finding_count": 1,
+            "finding_ids": ["conf-aabbccdd"],
+            "surfaces": ["src/Store.kt:12"],
+            "capability_count": 0,
+            "capability_ids": [],
+            "posture": "gapped",
+        }],
+    }
+    # Validate against the registry so the _defs.schema.json $refs resolve.
+    errs = list(jsonschema.Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errs == [], errs
+
+
+def test_masvs_maswe_coverage_registered_in_synthesis_rollups():
+    from apd_gauntlet.validate import SYNTHESIS_ROLLUPS
+    assert SYNTHESIS_ROLLUPS.get("masvs-coverage.yaml") == "masvs-coverage.schema.json"
+    assert SYNTHESIS_ROLLUPS.get("maswe-coverage.yaml") == "maswe-coverage.schema.json"
+
+
+def test_maswe_coverage_schema_is_valid_metaschema_and_accepts_minimal_doc():
+    import json
+
+    import jsonschema
+    from apd_gauntlet.validate import build_registry
+
+    schema = json.loads((SCHEMA_DIR / "maswe-coverage.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(schema)
+    doc = {
+        "schema_version": 1,
+        "generated_by": "synthesizer",
+        "entries": [{
+            "maswe_id": "MASWE-0001",
+            "name": "Insecure data storage",
+            "category": "MASVS-STORAGE",
+            "status": "new",
+            "parent_masvs": ["MASVS-STORAGE-2"],
+            "finding_count": 1,
+            "finding_ids": ["conf-aabbccdd"],
+            "surfaces": ["src/Store.kt:12"],
+        }],
+    }
+    errs = list(jsonschema.Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errs == [], errs

@@ -1,0 +1,132 @@
+{
+  "_meta": {
+    "commit": "c0db792d48206186874b8b10818e117226eb1d68",
+    "count": 24,
+    "fetched_at": "2026-06-09",
+    "source": "https://raw.githubusercontent.com/OWASP/masvs/c0db792d48206186874b8b10818e117226eb1d68/OWASP_MASVS.yaml",
+    "source_sha256": "ffb619bf35cb5f822578b398e7c6bb5e82366d9784dc57fe9057104c870a4bbe",
+    "version": "v2.1.0"
+  },
+  "controls": {
+    "MASVS-AUTH-1": {
+      "category": "MASVS-AUTH",
+      "category_title": "Authentication and Authorization",
+      "title": "The app uses secure authentication and authorization protocols and follows the relevant best practices."
+    },
+    "MASVS-AUTH-2": {
+      "category": "MASVS-AUTH",
+      "category_title": "Authentication and Authorization",
+      "title": "The app performs local authentication securely according to the platform best practices."
+    },
+    "MASVS-AUTH-3": {
+      "category": "MASVS-AUTH",
+      "category_title": "Authentication and Authorization",
+      "title": "The app secures sensitive operations with additional authentication."
+    },
+    "MASVS-CODE-1": {
+      "category": "MASVS-CODE",
+      "category_title": "Code Quality",
+      "title": "The app requires an up-to-date platform version."
+    },
+    "MASVS-CODE-2": {
+      "category": "MASVS-CODE",
+      "category_title": "Code Quality",
+      "title": "The app has a mechanism for enforcing app updates."
+    },
+    "MASVS-CODE-3": {
+      "category": "MASVS-CODE",
+      "category_title": "Code Quality",
+      "title": "The app only uses software components without known vulnerabilities."
+    },
+    "MASVS-CODE-4": {
+      "category": "MASVS-CODE",
+      "category_title": "Code Quality",
+      "title": "The app validates and sanitizes all untrusted inputs."
+    },
+    "MASVS-CRYPTO-1": {
+      "category": "MASVS-CRYPTO",
+      "category_title": "Cryptography",
+      "title": "The app employs current strong cryptography and uses it according to industry best practices."
+    },
+    "MASVS-CRYPTO-2": {
+      "category": "MASVS-CRYPTO",
+      "category_title": "Cryptography",
+      "title": "The app performs key management according to industry best practices."
+    },
+    "MASVS-NETWORK-1": {
+      "category": "MASVS-NETWORK",
+      "category_title": "Network Communication",
+      "title": "The app secures all network traffic according to the current best practices."
+    },
+    "MASVS-NETWORK-2": {
+      "category": "MASVS-NETWORK",
+      "category_title": "Network Communication",
+      "title": "The app performs identity pinning for all remote endpoints under the developer's control."
+    },
+    "MASVS-PLATFORM-1": {
+      "category": "MASVS-PLATFORM",
+      "category_title": "Platform Interaction",
+      "title": "The app uses IPC mechanisms securely."
+    },
+    "MASVS-PLATFORM-2": {
+      "category": "MASVS-PLATFORM",
+      "category_title": "Platform Interaction",
+      "title": "The app uses WebViews securely."
+    },
+    "MASVS-PLATFORM-3": {
+      "category": "MASVS-PLATFORM",
+      "category_title": "Platform Interaction",
+      "title": "The app uses the user interface securely."
+    },
+    "MASVS-PRIVACY-1": {
+      "category": "MASVS-PRIVACY",
+      "category_title": "Privacy",
+      "title": "The app minimizes access to sensitive data and resources."
+    },
+    "MASVS-PRIVACY-2": {
+      "category": "MASVS-PRIVACY",
+      "category_title": "Privacy",
+      "title": "The app prevents identification of the user."
+    },
+    "MASVS-PRIVACY-3": {
+      "category": "MASVS-PRIVACY",
+      "category_title": "Privacy",
+      "title": "The app is transparent about data collection and usage."
+    },
+    "MASVS-PRIVACY-4": {
+      "category": "MASVS-PRIVACY",
+      "category_title": "Privacy",
+      "title": "The app offers user control over their data."
+    },
+    "MASVS-RESILIENCE-1": {
+      "category": "MASVS-RESILIENCE",
+      "category_title": "Resilience Against Reverse Engineering and Tampering",
+      "title": "The app validates the integrity of the platform."
+    },
+    "MASVS-RESILIENCE-2": {
+      "category": "MASVS-RESILIENCE",
+      "category_title": "Resilience Against Reverse Engineering and Tampering",
+      "title": "The app implements anti-tampering mechanisms."
+    },
+    "MASVS-RESILIENCE-3": {
+      "category": "MASVS-RESILIENCE",
+      "category_title": "Resilience Against Reverse Engineering and Tampering",
+      "title": "The app implements anti-static analysis mechanisms."
+    },
+    "MASVS-RESILIENCE-4": {
+      "category": "MASVS-RESILIENCE",
+      "category_title": "Resilience Against Reverse Engineering and Tampering",
+      "title": "The app implements anti-dynamic analysis techniques."
+    },
+    "MASVS-STORAGE-1": {
+      "category": "MASVS-STORAGE",
+      "category_title": "Storage",
+      "title": "The app securely stores sensitive data."
+    },
+    "MASVS-STORAGE-2": {
+      "category": "MASVS-STORAGE",
+      "category_title": "Storage",
+      "title": "The app prevents leakage of sensitive data."
+    }
+  }
+}

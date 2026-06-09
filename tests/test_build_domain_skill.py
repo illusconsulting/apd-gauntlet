@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
+import yaml as _yaml
 from apd_gauntlet.build_domain_skill import build_domain_skill
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
@@ -84,3 +85,40 @@ def test_cli_accepts_multiple_domain_names(tmp_path):
     )
     assert result.exit_code == 0, result.output
     assert "name: sample2" in (out / "SKILL.md").read_text()
+
+
+def _frontmatter(text):
+    assert text.startswith("---\n")
+    end = text.find("\n---\n", 4)
+    return _yaml.safe_load(text[4:end])
+
+
+def test_pack_taxonomies_in_full_skill_frontmatter(tmp_path):
+    """A pack declaring taxonomies must surface them under metadata.taxonomies in the
+    full SKILL.md frontmatter, deduped and in declared order."""
+    domains_dir = tmp_path / "domains"
+    (domains_dir / "taxpack").mkdir(parents=True)
+    (domains_dir / "taxpack" / "domain.yaml").write_text(
+        "name: taxpack\n"
+        "display_name: Taxonomy Pack\n"
+        "version: 1.0.0\n"
+        'framework_compat: ">=1.0.0,<2.0.0"\n'
+        "description: A pack used to test taxonomy frontmatter emission, padded.\n"
+        "includes:\n  - severity-rubric.md\n"
+        "regulatory_anchors: []\n"
+        "taxonomies:\n  - masvs\n  - maswe\n"
+    )
+    (domains_dir / "taxpack" / "severity-rubric.md").write_text("# rubric\n")
+
+    out = tmp_path / "apd-domain"
+    build_domain_skill(["taxpack"], domains_dir, out, "1.0.0", emit_sidecars=False)
+    fm = _frontmatter((out / "SKILL.md").read_text())
+    assert fm["metadata"]["taxonomies"] == ["masvs", "maswe"]
+
+
+def test_no_taxonomies_omits_frontmatter_key(tmp_path):
+    """A pack with no taxonomies field must NOT emit a metadata.taxonomies key."""
+    out = tmp_path / "apd-domain"
+    build_domain_skill(["sample"], DOMAINS, out, "1.0.0", emit_sidecars=False)
+    fm = _frontmatter((out / "SKILL.md").read_text())
+    assert "taxonomies" not in fm["metadata"]

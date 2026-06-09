@@ -190,3 +190,27 @@ def test_run_config_rejects_legacy_domain_key():
     data = {"run_id": "r", "domain": "pbm", "framework_version": "1.1.0"}
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors, "legacy singular `domain` must be rejected (additionalProperties:false)"
+
+
+@pytest.mark.parametrize("tax", ["masvs", "maswe"])
+def test_run_config_accepts_mas_taxonomies(tax):
+    """The OWASP MAS taxonomies (v1.7+) are accepted enum values."""
+    data = {
+        "run_id": "apd-20260609-mobile",
+        "domains": ["mobile-applications"],
+        "framework_version": "1.7.0",
+        "taxonomies": [tax],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+def test_run_config_accepts_both_mas_taxonomies_together():
+    data = {
+        "run_id": "apd-20260609-mobile",
+        "domains": ["mobile-applications"],
+        "framework_version": "1.7.0",
+        "taxonomies": ["masvs", "maswe"],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []

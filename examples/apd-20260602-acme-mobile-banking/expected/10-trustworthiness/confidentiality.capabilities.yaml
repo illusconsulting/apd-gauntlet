@@ -20,3 +20,5 @@ capability:
     - SC-8
     - SC-8(1)
     - SC-13
+    masvs:
+    - MASVS-NETWORK-1

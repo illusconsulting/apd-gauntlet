@@ -267,3 +267,211 @@ def test_atlas_coverage_emitted_only_when_declared(tmp_path):
     assert sorted(by_id["AML.T0051"]["finding_ids"]) == ["intg-a1111111", "intg-a2222222"]
     # Sub-technique resolves with a parent-prefixed name.
     assert ":" in by_id["AML.T0051.000"]["name"]
+
+
+def test_rollup_result_has_masvs_and_maswe_fields():
+    from apd_gauntlet.synthesis.rollup import RollupResult
+
+    rr = RollupResult()
+    assert rr.masvs is None
+    assert rr.maswe is None
+
+
+def test_maswe_rollup_groups_by_id_with_surfaces_and_first_appearance_order():
+    from apd_gauntlet.synthesis.rollup import _maswe_rollup
+    findings = [
+        {"id": "intg-b2222222", "evidence": [{"artifact": "p.md", "locator": "src/B.kt:9"}],
+         "control_mappings": {"maswe": ["MASWE-0002"]}},
+        {"id": "conf-a1111111", "evidence": [{"artifact": "p.md", "locator": "src/A.kt:3"}],
+         "control_mappings": {"maswe": ["MASWE-0001"]}},
+        {"id": "conf-a3333333", "evidence": [{"artifact": "p.md", "locator": "src/A.kt:7"}],
+         "control_mappings": {"maswe": ["MASWE-0001"]}},
+    ]
+    doc = _maswe_rollup(findings)
+    assert doc["schema_version"] == 1
+    assert doc["generated_by"] == "synthesizer"
+    by_id = {e["maswe_id"]: e for e in doc["entries"]}
+    # MASWE-0002 cited first → appears before MASWE-0001 (first-appearance order).
+    assert [e["maswe_id"] for e in doc["entries"]] == ["MASWE-0002", "MASWE-0001"]
+    # MASWE-0001 cited by two findings → one entry, finding_count == 2, sorted ids + surfaces.
+    assert by_id["MASWE-0001"]["finding_count"] == 2
+    assert by_id["MASWE-0001"]["finding_ids"] == ["conf-a1111111", "conf-a3333333"]
+    assert by_id["MASWE-0001"]["surfaces"] == ["src/A.kt:3", "src/A.kt:7"]
+    # name/category/status/parent_masvs resolved from the maswe.json catalog.
+    assert by_id["MASWE-0001"]["category"] == "MASVS-STORAGE"
+    assert by_id["MASWE-0001"]["status"] == "new"
+    # MASWE-0001 maps to both MASVS-STORAGE-2 and MASVS-PRIVACY-1 upstream; the
+    # filing category (path-derived) is still MASVS-STORAGE.
+    assert by_id["MASWE-0001"]["parent_masvs"] == ["MASVS-STORAGE-2", "MASVS-PRIVACY-1"]
+    assert len(by_id["MASWE-0001"]["name"]) >= 3
+
+
+def test_maswe_rollup_falls_back_to_id_when_weakness_unknown():
+    from apd_gauntlet.synthesis.rollup import _maswe_rollup
+    findings = [{"id": "conf-z9999999", "control_mappings": {"maswe": ["MASWE-9999"]}}]
+    doc = _maswe_rollup(findings)
+    e = doc["entries"][0]
+    assert e["maswe_id"] == "MASWE-9999"
+    assert e["name"] == "MASWE-9999"
+    assert e["category"] is None
+    assert e["status"] is None
+    assert e["parent_masvs"] == []
+
+
+def test_masvs_rollup_posture_transitions_and_union():
+    from apd_gauntlet.synthesis.rollup import _masvs_rollup
+    findings = [
+        # gapped: finding only
+        {"id": "conf-a1111111", "evidence": [{"artifact": "p.md", "locator": "src/A.kt:3"}],
+         "control_mappings": {"masvs": ["MASVS-STORAGE-1"]}},
+        # gapped_and_covered: shares MASVS-CRYPTO-1 with a capability below
+        {"id": "conf-a2222222", "evidence": [{"artifact": "p.md", "locator": "src/B.kt:5"}],
+         "control_mappings": {"masvs": ["MASVS-CRYPTO-1"]}},
+    ]
+    capabilities = [
+        # covered: capability only
+        {"id": "auth-cap-c1111111", "control_mappings": {"masvs": ["MASVS-AUTH-1"]}},
+        # gapped_and_covered partner for MASVS-CRYPTO-1
+        {"id": "crypto-cap-c2222222", "control_mappings": {"masvs": ["MASVS-CRYPTO-1"]}},
+    ]
+    doc = _masvs_rollup(findings, capabilities)
+    assert doc["schema_version"] == 1
+    assert doc["generated_by"] == "synthesizer"
+    by_id = {c["masvs_id"]: c for c in doc["controls"]}
+    assert by_id["MASVS-STORAGE-1"]["posture"] == "gapped"
+    assert by_id["MASVS-STORAGE-1"]["finding_ids"] == ["conf-a1111111"]
+    assert by_id["MASVS-STORAGE-1"]["surfaces"] == ["src/A.kt:3"]
+    assert by_id["MASVS-STORAGE-1"]["capability_count"] == 0
+    assert by_id["MASVS-AUTH-1"]["posture"] == "covered"
+    assert by_id["MASVS-AUTH-1"]["capability_ids"] == ["auth-cap-c1111111"]
+    assert by_id["MASVS-AUTH-1"]["finding_count"] == 0
+    assert by_id["MASVS-CRYPTO-1"]["posture"] == "gapped_and_covered"
+    assert by_id["MASVS-CRYPTO-1"]["finding_ids"] == ["conf-a2222222"]
+    assert by_id["MASVS-CRYPTO-1"]["capability_ids"] == ["crypto-cap-c2222222"]
+    # name/category/category_title resolved from masvs.json catalog.
+    assert by_id["MASVS-STORAGE-1"]["category"] == "MASVS-STORAGE"
+    assert by_id["MASVS-STORAGE-1"]["category_title"] == "Storage"
+    assert len(by_id["MASVS-STORAGE-1"]["name"]) >= 3
+
+
+def test_masvs_rollup_first_appearance_then_id_ordering():
+    from apd_gauntlet.synthesis.rollup import _masvs_rollup
+    findings = [
+        {"id": "conf-b2222222", "control_mappings": {"masvs": ["MASVS-CRYPTO-1"]}},
+        {"id": "conf-a1111111", "control_mappings": {"masvs": ["MASVS-STORAGE-1"]}},
+    ]
+    # Capability cites an id not in any finding → appended after the finding-ordered ids.
+    capabilities = [{"id": "net-cap-c1", "control_mappings": {"masvs": ["MASVS-NETWORK-1"]}}]
+    doc = _masvs_rollup(findings, capabilities)
+    ids = [c["masvs_id"] for c in doc["controls"]]
+    # finding first-appearance: CRYPTO-1 then STORAGE-1; cap-only NETWORK-1 last.
+    assert ids == ["MASVS-CRYPTO-1", "MASVS-STORAGE-1", "MASVS-NETWORK-1"]
+    assert doc["controls"][2]["posture"] == "covered"
+
+
+def test_build_rollups_skips_masvs_maswe_when_not_declared(tmp_path):
+    from apd_gauntlet.synthesis.rollup import build_rollups
+    findings_yaml = (
+        "finding:\n"
+        "  - schema_version: 1\n"
+        "    id: conf-aabbccdd\n"
+        "    apd_goal: confidentiality\n"
+        "    disposition: gap\n"
+        "    control_mappings:\n"
+        "      masvs: [MASVS-STORAGE-1]\n"
+        "      maswe: [MASWE-0001]\n"
+    )
+    run_dir = _build_minimal_run(
+        tmp_path, "run_id: t\ndomain: pbm\n", findings_yaml, "capability: []\n"
+    )
+    result = build_rollups(run_dir)
+    assert result.masvs is None
+    assert result.maswe is None
+
+
+def test_build_rollups_emits_masvs_maswe_when_declared(tmp_path):
+    from apd_gauntlet.synthesis.rollup import build_rollups
+    findings_yaml = (
+        "finding:\n"
+        "  - schema_version: 1\n"
+        "    id: conf-aabbccdd\n"
+        "    apd_goal: confidentiality\n"
+        "    disposition: gap\n"
+        "    control_mappings:\n"
+        "      masvs: [MASVS-STORAGE-1]\n"
+        "      maswe: [MASWE-0001]\n"
+    )
+    run_dir = _build_minimal_run(
+        tmp_path,
+        "run_id: t\ndomain: mobile-applications\ntaxonomies: [masvs, maswe]\n",
+        findings_yaml,
+        "capability: []\n",
+    )
+    result = build_rollups(run_dir)
+    assert result.masvs is not None
+    assert result.maswe is not None
+    assert result.masvs["controls"][0]["masvs_id"] == "MASVS-STORAGE-1"
+    assert result.maswe["entries"][0]["maswe_id"] == "MASWE-0001"
+
+
+def test_masvs_maswe_coverage_written_and_schema_valid_only_when_declared(tmp_path):
+    findings_yaml = (
+        "finding:\n"
+        "  - schema_version: 1\n"
+        "    id: conf-aabbccdd\n"
+        "    apd_goal: confidentiality\n"
+        "    disposition: gap\n"
+        "    evidence:\n"
+        "      - artifact: scan.md\n"
+        "        locator: 'src/Store.kt:12'\n"
+        "    control_mappings:\n"
+        "      masvs: [MASVS-STORAGE-1]\n"
+        "      maswe: [MASWE-0001]\n"
+    )
+    caps_yaml = (
+        "capability:\n"
+        "  - schema_version: 1\n"
+        "    id: auth-cap-c1111111\n"
+        "    apd_goal: authenticity\n"
+        "    control_mappings:\n"
+        "      masvs: [MASVS-AUTH-1]\n"
+    )
+
+    # 1) Not declared → both files absent.
+    undeclared = _build_minimal_run(
+        tmp_path / "u", "run_id: t\ndomain: pbm\n", findings_yaml, caps_yaml
+    )
+    CliRunner().invoke(main, ["rollup", str(undeclared)])
+    assert not (undeclared / "40-synthesis" / "masvs-coverage.yaml").exists()
+    assert not (undeclared / "40-synthesis" / "maswe-coverage.yaml").exists()
+
+    # 2) Declared → both present and schema-valid.
+    declared = _build_minimal_run(
+        tmp_path / "d",
+        "run_id: t\ndomain: mobile-applications\ntaxonomies: [masvs, maswe]\n",
+        findings_yaml,
+        caps_yaml,
+    )
+    result = CliRunner().invoke(main, ["rollup", str(declared)])
+    assert result.exit_code == 0, result.output
+    masvs_doc = yaml.safe_load((declared / "40-synthesis" / "masvs-coverage.yaml").read_text())
+    assert _validate(masvs_doc, "masvs-coverage.schema.json") == []
+    maswe_doc = yaml.safe_load((declared / "40-synthesis" / "maswe-coverage.yaml").read_text())
+    assert _validate(maswe_doc, "maswe-coverage.schema.json") == []
+    # MASVS-AUTH-1 cap-only → covered; MASVS-STORAGE-1 finding-only → gapped.
+    by_id = {c["masvs_id"]: c for c in masvs_doc["controls"]}
+    assert by_id["MASVS-AUTH-1"]["posture"] == "covered"
+    assert by_id["MASVS-STORAGE-1"]["posture"] == "gapped"
+    assert maswe_doc["entries"][0]["maswe_id"] == "MASWE-0001"
+
+
+def test_existing_rollups_unchanged_when_mas_not_declared(tmp_path):
+    dst = _copy_example(tmp_path)
+    result = CliRunner().invoke(main, ["rollup", str(dst)])
+    assert result.exit_code == 0, result.output
+    # MAS files must NOT appear for a non-mobile example run.
+    assert not (dst / "40-synthesis" / "masvs-coverage.yaml").exists()
+    assert not (dst / "40-synthesis" / "maswe-coverage.yaml").exists()
+    # The canonical nist/attack/matrix outputs still validate.
+    nist = yaml.safe_load((dst / "40-synthesis" / "nist-coverage.yaml").read_text())
+    assert _validate(nist, "nist-coverage-doc.schema.json") == []

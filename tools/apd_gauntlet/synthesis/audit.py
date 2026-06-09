@@ -171,6 +171,32 @@ def audit_report(run_dir: Path) -> AuditResult:
     _check(result, "id_coverage_attack", attack_ids <= data_attack_ids,
            f"yaml={len(attack_ids)} data.js={len(data_attack_ids)}")
 
+    # OWASP MAS per-id: in data.js each finding carries its taxonomy ids under the
+    # `mappings` key (transform.findings_array renames control_mappings -> mappings),
+    # so read `mappings` here, NOT `control_mappings`. Every CITED id must resolve to
+    # a taxonomy_dict key so the report renders a title, never a bare ID (mirrors
+    # id_coverage_nist). Zero cited ids -> empty set -> vacuously passes.
+    def _cited_mas_ids(key: str) -> set[str]:
+        ids: set[str] = set()
+        for f in parsed.get("findings", []):
+            cm = f.get("mappings") if isinstance(f, dict) else None
+            vals = (cm or {}).get(key) if isinstance(cm, dict) else None
+            if isinstance(vals, list):
+                ids.update(str(v) for v in vals if v)
+        return ids
+
+    masvs_cited = _cited_mas_ids("masvs")
+    masvs_missing = sorted(cid for cid in masvs_cited if cid not in taxonomy)[:5]
+    _check(result, "id_coverage_masvs", not masvs_missing,
+           f"cited={len(masvs_cited)} missing_from_taxonomy={masvs_missing}",
+           klass="structural")
+
+    maswe_cited = _cited_mas_ids("maswe")
+    maswe_missing = sorted(cid for cid in maswe_cited if cid not in taxonomy)[:5]
+    _check(result, "id_coverage_maswe", not maswe_missing,
+           f"cited={len(maswe_cited)} missing_from_taxonomy={maswe_missing}",
+           klass="structural")
+
     # Count parity (passthrough): the rendered data.js.summary must faithfully
     # carry the canonical 40-synthesis/metrics.yaml. compute_metrics
     # (synthesis/metrics.py) is the single source — no independent recompute.
@@ -351,13 +377,31 @@ def audit_report(run_dir: Path) -> AuditResult:
     nist_rollup = _nr if isinstance(_nr, list) else []
     _ae = parsed.get("attack_exposure")
     attack_exposure = _ae if isinstance(_ae, list) else []
+    # OWASP MAS extension: when a taxonomy is active (lifted into
+    # meta.active_taxonomies from run-config) AND at least one finding cites a
+    # MAS id, the corresponding rendered coverage rows MUST be present. Zero
+    # cited ids stays exempt (a MAS-active run with no mobile findings is fine).
+    _at_raw = meta.get("active_taxonomies")
+    active_taxonomies = {str(t) for t in _at_raw} if isinstance(_at_raw, list) else set()
+    _masvs_cov = parsed.get("masvs_coverage")
+    masvs_cov = _masvs_cov if isinstance(_masvs_cov, list) else []
+    _maswe_cov = parsed.get("maswe_coverage")
+    maswe_cov = _maswe_cov if isinstance(_maswe_cov, list) else []
+    masvs_gated = "masvs" in active_taxonomies and bool(masvs_cited)
+    maswe_gated = "maswe" in active_taxonomies and bool(maswe_cited)
     rollups_ok = is_empty_run or (
         (len(nist) == 0 or len(nist_rollup) > 0)
         and (len(attack) == 0 or len(attack_exposure) > 0)
+        and (not masvs_gated or len(masvs_cov) > 0)
+        and (not maswe_gated or len(maswe_cov) > 0)
     )
     _check(result, "coverage_rollups_nonempty", rollups_ok,
            f"nist_controls={len(nist)} nist_rollup_rows={len(nist_rollup)} "
-           f"attack_techniques={len(attack)} attack_exposure_rows={len(attack_exposure)}",
+           f"attack_techniques={len(attack)} attack_exposure_rows={len(attack_exposure)} "
+           f"masvs_active={'masvs' in active_taxonomies} masvs_cited={len(masvs_cited)} "
+           f"masvs_rows={len(masvs_cov)} "
+           f"maswe_active={'maswe' in active_taxonomies} maswe_cited={len(maswe_cited)} "
+           f"maswe_rows={len(maswe_cov)}",
            klass="structural")
 
     # Completeness check #7 — taxonomy titles resolve (structural; per design spec):

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/masvs-coverage.schema.json",
+  "title": "APD Gauntlet OWASP MASVS Coverage Rollup",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "controls"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["masvs_id", "name", "category", "category_title", "finding_count", "finding_ids", "capability_count", "capability_ids", "posture"],
+        "additionalProperties": false,
+        "properties": {
+          "masvs_id":         { "$ref": "_defs.schema.json#/$defs/masvs_control_id" },
+          "name":             { "type": "string", "minLength": 3 },
+          "category":         { "$ref": "_defs.schema.json#/$defs/masvs_category_id" },
+          "category_title":   { "type": "string", "minLength": 1 },
+          "finding_count":    { "type": "integer", "minimum": 0 },
+          "finding_ids":      { "type": "array", "items": { "type": "string" } },
+          "surfaces":         { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "capability_count": { "type": "integer", "minimum": 0 },
+          "capability_ids":   { "type": "array", "items": { "type": "string" } },
+          "posture":          { "type": "string", "enum": ["silent", "covered", "gapped", "gapped_and_covered"] }
+        }
+      }
+    }
+  }
+}

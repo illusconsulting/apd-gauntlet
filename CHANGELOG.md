@@ -4,8 +4,13 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+## v1.7.0 — 2026-06-09
+
 ### Added
 
+- **OWASP MASVS / MASWE as first-class mobile taxonomies** — the `mobile-applications` pack declares `taxonomies: [masvs, maswe]` in `domain.yaml`, auto-seeded into a run's `taxonomies:` at `init-run`. Specialists emit `masvs` control IDs (`MASVS-<CATEGORY>-<n>`, on findings **and** capabilities) and `maswe` weakness IDs (`MASWE-####`, findings-only) in `control_mappings`, feeding two new gated synthesis rollups (`masvs-coverage.yaml`, `maswe-coverage.yaml` + their single-file schemas) and two new Coverage sub-tabs in the HTML report. New `apd-gauntlet refresh-mas` verb + bundled `masvs.json` (v2.1.0, 24 controls) and `maswe.json` (Beta, pinned per-refresh to an upstream commit). `data.meta.active_taxonomies` now lifts the run's taxonomy scope; `audit-report` gains `id_coverage_masvs` / `id_coverage_maswe` structural checks and `coverage_rollups_nonempty` extends to the MAS rollups.
+- **Optional `taxonomies` field on `domain.yaml`** — any pack can declare default taxonomies that `init-run` unions into the run config (pack -> run auto-seed). Packs that omit the field are unaffected.
+- **ADR 0014** — OWASP MAS (MASVS + MASWE) as mobile finding/capability taxonomies.
 - HTML report: a new "Start here" reading-guide tab (`✦`, leftmost) that orients first-time readers with an orientation map, a vocabulary glossary, a reading workflow, and per-role focus paths, reading the run's live data for contextual guidance. Overview remains the default tab.
 - **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, an interactive trust-boundary surface map, and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared interactive `GraphView`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
 - **HTML report — Attack-paths "Enumerated paths" link to findings.** Each enumerated path whose edges traverse a finding now shows a `⚑ N finding(s)` indicator in its header (titled with the finding ids). Clicking a finding/capability id pill copies the id to the clipboard (with a toast); clicking the red "finding" chip immediately left of the id opens that finding in the Findings view (the same `onOpenFinding` navigation Overview/Annexes already use).

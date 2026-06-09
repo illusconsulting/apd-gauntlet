@@ -1,0 +1,24 @@
+finding:
+  schema_version: 1
+  id: conf-a1b2c3d4
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: "Session token persisted to insecure on-device storage"
+  summary: "The mobile client writes the bearer token to a world-readable shared-preferences file."
+  detail: "MainActivity.kt:88 stores the auth token in default SharedPreferences (MODE_WORLD_READABLE), exposing it to any co-resident app; maps to MASVS-STORAGE and MASWE-0006."
+  evidence:
+    - artifact: app/src/main/java/com/example/MainActivity.kt
+      locator: "L88"
+      excerpt: 'getSharedPreferences("auth", MODE_WORLD_READABLE).edit().putString("token", t)'
+  control_mappings:
+    nist_800_53r5: ["SC-28", "IA-5"]
+    masvs: ["MASVS-STORAGE-1", "MASVS-STORAGE-2"]
+    maswe: ["MASWE-0006"]
+  recommendation:
+    posture: required
+    summary: "Store the token in the Android Keystore / EncryptedSharedPreferences."
+    detail: "Replace MODE_WORLD_READABLE SharedPreferences with EncryptedSharedPreferences keyed by a Keystore-backed master key, and clear on logout."

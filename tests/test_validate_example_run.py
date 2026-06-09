@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 
+import yaml as _yaml
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
 
@@ -38,3 +39,18 @@ def test_run_coverage_is_array_shape() -> None:
     assert isinstance(matrix.get("components"), list), \
         "apd-coverage-matrix must be array-shaped"
     assert "coverage" not in matrix
+
+
+MOBILE = (
+    pathlib.Path(__file__).resolve().parent.parent
+    / "examples" / "apd-20260602-acme-mobile-banking" / "expected"
+)
+
+
+def test_mobile_run_config_declares_mas_taxonomies() -> None:
+    cfg = _yaml.safe_load((MOBILE / ".apd-run.yaml").read_text(encoding="utf-8"))
+    tax = cfg.get("taxonomies") or []
+    assert "masvs" in tax, f"masvs must be declared; got {tax}"
+    assert "maswe" in tax, f"maswe must be declared; got {tax}"
+    # MAS taxonomy support landed in 1.7.0; the example must advertise it.
+    assert cfg.get("framework_version") == "1.7.0", cfg.get("framework_version")

@@ -1,0 +1,17 @@
+capability:
+  schema_version: 1
+  id: conf-cap-1a2b3c4d
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: "Keystore-backed encrypted credential storage"
+  description: "The mobile client stores all auth material in EncryptedSharedPreferences keyed by a hardware-backed Android Keystore master key."
+  maturity: implemented
+  scope: "Confirmed for the auth and session modules. Not addressed: cached profile images and the offline draft cache."
+  evidence:
+    - artifact: app/src/main/java/com/example/SecureStore.kt
+      locator: "L20"
+      excerpt: "EncryptedSharedPreferences.create(... MasterKeys.AES256_GCM_SPEC ...)"
+  control_mappings:
+    nist_800_53r5: ["SC-28"]
+    masvs: ["MASVS-STORAGE-0"]

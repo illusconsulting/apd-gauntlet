@@ -66,6 +66,19 @@ def test_cli_refresh_d3fend_invokes_refresh():
         mock.assert_called_once()
 
 
+def test_cli_refresh_mas_invokes_both_builders():
+    runner = CliRunner()
+    with patch("apd_gauntlet.refresh_mas.refresh_masvs") as masvs, patch(
+        "apd_gauntlet.refresh_mas.refresh_maswe"
+    ) as maswe:
+        masvs.return_value = Path("/tmp/masvs.json")
+        maswe.return_value = Path("/tmp/maswe.json")
+        result = runner.invoke(main, ["refresh-mas"])
+        assert result.exit_code == 0
+        masvs.assert_called_once()
+        maswe.assert_called_once()
+
+
 def test_cli_init_run_accepts_taxonomies_flag(tmp_path):
     inputs = tmp_path / "src-inputs"
     inputs.mkdir()
@@ -223,3 +236,14 @@ def test_cli_parse_threat_model_reports_invalid_json_path(tmp_path):
     result = runner.invoke(main, ["parse-threat-model", str(bad)])
     assert result.exit_code != 0
     assert "invalid JSON" in result.output
+
+
+def test_init_run_help_lists_mas_taxonomies():
+    """The init-run --taxonomies help must advertise masvs + maswe."""
+    from apd_gauntlet.cli import main
+    from click.testing import CliRunner
+
+    result = CliRunner().invoke(main, ["init-run", "--help"])
+    assert result.exit_code == 0, result.output
+    assert "masvs" in result.output
+    assert "maswe" in result.output

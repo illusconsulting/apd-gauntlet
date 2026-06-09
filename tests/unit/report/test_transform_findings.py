@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
-from apd_gauntlet.report.loader import load_run
+from apd_gauntlet.report.loader import RunArtifacts, load_run
 from apd_gauntlet.report.transform import findings_array
 
 
@@ -71,3 +71,46 @@ def test_findings_array_unknown_supplement_id_dropped_silently(
     )
     headlined = [f for f in arr if f.get("headline")]
     assert headlined == []
+
+
+_FA_METRICS = {"schema_version": 1, "findings_total": 0}
+
+
+def _fa_artifacts(findings):
+    return RunArtifacts(
+        run_id="r", framework_version="1", domain_pack_name="p",
+        domain_pack_version="1", subject="s", date="2026-01-01",
+        asset_inventory={}, deduped_findings=findings, deduped_capabilities=[],
+        contradictions=[], contradictions_notes=None,
+        severity_disagreements=[], severity_disagreements_notes=None,
+        nist_coverage={}, attack_exposure={}, apd_coverage_matrix={},
+        attack_paths=None, asset_graph=None, defense_graph=None,
+        attack_path_findings=[], report_data=None, metrics=_FA_METRICS,
+    )
+
+
+def test_findings_array_includes_masvs_and_maswe() -> None:
+    art = _fa_artifacts([
+        {
+            "id": "rslv-00000001",
+            "control_mappings": {
+                "masvs": ["MASVS-STORAGE-1", "MASVS-CRYPTO-2"],
+                "maswe": ["MASWE-0001"],
+            },
+            "evidence": [{"artifact": "src/Store.kt", "locator": "L42"}],
+        }
+    ])
+    rows = findings_array(art, headline_supplement=None)
+    mappings = rows[0]["mappings"]
+    assert mappings["masvs"] == ["MASVS-STORAGE-1", "MASVS-CRYPTO-2"]
+    assert mappings["maswe"] == ["MASWE-0001"]
+
+
+def test_findings_array_masvs_maswe_empty_when_absent() -> None:
+    art = _fa_artifacts([
+        {"id": "conf-00000001", "control_mappings": {"cwe": ["CWE-79"]},
+         "evidence": [{"artifact": "x", "locator": "y"}]}
+    ])
+    rows = findings_array(art, headline_supplement=None)
+    assert rows[0]["mappings"]["masvs"] == []
+    assert rows[0]["mappings"]["maswe"] == []

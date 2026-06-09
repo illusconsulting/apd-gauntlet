@@ -1,0 +1,13 @@
+name: mobile-applications
+display_name: "Mobile Applications"
+version: 1.0.0
+framework_compat: ">=1.7.0,<2.0.0"
+description: "Mobile-app severity rubric and pattern library anchored to OWASP MASVS v2 and MASWE."
+includes:
+  - severity-rubric.md
+  - common-patterns/confidentiality.md
+regulatory_anchors:
+  - "OWASP MASVS"
+taxonomies:
+  - masvs
+  - maswe

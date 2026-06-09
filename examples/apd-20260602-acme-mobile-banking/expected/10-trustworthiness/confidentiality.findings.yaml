@@ -25,6 +25,11 @@ finding:
     cwe:
     - CWE-312
     - CWE-522
+    masvs:
+    - MASVS-STORAGE-1
+    - MASVS-STORAGE-2
+    maswe:
+    - MASWE-0006
   recommendation:
     posture: required
     summary: Move tokens to the platform hardware-backed key store and disable cleartext backup of sensitive data.
@@ -56,6 +61,11 @@ finding:
     cwe:
     - CWE-798
     - CWE-321
+    masvs:
+    - MASVS-CRYPTO-2
+    - MASVS-RESILIENCE-2
+    maswe:
+    - MASWE-0014
   recommendation:
     posture: required
     summary: Remove the shared embedded secret; provision per-device keys at runtime or rely on server-verified attestation.

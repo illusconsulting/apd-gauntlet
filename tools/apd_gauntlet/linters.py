@@ -173,6 +173,41 @@ def check_hedge_words_in_attack_rationale(record: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def check_maswe_masvs_consistency(
+    record: dict[str, Any], maswe_parents: dict[str, list[str]]
+) -> list[str]:
+    """WARNING-level: a finding's cited ``maswe`` ids should be consistent with
+    its cited ``masvs`` ids.
+
+    Each MASWE weakness declares ``masvs_v2`` parent controls in maswe.json
+    (passed in as ``maswe_parents`` = {MASWE-NNNN: [MASVS-...]}). When a finding
+    cites a maswe whose parent control(s) are NONE of the finding's cited masvs
+    ids, the mapping is likely incomplete or mismatched — warn so the author can
+    add the parent control or correct the weakness id. A maswe id that is ABSENT
+    from ``maswe_parents`` is not graded here (id_coverage_maswe owns unknown
+    ids); a maswe with an EMPTY parent list is exempt (no constraint to check).
+    Returns ``[]`` when no ``maswe`` is cited.
+    """
+    warnings: list[str] = []
+    control_mappings = record.get("control_mappings") or {}
+    maswe_ids = control_mappings.get("maswe") or []
+    if not maswe_ids:
+        return warnings
+    cited_masvs = {str(m) for m in (control_mappings.get("masvs") or [])}
+    for wid in maswe_ids:
+        expected = maswe_parents.get(str(wid))
+        if not expected:  # unknown id or no declared parents -> not graded here
+            continue
+        if not (set(expected) & cited_masvs):
+            warnings.append(
+                f"control_mappings.maswe {wid!r} maps to MASVS {sorted(expected)} "
+                f"(per maswe.json masvs_v2), but the finding cites masvs "
+                f"{sorted(cited_masvs) or 'none'}; add the parent MASVS control or "
+                f"correct the weakness id"
+            )
+    return warnings
+
+
 def check_d3fend_counters_attack(record: dict[str, Any]) -> list[str]:
     """Every d3fend.counters_attack ID on a capability must appear in the same
     capability's `mitre_attack[].technique` list — either exactly, or (for

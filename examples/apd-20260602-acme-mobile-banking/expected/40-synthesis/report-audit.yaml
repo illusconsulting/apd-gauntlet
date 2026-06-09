@@ -1,0 +1,107 @@
+schema_version: 1
+generated_by: apd-gauntlet
+status: pass
+checks:
+- name: id_coverage_findings
+  status: pass
+  detail: yaml=9 data.js=9 missing=[]
+  klass: structural
+- name: id_coverage_capabilities
+  status: pass
+  detail: yaml=2 data.js=2
+  klass: structural
+- name: id_coverage_nist
+  status: pass
+  detail: controls=25 missing_from_taxonomy=[]
+  klass: structural
+- name: nist_rollup_parity
+  status: pass
+  detail: recompute_rows=6 data.js_rows=6 mismatched_families=[]
+  klass: structural
+- name: id_coverage_attack
+  status: pass
+  detail: yaml=0 data.js=0
+  klass: structural
+- name: id_coverage_masvs
+  status: pass
+  detail: cited=6 missing_from_taxonomy=[]
+  klass: structural
+- name: id_coverage_maswe
+  status: pass
+  detail: cited=3 missing_from_taxonomy=[]
+  klass: structural
+- name: metrics_present
+  status: pass
+  detail: present
+  klass: structural
+- name: count_parity_severity
+  status: pass
+  detail: 'metrics.yaml={''critical'': 2, ''high'': 6, ''medium'': 1, ''low'': 0,
+    ''info'': 0} data.js={''critical'': 2, ''high'': 6, ''medium'': 1, ''low'': 0,
+    ''info'': 0}'
+  klass: structural
+- name: count_parity_totals
+  status: pass
+  detail: data.js=9 metrics.yaml=9
+  klass: structural
+- name: metrics_internal_consistency
+  status: pass
+  detail: total=9 sev_sum=9 tier_sum=9 disp_sum=9
+  klass: structural
+- name: authored_merges_applied
+  status: pass
+  detail: unresolved_authored_merges=0 (see 40-synthesis/rejected-records.yaml)
+  klass: editorial
+- name: data_js_recompute_drift
+  status: pass
+  detail: recompute_findings=9 data.js=9
+  klass: structural
+- name: section_errors_empty
+  status: pass
+  detail: section_errors=[]
+  klass: structural
+- name: exec_summary_present
+  status: pass
+  detail: is_empty_run=False paragraphs=2
+  klass: editorial
+- name: editorial_sections_present
+  status: pass
+  detail: report_data=True posture=True headline=7 next_steps=5
+  klass: editorial
+- name: attack_paths_present
+  status: pass
+  detail: 'exempt: attack-path analysis not activated (no asset-graph.yaml)'
+  klass: structural
+- name: d3fend_overlay_present
+  status: pass
+  detail: 'exempt: defense_graph=False overlays=0'
+  klass: structural
+- name: apd_matrix_nonempty
+  status: pass
+  detail: findings_present=True matrix_rows=2
+  klass: structural
+- name: coverage_rollups_nonempty
+  status: pass
+  detail: nist_controls=25 nist_rollup_rows=6 attack_techniques=0 attack_exposure_rows=0
+    masvs_active=True masvs_cited=6 masvs_rows=7 maswe_active=True maswe_cited=3 maswe_rows=3
+  klass: structural
+- name: taxonomy_titles_resolve
+  status: pass
+  detail: taxonomy_entries=47 bare_id=0 sample=[]
+  klass: structural
+- name: threat_model_scene_coherent
+  status: pass
+  detail: "no threat model present \u2014 scene omitted (exempt)"
+  klass: structural
+counts:
+  deduped_findings_yaml: 9
+  apath_findings_yaml: 0
+  tmeval_findings_yaml: 0
+  findings_data_js: 9
+  capabilities_yaml: 2
+  capabilities_data_js: 2
+  nist_controls_yaml: 25
+  nist_ids_in_taxonomy: 25
+  attack_techniques_yaml: 0
+  attack_techniques_data_js: 0
+drift: []

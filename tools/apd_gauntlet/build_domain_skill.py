@@ -178,6 +178,16 @@ def _packs_yaml(metas: list[tuple[str, dict[str, Any], pathlib.Path]]) -> str:
     return "".join(f"    - name: {n}\n      version: {m['version']}\n" for (n, m, _) in metas)
 
 
+def _merge_taxonomies(metas: list[tuple[str, dict[str, Any], pathlib.Path]]) -> list[str]:
+    """Union the packs' declared ``taxonomies`` in declared-pack/declared-entry order,
+    deduped. Empty when no pack declares any."""
+    seen: dict[str, None] = {}
+    for _, meta, _ in metas:
+        for tax in meta.get("taxonomies", []) or []:
+            seen.setdefault(tax, None)
+    return list(seen)
+
+
 def _sidecar_frontmatter(
     goal_stem: str,
     metas: list[tuple[str, dict[str, Any], pathlib.Path]],
@@ -266,6 +276,12 @@ def build_domain_skill(
         return out_path
 
     surfaces = _render_surfaces_section(_merge_surfaces([(n, m) for (n, m, _) in metas]))
+    taxonomies = _merge_taxonomies(metas)
+    taxonomies_yaml = (
+        "  taxonomies:\n" + "".join(f"    - {t}\n" for t in taxonomies)
+        if taxonomies
+        else ""
+    )
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     frontmatter = (
         "---\n"
@@ -276,6 +292,7 @@ def build_domain_skill(
         "metadata:\n"
         "  packs:\n"
         f"{_packs_yaml(metas)}"
+        f"{taxonomies_yaml}"
         f"  framework_version: {framework_version}\n"
         f"  generated: {timestamp}\n"
         "---\n"

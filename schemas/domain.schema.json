@@ -48,6 +48,15 @@
           "description": { "type": "string", "minLength": 10 }
         }
       }
+    },
+    "taxonomies": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Optional. Taxonomies this pack expects the run to activate (lifted into run-config). Values match the run-config taxonomies enum subset this pack supports; the mobile pack declares [masvs, maswe].",
+      "items": {
+        "type": "string",
+        "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10", "mitre_atlas", "masvs", "maswe"]
+      }
     }
   }
 }

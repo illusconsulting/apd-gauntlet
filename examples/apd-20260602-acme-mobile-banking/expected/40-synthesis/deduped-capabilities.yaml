@@ -1,0 +1,52 @@
+capability:
+- schema_version: 1
+  id: auth-cap-7f003829
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Certificate pinning on the Android API channel
+  description: The Android client pins the production certificate for api.acmebank.com
+    in the Network Security Config, verifying server identity beyond default CA trust.
+  maturity: implemented
+  scope: Confirmed for api.acmebank.com on Android via Network Security Config. iOS
+    uses the default system trust store with no pinning, and pin agility is absent
+    — both tracked as findings.
+  evidence:
+  - artifact: network_security_config.xml
+    locator: domain-config pin-set
+    excerpt: <pin digest="SHA-256">k3y9Z0kPmS3xq2c8b1example+pinvalueAAAAAAAAAA=</pin>
+  control_mappings:
+    nist_800_53r5:
+    - SC-8(1)
+    - SC-17
+    - IA-3(1)
+  caveats:
+  - Single pin with no backup pin or rotation procedure (see the Resilient finding).
+  - iOS has no certificate pinning; it relies on the default ATS system trust store.
+- schema_version: 1
+  id: conf-cap-3ad59773
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: HTTPS-only transport with no cleartext exemptions
+  description: All API traffic is HTTPS; the Android Network Security Config does
+    not permit cleartext traffic and iOS App Transport Security does not allow arbitrary
+    loads.
+  maturity: implemented
+  scope: Confirmed for the api.acmebank.com channel on Android (Network Security Config)
+    and iOS (ATS). Scope is transport encryption only; endpoint-identity pinning is
+    partial and tracked separately under Resilient/Authenticity.
+  evidence:
+  - artifact: network_security_config.xml
+    locator: network-security-config domain-config
+    excerpt: 'No cleartextTrafficPermitted override: defaults to false on minSdk 26+'
+  - artifact: Info.plist
+    locator: NSAppTransportSecurity
+    excerpt: <key>NSAllowsArbitraryLoads</key> <false/>
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-13
+    masvs:
+    - MASVS-NETWORK-1

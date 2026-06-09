@@ -1,0 +1,117 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- cwe_id: CWE-345
+  name: Insufficient Verification of Data Authenticity
+  abstraction: class
+  parent_pillar: CWE-693
+  finding_count: 1
+  finding_ids:
+  - auth-a66343a2
+  surfaces:
+  - "\xA76 Integrity and platform"
+- cwe_id: CWE-287
+  name: Improper Authentication
+  abstraction: class
+  parent_pillar: CWE-284
+  finding_count: 1
+  finding_ids:
+  - auth-e0cc47fc
+  surfaces:
+  - "\xA72 Authentication and session"
+- cwe_id: CWE-603
+  name: Use of Client-Side Authentication
+  abstraction: base
+  parent_pillar: CWE-1390
+  finding_count: 2
+  finding_ids:
+  - auth-e0cc47fc
+  - intg-573fc767
+  surfaces:
+  - "\xA72 Authentication and session"
+  - "\xA75 Transfers and limits"
+- cwe_id: CWE-798
+  name: Use of Hard-coded Credentials
+  abstraction: base
+  parent_pillar: CWE-1391
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  surfaces:
+  - "\xA73 On-device storage"
+- cwe_id: CWE-321
+  name: Use of Hard-coded Cryptographic Key
+  abstraction: variant
+  parent_pillar: CWE-798
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  surfaces:
+  - "\xA73 On-device storage"
+- cwe_id: CWE-312
+  name: Cleartext Storage of Sensitive Information
+  abstraction: base
+  parent_pillar: CWE-311
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  surfaces:
+  - application android:allowBackup
+  - "\xA73 On-device storage"
+- cwe_id: CWE-522
+  name: Insufficiently Protected Credentials
+  abstraction: class
+  parent_pillar: CWE-1390
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  surfaces:
+  - application android:allowBackup
+  - "\xA73 On-device storage"
+- cwe_id: CWE-613
+  name: Insufficient Session Expiration
+  abstraction: base
+  parent_pillar: CWE-672
+  finding_count: 1
+  finding_ids:
+  - ephem-260cbeab
+  surfaces:
+  - "\xA72 Authentication and session"
+- cwe_id: CWE-602
+  name: Client-Side Enforcement of Server-Side Security
+  abstraction: class
+  parent_pillar: CWE-693
+  finding_count: 1
+  finding_ids:
+  - intg-573fc767
+  surfaces:
+  - "\xA75 Transfers and limits"
+- cwe_id: CWE-939
+  name: Improper Authorization in Handler for Custom URL Scheme
+  abstraction: base
+  parent_pillar: CWE-862
+  finding_count: 1
+  finding_ids:
+  - intg-80dbf492
+  surfaces:
+  - activity .TransferDeepLinkActivity
+  - "\xA75 Transfers and limits"
+- cwe_id: CWE-749
+  name: Exposed Dangerous Method or Function
+  abstraction: base
+  parent_pillar: CWE-284
+  finding_count: 1
+  finding_ids:
+  - intg-80dbf492
+  surfaces:
+  - activity .TransferDeepLinkActivity
+  - "\xA75 Transfers and limits"
+- cwe_id: CWE-778
+  name: Insufficient Logging
+  abstraction: base
+  parent_pillar: CWE-223
+  finding_count: 1
+  finding_ids:
+  - nonrep-38caffd0
+  surfaces:
+  - "\xA77 Audit and privacy"

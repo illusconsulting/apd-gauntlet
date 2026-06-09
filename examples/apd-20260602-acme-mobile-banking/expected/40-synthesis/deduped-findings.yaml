@@ -1,0 +1,428 @@
+finding:
+- schema_version: 1
+  id: auth-a66343a2
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: No hardware attestation — backend cannot prove a genuine app on a genuine
+    device
+  summary: The app has no Play Integrity / App Attest, so the backend has no cryptographic
+    way to distinguish a genuine app on a stock device from a repackaged build on
+    a rooted device.
+  detail: Per MASVS-RESILIENCE-4, hardware attestation is the verifiable answer to
+    client trust that makes runtime detection heuristics (root/Frida checks) moot.
+    With no Play Integrity (Android) or App Attest (iOS) verdict consumed server-side,
+    the backend cannot tell a real install from a repackaged or instrumented one,
+    so every client-trusted signal (and the hardcoded HMAC) collapses against the
+    reverse-engineer and rooted-device positions. CWE-345 (insufficient verification
+    of data authenticity) frames the gap. The structural control is a server-verified
+    attestation verdict consumed as a write-authorization input — the verifiable client
+    identity that the other RESILIENCE heuristics only approximate.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §6 Integrity and platform
+    excerpt: no root/jailbreak detection, no anti-tampering, and no hardware attestation
+      (Play Integrity / App Attest)
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - IA-3
+    - SI-7
+    cwe:
+    - CWE-345
+  recommendation:
+    posture: required
+    summary: Adopt Play Integrity / App Attest and verify the verdict server-side
+      as a write-authorization input.
+    detail: Integrate Play Integrity (Android) and App Attest (iOS), verify the verdict
+      on the backend with freshness/nonce checks, and gate consequential write operations
+      on a passing, fresh attestation rather than on client-side root/tamper heuristics.
+  related_concerns:
+  - integrity
+  - non_repudiation
+  - ephemeral
+- schema_version: 1
+  id: auth-e0cc47fc
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Biometric unlock is a UI gate, not a Keystore/Keychain key release
+  summary: Face ID / fingerprint success merely loads the saved refresh token; no
+    hardware-backed key is bound to the biometric, so a patched client resumes the
+    session without it.
+  detail: 'Per MASVS-AUTH-3, a sensitive operation must be bound to the authenticator,
+    not gated by a UI check. Using LAContext.evaluatePolicy (iOS) and BiometricPrompt
+    (Android) only to decide whether to read the token means the biometric is decorative:
+    a rooted-device attacker or a patched binary skips evaluatePolicy and loads the
+    token directly. CWE-287 / CWE-603 describe the class. The structural control is
+    a biometric-gated key RELEASE — the refresh token (or a per-session key) sealed
+    under a Keychain/Keystore key whose use requires successful biometric authentication,
+    so the secret is cryptographically unavailable without the live factor.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §2 Authentication and session
+    excerpt: the biometric check is a UI gate via LAContext.evaluatePolicy (iOS) and
+      BiometricPrompt (Android)
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - IA-2(1)
+    - SI-7
+    cwe:
+    - CWE-287
+    - CWE-603
+  recommendation:
+    posture: required
+    summary: Bind the token to a biometric-gated hardware key so its release requires
+      a live biometric.
+    detail: Seal the refresh token or a per-session key under a Keychain/Keystore
+      key configured to require biometric authentication for use (setUserAuthenticationRequired
+      / kSecAccessControlBiometryCurrentSet), so a patched client cannot obtain the
+      secret without the live factor.
+  related_concerns:
+  - integrity
+  - ephemeral
+  - confidentiality
+- schema_version: 1
+  id: conf-4149d0db
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: Hardcoded HMAC client secret compiled into the binary and shared across all
+    installs
+  summary: A single ACME_CLIENT_HMAC_KEY ships in every app install and is recoverable
+    from any APK/IPA by static analysis, granting backend request-signing for the
+    whole fleet.
+  detail: 'Per the severity rubric, a hardcoded shared secret recoverable from the
+    binary loads the scale-vector and all-users blast-radius modifiers — obfuscation
+    (MASVS-RESILIENCE-2) only delays recovery, it is not a mitigant. MASVS-CRYPTO-2
+    (key management) and CWE-798 (use of hard-coded credentials) describe the weakness;
+    a reverse-engineer holding the IPA/APK extracts the key and forges the ''genuine
+    Acme app'' request signature for every user. The structural fix is that no secret
+    the backend trusts may live in the client: use per-install/per-device keys provisioned
+    at runtime into the Keystore/Secure Enclave, or move the trust to a server-verified
+    attestation.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §3 On-device storage
+    excerpt: the client signs each API request with an HMAC using a shared secret
+      ACME_CLIENT_HMAC_KEY that is compiled into the app
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(7)
+    - SC-12
+    - SC-28
+    cwe:
+    - CWE-798
+    - CWE-321
+    masvs:
+    - MASVS-CRYPTO-2
+    - MASVS-RESILIENCE-2
+    maswe:
+    - MASWE-0014
+  recommendation:
+    posture: required
+    summary: Remove the shared embedded secret; provision per-device keys at runtime
+      or rely on server-verified attestation.
+    detail: Eliminate the compiled-in HMAC key. Provision a per-install key into the
+      hardware-backed key store at first run, or replace the client-secret trust with
+      Play Integrity / App Attest verified server-side, so that extracting one binary
+      does not yield fleet-wide request forgery.
+  related_concerns:
+  - authenticity
+  - ephemeral
+- schema_version: 1
+  id: conf-9c065684
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Session and refresh tokens stored in SharedPreferences/NSUserDefaults, not
+    Keystore/Keychain
+  summary: Access and refresh tokens are persisted in plaintext key-value stores readable
+    from a device backup or a stolen/rooted device.
+  detail: Per MASVS-STORAGE-1, sensitive data must be stored in hardware-backed storage.
+    Persisting the access and refresh tokens in SharedPreferences (Android) and NSUserDefaults
+    (iOS) places long-lived bearer credentials in world-of-the-app plaintext that
+    survives in cleartext backups (allowBackup is true) and is recoverable by a physical
+    thief or a co-resident app on a compromised device. The structural control is
+    the Android Keystore/StrongBox and iOS Keychain/Secure Enclave with non-exportable
+    keys; the MASWE storage-leakage area and CWE-312 describe the exposure.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §3 On-device storage
+    excerpt: The access token and refresh token are persisted in SharedPreferences
+      (Android) and NSUserDefaults (iOS) so the session survives app restarts
+  - artifact: AndroidManifest.xml
+    locator: application android:allowBackup
+    excerpt: android:allowBackup="true"
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - IA-5
+    cwe:
+    - CWE-312
+    - CWE-522
+    masvs:
+    - MASVS-STORAGE-1
+    - MASVS-STORAGE-2
+    maswe:
+    - MASWE-0006
+  recommendation:
+    posture: required
+    summary: Move tokens to the platform hardware-backed key store and disable cleartext
+      backup of sensitive data.
+    detail: Store the refresh token (and any cached secret) in the Android Keystore/StrongBox
+      and iOS Keychain/Secure Enclave with non-exportable keys, exclude it from backups
+      via dataExtractionRules / Keychain access controls, and treat the device as
+      untrusted for any long-lived credential.
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: ephem-260cbeab
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: 90-day refresh token with no server-side revocation and no device-binding
+  summary: The on-device refresh token lives for 90 days, is not bound to the device,
+    and cannot be revoked server-side, so a stolen or extracted token grants long-lived
+    access.
+  detail: Per MASVS-AUTH-2, on-device session material must be short-lived, revocable,
+    and ideally device-bound. A 90-day bearer refresh token with no revocation list
+    and no device-binding means a physical thief, a co-resident app, or a rooted-device
+    attacker who extracts it from SharedPreferences replays it for up to 90 days with
+    no recovery path. CWE-613 (insufficient session expiration) describes the lifetime
+    gap. The structural controls are short-TTL access tokens, rotating refresh tokens
+    with reuse detection, server-side revocation, and device-binding (DPoP / mTLS)
+    keyed to a hardware-backed key; the token-issuance protocol routes to the identity-security
+    pack.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §2 Authentication and session
+    excerpt: there is no server-side revocation list and the token is not bound to
+      the device
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - IA-5(13)
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: required
+    summary: Shorten and rotate the refresh token, add server-side revocation, and
+      bind it to a hardware-backed device key.
+    detail: Reduce the refresh-token lifetime, rotate it on use with reuse detection,
+      maintain a server-side revocation list invalidated on logout and credential
+      change, and bind the token to a non-exportable Keystore/Secure-Enclave key.
+      Route the OAuth token-issuance design to the identity-security pack.
+  related_concerns:
+  - authenticity
+  - confidentiality
+- schema_version: 1
+  id: intg-573fc767
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: Daily transfer limit enforced only client-side; backend accepts any amount
+  summary: The app refuses transfers above the member's daily limit, but the backend
+    records whatever amount the client submits — the limit is not a control.
+  detail: 'This is the pack''s central-tension Critical: client-side enforcement of
+    a server-side control is not a control. The client reads dailyLimit and blocks
+    oversized transfers, but a patched or instrumented client (or a direct API call)
+    submits any amount and the backend honors it. Per MASVS-AUTH-1, the authorization/business-rule
+    decision must be enforced server-side, and per MASVS-AUTH-2 the authorization
+    must be enforced on the server side rather than only locally on the device; CWE-602
+    (client-side enforcement of server-side security) and CWE-603 describe the class,
+    and MASWE-0042 (authorization enforced only locally instead of on the server-side)
+    names the weakness. The finding of record is the missing server-side limit check;
+    routes to the api-security pack for the endpoint-side enforcement in a multi-domain
+    run.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §5 Transfers and limits
+    excerpt: The backend accepts whatever amount the client submits and records the
+      transfer
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-4
+    - SI-10
+    cwe:
+    - CWE-602
+    - CWE-603
+    masvs:
+    - MASVS-AUTH-1
+    - MASVS-AUTH-2
+    maswe:
+    - MASWE-0042
+  recommendation:
+    posture: required
+    summary: Enforce the daily transfer limit on the backend; treat the client check
+      as UX only.
+    detail: Move the daily-limit and all business-rule checks to the backend, validate
+      the amount server-side on every transfer, and keep the client-side check purely
+      as input-friendly UX. Route the server-side enforcement design to the api-security
+      pack.
+  related_concerns:
+  - authenticity
+  - non_repudiation
+- schema_version: 1
+  id: intg-80dbf492
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Unverified acmebank:// deep link drives a pre-filled transfer with no caller
+    verification
+  summary: A custom-scheme deep link opens the transfer screen with attacker-supplied
+    to/amount parameters and no verification of the invoking app or link.
+  detail: Per MASVS-PLATFORM-1, inbound IPC and deep links are an untrusted-input
+    boundary. The acmebank://transfer handler is an exported activity reached by any
+    app or web page, the custom scheme is not an Android App Link (no autoVerify /
+    domain verification), and the parameters drive an in-app action without re-authentication
+    or server re-verification. CWE-939 (improper authorization in handler for custom
+    URL scheme) describes the weakness; the phishing-deep-link attacker position reaches
+    it. The structural controls are App Links / Universal Links domain verification,
+    parameter validation, and a server-side re-authorization of the action the link
+    requests.
+  evidence:
+  - artifact: tech_plan.md
+    locator: §5 Transfers and limits
+    excerpt: The deep link handler performs the pre-filled transfer screen with no
+      verification of which app or link invoked it
+  - artifact: AndroidManifest.xml
+    locator: activity .TransferDeepLinkActivity
+    excerpt: Deep-link handler for transfers. Custom scheme, NOT an autoVerify App
+      Link
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    - AC-3
+    - AC-4
+    cwe:
+    - CWE-939
+    - CWE-749
+  recommendation:
+    posture: required
+    summary: Adopt verified App Links / Universal Links, validate parameters, and
+      re-authorize the action server-side.
+    detail: Replace the unverified custom scheme with autoVerify Android App Links
+      and iOS Universal Links bound to the Acme domain, validate every deep-link parameter,
+      and require re-authentication plus server-side authorization before executing
+      a transfer initiated by a link.
+  related_concerns:
+  - confidentiality
+  - authenticity
+  - availability
+- schema_version: 1
+  id: nonrep-38caffd0
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Consequential-action audit kept only on the device, which is attacker-erasable
+  summary: Transfers, bill-pay, and profile edits are logged to a local on-device
+    audit log; the backend records only raw HTTP lines without device or app-version
+    attribution.
+  detail: 'On-device-only audit is no audit: a rooted or stolen device can rewrite
+    or delete the local log, so the durable record of a consequential action does
+    not exist. Per the consequential-action surface, transfers, bill-pay, and profile
+    edits must produce a server-anchored, attributable record carrying the actor,
+    device, app version, and (where present) the attestation verdict; CWE-778 (insufficient
+    logging) frames the gap. The backend''s raw HTTP access lines lack the device/app-version/attestation
+    attribution needed to tie an action to a genuine client during a dispute or breach
+    investigation.'
+  evidence:
+  - artifact: tech_plan.md
+    locator: §7 Audit and privacy
+    excerpt: Consequential actions (transfers, bill-pay, profile edits) are written
+      to a local on-device audit log
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-9
+    - AU-12
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Record consequential actions server-side with device, app-version, and
+      attestation attribution.
+    detail: Emit a durable, server-anchored audit record for every consequential action
+      carrying actor, device identifier, app version, and attestation verdict; treat
+      the on-device log as corroborating only. Route the audit-content design for
+      the backend to the api-security pack.
+  related_concerns:
+  - authenticity
+  - immutability
+- schema_version: 1
+  id: resil-d7f2b8e9
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: Single certificate pin with no backup pin or documented rotation bricks clients
+    on rotation
+  summary: The Android config pins one leaf certificate with no backup pin and no
+    rotation procedure, so a routine certificate rotation hard-fails every installed
+    client.
+  detail: Per MASVS-NETWORK-2, certificate pinning is correct only with pin agility.
+    A single pin with no backup and no rotation runbook means the day the production
+    leaf rotates, every client that has not yet updated fails to connect — pinning
+    brittleness turns a routine operational event into a fleet outage. The structural
+    controls are a backup pin (and/or pinning to an intermediate/SPKI), a documented
+    rotation procedure that publishes the next pin before the cert changes, and a
+    soft-fail-to-report path rather than a hard brick on pin mismatch. iOS additionally
+    has no pinning at all, so the two platforms degrade differently.
+  evidence:
+  - artifact: network_security_config.xml
+    locator: domain-config pin-set
+    excerpt: Single pin, no backup pin, no documented rotation
+  - artifact: tech_plan.md
+    locator: §4 Network
+    excerpt: a single pin is configured with no backup pin and no documented rotation
+      procedure
+  control_mappings:
+    nist_800_53r5:
+    - SC-8(1)
+    - SC-17
+    - CP-13
+  recommendation:
+    posture: recommended
+    summary: Add a backup pin and a documented rotation procedure with a soft-fail-to-report
+      path.
+    detail: Configure a backup pin (or pin to a stable intermediate/SPKI), publish
+      the next pin before each certificate rotation, and report pin-validation failures
+      to the backend rather than hard-failing the client, so rotation cannot brick
+      the fleet.
+  related_concerns:
+  - authenticity
+  - availability

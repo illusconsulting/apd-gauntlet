@@ -44,6 +44,21 @@
       "type": "string",
       "pattern": "^AML\\.T[0-9]{4}(\\.[0-9]{3})?$",
       "description": "MITRE ATLAS technique ID; accepts both top-level (AML.T0051) and sub-technique (AML.T0051.000) forms."
+    },
+    "maswe_id": {
+      "type": "string",
+      "pattern": "^MASWE-[0-9]{4}$",
+      "description": "OWASP MAS Weakness Enumeration ID (e.g. MASWE-0001). Always zero-padded to four digits."
+    },
+    "masvs_control_id": {
+      "type": "string",
+      "pattern": "^MASVS-(STORAGE|CRYPTO|AUTH|NETWORK|PLATFORM|CODE|RESILIENCE|PRIVACY)-[1-9][0-9]*$",
+      "description": "OWASP MASVS v2 control ID: a category prefix plus a 1-based control ordinal (e.g. MASVS-STORAGE-1)."
+    },
+    "masvs_category_id": {
+      "type": "string",
+      "pattern": "^MASVS-(STORAGE|CRYPTO|AUTH|NETWORK|PLATFORM|CODE|RESILIENCE|PRIVACY)$",
+      "description": "OWASP MASVS v2 control category (e.g. MASVS-STORAGE), without a control ordinal."
     }
   }
 }

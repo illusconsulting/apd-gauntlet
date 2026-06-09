@@ -53,6 +53,8 @@ class RollupResult:
     owasp: dict[str, Any] | None = None
     d3fend: dict[str, Any] | None = None
     atlas: dict[str, Any] | None = None
+    masvs: dict[str, Any] | None = None
+    maswe: dict[str, Any] | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
 
 
@@ -288,6 +290,10 @@ def build_rollups(run_dir: Path) -> RollupResult:
         result.d3fend = _d3fend_rollup(findings, caps)
     if "mitre_atlas" in declared:
         result.atlas = _atlas_rollup(findings)
+    if "masvs" in declared:
+        result.masvs = _masvs_rollup(findings, caps)
+    if "maswe" in declared:
+        result.maswe = _maswe_rollup(findings)
 
     synth = run_dir / "40-synthesis"
     contradictions = _read_records(
@@ -367,6 +373,103 @@ def _atlas_rollup(findings: list[dict[str, Any]]) -> dict[str, Any]:
             "surfaces": sorted(grouped[aid]["surfaces"]),
         })
     return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
+
+
+def _maswe_rollup(findings: list[dict[str, Any]]) -> dict[str, Any]:
+    # Mirrors _cwe_rollup: MASWE is a flat weakness-id list on
+    # control_mappings.maswe (MASWE-####). name/category/status/parent_masvs
+    # resolve from the bundled OWASP MAS catalog (data/maswe.json, weaknesses
+    # map), falling back to the id (name) / None (category, status) / [] on miss.
+    # First-appearance order over the deduped finding order, then by id.
+    maswe_data = json.loads((_PKG_DATA / "maswe.json").read_text(encoding="utf-8"))
+    by_id = maswe_data.get("weaknesses", {})
+    order: list[str] = []
+    grouped: dict[str, dict[str, Any]] = {}
+    for f in findings:
+        for wid in cl.extract_ids_from_mapping((f.get("control_mappings") or {}).get("maswe")):
+            if wid not in grouped:
+                grouped[wid] = {"finding_ids": [], "surfaces": set()}
+                order.append(wid)
+            if f["id"] not in grouped[wid]["finding_ids"]:
+                grouped[wid]["finding_ids"].append(f["id"])
+            for ev in f.get("evidence") or []:
+                if isinstance(ev, dict) and ev.get("locator"):
+                    grouped[wid]["surfaces"].add(str(ev["locator"]))
+    entries = []
+    for wid in sorted(order, key=lambda w: (order.index(w), w)):
+        ref = by_id.get(wid, {})
+        entries.append({
+            "maswe_id": wid, "name": ref.get("title") or wid,
+            "category": ref.get("category"),
+            "status": ref.get("status"),
+            "parent_masvs": list(ref.get("masvs_v2") or []),
+            "finding_count": len(grouped[wid]["finding_ids"]),
+            "finding_ids": sorted(grouped[wid]["finding_ids"]),
+            "surfaces": sorted(grouped[wid]["surfaces"]),
+        })
+    return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
+
+
+def _masvs_catalog() -> dict[str, dict[str, Any]]:
+    """Return {masvs_id: {title, category, category_title}} from data/masvs.json."""
+    raw = json.loads((_PKG_DATA / "masvs.json").read_text(encoding="utf-8"))
+    controls = raw.get("controls", {})
+    return controls if isinstance(controls, dict) else {}
+
+
+def _masvs_cap_index(caps: list[dict[str, Any]]) -> dict[str, set[str]]:
+    """Return {masvs_id: {cap_id, ...}} for capabilities citing control_mappings.masvs."""
+    index: dict[str, set[str]] = {}
+    for cap in caps:
+        cap_id = cap.get("id", "")
+        cm = cap.get("control_mappings") or {}
+        for mid in cl.extract_ids_from_mapping(cm.get("masvs")):
+            index.setdefault(mid, set()).add(cap_id)
+    return index
+
+
+def _masvs_rollup(
+    findings: list[dict[str, Any]],
+    caps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    # Mirrors _nist_rollup: per-control union of finding_ids + capability_ids,
+    # posture from coverage_logic.posture(), name/category/category_title from
+    # the bundled OWASP MAS catalog (data/masvs.json). First-appearance order
+    # over the deduped finding order, with cap-only controls sorted in by id.
+    catalog = _masvs_catalog()
+    order: list[str] = []
+    fmap: dict[str, list[str]] = {}
+    surfaces: dict[str, set[str]] = {}
+    for f in findings:
+        for mid in cl.extract_ids_from_mapping((f.get("control_mappings") or {}).get("masvs")):
+            if mid not in fmap:
+                fmap[mid] = []
+                surfaces[mid] = set()
+                order.append(mid)
+            if f["id"] not in fmap[mid]:
+                fmap[mid].append(f["id"])
+            for ev in f.get("evidence") or []:
+                if isinstance(ev, dict) and ev.get("locator"):
+                    surfaces[mid].add(str(ev["locator"]))
+    cap_index = _masvs_cap_index(caps)
+    all_ids = set(order) | set(cap_index)
+    order_index = {c: i for i, c in enumerate(order)}
+    controls: list[dict[str, Any]] = []
+    for mid in sorted(all_ids, key=lambda c: (order_index.get(c, 1_000_000), c)):
+        fids = sorted(fmap.get(mid, []))
+        cids = sorted(cap_index.get(mid, set()))
+        ref = catalog.get(mid, {})
+        controls.append({
+            "masvs_id": mid,
+            "name": ref.get("title") or mid,
+            "category": ref.get("category"),
+            "category_title": ref.get("category_title"),
+            "finding_count": len(fids), "finding_ids": fids,
+            "surfaces": sorted(surfaces.get(mid, set())),
+            "capability_count": len(cids), "capability_ids": cids,
+            "posture": cl.posture(has_findings=bool(fids), has_caps=bool(cids)),
+        })
+    return {"schema_version": 1, "generated_by": "synthesizer", "controls": controls}
 
 
 def _owasp_names(tax_key: str) -> dict[str, str]:
@@ -500,3 +603,9 @@ def _write(run_dir: Path, result: RollupResult) -> None:
     if result.atlas is not None:
         (synth / "atlas-coverage.yaml").write_text(
             yaml.safe_dump(result.atlas, sort_keys=False), encoding="utf-8")
+    if result.masvs is not None:
+        (synth / "masvs-coverage.yaml").write_text(
+            yaml.safe_dump(result.masvs, sort_keys=False), encoding="utf-8")
+    if result.maswe is not None:
+        (synth / "maswe-coverage.yaml").write_text(
+            yaml.safe_dump(result.maswe, sort_keys=False), encoding="utf-8")

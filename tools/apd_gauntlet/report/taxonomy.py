@@ -108,6 +108,35 @@ def cwe_abstractions() -> dict[str, str]:
 
 @_register_cached
 @lru_cache(maxsize=1)
+def maswe_masvs_parents() -> dict[str, list[str]]:
+    """Return {MASWE-NNNN: [MASVS-...]} from the bundled maswe.json.
+
+    Each weakness in maswe.json carries a ``masvs_v2`` list naming the MASVS v2
+    controls it maps to. Consumed by the ``check_maswe_masvs_consistency`` lint
+    so a finding's cited maswe parents can be reconciled with its cited masvs
+    ids. Defensive: returns {} when the catalog is missing or unparseable so
+    the lint degrades to a no-op rather than raising.
+    """
+    path = _PKG_DATA / "maswe.json"
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    weaknesses = raw.get("weaknesses") if isinstance(raw, dict) else None
+    out: dict[str, list[str]] = {}
+    if isinstance(weaknesses, dict):
+        for wid, entry in weaknesses.items():
+            if not isinstance(entry, dict):
+                continue
+            parents = entry.get("masvs_v2")
+            out[str(wid)] = [str(p) for p in parents if p] if isinstance(parents, list) else []
+    return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
 def attack_technique_titles() -> dict[str, str]:
     """Map ATT&CK technique id (T####[.###]) → name.
 
@@ -241,6 +270,35 @@ def d3fend_url(d3fend_id: str) -> str | None:
     return f"https://d3fend.mitre.org/technique/d3f:{local}/"
 
 
+_MASVS_CONTROL_RE = re.compile(
+    r"^MASVS-(?:STORAGE|CRYPTO|AUTH|NETWORK|PLATFORM|CODE|RESILIENCE|PRIVACY)-[1-9][0-9]*$"
+)
+
+
+def masvs_url(control_id: str) -> str | None:
+    """Authoritative mas.owasp.org URL for a MASVS control id.
+
+    Pure regex (no catalog lookup): MASVS-STORAGE-1 ->
+    .../MASVS/controls/MASVS-STORAGE-1/. Returns None for category ids
+    (MASVS-STORAGE), weakness ids (MASWE-####), or unknown category prefixes.
+    """
+    if not _MASVS_CONTROL_RE.match(control_id or ""):
+        return None
+    return f"https://mas.owasp.org/MASVS/controls/{control_id}/"
+
+
+def maswe_url(weakness_id: str) -> str | None:
+    """Authoritative mas.owasp.org URL for a MASWE weakness id.
+
+    The URL is keyed by the weakness's *filing category* (e.g. MASVS-STORAGE),
+    which is read from the bundled maswe.json. Returns None when the weakness
+    (or its category) is unknown — never fabricates a category."""
+    category = (maswe_categories().get(weakness_id or "") or "").strip()
+    if not category:
+        return None
+    return f"https://mas.owasp.org/MASWE/{category}/{weakness_id}/"
+
+
 @_register_cached
 @lru_cache(maxsize=1)
 def atlas_titles() -> dict[str, str]:
@@ -275,6 +333,79 @@ def atlas_titles() -> dict[str, str]:
     return out
 
 
+@_register_cached
+@lru_cache(maxsize=1)
+def masvs_titles() -> dict[str, str]:
+    """Map OWASP MASVS control id (MASVS-CATEGORY-N) → statement.
+
+    Reads the bundled masvs.json produced by ``apd-gauntlet refresh-mas``.
+    Returns {} if the file is missing/unparseable so callers fall back to the id.
+    Shape: {"controls": {"MASVS-STORAGE-1": {"title": ..., "category": ...}, ...}}.
+    """
+    path = _DATA / "masvs.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    out: dict[str, str] = {}
+    controls = raw.get("controls") if isinstance(raw, dict) else None
+    if isinstance(controls, dict):
+        for cid, v in controls.items():
+            out[cid] = (
+                v.get("title") or cid if isinstance(v, dict)
+                else v if isinstance(v, str)
+                else cid
+            )
+    return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
+def maswe_titles() -> dict[str, str]:
+    """Map OWASP MASWE weakness id (MASWE-####) → title.
+
+    Reads the bundled maswe.json produced by ``apd-gauntlet refresh-mas``.
+    Returns {} if the file is missing/unparseable so callers fall back to the id.
+    Shape: {"weaknesses": {"MASWE-0001": {"title": ..., "category": ...}, ...}}.
+    """
+    path = _DATA / "maswe.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    out: dict[str, str] = {}
+    weaknesses = raw.get("weaknesses") if isinstance(raw, dict) else None
+    if isinstance(weaknesses, dict):
+        for wid, v in weaknesses.items():
+            out[wid] = (
+                v.get("title") or wid if isinstance(v, dict)
+                else v if isinstance(v, str)
+                else wid
+            )
+    return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
+def maswe_categories() -> dict[str, str]:
+    """Map MASWE weakness id → filing category (MASVS-CATEGORY) from maswe.json."""
+    path = _DATA / "maswe.json"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    out: dict[str, str] = {}
+    weaknesses = raw.get("weaknesses") if isinstance(raw, dict) else None
+    if isinstance(weaknesses, dict):
+        for wid, v in weaknesses.items():
+            if isinstance(v, dict) and v.get("category"):
+                out[wid] = str(v["category"])
+    return out
+
+
 def reference_db_versions() -> dict[str, dict[str, Any]]:
     """Return {family: {fetched_at, count, source}} for each shipped reference DB.
 
@@ -289,6 +420,8 @@ def reference_db_versions() -> dict[str, dict[str, Any]]:
         ("cwe",    cwe_titles,              "cwe.json"),
         ("d3fend", d3fend_titles,           "d3fend.json"),
         ("atlas",  atlas_titles,            "atlas-techniques.json"),
+        ("masvs",  masvs_titles,            "masvs.json"),
+        ("maswe",  maswe_titles,            "maswe.json"),
     ):
         path = _DATA / path_name
         meta: dict[str, Any] = {}
@@ -341,6 +474,8 @@ def invalidate_if_modified(
         "cwe.json":                      (_cwe_catalog, cwe_titles, cwe_abstractions),
         "d3fend.json":                   (d3fend_titles,),
         "atlas-techniques.json":         (atlas_titles,),
+        "masvs.json":                    (masvs_titles,),
+        "maswe.json":                    (maswe_titles, maswe_categories, maswe_masvs_parents),
     }
     for filename, loaders in catalog_to_loaders.items():
         path = target / filename

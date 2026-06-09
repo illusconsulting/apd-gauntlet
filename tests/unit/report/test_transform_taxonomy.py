@@ -4,8 +4,9 @@ from __future__ import annotations
 import pathlib
 from typing import Any
 
+from apd_gauntlet.report import transform as _t
 from apd_gauntlet.report.loader import RunArtifacts, load_run
-from apd_gauntlet.report.transform import taxonomy_dict
+from apd_gauntlet.report.transform import _collect_referenced_ids, taxonomy_dict
 
 EMPTY_METRICS = {
     "schema_version": 1,
@@ -154,3 +155,87 @@ def test_d3fend_taxonomy_entries_carry_authoritative_url() -> None:
     assert tax["D3-PHDURA"]["url"] == (
         "https://d3fend.mitre.org/technique/d3f:PerHostDownload-UploadRatioAnalysis/"
     )
+
+
+def test_mas_family_display_constants() -> None:
+    assert _t._MASVS_FAMILY_DISPLAY == "OWASP MASVS"
+    assert _t._MASWE_FAMILY_DISPLAY == "OWASP MASWE"
+
+
+def _mas_artifacts(**overrides) -> RunArtifacts:
+    base = {
+        "run_id": "r", "framework_version": "1", "domain_pack_name": "p",
+        "domain_pack_version": "1", "subject": "s", "date": "2026-01-01",
+        "asset_inventory": {}, "deduped_findings": [], "deduped_capabilities": [],
+        "contradictions": [], "contradictions_notes": None,
+        "severity_disagreements": [], "severity_disagreements_notes": None,
+        "nist_coverage": {}, "attack_exposure": {}, "apd_coverage_matrix": {},
+        "attack_paths": None, "asset_graph": None, "defense_graph": None,
+        "attack_path_findings": [], "report_data": None, "metrics": EMPTY_METRICS,
+    }
+    base.update(overrides)
+    return RunArtifacts(**base)
+
+
+def test_collect_referenced_harvests_mas_from_findings_and_caps() -> None:
+    art = _mas_artifacts(
+        deduped_findings=[{
+            "id": "rslv-00000001",
+            "control_mappings": {"masvs": ["MASVS-STORAGE-1"], "maswe": ["MASWE-0001"]},
+        }],
+        deduped_capabilities=[{
+            "id": "cap-1",
+            "control_mappings": {"masvs": ["MASVS-CRYPTO-2"]},
+        }],
+    )
+    refs = _collect_referenced_ids(art)
+    assert "MASVS-STORAGE-1" in refs["masvs"]
+    assert "MASVS-CRYPTO-2" in refs["masvs"]
+    assert "MASWE-0001" in refs["maswe"]
+
+
+def test_collect_referenced_harvests_mas_from_coverage_rollups() -> None:
+    art = _mas_artifacts(
+        masvs_coverage={"controls": [
+            {"masvs_id": "MASVS-NETWORK-1", "finding_count": 1},
+            {"masvs_id": "MASVS-AUTH-2", "finding_count": 0},
+        ]},
+        maswe_coverage={"entries": [
+            {"maswe_id": "MASWE-0002", "finding_count": 1},
+        ]},
+    )
+    refs = _collect_referenced_ids(art)
+    assert {"MASVS-NETWORK-1", "MASVS-AUTH-2"} <= refs["masvs"]
+    assert "MASWE-0002" in refs["maswe"]
+
+
+def test_taxonomy_resolves_masvs_control_with_title_and_url() -> None:
+    art = _mas_artifacts(
+        deduped_findings=[{
+            "id": "rslv-00000001",
+            "control_mappings": {"masvs": ["MASVS-STORAGE-1"]},
+        }],
+    )
+    tax = taxonomy_dict(art)
+    assert tax["MASVS-STORAGE-1"]["family"] == "OWASP MASVS"
+    assert tax["MASVS-STORAGE-1"]["title"]  # resolved statement, not bare id
+    # masvs_url is pure-regex; always present for a well-formed control id.
+    assert tax["MASVS-STORAGE-1"]["url"] == (
+        "https://mas.owasp.org/MASVS/controls/MASVS-STORAGE-1/"
+    )
+
+
+def test_taxonomy_resolves_maswe_weakness_with_family_and_title() -> None:
+    art = _mas_artifacts(
+        deduped_findings=[{
+            "id": "rslv-00000002",
+            "control_mappings": {"maswe": ["MASWE-0001"]},
+        }],
+    )
+    tax = taxonomy_dict(art)
+    assert tax["MASWE-0001"]["family"] == "OWASP MASWE"
+    assert tax["MASWE-0001"]["title"]
+    # maswe_url returns a string for a known filing category; the branch sets
+    # "url" only when non-None, so assert the family + title even if url omitted.
+    if "url" in tax["MASWE-0001"]:
+        assert tax["MASWE-0001"]["url"].startswith("https://mas.owasp.org/MASWE/")

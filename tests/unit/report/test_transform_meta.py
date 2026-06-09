@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
-from apd_gauntlet.report.loader import load_run
+from apd_gauntlet.report.loader import RunArtifacts, load_run
 from apd_gauntlet.report.transform import meta_block
 
 
@@ -34,3 +34,36 @@ def test_meta_artifact_count_matches_inputs_dir(example_run: pathlib.Path) -> No
     # snapshot with no inputs/, so the count is 0 — and meta_block must not crash.
     expected = len(list(inputs_dir.iterdir())) if inputs_dir.is_dir() else 0
     assert meta["artifact_count"] == expected
+
+
+_EMPTY_METRICS = {"schema_version": 1, "findings_total": 0}
+
+
+def _meta_artifacts(**overrides) -> RunArtifacts:
+    base = {
+        "run_id": "r", "framework_version": "1.7.0",
+        "domain_pack_name": "mobile-applications",
+        "domain_pack_version": "1", "subject": "s", "date": "2026-01-01",
+        "asset_inventory": {}, "deduped_findings": [], "deduped_capabilities": [],
+        "contradictions": [], "contradictions_notes": None,
+        "severity_disagreements": [], "severity_disagreements_notes": None,
+        "nist_coverage": {}, "attack_exposure": {}, "apd_coverage_matrix": {},
+        "attack_paths": None, "asset_graph": None, "defense_graph": None,
+        "attack_path_findings": [], "report_data": None, "metrics": _EMPTY_METRICS,
+    }
+    base.update(overrides)
+    return RunArtifacts(**base)
+
+
+def test_meta_active_taxonomies_present() -> None:
+    art = _meta_artifacts(active_taxonomies=["masvs", "maswe"])
+    meta = meta_block(art)
+    assert meta["active_taxonomies"] == ["masvs", "maswe"]
+
+
+def test_meta_active_taxonomies_empty_on_non_mobile_run(example_run: pathlib.Path) -> None:
+    # example declares [cwe, mitre_attack, d3fend, owasp_api_top10] — no MAS.
+    artifacts = load_run(example_run)
+    meta = meta_block(artifacts)
+    assert "masvs" not in meta["active_taxonomies"]
+    assert "maswe" not in meta["active_taxonomies"]

@@ -1,0 +1,39 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- maswe_id: MASWE-0014
+  name: Cryptographic Keys Not Properly Protected at Rest
+  category: MASVS-CRYPTO
+  status: new
+  parent_masvs:
+  - MASVS-CRYPTO-2
+  - MASVS-STORAGE-1
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  surfaces:
+  - "\xA73 On-device storage"
+- maswe_id: MASWE-0006
+  name: Sensitive Data Stored Unencrypted in Private Storage Locations
+  category: MASVS-STORAGE
+  status: new
+  parent_masvs:
+  - MASVS-STORAGE-1
+  - MASVS-CRYPTO-2
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  surfaces:
+  - application android:allowBackup
+  - "\xA73 On-device storage"
+- maswe_id: MASWE-0042
+  name: Authorization Enforced Only Locally Instead of on the Server-side
+  category: MASVS-AUTH
+  status: placeholder
+  parent_masvs:
+  - MASVS-AUTH-2
+  finding_count: 1
+  finding_ids:
+  - intg-573fc767
+  surfaces:
+  - "\xA75 Transfers and limits"

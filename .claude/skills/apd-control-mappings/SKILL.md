@@ -9,7 +9,7 @@ Every finding and capability emits NIST SP 800-53r5 control mappings. ATT&CK tec
 
 ## Where mappings go (structural rule)
 
-ALL taxonomy mappings go UNDER the `control_mappings` block — never at the finding/capability root. Allowed keys: `nist_800_53r5`, `mitre_attack`, `cwe`, `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`, `atlas`. The MITRE ATLAS key on a record is exactly **`atlas`** — NOT `mitre_atlas` (`mitre_atlas` is only the `.apd-run.yaml` declaration name).
+ALL taxonomy mappings go UNDER the `control_mappings` block — never at the finding/capability root. Allowed keys: `nist_800_53r5`, `mitre_attack`, `cwe`, `owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`, `atlas`, `masvs`, `maswe`. The MITRE ATLAS key on a record is exactly **`atlas`** — NOT `mitre_atlas` (`mitre_atlas` is only the `.apd-run.yaml` declaration name). The OWASP MAS keys are `masvs` and `maswe`: `masvs` may appear on BOTH findings and capabilities (a control violated, or a control satisfied), while `maswe` is findings-only (a specific weakness exposed). Both are emitted only when the run declares `masvs` / `maswe` (i.e. the mobile-applications pack is active) — see the OWASP MAS subsection under Per-taxonomy discipline.
 
 ## NIST 800-53r5 mapping guidance
 
@@ -286,6 +286,56 @@ A run may declare additional taxonomies in `.apd-run.yaml` (`taxonomies: [cwe, o
 - Use the format `AML.T####` for a top-level technique or `AML.T####.###` for a sub-technique (e.g., AML.T0051 LLM Prompt Injection, AML.T0051.000 Direct, AML.T0043 Craft Adversarial Data, AML.T0020 Poison Training Data). Reference data with the full set of valid IDs and names ships at `tools/apd_gauntlet/data/atlas-techniques.json`; refresh with `apd-gauntlet refresh-atlas`.
 - ATLAS and the `agentic-ai` domain pack pair naturally — but ATLAS is a taxonomy, not a pack: declare it on any run with an ML surface, regardless of domain.
 
+### OWASP MAS (mobile — MASVS on findings + capabilities, MASWE on findings, optional)
+
+- OWASP MAS is the mobile application security taxonomy: **MASVS** is the verification standard (control IDs like `MASVS-STORAGE-1`) and **MASWE** is the companion weakness enumeration (IDs like `MASWE-0001`). **Only emit `masvs` / `maswe` when the run declares them** — they are declared together by the `mobile-applications` domain pack (`taxonomies: [masvs, maswe]` on its `domain.yaml`). A run without the mobile pack active does not authorize either key, exactly as the CWE/OWASP/ATLAS keys are gated on their declarations.
+- **MASVS attaches to BOTH findings and capabilities — direction-sensitive.** On a *finding*, a `masvs` ID names the **control violated** (the requirement the architecture fails). On a *capability*, the same ID names the **control satisfied** (the requirement the design demonstrably meets, scored on the capability's maturity ladder). MASVS is the only one of these taxonomies that lives on capabilities as a *positive* attestation as well as on findings as a gap.
+- **MASWE attaches to findings only** — it names the **specific weakness** the finding's gap instantiates (the MASWE entry whose description and `masvs_v2` parent match the weakness pattern), mirroring how `cwe` and `atlas` attach. A capability never carries `maswe` (there is no "weakness satisfied").
+- **Ground every MAS ID in the mobile pack prose.** Each `masvs` / `maswe` ID you emit must already be paired with its pattern in the active pack content — the `MAS mapping:` line on the matching clause in `domains/mobile-applications/severity-rubric.md` or the `MAS mapping:` line under the matching pattern in `domains/mobile-applications/common-patterns/*.md`. If the pack prose does not pair the pattern with a MASVS control (and, where known, a MASWE weakness), do not invent one — emit no MAS ID and justify the gap in `detail`, as with the other taxonomies.
+- Each `masvs` / `maswe` mapping is just the ID string — a **flat list, no rationale field** on the schema (like `cwe` and `atlas`). The finding's `detail` (or the capability's evidence) must justify the match: a reviewer should read the prose and see why `MASVS-NETWORK-1` is violated or why the capability satisfies `MASVS-STORAGE-1`.
+- ID formats: MASVS controls are `MASVS-<CATEGORY>-<n>` where `<CATEGORY>` is one of `STORAGE`, `CRYPTO`, `AUTH`, `NETWORK`, `PLATFORM`, `CODE`, `RESILIENCE`, `PRIVACY` (e.g. `MASVS-CRYPTO-1`); MASWE weaknesses are `MASWE-####` (e.g. `MASWE-0001`). A bare or unresolvable id fails the report completeness audit (`taxonomy_titles_resolve`) — every id must resolve in the bundled catalogs (`tools/apd_gauntlet/data/masvs.json`, `tools/apd_gauntlet/data/maswe.json`).
+- **MASWE-Beta caveat.** MASWE is published as a beta enumeration whose IDs and category assignments are still being stabilized upstream. Cite a `MASWE-####` id only when it resolves in the bundled `maswe.json` snapshot; when the weakness pattern is real but no stable MASWE id covers it yet, cite the MASVS control alone and name the weakness in prose. Do not coin a `MASWE-####` id that is not in the snapshot.
+
+**Examples — accepted MAS mappings**
+
+```yaml
+# Finding: a long-lived refresh token is written to SharedPreferences in
+# cleartext, readable from a device backup. The mobile confidentiality pattern
+# pairs this with MASVS-STORAGE-1 + MASWE-0002 (sensitive data stored
+# unencrypted in a private storage location).
+control_mappings:
+  masvs: ["MASVS-STORAGE-1"]
+  maswe: ["MASWE-0002"]
+```
+
+```yaml
+# Capability: all on-device secrets are held in a hardware-backed Keystore
+# with non-exportable keys (the confidentiality capability pattern). MASVS on a
+# capability = control SATISFIED; no maswe on a capability.
+control_mappings:
+  masvs: ["MASVS-STORAGE-1", "MASVS-CRYPTO-1"]
+```
+
+**Examples — rejected MAS mappings**
+
+```yaml
+# Finding on a run with NO mobile pack active (taxonomies do not include masvs).
+# Rejected: the run does not declare masvs/maswe, so neither key is authorized —
+# the same gating that forbids emitting cwe on an undeclared run.
+control_mappings:
+  masvs: ["MASVS-STORAGE-1"]   # WRONG: mobile-applications pack is not active
+```
+
+```yaml
+# Finding: certificate validation is disabled on a PII channel. The author
+# reached for a MASWE id by memory that is not in the bundled snapshot.
+# Rejected: MASWE-Beta caveat — cite the MASVS control alone and name the
+# weakness in prose rather than coining an unresolvable id.
+control_mappings:
+  masvs: ["MASVS-NETWORK-1"]
+  maswe: ["MASWE-9999"]        # WRONG: not in maswe.json — drop it, justify in detail
+```
+
 ## High-confidence-only rule (extends unchanged)
 
-The existing high-confidence-only rule applies to all six new taxonomies. When uncertain whether a CWE matches the weakness pattern, when uncertain whether the SUT actually exposes the OWASP-categorized surface, when uncertain whether a capability truly implements a D3FEND technique, when uncertain whether an ATLAS technique matches the finding's weakness — **do not map**. Leave the field absent.
+The existing high-confidence-only rule applies to all eight extension taxonomies. When uncertain whether a CWE matches the weakness pattern, when uncertain whether the SUT actually exposes the OWASP-categorized surface, when uncertain whether a capability truly implements a D3FEND technique, when uncertain whether an ATLAS technique matches the finding's weakness, when uncertain whether a MASVS control is the one the architecture violates or satisfies, or when uncertain whether a MASWE weakness resolves in the bundled snapshot — **do not map**. Leave the field absent.

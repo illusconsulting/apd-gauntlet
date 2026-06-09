@@ -86,6 +86,8 @@ const APD_GOAL_DETAIL = {
 };
 
 function Annexes({ data, onOpenFinding }) {
+  const active = (data.meta && data.meta.active_taxonomies) || [];
+  const masActive = active.includes("masvs") || active.includes("maswe");
   return (
     <div>
       <div className="section-eyebrow">§ 5 + § 10 — Annexes</div>
@@ -262,7 +264,9 @@ function Annexes({ data, onOpenFinding }) {
             <li><strong>NIST SP 800-63B</strong> — Digital Identity Guidelines (authenticator lifecycle and authentication assurance levels)</li>
             <li><strong>ISO/IEC 27001:2022</strong> — information security management, including Annex A controls</li>
             <li><strong>OWASP ASVS</strong> — Application Security Verification Standard</li>
-            <li><strong>OWASP Top 10 / API Security Top 10 / LLM Top 10</strong> — application, API, and AI-application security; <strong>OWASP MASVS / MASTG</strong> — the Mobile Application Security Verification Standard and Testing Guide, which inform the mobile domain pack but are not a mapped taxonomy</li>
+            <li><strong>OWASP Top 10 / API Security Top 10 / LLM Top 10</strong> — application, API, and AI-application security; <strong>OWASP MASVS / MASWE</strong> — {masActive
+              ? "the Mobile Application Security Verification Standard (MASVS) and Mobile Application Security Weakness Enumeration (MASWE), mapped on findings (and MASVS on capabilities) for this run"
+              : "the Mobile Application Security Verification Standard and Testing Guide, which inform the mobile domain pack but are not a mapped taxonomy"}</li>
             <li><strong>The Open Group Open FAIR</strong> — quantitative risk analysis (useful for reasoning about RTO/RPO and availability risk)</li>
             <li><strong>CSA Cloud Controls Matrix (CCM)</strong> — cloud-specific control framework</li>
             <li><strong>MITRE ATT&amp;CK</strong> — adversary tactics and techniques</li>
@@ -273,7 +277,9 @@ function Annexes({ data, onOpenFinding }) {
             <li><strong>IHE ATNA</strong> — Audit Trail and Node Authentication (healthcare audit conformance)</li>
           </ul>
           <p style={{ color: "var(--ink-2)", maxWidth: "72ch", lineHeight: 1.65 }}>
-            <strong>What the gauntlet actually enforces.</strong> Only NIST SP 800-53 Rev 5 is mapped on every finding and capability — it is required. MITRE ATT&amp;CK is available by default but is attached only when a finding (or a capability's defense) clears a high-confidence bar — the reviewer must be able to write a specific one-sentence rationale tying the architectural detail to the technique — so an ATT&amp;CK mapping may legitimately be absent. Two more vocabularies are available on every run under that same high-confidence discipline: CWE (on findings) and MITRE D3FEND (on capabilities, each cross-referenced to the ATT&amp;CK technique it counters). Three more are opt-in per run — they apply only when declared in the run's configuration because they fit a specific surface: OWASP Top 10 / API Top 10 / LLM Top 10 (on findings) and MITRE ATLAS (on findings, for adversarial-machine-learning threats). Everything in this list other than NIST 800-53r5 is a descriptive cross-reference — included so readers fluent in those vocabularies can orient themselves — and is not a statement that the gauntlet measures the system's compliance against that standard. The remaining bodies above (NIST CSF, ISO 27001, OWASP ASVS, The Open Group Open FAIR, CSA CCM, and the rest) shaped the nine goals but are not emitted as machine mappings at all.
+            <strong>What the gauntlet actually enforces.</strong> Only NIST SP 800-53 Rev 5 is mapped on every finding and capability — it is required. MITRE ATT&amp;CK is available by default but is attached only when a finding (or a capability's defense) clears a high-confidence bar — the reviewer must be able to write a specific one-sentence rationale tying the architectural detail to the technique — so an ATT&amp;CK mapping may legitimately be absent. Two more vocabularies are available on every run under that same high-confidence discipline: CWE (on findings) and MITRE D3FEND (on capabilities, each cross-referenced to the ATT&amp;CK technique it counters). {masActive
+              ? "Five more are opt-in per run — they apply only when declared in the run's configuration because they fit a specific surface: OWASP Top 10 / API Top 10 / LLM Top 10 (on findings), MITRE ATLAS (on findings, for adversarial-machine-learning threats), OWASP MASVS (on findings and capabilities), and OWASP MASWE (on findings, for mobile-application weaknesses)."
+              : "Three more are opt-in per run — they apply only when declared in the run's configuration because they fit a specific surface: OWASP Top 10 / API Top 10 / LLM Top 10 (on findings) and MITRE ATLAS (on findings, for adversarial-machine-learning threats)."}{" "}Everything in this list other than NIST 800-53r5 is a descriptive cross-reference — included so readers fluent in those vocabularies can orient themselves — and is not a statement that the gauntlet measures the system's compliance against that standard. The remaining bodies above (NIST CSF, ISO 27001, OWASP ASVS, The Open Group Open FAIR, CSA CCM, and the rest) shaped the nine goals but are not emitted as machine mappings at all.
           </p>
         </div>
       </section>

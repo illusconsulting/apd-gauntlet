@@ -236,6 +236,10 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "owasp-coverage.yaml":         "owasp-coverage.schema.json",
     "d3fend-coverage.yaml":        "d3fend-coverage.schema.json",
     "atlas-coverage.yaml":         "atlas-coverage.schema.json",
+    # v1.7 — OWASP MAS (mobile) coverage rollups. Single-file convention like
+    # cwe-coverage (no -doc wrapper); registered directly here.
+    "masvs-coverage.yaml":         "masvs-coverage.schema.json",
+    "maswe-coverage.yaml":         "maswe-coverage.schema.json",
     "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
     # C-21: Phase C synthesis artifacts
     "asset-graph.yaml":            "asset-graph.schema.json",
@@ -438,6 +442,7 @@ def run_semantic_pass(
     # loader, then enforce concrete-CWE resolution per finding (reachable here at the
     # tier gate, not only the late report-audit).
     cwe_index = _taxonomy.cwe_abstractions()
+    maswe_parents = _taxonomy.maswe_masvs_parents()
     for path, kind, record in _iter_records(run_dir):
         if "_parse_error" in record:
             continue
@@ -454,6 +459,8 @@ def run_semantic_pass(
             for msg in linters.check_lens_consistency(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_hedge_words_in_attack_rationale(record):
+                report.warnings.append(Violation(path, rid, msg))
+            for msg in linters.check_maswe_masvs_consistency(record, maswe_parents):
                 report.warnings.append(Violation(path, rid, msg))
             for msg in linters.check_tmeval_evidence_pointer(record):
                 report.errors.append(Violation(path, rid, msg))

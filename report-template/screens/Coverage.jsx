@@ -4,9 +4,21 @@
 function Coverage({ data }) {
   const [tab, setTab] = useState("nist");
 
+  const active = (data.meta && data.meta.active_taxonomies) || [];
+  const masvsRows = data.masvs_coverage || [];
+  const masweRows = data.maswe_coverage || [];
+  const showMasvs = active.includes("masvs") && masvsRows.length > 0;
+  const showMaswe = active.includes("maswe") && masweRows.length > 0;
+  // APD matrix is § 9 by default; each MAS sub-tab inserted before it bumps
+  // its section number so the tab labels stay contiguous after ATT&CK (§ 8).
+  let n = 9;
+  const masvsSec = showMasvs ? n++ : null;
+  const masweSec = showMaswe ? n++ : null;
+  const apdSec = n;
+
   return (
     <div>
-      <div className="section-eyebrow">§ 7-9 — Coverage</div>
+      <div className="section-eyebrow">§ 7-{apdSec} — Coverage</div>
       <h2 className="section-title">Control + technique + component coverage</h2>
 
       <div className="cov-tabs">
@@ -16,13 +28,25 @@ function Coverage({ data }) {
         <button className={`cov-tab ${tab === "attack" ? "cov-tab--active" : ""}`} onClick={() => setTab("attack")}>
           MITRE ATT&CK · § 8
         </button>
+        {showMasvs && (
+          <button className={`cov-tab ${tab === "masvs" ? "cov-tab--active" : ""}`} onClick={() => setTab("masvs")}>
+            OWASP MASVS · § {masvsSec}
+          </button>
+        )}
+        {showMaswe && (
+          <button className={`cov-tab ${tab === "maswe" ? "cov-tab--active" : ""}`} onClick={() => setTab("maswe")}>
+            OWASP MASWE · § {masweSec}
+          </button>
+        )}
         <button className={`cov-tab ${tab === "apd" ? "cov-tab--active" : ""}`} onClick={() => setTab("apd")}>
-          APD component matrix · § 9
+          APD component matrix · § {apdSec}
         </button>
       </div>
 
       {tab === "nist" && <NistTable rows={data.nist_rollup} />}
       {tab === "attack" && <AttackTable rows={data.attack_exposure} />}
+      {tab === "masvs" && showMasvs && <MasvsTable rows={masvsRows} />}
+      {tab === "maswe" && showMaswe && <MasweTable rows={masweRows} />}
       {tab === "apd" && <APDMatrix matrix={data.apd_matrix} />}
     </div>
   );
@@ -162,6 +186,87 @@ function APDMatrix({ matrix }) {
         <span><span className="legend__swatch" style={{ background: "var(--cell-gapped)" }} />gapped — findings, no capabilities</span>
         <span><span className="legend__swatch" style={{ background: "var(--cell-silent)" }} />silent</span>
       </div>
+    </div>
+  );
+}
+
+function MasvsTable({ rows }) {
+  const postureClass = (p) =>
+    p === "satisfying" || p === "covered" ? "covered"
+      : p === "exposed" || p === "gapped" ? "gapped"
+      : "both";
+  // Map the raw coverage enum to the friendly vocabulary used in the legend
+  // prose above, so the cell text matches what the reader is told to expect.
+  const postureLabel = (p) =>
+    p === "covered" ? "satisfying"
+      : p === "gapped" ? "exposed"
+      : p === "gapped_and_covered" ? "both"
+      : p;
+  return (
+    <div>
+      <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+        OWASP MASVS controls touched by this run, with the capabilities that satisfy them and the findings that expose them. Posture is <strong>satisfying</strong> (capabilities, no findings), <strong>exposed</strong> (findings, no satisfying capability), or <strong>both</strong> (review scope alignment). Authoritative version in <code className="mono">40-synthesis/masvs-coverage.yaml</code>.
+      </p>
+      <table className="nist-table">
+        <thead>
+          <tr>
+            <th>Control</th>
+            <th>Category</th>
+            <th>Statement</th>
+            <th className="num">Satisfying</th>
+            <th className="num">Exposed</th>
+            <th>Surfaces</th>
+            <th>Posture</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.masvs_id}>
+              <td><TaxonomyTag id={r.masvs_id} /></td>
+              <td style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{r.category_title || r.category}</td>
+              <td style={{ color: "var(--ink)" }}>{r.name}</td>
+              <td className="num">{r.capability_count}</td>
+              <td className="num" style={{ color: r.finding_count > 0 ? "var(--sev-high)" : undefined }}>{r.finding_count}</td>
+              <td style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{(r.surfaces || []).join(", ") || "—"}</td>
+              <td><span className={`cov-cell cov-cell--${postureClass(r.posture)}`}>{postureLabel(r.posture)}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MasweTable({ rows }) {
+  return (
+    <div>
+      <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+        OWASP MASWE weaknesses exposed by findings in this run, with the MASVS control each weakness rolls up to. MASWE is a findings-only weakness taxonomy — there is no &ldquo;satisfying capability&rdquo; column. Authoritative version in <code className="mono">40-synthesis/maswe-coverage.yaml</code>.
+      </p>
+      <table className="attack-table">
+        <thead>
+          <tr>
+            <th>Weakness</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Parent MASVS</th>
+            <th className="num">Findings</th>
+            <th>Surfaces</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.maswe_id}>
+              <td><TaxonomyTag id={r.maswe_id} /></td>
+              <td style={{ color: "var(--ink)" }}>{r.name}</td>
+              <td style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{r.category}</td>
+              <td><TagRow ids={r.parent_masvs || []} /></td>
+              <td className="num" style={{ color: r.finding_count > 0 ? "var(--sev-high)" : undefined }}>{r.finding_count}</td>
+              <td style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{(r.surfaces || []).join(", ") || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

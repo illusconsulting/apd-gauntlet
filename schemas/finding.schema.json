@@ -100,6 +100,14 @@
         "atlas": {
           "type": "array",
           "items": { "$ref": "_defs.schema.json#/$defs/atlas_technique_id" }
+        },
+        "masvs": {
+          "type": "array",
+          "items": { "$ref": "_defs.schema.json#/$defs/masvs_control_id" }
+        },
+        "maswe": {
+          "type": "array",
+          "items": { "$ref": "_defs.schema.json#/$defs/maswe_id" }
         }
       }
     },

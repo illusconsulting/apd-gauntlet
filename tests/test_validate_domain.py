@@ -40,3 +40,38 @@ def test_validate_domain_accepts_multiple_packs():
     )
     assert result.exit_code == 0, result.output
     assert "sample" in result.output and "sample2" in result.output
+
+
+def test_domain_accepts_optional_taxonomies(tmp_path=None):
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "domain.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "valid" / "domain-with-taxonomies.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors == [], [e.message for e in errors]
+    assert doc["taxonomies"] == ["masvs", "maswe"]
+
+
+def test_domain_rejects_unknown_taxonomy():
+    import json
+    import pathlib
+
+    import yaml
+    from apd_gauntlet.validate import build_registry
+    from jsonschema import Draft202012Validator
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    schema = json.loads((repo / "schemas" / "domain.schema.json").read_text())
+    doc = yaml.safe_load(
+        (repo / "tests" / "fixtures" / "invalid" / "domain-with-invalid-taxonomy.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
+    assert errors, "unknown domain taxonomy must be rejected by the enum"

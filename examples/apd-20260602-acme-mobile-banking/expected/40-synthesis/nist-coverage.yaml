@@ -1,0 +1,237 @@
+controls:
+- id: IA-9
+  family: IA
+  title: Service Identification and Authentication
+  finding_count: 1
+  finding_ids:
+  - auth-a66343a2
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-3
+  family: IA
+  title: Device Identification and Authentication
+  finding_count: 1
+  finding_ids:
+  - auth-a66343a2
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-7
+  family: SI
+  title: Software, Firmware, and Information Integrity
+  finding_count: 2
+  finding_ids:
+  - auth-a66343a2
+  - auth-e0cc47fc
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2
+  family: IA
+  title: Identification and Authentication (Organizational Users)
+  finding_count: 1
+  finding_ids:
+  - auth-e0cc47fc
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-2(1)
+  family: IA
+  title: Identification and Authentication (Organizational Users) | Multi-factor Authentication
+    to Privileged Accounts
+  finding_count: 1
+  finding_ids:
+  - auth-e0cc47fc
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5
+  family: IA
+  title: Authenticator Management
+  finding_count: 3
+  finding_ids:
+  - conf-4149d0db
+  - conf-9c065684
+  - ephem-260cbeab
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(7)
+  family: IA
+  title: Authenticator Management | No Embedded Unencrypted Static Authenticators
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-12
+  family: SC
+  title: Cryptographic Key Establishment and Management
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-28
+  family: SC
+  title: Protection of Information at Rest
+  finding_count: 2
+  finding_ids:
+  - conf-4149d0db
+  - conf-9c065684
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-28(1)
+  family: SC
+  title: Protection of Information at Rest | Cryptographic Protection
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-12
+  family: AC
+  title: Session Termination
+  finding_count: 1
+  finding_ids:
+  - ephem-260cbeab
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-5(13)
+  family: IA
+  title: Authenticator Management | Expiration of Cached Authenticators
+  finding_count: 1
+  finding_ids:
+  - ephem-260cbeab
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-3
+  family: AC
+  title: Access Enforcement
+  finding_count: 2
+  finding_ids:
+  - intg-573fc767
+  - intg-80dbf492
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AC-4
+  family: AC
+  title: Information Flow Enforcement
+  finding_count: 2
+  finding_ids:
+  - intg-573fc767
+  - intg-80dbf492
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SI-10
+  family: SI
+  title: Information Input Validation
+  finding_count: 2
+  finding_ids:
+  - intg-573fc767
+  - intg-80dbf492
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-2
+  family: AU
+  title: Event Logging
+  finding_count: 1
+  finding_ids:
+  - nonrep-38caffd0
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-3
+  family: AU
+  title: Content of Audit Records
+  finding_count: 1
+  finding_ids:
+  - nonrep-38caffd0
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-9
+  family: AU
+  title: Protection of Audit Information
+  finding_count: 1
+  finding_ids:
+  - nonrep-38caffd0
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: AU-12
+  family: AU
+  title: Audit Record Generation
+  finding_count: 1
+  finding_ids:
+  - nonrep-38caffd0
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: SC-8(1)
+  family: SC
+  title: Transmission Confidentiality and Integrity | Cryptographic Protection
+  finding_count: 1
+  finding_ids:
+  - resil-d7f2b8e9
+  capability_count: 2
+  capability_ids:
+  - auth-cap-7f003829
+  - conf-cap-3ad59773
+  posture: gapped_and_covered
+- id: SC-17
+  family: SC
+  title: Public Key Infrastructure Certificates
+  finding_count: 1
+  finding_ids:
+  - resil-d7f2b8e9
+  capability_count: 1
+  capability_ids:
+  - auth-cap-7f003829
+  posture: gapped_and_covered
+- id: CP-13
+  family: CP
+  title: Alternative Security Mechanisms
+  finding_count: 1
+  finding_ids:
+  - resil-d7f2b8e9
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- id: IA-3(1)
+  family: IA
+  title: Device Identification and Authentication | Cryptographic Bidirectional Authentication
+  finding_count: 0
+  finding_ids: []
+  capability_count: 1
+  capability_ids:
+  - auth-cap-7f003829
+  posture: covered
+- id: SC-13
+  family: SC
+  title: Cryptographic Protection
+  finding_count: 0
+  finding_ids: []
+  capability_count: 1
+  capability_ids:
+  - conf-cap-3ad59773
+  posture: covered
+- id: SC-8
+  family: SC
+  title: Transmission Confidentiality and Integrity
+  finding_count: 0
+  finding_ids: []
+  capability_count: 1
+  capability_ids:
+  - conf-cap-3ad59773
+  posture: covered

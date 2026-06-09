@@ -1,0 +1,46 @@
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "This APD gauntlet run reviews the Acme mobile banking app under the mobile-applications domain pack, with OWASP MASVS (control) and MASWE (weakness) promoted to first-class mapped taxonomies. The app splits trust between an adversary-controlled client and the backend; the highest-leverage gaps are structural client-trust failures, each of which needs a server-side invariant rather than a client-side measure."
+    - "The headline concerns are a fleet-wide hardcoded HMAC request-signing secret compiled into every install (conf-4149d0db, critical) and a daily transfer limit enforced only client-side while the backend honors any submitted amount (intg-573fc767, critical), compounded by session and refresh tokens persisted in plaintext SharedPreferences/NSUserDefaults instead of the platform hardware-backed key store (conf-9c065684, high). Confirmed capabilities are narrow but real — HTTPS-only transport with no cleartext exemptions — and do not offset the structural gaps."
+
+headline_findings:
+  - {id: "conf-4149d0db", rank: 1}
+  - {id: "intg-573fc767", rank: 2}
+  - {id: "conf-9c065684", rank: 3}
+  - {id: "ephem-260cbeab", rank: 4}
+  - {id: "auth-e0cc47fc", rank: 5}
+  - {id: "nonrep-38caffd0", rank: 6}
+  - {id: "intg-80dbf492", rank: 7}
+
+strengths:
+  - id: "conf-cap-3ad59773"
+    caveats:
+      - "HTTPS-only transport protects data in motion but does not address the hardcoded HMAC signing secret (conf-4149d0db) or plaintext token storage at rest (conf-9c065684)"
+  - id: "auth-cap-7f003829"
+    caveats:
+      - "Certificate pinning is single-pin with no backup pin or documented rotation, risking a self-inflicted lockout (resil-d7f2b8e9)"
+      - "Pinning is present on the Android API channel only; it does not establish device or app integrity (auth-a66343a2)"
+
+next_steps:
+  - rank: 1
+    text: "Remove the hardcoded HMAC request-signing secret from the binary; move request authentication to a per-device server-issued credential so a single extracted key cannot forge requests for the whole fleet."
+    refs: ["conf-4149d0db"]
+  - rank: 2
+    text: "Enforce the daily transfer limit as a server-side invariant; the backend must reject any amount over the limit regardless of what the client submits."
+    refs: ["intg-573fc767"]
+  - rank: 3
+    text: "Persist session and refresh tokens in the platform hardware-backed key store (Android Keystore / iOS Keychain) instead of SharedPreferences/NSUserDefaults."
+    refs: ["conf-9c065684"]
+  - rank: 4
+    text: "Add server-side refresh-token revocation and device-binding so a stolen 90-day refresh token can be invalidated."
+    refs: ["ephem-260cbeab"]
+  - rank: 5
+    text: "Move consequential-action audit off the attacker-controlled device to a server-side append-only store so actions are reconstructable and tamper-evident."
+    refs: ["nonrep-38caffd0"]
+
+posture_summary:
+  trustworthiness: "A hardcoded HMAC signing secret is compiled into every install (conf-4149d0db) and session/refresh tokens are stored in plaintext key-value stores rather than the hardware-backed key store (conf-9c065684); biometric unlock gates the UI but does not gate a Keystore/Keychain key release (auth-e0cc47fc)."
+  scalability: "Session lifetime is governed by a 90-day refresh token with no server-side revocation and no device-binding (ephem-260cbeab), and a single certificate pin with no backup pin or rotation path can brick the app fleet on rotation (resil-d7f2b8e9)."
+  auditability: "Consequential-action audit is kept only on the attacker-controlled device (nonrep-38caffd0), and the backend cannot prove a genuine app on a genuine device because there is no hardware attestation (auth-a66343a2), leaving consequential transfers unprovable."

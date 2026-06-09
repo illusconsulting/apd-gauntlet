@@ -210,6 +210,11 @@ def meta_block(
         "attacker_positions": _resolve_attacker_positions(artifacts),
         "is_empty_run": is_empty_run,
         "reference_db_versions": _taxonomy.reference_db_versions(),
+        # Taxonomies the run declared (run-config ``taxonomies``), lifted by the
+        # loader. Drives which taxonomy families the report advertises (e.g.
+        # ["masvs", "maswe"] on a mobile run). Empty list on runs that declared
+        # none, so non-mobile runs carry no MAS advertisement.
+        "active_taxonomies": list(artifacts.active_taxonomies),
     }
 
 
@@ -402,6 +407,14 @@ def findings_array(
                 ),
                 "atlas":     _extract_ids_from_mapping(
                     (f.get("control_mappings") or {}).get("atlas"),
+                    warnings=warnings,
+                ),
+                "masvs":     _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("masvs"),
+                    warnings=warnings,
+                ),
+                "maswe":     _extract_ids_from_mapping(
+                    (f.get("control_mappings") or {}).get("maswe"),
                     warnings=warnings,
                 ),
             },
@@ -694,6 +707,67 @@ def nist_rollup_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
             ))
 
     rows.sort(key=lambda r: -(r["covered"] + r["gapped"] + r["both"]))
+    return rows
+
+
+def masvs_coverage_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Return rows for the MASVS coverage table — one per cited OWASP MASVS
+    control, straight off ``40-synthesis/masvs-coverage.yaml``.
+
+    The synthesizer's ``_masvs_rollup`` already computes per-control counts,
+    surfaces, and posture (via coverage_logic.posture()), so this is a tolerant
+    passthrough: each ``controls[]`` entry maps to a row. Returns ``[]`` when the
+    rollup is absent (non-mobile run) so the Coverage tab omits the MASVS scene
+    gracefully.
+    """
+    controls = (artifacts.masvs_coverage or {}).get("controls") or []
+    rows: list[dict[str, Any]] = []
+    for c in controls:
+        if not isinstance(c, dict):
+            continue
+        rows.append({
+            "masvs_id":         c.get("masvs_id", ""),
+            "name":             c.get("name", ""),
+            "category":         c.get("category", ""),
+            "category_title":   c.get("category_title", ""),
+            "finding_count":    c.get("finding_count", 0),
+            "finding_ids":      list(c.get("finding_ids") or []),
+            "surfaces":         list(c.get("surfaces") or []),
+            "capability_count": c.get("capability_count", 0),
+            "capability_ids":   list(c.get("capability_ids") or []),
+            "posture":          c.get("posture", "silent"),
+        })
+    # Order: most-cited controls first (finding+capability volume desc), then id.
+    rows.sort(key=lambda r: (-(r["finding_count"] + r["capability_count"]), r["masvs_id"]))
+    return rows
+
+
+def maswe_coverage_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Return rows for the MASWE coverage table — one per cited OWASP MASWE
+    weakness, straight off ``40-synthesis/maswe-coverage.yaml``.
+
+    MASWE is findings-only (no capability cross-walk), so the synthesizer's
+    ``_maswe_rollup`` carries per-weakness finding counts, the filing category,
+    the catalog status, parent MASVS controls, and the touched surfaces. Tolerant
+    passthrough; returns ``[]`` on a non-mobile run so the Coverage tab omits the
+    MASWE scene gracefully.
+    """
+    entries = (artifacts.maswe_coverage or {}).get("entries") or []
+    rows: list[dict[str, Any]] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        rows.append({
+            "maswe_id":      e.get("maswe_id", ""),
+            "name":          e.get("name", ""),
+            "category":      e.get("category", ""),
+            "status":        e.get("status", ""),
+            "parent_masvs":  list(e.get("parent_masvs") or []),
+            "finding_count": e.get("finding_count", 0),
+            "finding_ids":   list(e.get("finding_ids") or []),
+            "surfaces":      list(e.get("surfaces") or []),
+        })
+    rows.sort(key=lambda r: (-r["finding_count"], r["maswe_id"]))
     return rows
 
 
@@ -1836,6 +1910,12 @@ def build_apd_data(
         ("attack_exposure",
          lambda: attack_exposure_rows(artifacts),
          []),
+        ("masvs_coverage",
+         lambda: masvs_coverage_rows(artifacts),
+         []),
+        ("maswe_coverage",
+         lambda: maswe_coverage_rows(artifacts),
+         []),
         ("apd_matrix",
          lambda: apd_matrix(artifacts, warnings=warnings),
          {"goals": [], "goalLabels": {}, "rows": []}),
@@ -1918,6 +1998,8 @@ _ATTACK_FAMILY_DISPLAY = "MITRE ATT&CK"
 _CWE_FAMILY_DISPLAY = "CWE"
 _D3FEND_FAMILY_DISPLAY = "MITRE D3FEND"
 _ATLAS_FAMILY_DISPLAY = "MITRE ATLAS"
+_MASVS_FAMILY_DISPLAY = "OWASP MASVS"
+_MASWE_FAMILY_DISPLAY = "OWASP MASWE"
 
 
 def _extract_ids_from_mapping(
@@ -2002,6 +2084,7 @@ def _collect_referenced_ids(
     """
     out: dict[str, set[str]] = {
         "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(), "atlas": set(),
+        "masvs": set(), "maswe": set(),
     }
     for rec in _report_finding_set(artifacts):
         cm = rec.get("control_mappings") or {}
@@ -2024,6 +2107,13 @@ def _collect_referenced_ids(
         out["atlas"].update(_extract_ids_from_mapping(
             cm.get("atlas"), warnings=warnings,
         ))
+        # MASVS lives on both findings and capabilities; MASWE is findings-only.
+        out["masvs"].update(_extract_ids_from_mapping(
+            cm.get("masvs"), warnings=warnings,
+        ))
+        out["maswe"].update(_extract_ids_from_mapping(
+            cm.get("maswe"), warnings=warnings,
+        ))
     for rec in artifacts.deduped_capabilities:
         cm = rec.get("control_mappings") or {}
         out["nist"].update(
@@ -2039,6 +2129,11 @@ def _collect_referenced_ids(
         ))
         out["d3fend"].update(_extract_ids_from_mapping(
             cm.get("d3fend"), warnings=warnings,
+        ))
+        # MASVS is the only MAS taxonomy carried on capabilities (MASWE is
+        # findings-only per the control_mappings contract).
+        out["masvs"].update(_extract_ids_from_mapping(
+            cm.get("masvs"), warnings=warnings,
         ))
     # Coverage rollups — handle all four shapes. Every NIST id is normalised
     # at ingest so 'ac-3' and 'AC-3' collapse to one taxonomy entry and junk
@@ -2114,6 +2209,20 @@ def _collect_referenced_ids(
         for t in (o.get("exposed_attack_techniques") or []):
             if isinstance(t, str) and t:
                 out["attack"].add(t)
+    # MAS coverage rollups (40-synthesis/masvs-coverage.yaml + maswe-coverage.yaml).
+    # The synthesizer rolls up every cited control/weakness here, so harvesting
+    # the rollup ids guarantees a taxonomy entry even for ids the per-finding
+    # mappings express in a shape the extractor did not recover.
+    for c in ((artifacts.masvs_coverage or {}).get("controls") or []):
+        if isinstance(c, dict):
+            mid = c.get("masvs_id")
+            if isinstance(mid, str) and mid:
+                out["masvs"].add(mid)
+    for e in ((artifacts.maswe_coverage or {}).get("entries") or []):
+        if isinstance(e, dict):
+            wid = e.get("maswe_id")
+            if isinstance(wid, str) and wid:
+                out["maswe"].add(wid)
     return out
 
 
@@ -2180,5 +2289,29 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         if not aid:
             continue
         out[aid] = {"family": _ATLAS_FAMILY_DISPLAY, "title": atlas.get(aid, aid)}
+
+    # OWASP MASVS controls: titles (the verification statement) from the bundled
+    # masvs.json catalog; URL is pure-regex (mas.owasp.org/MASVS/controls/<id>/),
+    # so every well-formed control id is clickable.
+    masvs = _taxonomy.masvs_titles()
+    for mid in sorted(refs["masvs"]):
+        if not mid:
+            continue
+        out[mid] = {"family": _MASVS_FAMILY_DISPLAY, "title": masvs.get(mid, mid)}
+        _url = _taxonomy.masvs_url(mid)
+        if _url:
+            out[mid]["url"] = _url
+
+    # OWASP MASWE weaknesses: titles from the bundled maswe.json catalog; URL is
+    # derived from the weakness's filing category (mas.owasp.org/MASWE/<cat>/<id>/)
+    # and may be None when the category is unknown — left unlinked in that case.
+    maswe = _taxonomy.maswe_titles()
+    for wid in sorted(refs["maswe"]):
+        if not wid:
+            continue
+        out[wid] = {"family": _MASWE_FAMILY_DISPLAY, "title": maswe.get(wid, wid)}
+        _url = _taxonomy.maswe_url(wid)
+        if _url:
+            out[wid]["url"] = _url
 
     return out

@@ -135,6 +135,17 @@ class RunArtifacts:
     # unioned into the report findings list, metrics, and coverage rollups,
     # mirroring attack_path_findings. Empty when the evaluator emitted none.
     threat_model_findings: list[dict[str, Any]] = field(default_factory=list)
+    # OWASP MAS (mobile) coverage rollups, loaded from 40-synthesis/ when the
+    # synthesizer emitted them (mobile-applications pack runs declaring the
+    # masvs / maswe taxonomies). Optional — None on non-mobile runs. Consumed by
+    # the transform's masvs_coverage / maswe_coverage scenes and harvested into
+    # the taxonomy dict so MASVS/MASWE ids resolve clickable titles + URLs.
+    masvs_coverage: dict[str, Any] | None = None
+    maswe_coverage: dict[str, Any] | None = None
+    # The run-config ``taxonomies`` list, lifted verbatim so the transform can
+    # emit data.meta.active_taxonomies (drives which taxonomy chips the report
+    # advertises). Empty when the run declared no taxonomies key.
+    active_taxonomies: list[str] = field(default_factory=list)
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -573,6 +584,12 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     tm_supplied = _yaml_optional(context / "threat-model-supplied-normalized.yaml")
     # The evaluator's coverage artifact lives under 40-synthesis (the synth dir).
     tm_coverage = _yaml_optional(synth / "threat-model-coverage.yaml")
+    # OWASP MAS (mobile) coverage rollups — present only on mobile-applications
+    # pack runs that declared the masvs / maswe taxonomies. Tolerant: absent on
+    # every non-mobile run, so _yaml_optional returns None and the transform
+    # omits the MAS scenes/meta gracefully.
+    masvs_coverage = _yaml_optional(synth / "masvs-coverage.yaml")
+    maswe_coverage = _yaml_optional(synth / "maswe-coverage.yaml")
 
     # Optional artifacts are hashed via the existing single-read helper:
     # they are already loaded above and we tolerate the second read here
@@ -588,6 +605,10 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         source_hashes["defense-graph.yaml"] = _hash(synth / "defense-graph.yaml")
     if report_data is not None:
         source_hashes["report-data.yaml"] = _hash(synth / "report-data.yaml")
+    if masvs_coverage is not None:
+        source_hashes["masvs-coverage.yaml"] = _hash(synth / "masvs-coverage.yaml")
+    if maswe_coverage is not None:
+        source_hashes["maswe-coverage.yaml"] = _hash(synth / "maswe-coverage.yaml")
 
     return RunArtifacts(
         run_id=run_cfg.get("run_id", run_dir.name),
@@ -626,4 +647,7 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         threat_model_supplied=tm_supplied,
         threat_model_coverage=tm_coverage,
         threat_model_findings=tm_findings,
+        masvs_coverage=masvs_coverage,
+        maswe_coverage=maswe_coverage,
+        active_taxonomies=_extract_str_list(run_cfg, "taxonomies"),
     )

@@ -1,0 +1,11 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+  - maswe_id: MASWE-6
+    name: "Sensitive data stored in unencrypted shared storage"
+    category: MASVS-STORAGE
+    status: new
+    parent_masvs: [MASVS-STORAGE]
+    finding_count: 0
+    finding_ids: []
+    surfaces: []

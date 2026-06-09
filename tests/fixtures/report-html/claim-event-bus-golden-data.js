@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-08",
+    "date": "2026-06-09",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -50,8 +50,24 @@ window.APD_DATA = {
         "fetched_at": "2026-06-02",
         "source": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
         "count": 170
+      },
+      "masvs": {
+        "fetched_at": "2026-06-09",
+        "source": "https://raw.githubusercontent.com/OWASP/masvs/c0db792d48206186874b8b10818e117226eb1d68/OWASP_MASVS.yaml",
+        "count": 24
+      },
+      "maswe": {
+        "fetched_at": "2026-06-09",
+        "source": "https://github.com/OWASP/maswe",
+        "count": 118
       }
     },
+    "active_taxonomies": [
+      "cwe",
+      "mitre_attack",
+      "d3fend",
+      "owasp_api_top10"
+    ],
     "has_threat_model": true,
     "section_errors": {},
     "warnings": []
@@ -240,7 +256,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -280,7 +298,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -322,7 +342,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -363,7 +385,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -401,7 +425,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -441,7 +467,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -481,7 +509,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -519,7 +549,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -560,7 +592,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -600,7 +634,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -641,7 +677,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -682,7 +720,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -723,7 +763,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -761,7 +803,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -808,7 +852,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [
         null,
@@ -850,7 +896,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -888,7 +936,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -926,7 +976,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -964,7 +1016,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1099,6 +1153,8 @@ window.APD_DATA = {
       "note": ""
     }
   ],
+  "masvs_coverage": [],
+  "maswe_coverage": [],
   "apd_matrix": {
     "goals": [
       "conf",

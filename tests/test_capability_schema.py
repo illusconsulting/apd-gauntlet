@@ -86,3 +86,26 @@ def test_capability_rejects_mitre_attack_entry_missing_required_field():
     data = _load_yaml(FIXTURES / "invalid" / "capability-with-malformed-mitre-attack.yaml")
     errors = list(validator.iter_errors(data["capability"]))
     assert errors, "Expected validation errors for missing tactic and rationale, got none"
+
+
+def test_capability_accepts_optional_masvs():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "valid" / "capability-with-masvs.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_capability_rejects_invalid_masvs_format():
+    validator = _build_validator()
+    data = _load_yaml(FIXTURES / "invalid" / "capability-with-invalid-masvs.yaml")
+    errors = list(validator.iter_errors(data["capability"]))
+    assert errors, "Expected validation errors for malformed MASVS control id, got none"
+
+
+def test_capability_control_mappings_has_no_maswe_property():
+    """maswe is findings-only; capability control_mappings must not declare it."""
+    import json
+    schema = json.loads((REPO / "schemas" / "capability.schema.json").read_text())
+    props = schema["properties"]["control_mappings"]["properties"]
+    assert "masvs" in props
+    assert "maswe" not in props

@@ -1,0 +1,90 @@
+schema_version: 1
+generated_by: synthesizer
+controls:
+- masvs_id: MASVS-CRYPTO-2
+  name: The app performs key management according to industry best practices.
+  category: MASVS-CRYPTO
+  category_title: Cryptography
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  surfaces:
+  - "\xA73 On-device storage"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-RESILIENCE-2
+  name: The app implements anti-tampering mechanisms.
+  category: MASVS-RESILIENCE
+  category_title: Resilience Against Reverse Engineering and Tampering
+  finding_count: 1
+  finding_ids:
+  - conf-4149d0db
+  surfaces:
+  - "\xA73 On-device storage"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-STORAGE-1
+  name: The app securely stores sensitive data.
+  category: MASVS-STORAGE
+  category_title: Storage
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  surfaces:
+  - application android:allowBackup
+  - "\xA73 On-device storage"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-STORAGE-2
+  name: The app prevents leakage of sensitive data.
+  category: MASVS-STORAGE
+  category_title: Storage
+  finding_count: 1
+  finding_ids:
+  - conf-9c065684
+  surfaces:
+  - application android:allowBackup
+  - "\xA73 On-device storage"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-AUTH-1
+  name: The app uses secure authentication and authorization protocols and follows
+    the relevant best practices.
+  category: MASVS-AUTH
+  category_title: Authentication and Authorization
+  finding_count: 1
+  finding_ids:
+  - intg-573fc767
+  surfaces:
+  - "\xA75 Transfers and limits"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-AUTH-2
+  name: The app performs local authentication securely according to the platform best
+    practices.
+  category: MASVS-AUTH
+  category_title: Authentication and Authorization
+  finding_count: 1
+  finding_ids:
+  - intg-573fc767
+  surfaces:
+  - "\xA75 Transfers and limits"
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+- masvs_id: MASVS-NETWORK-1
+  name: The app secures all network traffic according to the current best practices.
+  category: MASVS-NETWORK
+  category_title: Network Communication
+  finding_count: 0
+  finding_ids: []
+  surfaces: []
+  capability_count: 1
+  capability_ids:
+  - conf-cap-3ad59773
+  posture: covered

@@ -14,10 +14,23 @@ between Coverage and Attack paths only when a threat model exists for the run
 
 The Coverage tab renders taxonomy tooltips for every cited control or technique
 ID. Tooltip families include NIST 800-53r5, MITRE ATT&CK, CWE, OWASP (web /
-API / LLM), MITRE D3FEND, and — when `mitre_atlas` is declared for the run —
-**MITRE ATLAS** (adversarial-ML techniques). A bare ID in a tooltip (title
-equals the ID string) means the reference catalog for that family failed to
-load; this is caught by the completeness gate's `taxonomy_titles_resolve` check.
+API / LLM), MITRE D3FEND, — when `mitre_atlas` is declared for the run —
+**MITRE ATLAS** (adversarial-ML techniques), and — when the
+`mobile-applications` pack auto-seeds `masvs`/`maswe` — **OWASP MASVS** and
+**OWASP MASWE** (mobile verification controls and weaknesses). A bare ID in a
+tooltip (title equals the ID string) means the reference catalog for that family
+failed to load; this is caught by the completeness gate's
+`taxonomy_titles_resolve` check.
+
+When `masvs` or `maswe` is active, the Coverage tab adds two sub-tabs — an
+**OWASP MASVS** control-coverage view (sourced from
+`40-synthesis/masvs-coverage.yaml`, one row per control with finding/capability
+counts, surfaces, and a posture pill) and an **OWASP MASWE** weakness view
+(sourced from `maswe-coverage.yaml`, one row per weakness with finding count,
+filing category/status, and parent MASVS controls). Both sub-tabs are omitted
+when the taxonomy is not active. The transform exposes the active taxonomy set
+as `data.meta.active_taxonomies` (lifted from the run-config `taxonomies:`
+list), which the Coverage tab reads to decide which family sub-tabs to render.
 
 ## Start-here reading guide
 
@@ -144,16 +157,21 @@ The `audit-report` step (step 5g in the workflow, also available standalone as
 - `apd_matrix_nonempty` — the 9×N APD coverage matrix must have rows whenever
   findings are present.
 - `coverage_rollups_nonempty` — rendered NIST and ATT&CK rollups must be
-  non-empty when the authoritative coverage YAMLs have rows.
+  non-empty when the authoritative coverage YAMLs have rows; this also covers the
+  MASVS and MASWE rollups when those taxonomies are active and cited.
+- `id_coverage_masvs` — every MASVS control cited on a finding or capability must
+  appear in the rendered `masvs-coverage.yaml` (exempt when `masvs` is not active).
+- `id_coverage_maswe` — every MASWE weakness cited on a finding must appear in the
+  rendered `maswe-coverage.yaml` (exempt when `maswe` is not active).
 - `taxonomy_titles_resolve` — no cited taxonomy ID may appear as a bare ID
   (title equals ID), which would indicate a failed reference-catalog load.
 - `section_errors_empty` — the rendered report must carry no unresolved section
   errors.
 
 Pre-existing cross-checks (`id_coverage_findings`, `id_coverage_capabilities`,
-`id_coverage_nist`, `id_coverage_attack`, `count_parity_severity`,
-`count_parity_totals`, `nist_rollup_parity`, `data_js_recompute_drift`) are also
-structural.
+`id_coverage_nist`, `id_coverage_attack`, `id_coverage_masvs`,
+`id_coverage_maswe`, `count_parity_severity`, `count_parity_totals`,
+`nist_rollup_parity`, `data_js_recompute_drift`) are also structural.
 
 **Editorial checks** (failures are self-healed, not blocking):
 

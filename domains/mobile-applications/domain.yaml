@@ -28,6 +28,9 @@ regulatory_anchors:
   - GDPR
   - "Apple App Store Review / App Privacy"
   - "Google Play Data Safety"
+taxonomies:
+  - masvs
+  - maswe
 crown_jewels:
   - pattern: keystore_secure_enclave_keys
     description: "Hardware-backed key material in the Android Keystore / StrongBox / iOS Keychain / Secure Enclave, including biometric-gated keys and device-attestation keys. Non-exportability is the protection; a key that escapes hardware backing (software-only fallback, exportable flag, key copied into app memory) becomes a client-extractable secret recoverable from a rooted device."

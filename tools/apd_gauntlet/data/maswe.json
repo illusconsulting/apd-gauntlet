@@ -1,0 +1,1428 @@
+{
+  "_meta": {
+    "commit": "6799c10d662954a724d2a4b03b69f71c5debe3b1",
+    "count": 118,
+    "fetched_at": "2026-06-09",
+    "source": "https://github.com/OWASP/maswe"
+  },
+  "weaknesses": {
+    "MASWE-0001": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        209,
+        359,
+        497,
+        532
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-2",
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "new",
+      "title": "Insertion of Sensitive Data into Logs"
+    },
+    "MASWE-0002": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        200,
+        284,
+        732,
+        922
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Sensitive Data Stored With Insufficient Access Restrictions in Internal Locations"
+    },
+    "MASWE-0003": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        313
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-2",
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "placeholder",
+      "title": "Backup Unencrypted"
+    },
+    "MASWE-0004": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        212
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-2",
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "new",
+      "title": "Sensitive Data Not Excluded From Backup"
+    },
+    "MASWE-0005": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        798
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1"
+      ],
+      "status": "new",
+      "title": "API Keys Hardcoded in the App Package"
+    },
+    "MASWE-0006": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        312,
+        313,
+        922
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-1",
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "new",
+      "title": "Sensitive Data Stored Unencrypted in Private Storage Locations"
+    },
+    "MASWE-0007": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        312,
+        313,
+        921,
+        922
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-1"
+      ],
+      "status": "new",
+      "title": "Sensitive Data Stored Unencrypted in Shared Storage Requiring No User Interaction"
+    },
+    "MASWE-0008": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "status": "placeholder",
+      "title": "Missing Device Secure Lock Verification Implementation"
+    },
+    "MASWE-0009": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        331,
+        337,
+        338
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "new",
+      "title": "Improper Cryptographic Key Generation"
+    },
+    "MASWE-0010": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        326,
+        327
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "placeholder",
+      "title": "Improper Cryptographic Key Derivation"
+    },
+    "MASWE-0011": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        262,
+        324
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "placeholder",
+      "title": "Cryptographic Key Rotation Not Implemented"
+    },
+    "MASWE-0012": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        323
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure or Wrong Usage of Cryptographic Key"
+    },
+    "MASWE-0013": {
+      "category": "MASVS-CRYPTO",
+      "covered_by": [
+        "MASWE-0014"
+      ],
+      "cwe": [],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "deprecated",
+      "title": "Hardcoded Cryptographic Keys in Use"
+    },
+    "MASWE-0014": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        312,
+        318,
+        321
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2",
+        "MASVS-STORAGE-1"
+      ],
+      "status": "new",
+      "title": "Cryptographic Keys Not Properly Protected at Rest"
+    },
+    "MASWE-0015": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        327,
+        477,
+        522
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2",
+        "MASVS-CODE-3"
+      ],
+      "status": "placeholder",
+      "title": "Deprecated Android KeyStore Implementations"
+    },
+    "MASWE-0016": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        322
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Imported Cryptographic Keys"
+    },
+    "MASWE-0017": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        522
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2",
+        "MASVS-STORAGE-1",
+        "MASVS-NETWORK-1"
+      ],
+      "status": "placeholder",
+      "title": "Cryptographic Keys Not Properly Protected on Export"
+    },
+    "MASWE-0018": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        284
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-2",
+        "MASVS-AUTH-2",
+        "MASVS-AUTH-3"
+      ],
+      "status": "placeholder",
+      "title": "Cryptographic Keys Access Not Restricted"
+    },
+    "MASWE-0019": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        326,
+        327,
+        1240
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1",
+        "MASVS-CODE-3"
+      ],
+      "status": "new",
+      "title": "Risky Cryptography Implementations"
+    },
+    "MASWE-0020": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        326
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "new",
+      "title": "Improper Encryption"
+    },
+    "MASWE-0021": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        328
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "placeholder",
+      "title": "Improper Hashing"
+    },
+    "MASWE-0022": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        329
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "placeholder",
+      "title": "Predictable Initialization Vectors (IVs)"
+    },
+    "MASWE-0023": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        208,
+        325,
+        327,
+        780
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "new",
+      "title": "Risky Padding"
+    },
+    "MASWE-0024": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        327,
+        807,
+        915
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "placeholder",
+      "title": "Improper Use of Message Authentication Code (MAC)"
+    },
+    "MASWE-0025": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        327
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "placeholder",
+      "title": "Improper Generation of Cryptographic Signatures"
+    },
+    "MASWE-0026": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        347
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "placeholder",
+      "title": "Improper Verification of Cryptographic Signature"
+    },
+    "MASWE-0027": {
+      "category": "MASVS-CRYPTO",
+      "cwe": [
+        332,
+        337,
+        338
+      ],
+      "masvs_v2": [
+        "MASVS-CRYPTO-1"
+      ],
+      "status": "new",
+      "title": "Improper Random Number Generation"
+    },
+    "MASWE-0028": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-3"
+      ],
+      "status": "placeholder",
+      "title": "MFA Implementation Best Practices Not Followed"
+    },
+    "MASWE-0029": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        306
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-3",
+        "MASVS-PLATFORM-3"
+      ],
+      "status": "placeholder",
+      "title": "Step-Up Authentication Not Implemented After Login"
+    },
+    "MASWE-0030": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        285,
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-3"
+      ],
+      "status": "placeholder",
+      "title": "Re-Authenticates Not Triggered On Contextual State Changes"
+    },
+    "MASWE-0031": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-3"
+      ],
+      "status": "placeholder",
+      "title": "Insecure use of Android Protected Confirmation"
+    },
+    "MASWE-0032": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-CODE-3"
+      ],
+      "status": "placeholder",
+      "title": "Platform-provided Authentication APIs Not Used"
+    },
+    "MASWE-0033": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        285,
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1"
+      ],
+      "status": "placeholder",
+      "title": "Authentication or Authorization Protocol Security Best Practices Not Followed"
+    },
+    "MASWE-0034": {
+      "category": "MASVS-AUTH",
+      "covered_by": [
+        "MASWE-0044"
+      ],
+      "cwe": [
+        287,
+        319
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2"
+      ],
+      "status": "deprecated",
+      "title": "Insecure Implementation of Confirm Credentials"
+    },
+    "MASWE-0035": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-STORAGE-1"
+      ],
+      "status": "placeholder",
+      "title": "Passwordless Authentication Not Implemented"
+    },
+    "MASWE-0036": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        312
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-STORAGE-1"
+      ],
+      "status": "placeholder",
+      "title": "Authentication Material Stored Unencrypted on the Device"
+    },
+    "MASWE-0037": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        319
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-NETWORK-1"
+      ],
+      "status": "placeholder",
+      "title": "Authentication Material Sent over Insecure Connections"
+    },
+    "MASWE-0038": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Authentication Tokens Not Validated"
+    },
+    "MASWE-0039": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-PLATFORM-1"
+      ],
+      "status": "placeholder",
+      "title": "Shared Web Credentials and Website-association Not Implemented"
+    },
+    "MASWE-0040": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-1",
+        "MASVS-PLATFORM-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Authentication in WebViews"
+    },
+    "MASWE-0041": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        603,
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2"
+      ],
+      "status": "placeholder",
+      "title": "Authentication Enforced Only Locally Instead of on the Server-side"
+    },
+    "MASWE-0042": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        285,
+        602,
+        863
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2"
+      ],
+      "status": "placeholder",
+      "title": "Authorization Enforced Only Locally Instead of on the Server-side"
+    },
+    "MASWE-0043": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        922,
+        326,
+        312
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2",
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "placeholder",
+      "title": "App Custom PIN Not Bound to Platform KeyStore"
+    },
+    "MASWE-0044": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2"
+      ],
+      "status": "placeholder",
+      "title": "Biometric Authentication Can Be Bypassed"
+    },
+    "MASWE-0045": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        288,
+        287
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2"
+      ],
+      "status": "placeholder",
+      "title": "Fallback to Non-biometric Credentials Allowed for Sensitive Transactions"
+    },
+    "MASWE-0046": {
+      "category": "MASVS-AUTH",
+      "cwe": [
+        287,
+        522
+      ],
+      "masvs_v2": [
+        "MASVS-AUTH-2",
+        "MASVS-CRYPTO-2"
+      ],
+      "status": "placeholder",
+      "title": "Crypto Keys Not Invalidated on New Biometric Enrollment"
+    },
+    "MASWE-0047": {
+      "category": "MASVS-NETWORK",
+      "cwe": [
+        295
+      ],
+      "masvs_v2": [
+        "MASVS-NETWORK-2"
+      ],
+      "status": "new",
+      "title": "Insecure Identity Pinning"
+    },
+    "MASWE-0048": {
+      "category": "MASVS-NETWORK",
+      "cwe": [
+        311,
+        319
+      ],
+      "masvs_v2": [
+        "MASVS-NETWORK-1"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Machine-to-Machine Communication"
+    },
+    "MASWE-0049": {
+      "category": "MASVS-NETWORK",
+      "cwe": [],
+      "masvs_v2": [
+        "MASVS-NETWORK-1",
+        "MASVS-CODE-3"
+      ],
+      "status": "new",
+      "title": "Proven Networking APIs Not used"
+    },
+    "MASWE-0050": {
+      "category": "MASVS-NETWORK",
+      "cwe": [
+        319
+      ],
+      "masvs_v2": [
+        "MASVS-NETWORK-1"
+      ],
+      "status": "new",
+      "title": "Cleartext Traffic"
+    },
+    "MASWE-0051": {
+      "category": "MASVS-NETWORK",
+      "cwe": [
+        923
+      ],
+      "masvs_v2": [
+        "MASVS-NETWORK-1"
+      ],
+      "status": "new",
+      "title": "Unprotected Open Ports"
+    },
+    "MASWE-0052": {
+      "category": "MASVS-NETWORK",
+      "cwe": [
+        295,
+        297
+      ],
+      "masvs_v2": [
+        "MASVS-NETWORK-1"
+      ],
+      "status": "new",
+      "title": "Insecure Certificate Validation"
+    },
+    "MASWE-0053": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Sensitive Data Leaked via the User Interface"
+    },
+    "MASWE-0054": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Sensitive Data Leaked via Notifications"
+    },
+    "MASWE-0055": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "new",
+      "title": "Sensitive Data Leaked via Screenshots or Screen Recordings"
+    },
+    "MASWE-0056": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        1021
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-3",
+        "MASVS-CODE-1"
+      ],
+      "status": "placeholder",
+      "title": "Tapjacking Attacks"
+    },
+    "MASWE-0057": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        451,
+        1104
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-3"
+      ],
+      "status": "placeholder",
+      "title": "StrandHogg Attack / Task Affinity Vulnerability"
+    },
+    "MASWE-0058": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        939,
+        917
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Deep Links"
+    },
+    "MASWE-0059": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        287,
+        668,
+        200
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Use Of Unauthenticated Platform IPC"
+    },
+    "MASWE-0060": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        285,
+        358
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Use of UIActivity"
+    },
+    "MASWE-0061": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Use of App Extensions"
+    },
+    "MASWE-0062": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        926
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Services"
+    },
+    "MASWE-0063": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        925,
+        926
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Broadcast Receivers"
+    },
+    "MASWE-0064": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        926
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-1"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Content Providers"
+    },
+    "MASWE-0065": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        276,
+        732
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-1"
+      ],
+      "status": "placeholder",
+      "title": "Sensitive Data Permanently Shared with Other Apps"
+    },
+    "MASWE-0066": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        927,
+        940
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Intents"
+    },
+    "MASWE-0067": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        489
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "status": "new",
+      "title": "Debuggable Flag Not Disabled"
+    },
+    "MASWE-0068": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        749,
+        94
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "JavaScript Bridges in WebViews"
+    },
+    "MASWE-0069": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        200,
+        22
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-STORAGE-2"
+      ],
+      "status": "placeholder",
+      "title": "WebViews Allows Access to Local Resources"
+    },
+    "MASWE-0070": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        79,
+        829
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "JavaScript Loaded from Untrusted Sources"
+    },
+    "MASWE-0071": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        601
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "WebViews Loading Content from Untrusted Sources"
+    },
+    "MASWE-0072": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        79
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Universal XSS"
+    },
+    "MASWE-0073": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        79,
+        200,
+        669
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Insecure WebResourceResponse Implementations"
+    },
+    "MASWE-0074": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [
+        489
+      ],
+      "masvs_v2": [
+        "MASVS-PLATFORM-2",
+        "MASVS-RESILIENCE-4"
+      ],
+      "status": "placeholder",
+      "title": "Web Content Debugging Enabled"
+    },
+    "MASWE-0075": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        602,
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-2"
+      ],
+      "status": "placeholder",
+      "title": "Enforced Updating Not Implemented"
+    },
+    "MASWE-0076": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        1395,
+        1357
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-3"
+      ],
+      "status": "new",
+      "title": "Dependencies with Known Vulnerabilities"
+    },
+    "MASWE-0077": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        693,
+        1357
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-1"
+      ],
+      "status": "placeholder",
+      "title": "Running on a recent Platform Version Not Ensured"
+    },
+    "MASWE-0078": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        693,
+        1357
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-1"
+      ],
+      "status": "placeholder",
+      "title": "Latest Platform Version Not Targeted"
+    },
+    "MASWE-0079": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        924
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Data from the Network"
+    },
+    "MASWE-0080": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        349
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Data from Backups"
+    },
+    "MASWE-0081": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        924
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling Of Data From External Interfaces"
+    },
+    "MASWE-0082": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        20,
+        22,
+        73,
+        349
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Data From Local Storage"
+    },
+    "MASWE-0083": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        345,
+        348
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4",
+        "MASVS-PLATFORM-3"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Data From The User Interface"
+    },
+    "MASWE-0084": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        20,
+        345,
+        349
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4",
+        "MASVS-PLATFORM-1"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Handling of Data from IPC"
+    },
+    "MASWE-0085": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        494
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Unsafe Dynamic Code Loading"
+    },
+    "MASWE-0086": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        89
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "SQL Injection"
+    },
+    "MASWE-0087": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        116,
+        611
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Parsing and Escaping"
+    },
+    "MASWE-0088": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        502
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Insecure Object Deserialization"
+    },
+    "MASWE-0089": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Code Obfuscation Not Implemented"
+    },
+    "MASWE-0090": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Resource Obfuscation Not Implemented"
+    },
+    "MASWE-0091": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Anti-Deobfuscation Techniques Not Implemented"
+    },
+    "MASWE-0092": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Static Analysis Tools Not Prevented"
+    },
+    "MASWE-0093": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        497,
+        540
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Debugging Symbols Not Removed"
+    },
+    "MASWE-0094": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        497,
+        540,
+        1295
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Non-Production Resources Not Removed"
+    },
+    "MASWE-0095": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        489,
+        912
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "status": "placeholder",
+      "title": "Code That Disables Security Controls Not Removed"
+    },
+    "MASWE-0096": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        319
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-3",
+        "MASVS-NETWORK-1"
+      ],
+      "status": "placeholder",
+      "title": "Data Sent Unencrypted Over Encrypted Connections"
+    },
+    "MASWE-0097": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "status": "placeholder",
+      "title": "Root/Jailbreak Detection Not Implemented"
+    },
+    "MASWE-0098": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "status": "placeholder",
+      "title": "App Virtualization Environment Detection Not Implemented"
+    },
+    "MASWE-0099": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "status": "placeholder",
+      "title": "Emulator Detection Not Implemented"
+    },
+    "MASWE-0100": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "status": "placeholder",
+      "title": "Device Attestation Not Implemented"
+    },
+    "MASWE-0101": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "status": "placeholder",
+      "title": "Debugger Detection Not Implemented"
+    },
+    "MASWE-0102": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "status": "placeholder",
+      "title": "Dynamic Analysis Tools Detection Not Implemented"
+    },
+    "MASWE-0103": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "status": "placeholder",
+      "title": "RASP Techniques Not Implemented"
+    },
+    "MASWE-0104": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        347
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "status": "placeholder",
+      "title": "App Integrity Not Verified"
+    },
+    "MASWE-0105": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-2",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Integrity of App Resources Not Verified"
+    },
+    "MASWE-0106": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "status": "placeholder",
+      "title": "Official Store Verification Not Implemented"
+    },
+    "MASWE-0107": {
+      "category": "MASVS-RESILIENCE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "status": "placeholder",
+      "title": "Runtime Code Integrity Not Verified"
+    },
+    "MASWE-0108": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "new",
+      "title": "Sensitive Data in Network Traffic"
+    },
+    "MASWE-0109": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-2"
+      ],
+      "status": "new",
+      "title": "Lack of Anonymization or Pseudonymisation Measures"
+    },
+    "MASWE-0110": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-2"
+      ],
+      "status": "new",
+      "title": "Use of Unique Identifiers for User Tracking"
+    },
+    "MASWE-0111": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-3"
+      ],
+      "status": "new",
+      "title": "Inadequate Privacy Policy"
+    },
+    "MASWE-0112": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-3"
+      ],
+      "status": "new",
+      "title": "Inadequate Data Collection Declarations"
+    },
+    "MASWE-0113": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-4"
+      ],
+      "status": "new",
+      "title": "Lack of Proper Data Management Controls"
+    },
+    "MASWE-0114": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-4"
+      ],
+      "status": "new",
+      "title": "Inadequate Data Visibility Controls"
+    },
+    "MASWE-0115": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        359
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-4"
+      ],
+      "status": "new",
+      "title": "Inadequate or Ambiguous User Consent Mechanisms"
+    },
+    "MASWE-0116": {
+      "category": "MASVS-CODE",
+      "cwe": [
+        693
+      ],
+      "masvs_v2": [
+        "MASVS-CODE-3",
+        "MASVS-CODE-4"
+      ],
+      "status": "placeholder",
+      "title": "Compiler-Provided Security Features Not Used"
+    },
+    "MASWE-0117": {
+      "category": "MASVS-PRIVACY",
+      "cwe": [
+        250
+      ],
+      "masvs_v2": [
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "new",
+      "title": "Inadequate Permission Management"
+    },
+    "MASWE-0118": {
+      "category": "MASVS-PLATFORM",
+      "cwe": [],
+      "masvs_v2": [
+        "MASVS-PRIVACY-1"
+      ],
+      "status": "placeholder",
+      "title": "Sensitive Data Not Removed After Use"
+    }
+  }
+}

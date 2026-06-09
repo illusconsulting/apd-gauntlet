@@ -1,0 +1,88 @@
+components:
+- name: network_security_config.xml
+  cells:
+    confidentiality:
+      findings: []
+      capabilities:
+      - conf-cap-3ad59773
+      posture: covered
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-d7f2b8e9
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities:
+      - auth-cap-7f003829
+      posture: covered
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: tech_plan.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-4149d0db
+      - conf-9c065684
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings:
+      - intg-573fc767
+      - intg-80dbf492
+      capabilities: []
+      posture: gapped
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-260cbeab
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings:
+      - auth-a66343a2
+      - auth-e0cc47fc
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings:
+      - nonrep-38caffd0
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
