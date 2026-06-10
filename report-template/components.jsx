@@ -404,8 +404,89 @@ function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPath
   );
 }
 
+// ── Per-finding attack-path strip ("subway map") ──
+// Renders one enumerated path for an apath risk finding: ordered stations
+// (attacker → crown jewel) with edge segments colored by type, and layered
+// markers — ⚠ vuln (compromisable edge), 💡 fix-at-source (highest-confidence
+// compromisable edge), 🛡 D3FEND choke-point (bottleneck edge with overlay).
+// Pure presentational; consumes finding.attack_path built by the transform.
+function AttackPathStrip({ attackPath, onOpenPath }) {
+  const ap = attackPath;
+  const hops = (ap && ap.hops) || [];
+  if (!ap || hops.length === 0) return null;
+
+  const SEG = {
+    compromisable_via_finding: "var(--sev-high)",
+    mitigated_by_capability: "var(--sev-low)",
+  };
+  const nm = (n) => (n && (n.name || n.id)) || "?";
+
+  function Station({ node, kind }) {
+    const big = kind === "attacker" || kind === "jewel";
+    const bg = kind === "attacker" ? "var(--sev-high)"
+      : kind === "jewel" ? "var(--accent)" : "var(--ink-3)";
+    const glyph = kind === "attacker" ? "🌐 " : kind === "jewel" ? "💎 " : "";
+    return (
+      <div className="apath-strip__station" title={node ? `${nm(node)} (${node.type})` : ""}>
+        <span className="apath-strip__dot"
+          style={{ background: bg, width: big ? 16 : 11, height: big ? 16 : 11 }} />
+        <span className="apath-strip__name">{glyph}{nm(node)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="apath-strip">
+      <div className="apath-strip__head">
+        <span className="apath-strip__pid mono">{ap.path_id}</span>
+        <span>{ap.hop_count} hop{ap.hop_count === 1 ? "" : "s"}</span>
+        <span>feasibility {ap.feasibility}</span>
+        {typeof onOpenPath === "function" && (
+          <button type="button" className="apath-strip__open"
+            title="Open this path in the Attack Paths tab"
+            onClick={() => onOpenPath(ap.path_id)}>view full graph →</button>
+        )}
+      </div>
+      <div className="apath-strip__rail">
+        <Station node={ap.attacker} kind="attacker" />
+        {hops.map((h, i) => {
+          const isLast = i === hops.length - 1;
+          const color = SEG[h.edge_type] || "var(--rule)";
+          return (
+            <React.Fragment key={h.edge_id}>
+              <div className="apath-strip__seg" title={`${h.edge_type} · ${h.confidence || "?"}`}>
+                <div className="apath-strip__above">
+                  {h.is_vuln && (
+                    <span style={{ color: "var(--sev-high)" }}>
+                      ⚠ vuln{h.finding_id ? ` ${h.finding_id}` : ""}
+                    </span>
+                  )}
+                  {h.chokepoint && (
+                    <span style={{ color: "var(--rec)" }}>
+                      ⛓ choke{h.chokepoint.paths_traversing ? ` ·${h.chokepoint.paths_traversing}` : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="apath-strip__line"
+                  style={{ background: color, height: h.is_bottleneck ? 7 : 4 }} />
+                <div className="apath-strip__below">
+                  {h.is_fix && <span style={{ color: "var(--rec)" }}>💡 fix here</span>}
+                  {h.chokepoint && (h.chokepoint.d3fend || []).length > 0 && (
+                    <span style={{ color: "var(--rec)" }}>🛡 {h.chokepoint.d3fend.join(" ")}</span>
+                  )}
+                </div>
+              </div>
+              <Station node={h.to} kind={isLast ? "jewel" : "mid"} />
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   SeverityPill, DispositionMark, MaturityMark, CopyPill, TaxonomyTag, TagRow, ToastHost, DiagnosticsBanner,
-  GraphView,
+  GraphView, AttackPathStrip,
   GOAL_LABELS, GOAL_SHORT, TIER_LABELS, TIER_GOALS,
 });

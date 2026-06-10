@@ -5,11 +5,24 @@
 // (components.jsx, exported on window). Clicking a node highlights its path(s);
 // clicking an "Enumerated paths" row cross-highlights the graph (two-way link).
 
-function AttackPaths({ data, onOpenFinding }) {
+function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
 
   const [selectedPathId, setSelectedPathId] = React.useState(null);
+
+  // Reverse-nav focus: the <details> pairs are intentionally UNCONTROLLED (no `open`
+  // prop), so imperatively setting det.open here is safe and React won't reset it.
+  React.useEffect(() => {
+    if (!focusPathId) return;
+    setSelectedPathId(focusPathId);
+    const row = document.getElementById(`ap-row-${focusPathId}`);
+    if (row) {
+      const det = row.closest("details");
+      if (det) det.open = true;
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [focusPathId]);
   const paths = (ap && ap.pairs || []).flatMap((pair) =>
     (pair.paths || []).map((p) => ({ id: p.path_id, edgeIds: p.edges || [] })));
 
@@ -155,6 +168,7 @@ function AttackPaths({ data, onOpenFinding }) {
                   return (
                   <li
                     key={p.path_id}
+                    id={`ap-row-${p.path_id}`}
                     className={`attack-path attack-path--${p.feasibility || "unknown"}`}
                     onClick={() => setSelectedPathId(
                       (cur) => cur === p.path_id ? null : p.path_id)}

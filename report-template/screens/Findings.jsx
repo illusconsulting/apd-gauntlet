@@ -2,7 +2,7 @@
 // Findings screen — two-pane mail-app style with filters + search.
 // Tweakable layout: 'two-pane' | 'stacked' | 'table'
 
-function Findings({ data, selectedId, onSelect, layout = "two-pane", initialFilter = null }) {
+function Findings({ data, selectedId, onSelect, layout = "two-pane", initialFilter = null, onOpenPath }) {
   const [q, setQ] = useState("");
   const [sevFilter, setSevFilter] = useState(initialFilter?.severity || new Set());
   const [tierFilter, setTierFilter] = useState(new Set());
@@ -110,7 +110,7 @@ function Findings({ data, selectedId, onSelect, layout = "two-pane", initialFilt
           </div>
         </div>
         <div className="findings-stack">
-          {filtered.map((f) => <FindingDetail key={f.id} finding={f} embedded />)}
+          {filtered.map((f) => <FindingDetail key={f.id} finding={f} embedded onOpenPath={onOpenPath} />)}
         </div>
       </div>
     );
@@ -196,14 +196,14 @@ function Findings({ data, selectedId, onSelect, layout = "two-pane", initialFilt
       </div>
 
       <div className="finding-detail">
-        {selected ? <FindingDetail finding={selected} /> : <div className="empty-state">Select a finding</div>}
+        {selected ? <FindingDetail finding={selected} onOpenPath={onOpenPath} /> : <div className="empty-state">Select a finding</div>}
       </div>
     </div>
   );
 }
 
 // ── Reusable finding detail (used by two-pane, stacked, and from Overview) ─
-function FindingDetail({ finding, embedded = false }) {
+function FindingDetail({ finding, embedded = false, onOpenPath }) {
   const f = finding;
   const Wrapper = embedded ? "div" : React.Fragment;
   const wrapperProps = embedded ? { className: "finding-detail" } : {};
@@ -249,6 +249,13 @@ function FindingDetail({ finding, embedded = false }) {
           <section className="finding-detail__block">
             <div className="finding-detail__block-head"><span>Summary</span></div>
             <p>{f.summary}</p>
+          </section>
+        )}
+
+        {f.attack_path && (
+          <section className="finding-detail__block">
+            <div className="finding-detail__block-head"><span>Attack path</span></div>
+            <AttackPathStrip attackPath={f.attack_path} onOpenPath={onOpenPath} />
           </section>
         )}
 

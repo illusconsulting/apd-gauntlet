@@ -279,6 +279,18 @@ The diagram is a *visual aid* over the same graph in
 `asset-graph.yaml`; if the diagram and the YAML disagree, the YAML
 wins.
 
+### Per-finding attack-path strip
+
+Each `apath-*` **risk** finding renders a compact horizontal "hop-strip" in its
+Findings-tab detail card: attacker through to the crown jewel, with the
+vulnerable hop (the `compromisable_via_finding` edge), a fix-at-source marker on
+the highest-confidence compromisable edge, and a D3FEND choke-point marker on any
+bottleneck edge that carries a `defense-graph` overlay (showing its
+`net_new_d3fend` techniques). A "view full graph" link focuses the Attack Paths
+tab on that path. The strip is derived deterministically at report-build time
+from `attack-paths.yaml` / `asset-graph.yaml` / `defense-graph.yaml` — no
+finding-schema change and no agent in the loop.
+
 ## The four finding flavors
 
 The analyzer emits `apath-*` findings under

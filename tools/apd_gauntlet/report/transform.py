@@ -11,6 +11,7 @@ import pathlib
 import re
 from typing import Any
 
+from ..attack_path.findings import _apath_id_for_path
 from ..severity import display_severity as _severity_display
 from ..synthesis import coverage_logic as _cl
 from . import taxonomy as _taxonomy
@@ -424,6 +425,9 @@ def findings_array(
         if fid in headline_ranks:
             entry["headline"] = True
             entry["headline_rank"] = headline_ranks[fid]
+        ctx = _attack_path_context(f, artifacts)
+        if ctx is not None:
+            entry["attack_path"] = ctx
         out.append(entry)
     return out
 
@@ -1316,21 +1320,144 @@ def _asset_graph_view_focused(
     return {"nodes": nodes, "edges": edges}
 
 
+def _build_node_edge_maps(
+    asset_graph: dict[str, Any] | None,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Index an asset graph's nodes and edges by their ids. Shared by
+    attack_paths_data and _attack_path_context so both resolve identically."""
+    raw_nodes = (asset_graph or {}).get("nodes") or []
+    raw_edges = (asset_graph or {}).get("edges") or []
+    node_by_id = {str(n.get("node_id", "")): n for n in raw_nodes if isinstance(n, dict)}
+    edge_by_id = {str(e.get("edge_id", "")): e for e in raw_edges if isinstance(e, dict)}
+    return node_by_id, edge_by_id
+
+
+def _normalize_edge_type(raw_type: str) -> str:
+    """Collapse raw asset-graph edge_type values onto the canonical set used by
+    the renderer chips. Identical to the inline mapping attack_paths_data used."""
+    if raw_type == "trusts":
+        return "trust_boundary"
+    if raw_type in ("compromisable_via_finding", "finding"):
+        return "compromisable_via_finding"
+    if raw_type in ("mitigated_by_capability", "capability"):
+        return "mitigated_by_capability"
+    return raw_type or "trust_boundary"
+
+
+def _hop_node(node_by_id: dict[str, dict[str, Any]], node_id: str) -> dict[str, Any]:
+    """Resolve a node id to {id, name, type} for a hop-strip station. Falls back
+    to the id and a default type when the node is missing (existing behavior)."""
+    n = node_by_id.get(node_id) or {}
+    return {
+        "id": node_id,
+        "name": str(n.get("name") or node_id),
+        "type": str(n.get("node_type") or "asset"),
+    }
+
+
+_PATH_ID_RE = re.compile(r"path-[0-9a-f]{8}")
+_CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1, "": 0}
+
+
+def _attack_path_context(
+    finding: dict[str, Any], artifacts: RunArtifacts
+) -> dict[str, Any] | None:
+    """Derive the per-finding attack-path strip block, or None.
+
+    Deterministic and side-effect-free: a pure function of the finding plus the
+    on-disk synthesis artifacts. Attaches ONLY to apath-* findings with
+    disposition == "risk" that resolve to exactly one enumerated path (via the
+    id == "apath-" + sha256(path_id)[:8] join, with an evidence-locator
+    fallback). No new prose is synthesized — markers surface existing fields.
+    """
+    fid = str(finding.get("id") or "")
+    if not fid.startswith("apath-") or finding.get("disposition") != "risk":
+        return None
+    if artifacts.attack_paths is None or artifacts.asset_graph is None:
+        return None
+
+    raw_paths = [p for p in (artifacts.attack_paths.get("paths") or []) if isinstance(p, dict)]
+    paths_by_id = {str(p.get("path_id")): p for p in raw_paths}
+    apath_id_to_path = {
+        _apath_id_for_path(str(p.get("path_id"))): p
+        for p in raw_paths
+    }
+
+    path = apath_id_to_path.get(fid)
+    if path is None:  # locator fallback: scan evidence for a known path_id token
+        for ev in finding.get("evidence", []) or []:
+            for tok in _PATH_ID_RE.findall(str((ev or {}).get("locator", ""))):
+                if tok in paths_by_id:
+                    path = paths_by_id[tok]
+                    break
+            if path is not None:
+                break
+    if path is None:
+        return None
+
+    node_by_id, edge_by_id = _build_node_edge_maps(artifacts.asset_graph)
+    bottleneck_ids = {str(e) for e in (path.get("bottleneck_edges") or [])}
+
+    overlays_by_edge: dict[str, dict[str, Any]] = {}
+    if artifacts.defense_graph is not None:
+        for o in artifacts.defense_graph.get("bottleneck_overlays") or []:
+            if isinstance(o, dict) and o.get("edge_id"):
+                overlays_by_edge[str(o["edge_id"])] = o
+
+    hops: list[dict[str, Any]] = []
+    fix_edge_id: str | None = None
+    fix_rank = -1
+    for eid in (str(e) for e in (path.get("edges") or [])):
+        e = edge_by_id.get(eid, {})
+        edge_type = _normalize_edge_type(str(e.get("edge_type", "")))
+        confidence = str(e.get("confidence", ""))
+        is_vuln = edge_type == "compromisable_via_finding"
+        if is_vuln and _CONFIDENCE_RANK.get(confidence, 0) > fix_rank:
+            fix_rank = _CONFIDENCE_RANK.get(confidence, 0)
+            fix_edge_id = eid
+        chokepoint = None
+        if eid in bottleneck_ids and eid in overlays_by_edge:
+            ov = overlays_by_edge[eid]
+            chokepoint = {
+                "d3fend": sorted(str(d) for d in (ov.get("net_new_d3fend") or [])),
+                "paths_traversing": ov.get("paths_traversing"),
+            }
+        hops.append({
+            "edge_id": eid,
+            "from": _hop_node(node_by_id, str(e.get("from", ""))),
+            "to": _hop_node(node_by_id, str(e.get("to", ""))),
+            "edge_type": edge_type,
+            "confidence": confidence,
+            "is_bottleneck": eid in bottleneck_ids,
+            "is_vuln": is_vuln,
+            "is_fix": False,
+            "finding_id": e.get("finding_id") if is_vuln else None,
+            "chokepoint": chokepoint,
+        })
+    for h in hops:
+        if h["edge_id"] == fix_edge_id:
+            h["is_fix"] = True
+
+    return {
+        "path_id": path.get("path_id"),
+        "attacker": _hop_node(node_by_id, str(path.get("attacker_position", ""))),
+        "crown_jewel": _hop_node(node_by_id, str(path.get("crown_jewel", ""))),
+        "hop_count": path.get("hop_count"),
+        "feasibility": path.get("feasibility"),
+        "hops": hops,
+    }
+
+
 def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
     """Return the data.attack_paths block, or None when v1.4 artifacts are absent."""
     if artifacts.attack_paths is None or artifacts.asset_graph is None:
         return None
     paths = artifacts.attack_paths.get("paths") or []
 
-    # Build lookup maps for nodes and edges.
+    # Raw node/edge lists (consumed by the summary block below) + id-indexed maps.
     raw_nodes = artifacts.asset_graph.get("nodes") or []
     raw_edges = artifacts.asset_graph.get("edges") or []
-    node_by_id: dict[str, dict[str, Any]] = {
-        str(n.get("node_id", "")): n for n in raw_nodes if isinstance(n, dict)
-    }
-    edge_by_id: dict[str, dict[str, Any]] = {
-        str(e.get("edge_id", "")): e for e in raw_edges if isinstance(e, dict)
-    }
+    node_by_id, edge_by_id = _build_node_edge_maps(artifacts.asset_graph)
 
     def _node_name(node_id: str) -> str:
         node = node_by_id.get(node_id)
@@ -1349,15 +1476,7 @@ def attack_paths_data(artifacts: RunArtifacts) -> dict[str, Any] | None:
             from_id = str(e.get("from", ""))
             to_id = str(e.get("to", ""))
             raw_type = str(e.get("edge_type", ""))
-            # Normalise edge_type to the three canonical values.
-            if raw_type == "trusts":
-                edge_type = "trust_boundary"
-            elif raw_type in ("compromisable_via_finding", "finding"):
-                edge_type = "compromisable_via_finding"
-            elif raw_type in ("mitigated_by_capability", "capability"):
-                edge_type = "mitigated_by_capability"
-            else:
-                edge_type = raw_type or "trust_boundary"
+            edge_type = _normalize_edge_type(raw_type)
             out.append({
                 "edge_id":       eid,
                 "from_id":       from_id,

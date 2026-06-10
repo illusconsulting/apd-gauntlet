@@ -75,6 +75,18 @@ def _check(
         result.status = "fail"
 
 
+def _attack_path_strip_status(
+    *, apath_findings: list[dict[str, Any]], data_findings: list[dict[str, Any]]
+) -> tuple[bool, str]:
+    """Editorial check: when the run produced any apath risk finding, at least
+    one data.js finding should carry the derived `attack_path` strip block."""
+    risk = [f for f in apath_findings if f.get("disposition") == "risk"]
+    if not risk:
+        return True, "exempt: no apath risk findings"
+    with_strip = sum(1 for f in data_findings if isinstance(f.get("attack_path"), dict))
+    return with_strip > 0, f"apath_risk={len(risk)} data_js_with_strip={with_strip}"
+
+
 def audit_report(run_dir: Path) -> AuditResult:
     from ..report.loader import load_run
     from ..report.transform import EXEC_SUMMARY_PLACEHOLDER, build_apd_data
@@ -359,6 +371,14 @@ def audit_report(run_dir: Path) -> AuditResult:
                f"defense_graph_overlays={len(dg_overlays)} data_js_overlays={len(data_overlays)} "
                f"candidate_d3fend_present={has_d3fend}",
                klass="structural")
+
+    # Completeness check — per-finding attack-path strip (editorial; non-blocking):
+    # whenever apath risk findings exist, the derived strip block must reach data.js.
+    strip_ok, strip_detail = _attack_path_strip_status(
+        apath_findings=apath_f, data_findings=parsed.get("findings", []),
+    )
+    _check(result, "attack_path_finding_strip_present", strip_ok, strip_detail,
+           klass="editorial")
 
     # Completeness check #6a — APD matrix (structural; per design spec):
     # the 9xN matrix must have rows whenever findings exist.

@@ -14,6 +14,7 @@ function App() {
   const [t, setTweak] = useTweaks(DEFAULTS);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedFinding, setSelectedFinding] = useState(null);
+  const [focusPathId, setFocusPathId] = useState(null);
 
   // Tab list is data-driven so the Threat model tab is omitted entirely when no
   // threat model exists. The Start-here guide carries a sigil instead of a
@@ -55,6 +56,11 @@ function App() {
   const onOpenFinding = (id) => {
     setSelectedFinding(id);
     setActiveTab("findings");
+  };
+
+  const onOpenPath = (pathId) => {
+    setFocusPathId(pathId);
+    setActiveTab("attack_paths");
   };
 
   return (
@@ -127,13 +133,14 @@ function App() {
             selectedId={selectedFinding}
             onSelect={setSelectedFinding}
             layout={t.findingsLayout}
+            onOpenPath={onOpenPath}
           />
         )}
         {activeTab === "capabilities" && <Capabilities data={data} />}
         {activeTab === "coverage" && <Coverage data={data} />}
         {activeTab === "threat_model" && <ThreatModel data={data} />}
         {activeTab === "attack_paths" && (
-          <AttackPaths data={data} onOpenFinding={onOpenFinding} />
+          <AttackPaths data={data} onOpenFinding={onOpenFinding} focusPathId={focusPathId} />
         )}
         {activeTab === "annexes" && (
           <Annexes data={data} onOpenFinding={onOpenFinding} />

@@ -37,3 +37,6 @@ runs/
 # Claude Code session-local config (do not commit; .claude/ contents that are part of the plugin payload, e.g. .claude/agents/ and .claude/skills/, are tracked explicitly)
 .claude/settings.json
 .claude/settings.local.json
+
+# Superpowers brainstorm scratch (visual companion mockups) — local only
+.superpowers/

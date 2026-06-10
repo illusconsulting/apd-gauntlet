@@ -47,6 +47,23 @@ bar). It is a reading guide for first-time readers and provides:
 The guide reads the run's own data, so its examples reflect the system under
 review. Overview remains the default landing tab.
 
+## Findings tab
+
+The Findings tab renders each deduped finding's full detail card: rubric, summary,
+detail, evidence, recommendation, mappings, and lens perspectives. For `apath-*`
+**risk** findings that resolve to an attack path, the card additionally renders a
+compact **per-finding hop-strip** — a horizontal "subway map" showing the attacker
+through to the crown jewel, the vulnerable hop, a fix-at-source marker, and any
+D3FEND choke-point markers — immediately after the summary and before the detail.
+A "view full graph" link in the strip focuses the Attack Paths tab on that path.
+See [Attack-path analysis — Per-finding attack-path strip](attack-path-analysis.md#per-finding-attack-path-strip)
+for the full marker semantics.
+
+The hop-strip is rendered by the `AttackPathStrip` JSX component in
+`report-template/components.jsx`. As with any JSX or CSS change, edits require
+re-running `python tools/build_report_template.py` and committing the regenerated
+`app.js` and `.source-hash`.
+
 ## Interactive graphs
 
 The **Attack paths** asset graph and the **Threat model** surface map are drawn
@@ -144,8 +161,9 @@ The `audit-report` step (step 5g in the workflow, also available standalone as
    — so a build that dropped or corrupted records is caught before you read the
    report. (The APD coverage matrix is checked for non-emptiness and bundle-hash
    drift rather than record-by-record equality.)
-2. **Enforce 8 completeness checks**, each tagged as either `structural` or
-   `editorial`:
+2. **Enforce completeness checks**, each tagged as either `structural` or
+   `editorial`. There are 8 core checks (6 structural, 2 editorial) plus one
+   additional editorial check:
 
 **Structural checks** (a failure blocks the run):
 
@@ -179,6 +197,10 @@ Pre-existing cross-checks (`id_coverage_findings`, `id_coverage_capabilities`,
   placeholder text.
 - `editorial_sections_present` — `report-data.yaml` must contain
   `exec_summary`, `posture_summary`, `headline_findings`, and `next_steps`.
+- `attack_path_finding_strip_present` — when at least one `disposition == "risk"`
+  `apath-*` finding resolves to a path, at least one finding in `data.js` must
+  carry an `attack_path` block (i.e. the hop-strip transform ran). Non-blocking;
+  surfaces drift without gating the workflow.
 
 ### How the workflow uses the gate
 
@@ -198,7 +220,7 @@ On each iteration:
 
 The `audit-report` CLI prints a summary line:
 
-    audit-report: pass (16 checks, 0 failed; structural_failed=0 editorial_failed=0)
+    audit-report: pass (17 checks, 0 failed; structural_failed=0 editorial_failed=0)
 
 It exits 1 on any failure, making it usable as a CI gate independently of the
 workflow.

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file. Format base
 
 ## [Unreleased]
 
+### Added
+
+- Per-finding attack-path "hop-strip" visualization in the Findings tab for
+  `apath-*` risk findings — shows the path, the vulnerable hop, and layered
+  fix-at-source + D3FEND choke-point recommendation markers, with a reverse
+  link to the Attack Paths tab. Derived deterministically from the synthesis
+  artifacts (no finding-schema change). New editorial audit check
+  `attack_path_finding_strip_present`. ADR-0015.
+
 ## v1.7.0 — 2026-06-09
 
 ### Added
