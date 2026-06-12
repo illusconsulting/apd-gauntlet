@@ -4,17 +4,18 @@
   "title": "APD Gauntlet Finding",
   "type": "object",
   "required": [
-    "schema_version", "id", "agent", "apd_tier", "apd_goal",
+    "agent", "apd_tier", "apd_goal",
     "disposition", "severity", "confidence",
     "title", "summary", "detail",
     "evidence", "control_mappings", "recommendation"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "type": "integer", "const": 1 },
+    "schema_version": { "type": "integer", "const": 1, "readOnly": true },
     "id": {
       "type": "string",
-      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$"
+      "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$",
+      "readOnly": true
     },
     "agent": {
       "type": "string",
@@ -156,6 +157,22 @@
     "linked_perspectives": {
       "type": "array",
       "items": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" }
+    },
+    "tmeval_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["flavor"],
+      "properties": {
+        "flavor": {
+          "type": "string",
+          "enum": ["supplied_omission", "coverage_gap", "contradiction", "silence", "blocked"]
+        },
+        "tm_entry_id": { "type": "string" },
+        "surface": { "type": "string" },
+        "goal": { "type": "string" },
+        "contradicting_finding_id": { "type": "string" },
+        "source_artifact": { "type": "string" }
+      }
     }
   },
   "allOf": [

@@ -3,7 +3,7 @@ window.APD_DATA = {
     "framework_version": "1.4.0",
     "domain_pack": {
       "name": "pbm",
-      "version": "unknown"
+      "version": "1.0.0"
     },
     "run_id": "apd-20260601-claim-event-bus",
     "synthesizer_version": "1.4.0",
@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-07",
+    "date": "2026-06-12",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -50,8 +50,24 @@ window.APD_DATA = {
         "fetched_at": "2026-06-02",
         "source": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
         "count": 170
+      },
+      "masvs": {
+        "fetched_at": "2026-06-09",
+        "source": "https://raw.githubusercontent.com/OWASP/masvs/c0db792d48206186874b8b10818e117226eb1d68/OWASP_MASVS.yaml",
+        "count": 24
+      },
+      "maswe": {
+        "fetched_at": "2026-06-09",
+        "source": "https://github.com/OWASP/maswe",
+        "count": 118
       }
     },
+    "active_taxonomies": [
+      "cwe",
+      "mitre_attack",
+      "d3fend",
+      "owasp_api_top10"
+    ],
     "has_threat_model": true,
     "section_errors": {},
     "warnings": []
@@ -240,7 +256,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -280,7 +298,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -322,7 +342,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -363,7 +385,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -401,7 +425,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -441,7 +467,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -481,7 +509,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -519,7 +549,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -560,7 +592,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -600,7 +634,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -641,7 +677,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [],
@@ -682,7 +720,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -723,7 +763,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -761,7 +803,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": [
@@ -808,7 +852,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [
         null,
@@ -850,13 +896,15 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-cccc3333",
+      "id": "tmeval-e5b594b0",
       "title": "Threat model omits Repudiation analysis for audit-log-writer",
       "goal": "non_repudiation",
       "tier": "auditability",
@@ -888,13 +936,15 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-dddd4444",
+      "id": "tmeval-6e33edd4",
       "title": "Threat model asserts TLS that conf-7aa376c5 contradicts",
       "goal": "confidentiality",
       "tier": "trustworthiness",
@@ -926,13 +976,15 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-eeee5555",
+      "id": "tmeval-cb19d940",
       "title": "Threat model is silent on vendor-API integration surface",
       "goal": "authenticity",
       "tier": "auditability",
@@ -964,7 +1016,9 @@ window.APD_DATA = {
         "owasp_api": [],
         "owasp": [],
         "d3fend": [],
-        "atlas": []
+        "atlas": [],
+        "masvs": [],
+        "maswe": []
       },
       "lens_perspectives": [],
       "prerequisite_evidence": []
@@ -1099,6 +1153,8 @@ window.APD_DATA = {
       "note": ""
     }
   ],
+  "masvs_coverage": [],
+  "maswe_coverage": [],
   "apd_matrix": {
     "goals": [
       "conf",
@@ -2205,7 +2261,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2287,7 +2343,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2369,7 +2425,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2451,7 +2507,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2533,7 +2589,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4193,7 +4249,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4275,7 +4331,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4357,7 +4413,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4439,7 +4495,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4521,7 +4577,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6181,7 +6237,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6263,7 +6319,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6345,7 +6401,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6427,7 +6483,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6509,7 +6565,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true

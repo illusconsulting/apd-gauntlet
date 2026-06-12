@@ -6,7 +6,7 @@ description: |
   the settled deduped corpus, the merged apd-domain skill, and the asset
   inventory; materializes the deterministic candidates into full
   domain-improvement records, harvests prose-judgment opportunities, drafts a
-  paste-ready draft_snippet for each, computes the dimpr- id, and writes ONE
+  paste-ready draft_snippet for each, emits content (the assembler mints the dimpr- id), and writes ONE
   artifact 40-synthesis/domain-improvements.yaml. It NEVER edits a pack, never
   opens a PR, and never gates the run. Distinct from apd-report-auditor (which is
   report-faithfulness only and must not be extended).
@@ -110,17 +110,19 @@ absent from the pattern library (missing_common_pattern).
    `description` minLength 10, `pattern` non-empty), so it passes the on-demand validate gate.
    For exactly ONE crown_jewels/attacker_positions/trust_boundaries item per record:
    the on-demand command rejects a snippet that loads to a list or a scalar.
-4. **Compute the dimpr- id** with the deterministic CLI — do NOT hand-roll the
-   sha256. Once you have chosen the 4-tuple, run (via Bash):
-   `apd-gauntlet mint-improvement-id --type <improvement_type> --target-pack <target_pack> --target-file <target_file> --ref <evidence[0].ref>`
-   and use its printed `dimpr-<sha8>` verbatim. This wraps the SAME
-   `compute_improvement_id` the validator recomputes, so the at-capture id is
-   guaranteed to match the gate (the rule is the LOWERCASED, `|`-joined 4-tuple
-   `improvement_type|target_pack|target_file|evidence[0].ref`, sha256[:8],
-   `dimpr-` prefix). NEVER emit an empty `improvements: []` solely because you
-   could not compute an id — mint it with the CLI. Dedup identical opportunities
-   (same id) across the deterministic and judgment halves — keep one, prefer
-   `source: deterministic`.
+4. **do NOT emit or compute the `id`.** Emit each domain-improvement record with
+   its content fields only (`improvement_type`, `target_pack`, `target_file`,
+   `source`, `priority`, `evidence` [each `{kind, ref}`], `rationale`,
+   `suggested_action`, `draft_snippet`) and NO `id`. The assembler
+   (`apd-gauntlet canonicalize`) is the sole author of the `dimpr-<sha8>` id and
+   mints it deterministically from the LOWERCASED, `|`-joined 4-tuple
+   `improvement_type|target_pack|target_file|evidence[0].ref`. (`apd-gauntlet
+   mint-improvement-id` remains available for manual inspection only — do not
+   wire it into your output.) Dedup identical opportunities by that 4-tuple
+   across the deterministic and judgment halves — keep one, prefer
+   `source: deterministic`. NEVER emit an empty `improvements: []` solely because
+   you could not compute an id — the id is no longer your concern; emit the
+   record's content.
 5. **apd_goal for missing_common_pattern.** `apd_goal` is REQUIRED for
    missing_common_pattern and must match the `common-patterns/<goal>.md` target_file.
    `non_repudiation` (the apd_goal value) maps to the file `common-patterns/non-repudiation.md`.

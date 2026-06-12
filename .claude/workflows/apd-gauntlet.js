@@ -321,6 +321,17 @@ const intakeReceipt = llmStep('apd-intake',
     outputs: runDir + '/00-context/context-brief.md, ' + runDir + '/00-context/asset-inventory.yaml' });
 bailIfInterrupted(intakeReceipt, 'intake');
 
+// FW: assemble the asset inventory — mint deterministic asset-/idn-/tb- ids from
+// name+provenance and wire trust_boundaries.crosses (authored by NAME) to the
+// minted asset ids. MUST run before specialists cite inventory ids (code-recon +
+// tier-1 onward), so ids are stable for the rest of the run; placed before the
+// 00-context schema-gate so the gate validates the canonical (id-bearing) form.
+pyStep('assemble-inventory', {
+  phase: 'intake', label: 'assemble-inventory',
+  outputs: runDir + '/00-context/asset-inventory.yaml (asset-/idn-/tb- ids minted; crosses wired)',
+  validateScope: runDir + '/00-context', alwaysRun: true,
+});
+
 // FW-2: schema-gate 00-context immediately after intake so an invalid
 // asset-inventory (e.g. a data_classifications value outside the schema enum,
 // or malformed context-brief frontmatter) surfaces HERE, in the intake phase —
@@ -614,6 +625,18 @@ parallel([
   },
 ]);
 
+// 5c.5 canonicalize — mint tmeval-* ids from the evaluator's tmeval_key BEFORE
+// rollup. The evaluator now emits a structured tmeval_key (not a hand-computed
+// id); the assembler is the sole author of tmeval-<sha8>. This MUST run after the
+// tmeval/apath barrier and before rollup, which loads tmeval-* findings BY ID into
+// nist/attack/matrix coverage — an un-minted (id-less) tmeval finding would drop
+// out of the rollup. (apath-* records are out-of-scope here and pass through.)
+pyStep('canonicalize', {
+  phase: 'tmeval', label: 'canonicalize-tmeval',
+  outputs: 'tmeval- ids minted under ' + runDir + '/40-threat-model/',
+  alwaysRun: true,
+});
+
 // 5d rollup (Python) — runs HERE, after tmeval/apath, in BOTH the decomposed and
 // fallback paths. synthesis/rollup.py `_load_deduped` unions the apath-* findings
 // (load_corpus pulls tmeval-* too), so nist/attack/matrix coverage now reflects
@@ -777,6 +800,16 @@ llmStep('apd-domain-auditor',
   { phase: 'domain-improvements', label: 'domain-auditor',
     validateScope: runDir + '/40-synthesis',
     outputs: runDir + '/40-synthesis/domain-improvements.yaml' });
+
+// 5h-iii canonicalize — mint dimpr-<sha8> ids from the domain-auditor's records
+// (it now emits content only; the assembler is the sole id author). Runs before
+// the closeout validate, whose _validate_domain_improvements_cross_refs recomputes
+// and would flag an un-minted (id-less) record.
+pyStep('canonicalize', {
+  phase: 'domain-improvements', label: 'canonicalize-dimpr',
+  outputs: 'dimpr- ids minted in ' + runDir + '/40-synthesis/domain-improvements.yaml',
+  alwaysRun: true,
+});
 
 // ===========================================================================
 // PHASE 6 — closeout.

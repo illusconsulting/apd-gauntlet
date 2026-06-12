@@ -1138,6 +1138,18 @@ def build_report_cmd(run_dir, out_dir, quiet) -> None:  # type: ignore[no-untype
         click.echo(f"HTML report at {target}")
 
 
+@main.command("assemble-inventory")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def assemble_inventory_cmd(run_dir: Path) -> None:
+    """Mint deterministic asset-/idn-/tb- ids and wire trust-boundary crosses (by name)."""
+    from .assemble_inventory import assemble_inventory
+
+    changed = assemble_inventory(run_dir)
+    click.echo(
+        f"assemble-inventory: {changed} asset id(s) (re)minted under {run_dir}/00-context/"
+    )
+
+
 @main.command("canonicalize")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
 def canonicalize_cmd(run_dir: Path) -> None:

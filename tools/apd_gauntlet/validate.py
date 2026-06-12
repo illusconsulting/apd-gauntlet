@@ -456,6 +456,8 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_finding_id(record):
                 report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_id_present(record):
+                report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_lens_consistency(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_hedge_words_in_attack_rationale(record):
@@ -466,10 +468,14 @@ def run_semantic_pass(
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_tmeval_contradiction_cross_reference(record):
                 report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_tmeval_id(record):
+                report.errors.append(Violation(path, rid, msg))
         elif kind == "capability":
             for msg in linters.check_excerpt_length(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_capability_id(record):
+                report.errors.append(Violation(path, rid, msg))
+            for msg in linters.check_id_present(record):
                 report.errors.append(Violation(path, rid, msg))
             for msg in linters.check_lens_consistency(record):
                 report.errors.append(Violation(path, rid, msg))

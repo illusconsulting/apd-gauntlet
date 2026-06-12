@@ -1,6 +1,7 @@
 """Schema validation tests for capability records."""
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 
@@ -109,3 +110,14 @@ def test_capability_control_mappings_has_no_maswe_property():
     props = schema["properties"]["control_mappings"]["properties"]
     assert "masvs" in props
     assert "maswe" not in props
+
+
+def test_capability_without_id_or_schema_version_is_valid():
+    """Agents emit content only; id + schema_version are tooling-injected."""
+    data = _load_yaml(FIXTURES / "valid" / "capability-designed.yaml")
+    rec = copy.deepcopy(data["capability"])
+    rec.pop("id", None)
+    rec.pop("schema_version", None)
+    validator = _build_validator()
+    errors = list(validator.iter_errors(rec))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"

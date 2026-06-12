@@ -4,13 +4,13 @@
   "title": "APD Gauntlet Domain-Improvement Opportunity",
   "type": "object",
   "required": [
-    "id", "improvement_type", "target_pack", "target_file",
+    "improvement_type", "target_pack", "target_file",
     "source", "priority", "evidence", "rationale",
     "suggested_action", "draft_snippet"
   ],
   "additionalProperties": false,
   "properties": {
-    "id": { "type": "string", "pattern": "^dimpr-[0-9a-f]{8}$" },
+    "id": { "type": "string", "pattern": "^dimpr-[0-9a-f]{8}$", "readOnly": true },
     "improvement_type": {
       "type": "string",
       "enum": [

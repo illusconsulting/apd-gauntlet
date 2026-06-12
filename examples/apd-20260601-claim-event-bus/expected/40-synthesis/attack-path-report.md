@@ -26,13 +26,13 @@ The graph contains 16 nodes (8 assets, 3 identities, 3 attacker positions, 2 cro
 
 ## High-leverage findings
 
-The defense overlay produced **zero** `net_new_d3fend[]` entries despite 24 bottleneck edges. The reason is deterministic: D3FEND counters are derived from ATT&CK techniques referenced by `compromisable_via_finding` edges, and the only finding-driven bottleneck edge (`edge-f0f89452`, backing `tmeval-eeee5555`) carries no `control_mappings.mitre_attack` entry on its source finding. The bulk of the bottleneck edges are `network_reachable` (TM-derived) and `trusts` (inventory-derived) — neither of which exposes ATT&CK techniques per the C-12 overlay contract.
+The defense overlay produced **zero** `net_new_d3fend[]` entries despite 24 bottleneck edges. The reason is deterministic: D3FEND counters are derived from ATT&CK techniques referenced by `compromisable_via_finding` edges, and the only finding-driven bottleneck edge (`edge-f0f89452`, backing `tmeval-cb19d940`) carries no `control_mappings.mitre_attack` entry on its source finding. The bulk of the bottleneck edges are `network_reachable` (TM-derived) and `trusts` (inventory-derived) — neither of which exposes ATT&CK techniques per the C-12 overlay contract.
 
 This is the canonical "low ATT&CK coverage" disposition: the analyzer never invents technique mappings, so the absence of D3FEND candidates flags a gap in upstream specialist evidence rather than a defensive opportunity. See `apd-attack-path-discipline`'s D3FEND-must-counter-ATT&CK rule.
 
 | Bottleneck edge       | Edge type                     | Paths affected | Exposed ATT&CK | Candidate D3FEND |
 |-----------------------|-------------------------------|----------------|----------------|------------------|
-| `edge-f0f89452`       | `compromisable_via_finding`   | many           | (none on finding `tmeval-eeee5555`) | none |
+| `edge-f0f89452`       | `compromisable_via_finding`   | many           | (none on finding `tmeval-cb19d940`) | none |
 | `edge-989fc99a`       | `data_resides_on`             | many           | n/a (terminal edge to `phi_store`) | n/a |
 | `edge-37b95b02`       | `trusts`                      | many           | n/a (inventory boundary) | n/a |
 | `edge-bd61022c`       | `network_reachable`           | many           | n/a (TM-derived) | n/a |
@@ -47,8 +47,8 @@ All 75 paths are sorted by descending `severity_sum`, then ascending `hop_count`
 
 `external_internet` --[network_reachable/high]--> `claim-ingress-api` --[compromisable_via_finding/high]--> `audit-log-writer` --[trusts/high]--> `audit-log-store` --[data_resides_on/high]--> `phi_store`
 
-- **Edge provenance:** TM `tm-b9c3c1b5` (replay-of-submitted-claim) → finding `tmeval-eeee5555` (vendor-API surface silence) → inventory `tb-55667788` (audit-writer-to-audit-store boundary) → inventory `member-record-store` PHI classification.
-- **Compromisable findings on path:** `tmeval-eeee5555`
+- **Edge provenance:** TM `tm-b9c3c1b5` (replay-of-submitted-claim) → finding `tmeval-cb19d940` (vendor-API surface silence) → inventory `tb-55667788` (audit-writer-to-audit-store boundary) → inventory `member-record-store` PHI classification.
+- **Compromisable findings on path:** `tmeval-cb19d940`
 - **Mitigating capabilities on path:** none
 - **Bottleneck membership:** every edge on this path is a bottleneck (appears on ≥ 4 enumerated paths).
 

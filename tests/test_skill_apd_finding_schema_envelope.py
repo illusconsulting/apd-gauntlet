@@ -14,4 +14,4 @@ def test_skill_states_singular_bare_envelope():
     assert "Output envelope (canonical)" in text
     # explicitly forbids the two drift shapes
     assert "never the plural" in text
-    assert "tooling-canonicalized" in text
+    assert "tooling-authored" in text

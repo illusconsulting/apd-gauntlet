@@ -31,6 +31,7 @@ apd-gauntlet validate-domain <pack...>           # validate one or more domain p
 apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml against the schema
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
+apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics

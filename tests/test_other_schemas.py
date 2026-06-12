@@ -492,3 +492,33 @@ def test_maswe_coverage_schema_is_valid_metaschema_and_accepts_minimal_doc():
     }
     errs = list(jsonschema.Draft202012Validator(schema, registry=build_registry()).iter_errors(doc))
     assert errs == [], errs
+
+
+# ---------------------------------------------------------------------------
+# Task 4.3 — inventory ids tooling-authored; crosses authored by name pre-assembly
+# ---------------------------------------------------------------------------
+
+def _load_asset_inventory_schema():
+    return json.loads((SCHEMA_DIR / "asset-inventory.schema.json").read_text())
+
+
+def _build_asset_inventory_validator(schema):
+    return Draft202012Validator(schema, registry=_build_registry())
+
+
+def test_inventory_valid_without_ids_and_with_named_crosses():
+    schema = _load_asset_inventory_schema()
+    inv = {
+        "schema_version": 1, "generated_by": "intake",
+        "assets": [{"name": "A", "asset_type": "service",
+                    "provenance": {"source": "artifact", "artifact": "t.md", "locator": "L1"},
+                    "confidence": "high"}],
+        "identities": [],
+        "trust_boundaries": [
+            {"name": "b", "crosses": ["A", "A2"],
+             "provenance": {"source": "artifact", "artifact": "t.md", "locator": "L2"}},
+        ],
+    }
+    validator = _build_asset_inventory_validator(schema)
+    errors = list(validator.iter_errors(inv))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"

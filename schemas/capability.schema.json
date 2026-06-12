@@ -4,16 +4,17 @@
   "title": "APD Gauntlet Capability",
   "type": "object",
   "required": [
-    "schema_version", "id", "agent", "apd_tier", "apd_goal",
+    "agent", "apd_tier", "apd_goal",
     "title", "description", "maturity", "scope",
     "evidence", "control_mappings"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "type": "integer", "const": 1 },
+    "schema_version": { "type": "integer", "const": 1, "readOnly": true },
     "id": {
       "type": "string",
-      "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$"
+      "pattern": "^((conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap|cap-merged)-[0-9a-f]{8}$",
+      "readOnly": true
     },
     "agent": { "$ref": "finding.schema.json#/properties/agent" },
     "apd_tier": { "$ref": "finding.schema.json#/properties/apd_tier" },

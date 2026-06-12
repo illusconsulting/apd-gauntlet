@@ -41,7 +41,7 @@ identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
 - **Assets** — every named service, data store, secret store, queue,
   network, external dependency, or compute resource mentioned in supplied
   artifacts. Each carries:
-  - `asset_id: asset-<sha8>` (deterministic ID from name + locator)
+  - `# NO asset_id` — the assembler (`apd-gauntlet assemble-inventory`) mints `asset-<sha8>` from name + provenance.locator after intake completes; do NOT fabricate this field
   - `name`: the canonical name as used in artifacts
   - `asset_type` ∈ {service, data_store, secret_store, queue, network, external_dependency, compute}
   - `data_classifications[]`: one or more of EXACTLY the schema enum — `phi`, `pii`, `pci`, `phi_subset`, `secret`, `public`, `internal`, `confidential`. Do NOT invent values (e.g. `research_content`, `user_content`, `chat_history`, `embeddings`): map sensitive user/research content to `confidential`, regulated health data to `phi`/`phi_subset`, payment data to `pci`, secrets/keys to `secret`. Values outside this enum are rejected by the asset-inventory schema.
@@ -51,15 +51,15 @@ identified during context-briefing. Consumed by `apd-attack-path-analyzer`.
 
 - **Identities** — human roles, service accounts, workload identities,
   external parties mentioned in supplied artifacts. Each carries:
-  - `identity_id: idn-<sha8>`
+  - `# NO identity_id` — minted by the assembler (`apd-gauntlet assemble-inventory`); do NOT fabricate this field
   - `name`: canonical name
   - `identity_type` ∈ {human_role, service_account, workload_identity, external_party}
   - provenance + confidence as above
 
 - **Trust boundaries** — declared cross-asset trust transitions. Each carries:
-  - `boundary_id: tb-<sha8>`
+  - `# NO boundary_id` — minted by the assembler (`apd-gauntlet assemble-inventory`); do NOT fabricate this field
   - `name`: human-readable description
-  - `crosses[]`: array of `asset_id` values the boundary partitions
+  - `crosses[]`: list of asset **names** (exactly as written in `assets[].name`); the assembler rewrites them to the minted `asset_id`s
 
 (Trust boundaries do not carry a `confidence` field — the schema does not define one at the boundary level.)
 

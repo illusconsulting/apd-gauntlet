@@ -1,6 +1,10 @@
 finding:
   - schema_version: 1
-    id: tmeval-cccc3333
+    id: tmeval-e5b594b0
+    tmeval_key:
+      flavor: coverage_gap
+      surface: audit-log-writer
+      goal: non_repudiation
     agent: threat_model_evaluator
     apd_tier: auditability
     apd_goal: non_repudiation
@@ -23,7 +27,11 @@ finding:
       detail: "Add a Repudiation entry covering: who can deny having written an audit entry, how the write-once property prevents post-hoc denial (th-8 mentions IAM deny-update but not log deletion by a privileged actor), and what cryptographic mechanism — such as HMAC signing — allows the system to refute a denial claim. Reference nonrep-62124087 for the remediation specifics already identified by the specialist."
 
   - schema_version: 1
-    id: tmeval-dddd4444
+    id: tmeval-6e33edd4
+    tmeval_key:
+      flavor: contradiction
+      tm_entry_id: tm-1a799f16
+      contradicting_finding_id: conf-7aa376c5
     agent: threat_model_evaluator
     apd_tier: trustworthiness
     apd_goal: confidentiality
@@ -46,7 +54,10 @@ finding:
       detail: "Either enforce field-level envelope encryption on the adjudication-to-pricing Kafka topic so the TM's intended mitigated state becomes accurate (see conf-7aa376c5 for the DEK-based remediation approach), or reopen th-6 in the threat model to reflect that the topic currently operates without adequate PHI protection, and raise its severity to Critical given the regulatory exposure of PHI in transit at AAL2 surfaces."
 
   - schema_version: 1
-    id: tmeval-eeee5555
+    id: tmeval-cb19d940
+    tmeval_key:
+      flavor: silence
+      surface: vendor-API
     agent: threat_model_evaluator
     apd_tier: auditability
     apd_goal: authenticity

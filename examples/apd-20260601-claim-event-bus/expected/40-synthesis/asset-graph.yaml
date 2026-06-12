@@ -234,10 +234,10 @@ edges:
   provenance:
     source: artifact
     artifact: specialist findings
-    locator: tmeval-eeee5555
+    locator: tmeval-cb19d940
   confidence: high
   traversal_cost: 4
-  finding_id: tmeval-eeee5555
+  finding_id: tmeval-cb19d940
 - edge_id: edge-4b6f06ec
   edge_type: network_reachable
   from: atk-accb3a4c

@@ -37,20 +37,19 @@ Each output file uses the **singular** root key whose value is a **list of bare 
 
 ```yaml
 finding:                      # singular — never the plural 'findings:'
-  - schema_version: 1         # each record carries schema_version
-    id: conf-1a2b3c4d         # best-effort; see "IDs are tooling-canonicalized" below
-    agent: confidentiality
+  - agent: confidentiality    # NO id, NO schema_version — the assembler injects both
     # ... rest of the record, BARE (not wrapped) ...
-  - schema_version: 1
+  - agent: confidentiality
     # ... second record ...
 ```
 
 Capabilities files use the singular `capability:` root key the same way.
 
-**IDs are tooling-canonicalized.** `apd-gauntlet canonicalize` recomputes every
-`id` deterministically (`sha8(title|first-evidence-locator)`, with a `-cap-`
-infix for capabilities) and rewrites `cross_references` to match. Author a
-best-effort `id`, but do **not** hand-tune it — tooling is the source of truth.
+**IDs are tooling-authored.** Do **not** emit `id` or `schema_version`.
+`apd-gauntlet canonicalize` is the sole author: it injects `schema_version: 1`
+and computes `id` deterministically (`<shortcode>-<sha8(title|first-evidence-locator)>`,
+with a `-cap-` infix for capabilities) and rewrites `cross_references` to match.
+Emitting an `id` yourself is ignored (overwritten) and now flagged by lint.
 
 ### Common mistakes (rejected by `validate`)
 
@@ -83,7 +82,7 @@ best-effort `id`, but do **not** hand-tune it — tooling is the source of truth
 ```yaml
 finding:
   schema_version: 1
-  id: <agent-shortcode>-<sha8>
+  id: <agent-shortcode>-<sha8>    # (tooling-authored — do not emit)
   agent: confidentiality
   apd_tier: trustworthiness
   apd_goal: confidentiality
@@ -205,7 +204,7 @@ finding:
 ```yaml
 capability:
   schema_version: 1
-  id: <agent-shortcode>-cap-<sha8>
+  id: <agent-shortcode>-cap-<sha8>    # (tooling-authored — do not emit)
   agent: confidentiality
   apd_tier: trustworthiness
   apd_goal: confidentiality
@@ -309,4 +308,4 @@ Specialist agents do not emit `lens_perspectives` — it is added only at synthe
 7. Capability `maturity` ≥ `implemented` ⇒ at least one non-tech-plan evidence entry
 8. Capability `scope` statement is explicit about what is and is not confirmed
 9. `title` names a component and a concern (not generic property statement)
-10. ID computed correctly per the algorithm above
+10. ID is **absent** in agent output (the assembler authors it)

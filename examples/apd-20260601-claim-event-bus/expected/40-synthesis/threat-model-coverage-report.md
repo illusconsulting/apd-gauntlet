@@ -46,7 +46,7 @@
 | I — Information Disclosure | tm-1a799f16 | **Mitigated** (contradicted) |
 | S, T, R, D, E | *(absent)* | — |
 
-**Contradiction finding: `tmeval-dddd4444` (high severity)**
+**Contradiction finding: `tmeval-6e33edd4` (high severity)**
 The TM marks th-6 as Mitigated via "TLS 1.3 enforced on all Kafka topics including adjudication-to-pricing." Specialist finding `conf-7aa376c5` demonstrates that PHI flows in plaintext at the broker layer — the claimed mitigation does not reflect implementation reality.
 
 ---
@@ -62,7 +62,7 @@ The TM marks th-6 as Mitigated via "TLS 1.3 enforced on all Kafka topics includi
 | E — Elevation of Privilege | tm-8df8b2f3 | Open |
 | R — Repudiation | *(absent)* | — |
 
-**Coverage gap finding: `tmeval-cccc3333` (medium severity)**
+**Coverage gap finding: `tmeval-e5b594b0` (medium severity)**
 Repudiation is absent for audit-log-writer. Specialist findings `nonrep-cf99a733` (missing user attribution) and `nonrep-62124087` (unsigned mutable audit entries) both flagged active non-repudiation risks on this surface. The STRIDE analysis is incomplete without a Repudiation entry.
 
 ---
@@ -73,7 +73,7 @@ Repudiation is absent for audit-log-writer. Specialist findings `nonrep-cf99a733
 
 No entries — not modelled in scope, not declared out of scope.
 
-**Silence finding: `tmeval-eeee5555` (medium severity)**
+**Silence finding: `tmeval-cb19d940` (medium severity)**
 Specialist finding `auth-dbba3dea` flagged SMS MFA fallback on the member portal, which is a PHI-bearing surface. The threat model contains zero entries for this surface. Reviewers cannot determine whether the omission was intentional (with coverage in another artifact) or an oversight.
 
 ---
@@ -82,9 +82,9 @@ Specialist finding `auth-dbba3dea` flagged SMS MFA fallback on the member portal
 
 | ID | Flavor | Severity | Related specialist findings |
 |---|---|---|---|
-| tmeval-cccc3333 | Coverage gap | medium | nonrep-cf99a733, nonrep-62124087 |
-| tmeval-dddd4444 | Contradiction | high | conf-7aa376c5 |
-| tmeval-eeee5555 | Silence | medium | auth-dbba3dea |
+| tmeval-e5b594b0 | Coverage gap | medium | nonrep-cf99a733, nonrep-62124087 |
+| tmeval-6e33edd4 | Contradiction | high | conf-7aa376c5 |
+| tmeval-cb19d940 | Silence | medium | auth-dbba3dea |
 
 ---
 

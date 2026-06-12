@@ -60,6 +60,55 @@ def compute_improvement_id(
     return f"dimpr-{digest}"
 
 
+# Per-flavor ordered component keys. The id is sha8 over
+# "<flavor>|<component-1>|<component-2>..." — flavor first, uniform shape.
+_TMEVAL_COMPONENTS: dict[str, tuple[str, ...]] = {
+    "supplied_omission": ("tm_entry_id",),
+    "coverage_gap": ("surface", "goal"),
+    "contradiction": ("tm_entry_id", "contradicting_finding_id"),
+    "silence": ("surface",),
+    "blocked": ("source_artifact",),
+}
+
+
+def compute_tmeval_id(key: dict[str, Any]) -> str:
+    """Deterministic tmeval- id from a structured flavor key (replaces the
+    agent-computed sha). Raises ValueError on unknown flavor or a missing
+    component so a malformed key fails loud instead of minting a garbage id."""
+    flavor = key.get("flavor", "")
+    components = _TMEVAL_COMPONENTS.get(flavor)
+    if components is None:
+        raise ValueError(f"unknown tmeval flavor {flavor!r}")
+    parts = [flavor]
+    for name in components:
+        val = key.get(name)
+        if not val:
+            raise ValueError(f"tmeval flavor {flavor!r} requires component {name!r}")
+        parts.append(str(val))
+    digest = hashlib.sha256("|".join(parts).encode()).hexdigest()[:8]
+    return f"tmeval-{digest}"
+
+
+def _inventory_id(prefix: str, name: str, locator: str) -> str:
+    digest = hashlib.sha256(f"{name}|{locator}".encode()).hexdigest()[:8]
+    return f"{prefix}-{digest}"
+
+
+def compute_asset_id(name: str, locator: str) -> str:
+    """Deterministic asset- id: asset-<sha8(name|provenance-locator)>."""
+    return _inventory_id("asset", name, locator)
+
+
+def compute_identity_id(name: str, locator: str) -> str:
+    """Deterministic idn- id: idn-<sha8(name|provenance-locator)>."""
+    return _inventory_id("idn", name, locator)
+
+
+def compute_boundary_id(name: str, locator: str) -> str:
+    """Deterministic tb- id: tb-<sha8(name|provenance-locator)>."""
+    return _inventory_id("tb", name, locator)
+
+
 def check_domain_improvement_id(record: dict[str, Any]) -> list[str]:
     """Recompute the dimpr-<sha8> via compute_improvement_id and flag a mismatch.
 
@@ -158,6 +207,48 @@ def check_capability_id(record: dict[str, Any]) -> list[str]:
     actual = record.get("id", "")
     if actual != expected:
         return [f"id mismatch: got {actual}, expected {expected} per deterministic rule"]
+    return []
+
+
+def check_id_present(record: dict[str, Any]) -> list[str]:
+    """Post-assembly backstop: every in-scope record MUST carry a tooling-authored id.
+
+    In-scope == the nine specialist lenses (``_PREFIX_BY_AGENT``). Records with no
+    first-evidence locator are skipped (no deterministic id is computable for them;
+    they are caught elsewhere). attack_path / threat_model_evaluator records are
+    out of scope here — their ids are minted by their own assembler passes.
+    """
+    agent = record.get("agent") or ""
+    if agent not in _PREFIX_BY_AGENT:
+        return []
+    evidence = record.get("evidence") or []
+    if not evidence or not evidence[0].get("locator"):
+        return []
+    if not record.get("id"):
+        return [
+            "missing tooling-authored id: run `apd-gauntlet canonicalize <run-dir>` "
+            "before validate (the assembler is the sole author of id)"
+        ]
+    return []
+
+
+def check_tmeval_id(record: dict[str, Any]) -> list[str]:
+    """tmeval- id must equal compute_tmeval_id(record['tmeval_key'])."""
+    if record.get("agent") != "threat_model_evaluator":
+        return []
+    key = record.get("tmeval_key")
+    if not key:
+        return [
+            "threat_model_evaluator record missing tmeval_key "
+            "(assembler needs it to mint the id)"
+        ]
+    try:
+        expected = compute_tmeval_id(key)
+    except ValueError as exc:
+        return [f"invalid tmeval_key: {exc}"]
+    actual = record.get("id", "")
+    if actual != expected:
+        return [f"id mismatch: got {actual}, expected {expected} per tmeval deterministic rule"]
     return []
 
 

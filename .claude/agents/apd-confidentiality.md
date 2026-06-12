@@ -35,7 +35,7 @@ Both files may be empty lists if the lens is not engaged by the artifacts, but y
 
 **Output envelope reminder.** Emit a **bare, singular** `finding:` / `capability:`
 list (never the plural `findings:`/`capabilities:`, and never wrap a record in its
-own `finding:`/`capability:` key). Each record carries `schema_version: 1`.
+own `finding:`/`capability:` key). Each record is emitted WITHOUT `schema_version` or `id` — the assembler injects them.
 Evidence `artifact` values must be **input artifacts** whose string **byte-exactly
 matches the intake brief's artifact-index filename, including any subdirectory
 prefix** (e.g. `docs/dev-security.md`, not bare `dev-security.md`); never
@@ -45,8 +45,9 @@ parsing and the whole file is rejected. Keep `title` ≤ 200 characters and each
 evidence `excerpt` ≤ 25 tokens. A capability with `maturity: implemented` (or
 higher) MUST cite at least one **non-tech-plan** evidence entry — in a
 code-recon run the `code-evidence-index.yaml` (`code:<qn>:L…@<sha>`) entries
-are the canonical non-tech-plan source. IDs are tooling-canonicalized — author
-a best-effort `id` and do not hand-tune it.
+are the canonical non-tech-plan source. do NOT emit an `id` or `schema_version`
+field — the assembler (`apd-gauntlet canonicalize`) is the sole author of both.
+Emit each record WITHOUT them; the tooling injects them deterministically.
 
 ## Analytical checklist
 

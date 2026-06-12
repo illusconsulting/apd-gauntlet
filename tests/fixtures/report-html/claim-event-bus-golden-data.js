@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-09",
+    "date": "2026-06-12",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -904,7 +904,7 @@ window.APD_DATA = {
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-cccc3333",
+      "id": "tmeval-e5b594b0",
       "title": "Threat model omits Repudiation analysis for audit-log-writer",
       "goal": "non_repudiation",
       "tier": "auditability",
@@ -944,7 +944,7 @@ window.APD_DATA = {
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-dddd4444",
+      "id": "tmeval-6e33edd4",
       "title": "Threat model asserts TLS that conf-7aa376c5 contradicts",
       "goal": "confidentiality",
       "tier": "trustworthiness",
@@ -984,7 +984,7 @@ window.APD_DATA = {
       "prerequisite_evidence": []
     },
     {
-      "id": "tmeval-eeee5555",
+      "id": "tmeval-cb19d940",
       "title": "Threat model is silent on vendor-API integration surface",
       "goal": "authenticity",
       "tier": "auditability",
@@ -2261,7 +2261,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2343,7 +2343,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2425,7 +2425,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2507,7 +2507,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -2589,7 +2589,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4249,7 +4249,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4331,7 +4331,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4413,7 +4413,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4495,7 +4495,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -4577,7 +4577,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6237,7 +6237,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6319,7 +6319,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6401,7 +6401,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6483,7 +6483,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true
@@ -6565,7 +6565,7 @@ window.APD_DATA = {
                 "to_id": "asset-1a2b3c4d",
                 "to_name": "claim-ingress-api",
                 "edge_type": "compromisable_via_finding",
-                "finding_id": "tmeval-eeee5555",
+                "finding_id": "tmeval-cb19d940",
                 "capability_id": null,
                 "confidence": "high",
                 "is_bottleneck": true

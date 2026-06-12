@@ -16,8 +16,13 @@ This deliberately leaves alone:
     by glob anyway, since ``deduped-findings.yaml`` does not match
     ``*.findings.yaml``;
   - ``40-synthesis/attack-path.findings.yaml`` (agent ``attack_path_analyzer``)
-    and ``40-threat-model/threat-model.findings.yaml`` (agent
-    ``threat_model_evaluator``) — they contain no in-scope records.
+    — it contains no in-scope records.
+
+It DOES mint ids for:
+  - ``40-threat-model/threat-model.findings.yaml`` (agent
+    ``threat_model_evaluator``) — records that carry a ``tmeval_key`` are
+    in-scope and receive a deterministic ``tmeval-<sha8>`` id (computed from the
+    structured key, not title|locator); records without one are skipped.
 """
 from __future__ import annotations
 
@@ -27,7 +32,13 @@ from typing import Any
 
 import yaml
 
-from .linters import _PREFIX_BY_AGENT, compute_capability_id, compute_id
+from .linters import (
+    _PREFIX_BY_AGENT,
+    compute_capability_id,
+    compute_id,
+    compute_improvement_id,
+    compute_tmeval_id,
+)
 from .validate import extract_records
 
 # (singular root key, glob) per record kind. Mirrors validate.RECORD_KINDS.
@@ -153,6 +164,26 @@ def _recompute_ids_for_file(
             normalized = True
         # schema_version is persisted only when the file is written back.
         rec.setdefault("schema_version", 1)
+        # tmeval-* ids are minted from the record's structured tmeval_key, not
+        # from title|locator. Handled here because threat_model_evaluator has no
+        # _PREFIX_BY_AGENT entry (the generic prefix path would skip it).
+        if rec.get("agent") == "threat_model_evaluator" and root_key == "finding":
+            key = rec.get("tmeval_key")
+            if key:
+                new_id = compute_tmeval_id(key)
+                in_scope += 1
+                old_id = rec.get("id")
+                if new_id in seen_new_ids:
+                    raise CanonicalizeCollision(
+                        f"tmeval id collision on {new_id!r} in {path}"
+                    )
+                seen_new_ids.add(new_id)
+                if old_id != new_id:
+                    n_changed += 1
+                if old_id:
+                    id_map[old_id] = new_id
+                rec["id"] = new_id
+            continue  # do not fall through to the prefix path
         prefix = _PREFIX_BY_AGENT.get(rec.get("agent") or "", "")
         if not prefix:
             continue  # out-of-scope agent (attack_path / threat_model / etc.)
@@ -206,6 +237,38 @@ def _rewrite_cross_refs(records: list[dict[str, Any]], id_map: dict[str, str]) -
     return changed
 
 
+def _mint_dimpr_ids(run_dir: Path) -> int:
+    """Mint dimpr-<sha8> for every record in 40-synthesis/domain-improvements.yaml
+    from its own 4-tuple (improvement_type|target_pack|target_file|evidence[0].ref).
+    The doc is a metadata envelope ({schema_version, generated_by, examined_domains,
+    improvements:[...]}); records live under ``improvements`` and carry no per-record
+    schema_version. Idempotent; no-op when the file is absent. Returns records changed."""
+    path = run_dir / "40-synthesis" / "domain-improvements.yaml"
+    if not path.exists():
+        return 0
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(doc, dict) or "improvements" not in doc:
+        return 0
+    records = doc.get("improvements") or []
+    changed = 0
+    for rec in records:
+        evidence = rec.get("evidence") or []
+        primary_ref = evidence[0].get("ref", "") if evidence else ""
+        new_id = compute_improvement_id(
+            rec.get("improvement_type", ""), rec.get("target_pack", ""),
+            rec.get("target_file", ""), primary_ref,
+        )
+        if rec.get("id") != new_id:
+            changed += 1
+        rec["id"] = new_id
+    if changed:
+        path.write_text(
+            yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=4096),
+            encoding="utf-8",
+        )
+    return changed
+
+
 def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
     """Canonicalize every in-scope lens file under ``run_dir`` in place."""
     id_map: dict[str, str] = {}
@@ -241,5 +304,7 @@ def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
             yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=4096),
             encoding="utf-8",
         )
+
+    records_canonicalized += _mint_dimpr_ids(run_dir)
 
     return CanonicalizeResult(records_canonicalized, cross_refs_rewritten, parse_errors)

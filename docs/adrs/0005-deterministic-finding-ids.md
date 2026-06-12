@@ -1,6 +1,8 @@
 # ADR-0005: Deterministic Finding and Capability IDs
 
-**Status:** Accepted
+> **Amended by [ADR-0020](0020-tooling-authored-derived-fields.md)** (2026-06-12): agents no longer author a best-effort `id`; the assembler (`apd-gauntlet canonicalize`) is the sole author. The ID algorithm described in this ADR is unchanged.
+
+**Status:** Accepted (amended by ADR-0020)
 **Date:** 2026-05-24
 
 ## Context

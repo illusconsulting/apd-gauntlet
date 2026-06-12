@@ -12,10 +12,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["asset_id", "name", "asset_type", "provenance", "confidence"],
+        "required": ["name", "asset_type", "provenance", "confidence"],
         "additionalProperties": false,
         "properties": {
-          "asset_id": { "type": "string", "pattern": "^asset-[0-9a-f]{8}$" },
+          "asset_id": { "type": "string", "pattern": "^asset-[0-9a-f]{8}$", "readOnly": true },
           "name": { "type": "string", "minLength": 1 },
           "asset_type": { "type": "string", "enum": ["service", "data_store", "secret_store", "queue", "network", "external_dependency", "compute"] },
           "data_classifications": {
@@ -45,10 +45,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["identity_id", "name", "identity_type", "provenance", "confidence"],
+        "required": ["name", "identity_type", "provenance", "confidence"],
         "additionalProperties": false,
         "properties": {
-          "identity_id": { "type": "string", "pattern": "^idn-[0-9a-f]{8}$" },
+          "identity_id": { "type": "string", "pattern": "^idn-[0-9a-f]{8}$", "readOnly": true },
           "name": { "type": "string", "minLength": 1 },
           "identity_type": { "type": "string", "enum": ["human_role", "service_account", "workload_identity", "external_party"] },
           "provenance": { "$ref": "#/properties/assets/items/properties/provenance" },
@@ -60,15 +60,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["boundary_id", "name", "crosses", "provenance"],
+        "required": ["name", "crosses", "provenance"],
         "additionalProperties": false,
         "properties": {
-          "boundary_id": { "type": "string", "pattern": "^tb-[0-9a-f]{8}$" },
+          "boundary_id": { "type": "string", "pattern": "^tb-[0-9a-f]{8}$", "readOnly": true },
           "name": { "type": "string", "minLength": 1 },
           "crosses": {
             "type": "array",
             "minItems": 2,
-            "items": { "type": "string", "pattern": "^asset-[0-9a-f]{8}$" }
+            "items": { "type": "string", "minLength": 1 }
           },
           "provenance": { "$ref": "#/properties/assets/items/properties/provenance" }
         }

@@ -75,6 +75,13 @@ Workflow:
 8. Bump the framework version per [schema-evolution.md](schema-evolution.md).
 9. Update `CHANGELOG.md`.
 
+**Derived fields are tooling-authored.** A specialist emits records WITHOUT `id`
+or `schema_version` — the assembler (`apd-gauntlet canonicalize`) authors both.
+Never emit or compute an id. If a new record type needs a deterministic id, add a
+`compute_*_id` helper in `linters.py`, mint it in the assembler, and register it in
+[deterministic-field-register.md](deterministic-field-register.md) (see
+[ADR-0020](adrs/0020-tooling-authored-derived-fields.md)).
+
 ## When to add a new validator lint
 
 The validator has three passes (schema, semantic, cross-file). Adding a new check:

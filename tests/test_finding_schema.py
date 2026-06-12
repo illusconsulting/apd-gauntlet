@@ -1,6 +1,7 @@
 """Schema validation tests for finding records."""
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 
@@ -148,3 +149,41 @@ def test_finding_rejects_invalid_maswe_format():
     validator = _build_validator(schema)
     errors = list(validator.iter_errors(data["finding"]))
     assert errors, "Expected validation errors for malformed MASWE id, got none"
+
+
+def test_finding_without_id_or_schema_version_is_valid():
+    """Agents emit content only; id + schema_version are tooling-injected."""
+    data = _load_yaml(FIXTURES / "valid" / "finding-minimal.yaml")
+    rec = copy.deepcopy(data["finding"])
+    rec.pop("id", None)
+    rec.pop("schema_version", None)
+    schema = _load_schema()
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(rec))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_accepts_tmeval_key():
+    data = _load_yaml(FIXTURES / "valid" / "finding-minimal.yaml")
+    rec = copy.deepcopy(data["finding"])
+    rec.pop("id", None)
+    rec["agent"] = "threat_model_evaluator"
+    rec["tmeval_key"] = {
+        "flavor": "coverage_gap",
+        "surface": "ingest-api",
+        "goal": "confidentiality",
+    }
+    schema = _load_schema()
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(rec))
+    assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_finding_rejects_unknown_tmeval_flavor():
+    data = _load_yaml(FIXTURES / "valid" / "finding-minimal.yaml")
+    rec = copy.deepcopy(data["finding"])
+    rec["tmeval_key"] = {"flavor": "bogus"}
+    schema = _load_schema()
+    validator = _build_validator(schema)
+    errors = list(validator.iter_errors(rec))
+    assert errors != []

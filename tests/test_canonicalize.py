@@ -1,6 +1,7 @@
 """Unit tests for the structural canonicalizer (C1)."""
 from __future__ import annotations
 
+import hashlib
 import pathlib
 
 import pytest
@@ -256,6 +257,21 @@ def test_canonicalize_parse_errors_empty_when_all_parse(tmp_path):
     assert result.parse_errors == []
 
 
+def test_canonicalize_injects_id_and_schema_version_when_absent(tmp_path):
+    rec = _finding("confidentiality", "PHI in logs", "§2.1")
+    rec.pop("id", None)
+    rec.pop("schema_version", None)
+    run_dir = tmp_path
+    path = run_dir / "10-trustworthiness" / "confidentiality.findings.yaml"
+    _write(path, {"finding": [rec]})
+
+    canonicalize_run(run_dir)
+
+    out = yaml.safe_load(path.read_text(encoding="utf-8"))["finding"][0]
+    assert out["schema_version"] == 1
+    assert out["id"].startswith("conf-") and len(out["id"]) == len("conf-") + 8
+
+
 def test_canonicalize_normalizes_plural_capabilities_root(tmp_path):
     """A genuine 'capabilities:' plural root key is now correctly normalized."""
     run = tmp_path / "run"
@@ -276,3 +292,89 @@ def test_canonicalize_normalizes_plural_capabilities_root(tmp_path):
     assert set(doc.keys()) == {"capability"}  # normalized to singular root
     rec = doc["capability"][0]
     assert rec["id"] == compute_capability_id("conf", title, locator)
+
+
+def test_canonicalize_mints_tmeval_id_from_key(tmp_path):
+    tmeval_key = {"flavor": "coverage_gap", "surface": "ingest-api", "goal": "confidentiality"}
+    rec = {
+        "agent": "threat_model_evaluator",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality",
+        "disposition": "gap", "severity": "medium", "confidence": "medium",
+        "title": "Threat model omits Confidentiality analysis for ingest-api",
+        "summary": "s", "detail": "d",
+        "tmeval_key": tmeval_key,
+        "evidence": [{"artifact": "00-context/threat-model-normalized.yaml",
+                      "locator": "entries[asset=ingest-api]", "excerpt": "x"}],
+        "control_mappings": {"nist_800_53r5": ["SC-7"]},
+        "recommendation": {"posture": "recommended", "summary": "s", "detail": "d"},
+    }
+    d = tmp_path / "40-threat-model"
+    d.mkdir(parents=True)
+    p = d / "threat-model.findings.yaml"
+    p.write_text(yaml.safe_dump({"finding": [rec]}, sort_keys=False), encoding="utf-8")
+
+    canonicalize_run(tmp_path)
+
+    out = yaml.safe_load(p.read_text(encoding="utf-8"))["finding"][0]
+    digest = hashlib.sha256(b"coverage_gap|ingest-api|confidentiality").hexdigest()[:8]
+    want = f"tmeval-{digest}"
+    assert out["id"] == want
+    assert out["schema_version"] == 1
+
+
+def test_canonicalize_skips_tmeval_record_without_key(tmp_path):
+    """A threat_model_evaluator record lacking tmeval_key is silently skipped:
+    no id is minted (the prefix path also can't mint one — agent is out-of-prefix)."""
+    rec = {
+        "agent": "threat_model_evaluator",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality",
+        "disposition": "gap", "severity": "medium", "confidence": "medium",
+        "title": "Threat model omits Confidentiality analysis for ingest-api",
+        "summary": "s", "detail": "d",
+        "evidence": [{"artifact": "00-context/threat-model-normalized.yaml",
+                      "locator": "entries[asset=ingest-api]", "excerpt": "x"}],
+        "control_mappings": {"nist_800_53r5": ["SC-7"]},
+        "recommendation": {"posture": "recommended", "summary": "s", "detail": "d"},
+    }
+    d = tmp_path / "40-threat-model"
+    d.mkdir(parents=True)
+    p = d / "threat-model.findings.yaml"
+    p.write_text(yaml.safe_dump({"finding": [rec]}, sort_keys=False), encoding="utf-8")
+
+    canonicalize_run(tmp_path)
+
+    out = yaml.safe_load(p.read_text(encoding="utf-8"))["finding"][0]
+    assert "id" not in out
+
+
+def test_canonicalize_mints_dimpr_id(tmp_path):
+    from apd_gauntlet.canonicalize import canonicalize_run
+    from apd_gauntlet.linters import compute_improvement_id
+    rec = {
+        "improvement_type": "missing_consequential_action",
+        "target_pack": "agentic-ai",
+        "target_file": "domain.yaml",
+        "source": "deterministic",
+        "priority": "medium",
+        "rationale": "Tool-call audit action missing from the pack's consequential-action surface.",
+        "suggested_action": "Add a tool_invocation consequential action.",
+        "draft_snippet": "consequential_actions:\n  - tool_invocation",
+        "evidence": [{"kind": "finding", "ref": "conf-12345678"}],
+    }
+    doc = {
+        "schema_version": 1, "generated_by": "domain-auditor",
+        "examined_domains": ["agentic-ai"], "improvements": [rec],
+    }
+    d = tmp_path / "40-synthesis"
+    d.mkdir(parents=True)
+    p = d / "domain-improvements.yaml"
+    p.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    canonicalize_run(tmp_path)
+
+    out = yaml.safe_load(p.read_text(encoding="utf-8"))
+    assert out["improvements"][0]["id"] == compute_improvement_id(
+        "missing_consequential_action", "agentic-ai", "domain.yaml", "conf-12345678")
+    # envelope preserved
+    assert out["generated_by"] == "domain-auditor"
+    assert out["examined_domains"] == ["agentic-ai"]

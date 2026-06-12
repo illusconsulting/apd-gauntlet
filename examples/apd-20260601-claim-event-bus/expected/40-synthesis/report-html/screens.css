@@ -1186,3 +1186,46 @@
   .guide__rail { position: static; }
   .guide__pillars, .guide__roles { grid-template-columns: 1fr; }
 }
+
+/* ── Per-finding attack-path strip ("subway map") ── */
+.apath-strip { margin: 0; }
+.apath-strip__head {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--ink-3); margin-bottom: var(--space-2); flex-wrap: wrap;
+}
+.apath-strip__pid {
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: 3px; padding: 1px 5px; color: var(--ink-3);
+}
+.apath-strip__open {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: var(--accent); font-size: var(--text-xs); padding: 0;
+  text-decoration: underline; font-family: inherit;
+}
+.apath-strip__rail {
+  display: flex; align-items: center; overflow-x: auto;
+  padding: 40px 4px 38px;
+  gap: 0; min-height: 120px;
+}
+.apath-strip__station {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px; flex: 0 0 auto; max-width: 96px; text-align: center;
+}
+.apath-strip__dot { border-radius: 50%; flex: 0 0 auto; }
+.apath-strip__name {
+  font-size: 11px; color: var(--ink); line-height: 1.15; word-break: break-word;
+}
+.apath-strip__seg {
+  position: relative; flex: 1 1 64px; min-width: 64px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.apath-strip__line { border-radius: 3px; width: 100%; }
+.apath-strip__above, .apath-strip__below {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  max-width: 150px; white-space: normal; overflow-wrap: anywhere;
+  line-height: 1.15; font-size: 10px; font-weight: 700; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.apath-strip__above { bottom: calc(50% + 6px); }
+.apath-strip__below { top: calc(50% + 6px); }

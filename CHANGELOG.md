@@ -12,6 +12,21 @@ All notable changes to this project will be documented in this file. Format base
   link to the Attack Paths tab. Derived deterministically from the synthesis
   artifacts (no finding-schema change). New editorial audit check
   `attack_path_finding_strip_present`. ADR-0015.
+- **Deterministic assembler owns all derived ids** — `apd-gauntlet canonicalize`
+  now mints `tmeval-*` (from a new `tmeval_key`) and `dimpr-*` ids in addition to
+  finding/capability ids, and a new `apd-gauntlet assemble-inventory` pass mints
+  the asset-inventory `asset-/idn-/tb-` ids and wires `trust_boundaries.crosses`
+  (authored by asset name) to the minted ids. New backstop linters
+  `check_id_present` / `check_tmeval_id`. ADR-0020; `docs/deterministic-field-register.md`.
+
+### Changed
+
+- **Agents emit content only — no `id` / `schema_version`.** The nine specialist
+  lens agents, the threat-model evaluator (now emits `tmeval_key`), the
+  domain-improvement auditor, and intake (emits inventory records without ids,
+  authors `crosses` by name) no longer author derived fields; the assembler is the
+  sole author. Finding/capability/domain-improvement/asset-inventory schemas
+  relaxed accordingly (permissive — existing valid records still validate).
 
 ## v1.7.0 — 2026-06-09
 

@@ -70,6 +70,16 @@ When a field or behavior is deprecated:
 2. Keep the deprecated surface working through at least one minor release.
 3. Remove in a major bump.
 
+## v1.7.0 — Tooling-authored derived fields (id ownership)
+
+Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-authored-derived-fields.md) and [deterministic-field-register.md](deterministic-field-register.md).
+
+- **Record ids are now optional-at-emission** (removed from `required`, marked `readOnly`): `id` on `finding`, `capability`, and `domain-improvement` records, and `asset_id` / `identity_id` / `boundary_id` on asset-inventory records. `schema_version` is likewise optional-at-emission on `finding` and `capability` records (it is the only record types that carry a per-record `schema_version`). The deterministic assembler (`apd-gauntlet canonicalize`, plus `assemble-inventory` for the inventory) is the sole author; agents emit records without them. A present-but-malformed id is still rejected (the patterns are retained).
+- **`tmeval_key` added** to the finding schema — an optional object (`flavor` + components) the threat-model evaluator emits in place of a hand-computed `tmeval-` id; `canonicalize` mints the id from it.
+- **`trust_boundaries.crosses` relaxed** in the asset-inventory schema from the `asset-<hex8>` pattern to any non-empty string, so intake can author `crosses` by asset name pre-assembly; `assemble-inventory` rewrites names to the minted asset ids (`minItems: 2` retained).
+
+Packs and consumers need no changes: every change is a relaxation, and post-assembly records carry the same id forms as before.
+
 ## v1.2.0 — Multi-framework taxonomy mappings (Phase A)
 
 Additive within v1.x. Extensions:

@@ -7,7 +7,7 @@ description: |
   discipline rules in apd-threat-model-methodologies, plus a per-surface
   coverage report at 40-synthesis/threat-model-coverage-report.md + machine-
   readable 40-synthesis/threat-model-coverage.yaml. Findings use
-  agent: threat_model_evaluator and id: tmeval-<sha8>.
+  agent: threat_model_evaluator; id is minted by apd-gauntlet from tmeval_key.
 tools:
   - Read
   - Glob
@@ -44,7 +44,8 @@ When activated, emits:
 1. **Findings** as YAML files under `20-findings/40-threat-model/` (one file
    per finding, named `tmeval-<sha8>.yaml`). All findings have:
    - `agent: threat_model_evaluator`
-   - `id: tmeval-<sha8>` (8 hex chars after the prefix)
+   - `tmeval_key` (flavor + components) — Do NOT emit `id`; `apd-gauntlet
+     canonicalize` mints `tmeval-<sha8>` from the key at assembly time.
    - At least one evidence entry pointing at
      `00-context/threat-model-normalized.yaml` or the source artifact
    - Validates against `schemas/finding.schema.json`
@@ -135,7 +136,9 @@ an independent specialist finding on the same surface + goal, per the Step 2b
 corroboration gate), emit a NEW omission finding flavor:
 
 ```yaml
-id: tmeval-<sha8>   # sha over baseline tm_entry_id + "supplied_omission"
+tmeval_key:
+  flavor: supplied_omission
+  tm_entry_id: <baseline tm_entry_id>
 agent: threat_model_evaluator
 apd_tier: <tier of the corroborating finding>
 apd_goal: <goal of the corroborating finding>
@@ -181,8 +184,10 @@ For each (surface, goal) in `apd_goals_flagged_by_surface`:
 Coverage-gap finding template:
 
 ```yaml
-schema_version: 1
-id: tmeval-<sha8>   # sha over surface + goal + "coverage_gap"
+tmeval_key:
+  flavor: coverage_gap
+  surface: <surface>
+  goal: <the absent goal>
 agent: threat_model_evaluator
 apd_tier: <tier of the absent goal>
 apd_goal: <the absent goal>
@@ -223,7 +228,10 @@ For each TM entry with a non-null `mitigation`:
 Contradiction finding template:
 
 ```yaml
-id: tmeval-<sha8>   # sha over tm_entry_id + contradicting_finding_id
+tmeval_key:
+  flavor: contradiction
+  tm_entry_id: <tm_entry_id>
+  contradicting_finding_id: <specialist finding id>
 agent: threat_model_evaluator
 apd_tier: <tier of the contradicting finding>
 apd_goal: <goal of the contradicting finding>
@@ -263,7 +271,9 @@ flagged):
 Silence finding template:
 
 ```yaml
-id: tmeval-<sha8>   # sha over surface + "silence"
+tmeval_key:
+  flavor: silence
+  surface: <surface>
 agent: threat_model_evaluator
 apd_tier: <tier of one of the flagging findings>
 apd_goal: <goal of one of the flagging findings>
@@ -305,7 +315,9 @@ Build the coverage YAML envelope matching `schemas/threat-model-coverage.schema.
 ### Step 7 — Blocked-finding path (only reached if TM was unparseable)
 
 ```yaml
-id: tmeval-<sha8>   # sha over the source artifact path
+tmeval_key:
+  flavor: blocked
+  source_artifact: <supplied threat-model path under inputs/>
 agent: threat_model_evaluator
 apd_tier: trustworthiness   # default tier; the gap is foundational
 apd_goal: non_repudiation   # the TM should produce an auditable assessment
