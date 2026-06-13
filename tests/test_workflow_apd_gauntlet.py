@@ -660,6 +660,21 @@ def test_attack_paths_uses_graphview_with_path_selection() -> None:
     assert "edgeIds" in ap and "path_id" in ap
 
 
+def test_attack_paths_has_findings_only_filter() -> None:
+    ap = (REPO / "report-template" / "screens" / "AttackPaths.jsx").read_text(encoding="utf-8")
+    # Default-ON interactive toggle state.
+    assert "findingsOnly" in ap and "setFindingsOnly" in ap
+    assert "useState(true)" in ap  # the toggle defaults ON
+    # Predicate: a path "has findings" iff it traverses a finding-derived edge.
+    assert "pathHasFindings" in ap
+    # Effective filter state gates the no-findings fallback (default-ON safety).
+    assert "anyFindingPaths" in ap and "effectiveOn" in ap
+    # Client-side graph subsetter (JS mirror of _asset_graph_view_focused).
+    assert "subsetGraph" in ap
+    # The toggle is labelled.
+    assert "Findings only" in ap
+
+
 def test_threat_model_uses_graphview_surface_map() -> None:
     tm = (REPO / "report-template" / "screens" / "ThreatModel.jsx").read_text(encoding="utf-8")
     assert "GraphView" in tm and "MermaidGraph" not in tm

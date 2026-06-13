@@ -14,7 +14,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260602-acme-mobile-banking",
     "subject_tagline": "",
-    "date": "2026-06-09",
+    "date": "2026-06-13",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [

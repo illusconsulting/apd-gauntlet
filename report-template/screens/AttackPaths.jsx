@@ -9,13 +9,29 @@ function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
   const ap = data.attack_paths;
   const taxonomy = data.taxonomy || {};
 
+  // --- Findings-only filter (default ON) ---------------------------------
+  // A path "has findings" iff it traverses a finding-derived edge — the same
+  // signal as the per-path ⚑ N findings badge. One toggle narrows all three
+  // views (asset graph, path-focused graph, enumerated paths) to those paths.
+  const pathHasFindings = (p) => (p.edges_detailed || []).some((e) => e.finding_id);
+  const allPaths = (ap && ap.pairs || []).flatMap((pair) => pair.paths || []);
+  const findingPaths = allPaths.filter(pathHasFindings);
+  const anyFindingPaths = findingPaths.length > 0;
+
   const [selectedPathId, setSelectedPathId] = React.useState(null);
+  const [findingsOnly, setFindingsOnly] = React.useState(true);
+  // "Effective" only when there is something to filter — otherwise default-ON
+  // would blank the scene (see the disabled-toggle fallback in the toolbar).
+  const effectiveOn = findingsOnly && anyFindingPaths;
 
   // Reverse-nav focus: the <details> pairs are intentionally UNCONTROLLED (no `open`
   // prop), so imperatively setting det.open here is safe and React won't reset it.
   React.useEffect(() => {
     if (!focusPathId) return;
     setSelectedPathId(focusPathId);
+    // If the target path is finding-free, default-ON would hide it — flip off.
+    const target = allPaths.find((p) => p.path_id === focusPathId);
+    if (target && !pathHasFindings(target)) setFindingsOnly(false);
     const row = document.getElementById(`ap-row-${focusPathId}`);
     if (row) {
       const det = row.closest("details");
@@ -23,8 +39,31 @@ function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
       row.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [focusPathId]);
-  const paths = (ap && ap.pairs || []).flatMap((pair) =>
-    (pair.paths || []).map((p) => ({ id: p.path_id, edgeIds: p.edges || [] })));
+
+  // Memoized graph views so the GraphView `graph` prop identity is stable
+  // across unrelated re-renders (selecting a path must NOT rebuild cytoscape).
+  // Recomputes only when the data or the effective filter state changes.
+  const graphs = React.useMemo(() => {
+    function subsetGraph(graph, edgeIdSet) {
+      if (!graph) return graph;
+      const edges = (graph.edges || []).filter((e) => edgeIdSet.has(e.id));
+      const keep = new Set();
+      edges.forEach((e) => { keep.add(e.source); keep.add(e.target); });
+      const nodes = (graph.nodes || []).filter((n) => keep.has(n.id));
+      return { ...graph, nodes, edges };
+    }
+    const full = ap && ap.graph;
+    const focused = ap && ap.graph_path_focused;
+    if (!effectiveOn) return { asset: full, focused };
+    const fps = (ap && ap.pairs || []).flatMap((pair) => pair.paths || [])
+      .filter(pathHasFindings);
+    const ids = new Set(fps.flatMap((p) => p.edges || []));
+    return { asset: subsetGraph(full, ids), focused: subsetGraph(focused, ids) };
+  }, [ap, effectiveOn]);
+
+  // Flat path list for graph↔list cross-highlight (narrowed when filtering).
+  const highlightPaths = (effectiveOn ? findingPaths : allPaths).map(
+    (p) => ({ id: p.path_id, edgeIds: p.edges || [] }));
 
   if (!ap) {
     return (
@@ -112,16 +151,38 @@ function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
         ({tbEdges} trust-boundary, {findEdges} finding-derived, {capEdges} capability-derived)
       </div>
 
+      {/* Findings-only filter — one toggle drives all three views below. */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", margin: "var(--space-3) 0 0" }}>
+        <button
+          type="button"
+          className={`chip ${effectiveOn ? "chip--active" : ""}`}
+          disabled={!anyFindingPaths}
+          aria-pressed={effectiveOn}
+          onClick={() => { setFindingsOnly((v) => !v); setSelectedPathId(null); }}
+          title={anyFindingPaths
+            ? "Show only attack paths that traverse a finding-derived edge (and the assets exclusive to them)"
+            : "No path traverses a finding-derived edge — nothing to filter"}
+          style={{ cursor: anyFindingPaths ? "pointer" : "not-allowed", opacity: anyFindingPaths ? 1 : 0.55 }}
+        >⚑ Findings only</button>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
+          {!anyFindingPaths
+            ? "No path traverses a finding-derived edge — nothing to filter."
+            : effectiveOn
+              ? `showing ${findingPaths.length} of ${allPaths.length} path${allPaths.length === 1 ? "" : "s"} · ${allPaths.length - findingPaths.length} finding-free hidden`
+              : `showing all ${allPaths.length} path${allPaths.length === 1 ? "" : "s"}`}
+        </span>
+      </div>
+
       <section className="attack-paths__graph">
         <h3 className="attack-paths__section-h">Asset graph</h3>
-        <GraphView graph={ap.graph} layout="dagre" idBase="apd-asset-graph"
-          paths={paths} selectedPathId={selectedPathId} onSelectPath={setSelectedPathId} />
+        <GraphView graph={graphs.asset} layout="dagre" idBase="apd-asset-graph"
+          paths={highlightPaths} selectedPathId={selectedPathId} onSelectPath={setSelectedPathId} />
       </section>
 
-      {ap.graph_path_focused && (
+      {graphs.focused && (
         <section className="attack-paths__graph">
           <h3 className="attack-paths__section-h">Path-focused graph</h3>
-          <GraphView graph={ap.graph_path_focused} layout="dagre" idBase="apd-paths-focused" />
+          <GraphView graph={graphs.focused} layout="dagre" idBase="apd-paths-focused" />
         </section>
       )}
 
@@ -135,6 +196,10 @@ function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
           </p>
         )}
         {ap.pairs.map((pair, idx) => {
+          const visiblePaths = effectiveOn
+            ? (pair.paths || []).filter(pathHasFindings)
+            : (pair.paths || []);
+          if (visiblePaths.length === 0) return null;
           const atkName  = pair.attacker_position_name || pair.attacker_position;
           const jewName  = pair.crown_jewel_name || pair.crown_jewel;
           const atkId    = pair.attacker_position;
@@ -155,10 +220,10 @@ function AttackPaths({ data, onOpenFinding, focusPathId = null }) {
                     </div>
                   )}
                 </div>
-                <span className="attack-pair__count">{pair.paths.length} path{pair.paths.length === 1 ? "" : "s"}</span>
+                <span className="attack-pair__count">{visiblePaths.length} path{visiblePaths.length === 1 ? "" : "s"}</span>
               </summary>
               <ul className="attack-pair__paths">
-                {pair.paths.map((p) => {
+                {visiblePaths.map((p) => {
                   // Distinct findings this path traverses (finding-derived edges).
                   const pathFindingIds = [...new Set(
                     (p.edges_detailed || [])

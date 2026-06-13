@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-12",
+    "date": "2026-06-13",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [

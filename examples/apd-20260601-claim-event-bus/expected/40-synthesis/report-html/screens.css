@@ -276,7 +276,7 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.chip:hover { background: var(--paper-2); color: var(--ink); }
+.chip:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
 .chip--active {
   background: var(--ink); color: var(--paper);
   border-color: var(--ink);

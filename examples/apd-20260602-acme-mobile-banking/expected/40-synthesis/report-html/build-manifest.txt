@@ -1,6 +1,6 @@
-generated_at=2026-06-09T22:06:11.720246+00:00
+generated_at=2026-06-13T22:03:03.440861+00:00
 framework_version=1.7.0
-bundle_hash=2ea2f41f683fdac4
+bundle_hash=e003c4a3a4dbdb82
 .apd-run.yaml=5e12c6e64b76c660
 apd-coverage-matrix.yaml=68ceeadb71b077a4
 asset-inventory.yaml=f99d817c6d7493be

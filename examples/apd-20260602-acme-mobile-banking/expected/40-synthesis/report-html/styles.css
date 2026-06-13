@@ -46,6 +46,7 @@
   --ink-mark:     #2a2620;     /* hover ink */
   --accent:       #5b3a1f;     /* warm editorial accent */
   --accent-soft:  #f0e6d3;
+  --rec: #6b4cff;   /* recommendation / D3FEND markers — distinct from --sev-* and --accent */
   --shadow-sm:    0 1px 0 rgba(58, 45, 20, 0.04);
   --shadow-md:    0 1px 2px rgba(58, 45, 20, 0.05), 0 4px 16px -8px rgba(58, 45, 20, 0.06);
 
@@ -136,6 +137,7 @@
   --ink-mark:    #ffffff;
   --accent:      #d4a574;
   --accent-soft: #2a2419;
+  --rec: #9d8bff;
   --shadow-sm:   0 1px 0 rgba(0, 0, 0, 0.4);
   --shadow-md:   0 1px 2px rgba(0,0,0,0.3), 0 4px 16px -8px rgba(0,0,0,0.5);
 
