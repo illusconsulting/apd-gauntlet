@@ -84,6 +84,14 @@ def scaffold_run(
         "# code_recon: enabled  # hard-fail if CBM not reachable\n"
         "# code_recon: disabled # skip code-recon entirely\n"
         "# cbm_project: <project-name>  # optional CBM project pointer override\n"
+        "# infrastructure:           # static IaC intake (declared globs); absent == disabled\n"
+        "#   mode: static            # disabled | static | live (live = future release)\n"
+        "#   static:                 # globs relative to inputs/; no leading '/' or '..'\n"
+        "#     k8s: []\n"
+        "#     istio_linkerd: []\n"
+        "#     terraform: []\n"
+        "#     helm: []\n"
+        "#     cert_secret_managers: []\n"
     )
     if effective_taxonomies:
         taxonomies_block = (

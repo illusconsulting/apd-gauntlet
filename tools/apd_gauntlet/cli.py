@@ -20,6 +20,7 @@ from .build_domain_skill import build_domain_skill
 from .init_run import scaffold_run
 from .lint_agents import lint_agents_dir
 from .linters import check_capability_id, check_finding_id
+from .manual_audit import write_prompts
 from .refresh_cwe import refresh_cwe
 from .refresh_d3fend import refresh_d3fend
 from .refresh_mitre import fetch_and_project
@@ -380,6 +381,23 @@ def plan_run_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
         click.echo(_stdjson.dumps(plan, indent=2))
     else:
         click.echo(render_markdown(plan, cfg))
+
+
+@main.command("manual-audit-prompts")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+def manual_audit_prompts_cmd(run_dir) -> None:  # type: ignore[no-untyped-def]
+    """Render 40-synthesis/manual-audit-prompts.md from blocked deduped findings.
+
+    Reads RUN_DIR/40-synthesis/deduped-findings.yaml, filters disposition:blocked
+    records, and writes copy-paste audit commands (kubectl/istioctl) keyed off a
+    small keyword->template table. Deterministic, LLM-free, byte-stable.
+    """
+    try:
+        out_path, blocked = write_prompts(run_dir)
+    except FileNotFoundError as e:
+        click.echo(f"No deduped-findings.yaml under {run_dir} (looked at {e})", err=True)
+        raise SystemExit(1) from e
+    click.echo(f"manual-audit-prompts: wrote {out_path} ({blocked} blocked findings)")
 
 
 @main.command("refresh-mitre")
@@ -1223,13 +1241,21 @@ def cluster_candidates_cmd(run_dir: Path, max_group_size: int) -> None:
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
 def apply_clusters_cmd(run_dir: Path) -> None:
     """5c: apply cluster-decisions.yaml; emit deduped + severity-disagreements + rejected."""
-    from .synthesis.apply import AdjudicationMissing, apply_clusters
+    from .synthesis.apply import AdjudicationMissing, SerializationIntegrityError, apply_clusters
 
     try:
         result = apply_clusters(run_dir)
     except AdjudicationMissing as exc:
         click.echo(f"apply-clusters: blocked - {exc}", err=True)
         raise SystemExit(2) from None
+    except SerializationIntegrityError as exc:
+        click.echo(
+            f"apply-clusters: serialization integrity error - {exc}; "
+            "a schema-string field held a non-string or repr-poisoned value "
+            "and was NOT written. Inspect the source records and re-run.",
+            err=True,
+        )
+        raise SystemExit(3) from None
     if result.unresolved_authored_merges:
         click.echo(
             f"apply-clusters: WARNING - {result.unresolved_authored_merges} authored "

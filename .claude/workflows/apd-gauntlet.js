@@ -483,12 +483,24 @@ runTier('tier-3', '30-auditability', ['authenticity', 'non-repudiation', 'immuta
 
 // FULL pre-Phase-5 cross-file gate (--tier skips Pass 3; cluster-candidates
 // must read a cross-file-clean corpus).
-pyStep('validate', {
+// W0: capture the receipt and HARD-BLOCK on isErr. Previously the receipt was
+// unassigned, making this whole-run schema/cross-file gate advisory. A
+// dict-scope capability (or any schema violation) makes `validate --errors-only`
+// exit 1, which pyStep surfaces as status:'error' -> isErr true. Blocking here
+// stops a poisoned corpus from reaching Phase-5 synthesis.
+const vfull = pyStep('validate', {
   phase: 'tier-3', label: 'validate-full-prephase5',
   cliArgs: '--errors-only',
   outputs: 'whole-run cross-file clean (read-only gate)',
   validateScope: runDir,
 });
+if (isErr(vfull)) {
+  log('validate-full-prephase5: status:error — whole-run corpus not schema/cross-file clean — HALT before Phase-5 synthesis.');
+  throw new Error(
+    'validate-full-prephase5 FAILED — the whole-run corpus is not '
+    + 'schema/cross-file clean (e.g. a non-string capability scope). Fix the '
+    + 'offending records before Phase-5 synthesis. See the ERROR lines above.');
+}
 
 // ===========================================================================
 // PHASE 5 — decomposed synthesis (strictly sequential 5a..5g).

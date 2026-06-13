@@ -35,7 +35,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
+
+from .kb_fetch import fetch_pinned
 
 # Hard cap on the fetched payload size to bound memory use if the upstream is
 # compromised or misbehaves. OWASP category lists are kilobytes; 200 MiB leaves
@@ -64,31 +65,13 @@ OWASP_LLM_TOP10_URL = (
 def _fetch_json(url: str) -> tuple[bytes, Any]:
     """Fetch a JSON document with the standard timeout + size cap.
 
-    Returns a ``(raw_body_bytes, parsed_json)`` tuple so callers can compute a
-    ``source_sha256`` over the *exact* bytes received, before parsing.
-
-    Raises ``ValueError`` if the response exceeds :data:`MAX_RESPONSE_BYTES`
-    (checked twice: once via ``Content-Length``, once after reading).
+    Returns ``(raw_body_bytes, parsed_json)`` so callers can compute a
+    ``source_sha256`` over the *exact* bytes received, before parsing. Delegates
+    the size-cap + timeout discipline to :func:`kb_fetch.fetch_pinned`.
     """
-    with urlopen(url, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        content_length = response.headers.get("Content-Length")
-        if content_length is not None:
-            try:
-                advertised = int(content_length)
-            except (TypeError, ValueError):
-                advertised = None
-            if advertised is not None and advertised > MAX_RESPONSE_BYTES:
-                raise ValueError(
-                    f"OWASP response from {url} Content-Length ({advertised}) "
-                    f"exceeds maximum ({MAX_RESPONSE_BYTES})"
-                )
-        body = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise ValueError(
-            f"OWASP response from {url} body exceeds maximum "
-            f"({MAX_RESPONSE_BYTES} bytes); refusing to load. "
-            "Verify the upstream feed before retrying."
-        )
+    body, _meta = fetch_pinned(
+        url, max_bytes=MAX_RESPONSE_BYTES, timeout=DEFAULT_TIMEOUT_SECONDS
+    )
     return body, json.loads(body)
 
 

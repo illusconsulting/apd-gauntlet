@@ -463,17 +463,30 @@ def _extract_subject(run_cfg: dict[str, Any]) -> str:
     1. ``subject:`` key in run_cfg (explicit, human-authored)
     2. ``cbm_project`` if it doesn't look like a path slug
     3. Humanised last segment of ``cbm_project`` when it is a path slug
-    4. Empty string
+    4. The primary (or first) ``repos[].cbm_project`` in multi-repo mode
+    5. Empty string
     """
     subject = run_cfg.get("subject", "")
     if subject:
         return str(subject)
     cbm = str(run_cfg.get("cbm_project", ""))
-    if not cbm:
-        return ""
-    if _is_path_slug(cbm):
-        return _humanise_slug(cbm)
-    return cbm
+    if cbm:
+        if _is_path_slug(cbm):
+            return _humanise_slug(cbm)
+        return cbm
+    # Multi-repo back-stop: no subject and no single cbm_project, but a repos[]
+    # array is declared. Prefer the entry tagged role: primary, else the first.
+    repos = run_cfg.get("repos")
+    if isinstance(repos, list) and repos:
+        primary = next(
+            (r for r in repos if isinstance(r, dict) and r.get("role") == "primary"),
+            repos[0],
+        )
+        if isinstance(primary, dict):
+            name = str(primary.get("cbm_project", ""))
+            if name:
+                return _humanise_slug(name) if _is_path_slug(name) else name
+    return ""
 
 
 def _extract_str_list(run_cfg: dict[str, Any], key: str) -> list[str]:

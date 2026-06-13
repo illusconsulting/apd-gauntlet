@@ -1,0 +1,10 @@
+{
+  "mitigations": {
+    "M1041": [
+      "T1530"
+    ]
+  },
+  "source_sha256": "32f172859ad658016f533e863b11e8aeefe1ca1c870bc11a6cb237870da265e5",
+  "source_url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
+  "version": "2026-01-01"
+}

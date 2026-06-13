@@ -73,7 +73,8 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
     if str(cfg.get("code_recon") or "auto") != "disabled":
         plan.append(
             _step("code-recon", "AGENT", "apd-code-recon",
-                  "00-context/code-evidence-index.yaml")
+                  "00-context/code-evidence-index.yaml "
+                  "(multi-repo: per-repo passes + cross-repo edges when repos[] declared)")
         )
 
     # 4 — threat-model-author (always-on)

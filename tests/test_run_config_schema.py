@@ -214,3 +214,145 @@ def test_run_config_accepts_both_mas_taxonomies_together():
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors == []
+
+
+def test_run_config_accepts_static_infrastructure_block():
+    """A run-config with infrastructure.mode=static + static globs validates."""
+    data = yaml.safe_load(
+        (FIXTURES / "valid/run-config-with-infrastructure.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == [], [e.message for e in errors]
+    assert data["infrastructure"]["mode"] == "static"
+    assert data["infrastructure"]["static"]["k8s"] == ["inputs/k8s/**/*.yaml"]
+
+
+def test_run_config_without_infrastructure_still_valid():
+    """Omitting infrastructure entirely remains valid (absent == disabled)."""
+    data = yaml.safe_load((FIXTURES / "valid/run-config.yaml").read_text())
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+def test_run_config_accepts_repos_array():
+    """A run-config declaring repos[] (multi-repo) validates; cbm_project stays optional."""
+    data = yaml.safe_load((FIXTURES / "valid/run-config-multirepo.yaml").read_text())
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+    assert data["repos"][0]["cbm_project"] == "payments-api"
+    assert data["repos"][0]["role"] == "primary"
+    # cbm_project absence at top level is fine in multi-repo mode
+    assert "cbm_project" not in data
+
+
+def test_run_config_repos_entry_requires_cbm_project():
+    """A repos[] entry without cbm_project must fail validation."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-multirepo-missing-cbm-project.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "repos[] entry missing cbm_project must be rejected"
+    assert any("cbm_project" in e.message for e in errors)
+
+
+def test_run_config_repos_rejects_unknown_role():
+    """role is an enum; an unknown role value is rejected."""
+    data = {
+        "run_id": "apd-test",
+        "domains": ["api-security"],
+        "framework_version": "1.7.0",
+        "repos": [{"cbm_project": "x", "role": "not-a-role"}],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "unknown role must violate the enum"
+
+
+def test_run_config_repos_rejects_unknown_subkey():
+    """additionalProperties:false on the entry rejects unknown keys."""
+    data = {
+        "run_id": "apd-test",
+        "domains": ["api-security"],
+        "framework_version": "1.7.0",
+        "repos": [{"cbm_project": "x", "bogus": 1}],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "unknown repos[] sub-key must be rejected"
+
+
+def test_run_config_single_repo_cbm_project_still_valid():
+    """Back-compat: a single-repo cbm_project config without repos[] still validates."""
+    data = {
+        "run_id": "apd-test",
+        "domains": ["pbm"],
+        "framework_version": "1.7.0",
+        "cbm_project": "claim-event-bus",
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+
+
+@pytest.mark.parametrize("mode", ["disabled", "static", "live"])
+def test_run_config_accepts_all_infrastructure_modes(mode):
+    """All three mode discriminator values validate (live reserved for a future release)."""
+    data = {
+        "run_id": "infra-mode",
+        "domains": ["pbm"],
+        "framework_version": "1.7.0",
+        "infrastructure": {"mode": mode},
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == [], [e.message for e in errors]
+
+
+def test_run_config_rejects_unknown_infrastructure_subkey():
+    """An unknown sub-key under infrastructure violates additionalProperties:false."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-infra-unknown-subkey.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "bogus_subkey under infrastructure must be rejected"
+
+
+def test_run_config_rejects_infrastructure_traversal_glob():
+    """A leading-/ or .. glob item violates the path-traversal guard pattern."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/run-config-infra-traversal-glob.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "traversal globs (.. / leading /) must be rejected"
+
+
+def test_run_config_rejects_unknown_infrastructure_mode():
+    """An out-of-enum mode value is rejected."""
+    data = {
+        "run_id": "infra-mode-bad",
+        "domains": ["pbm"],
+        "framework_version": "1.7.0",
+        "infrastructure": {"mode": "wildcard"},
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "mode=wildcard must violate the enum"
+
+
+def test_run_config_repos_rejects_traversal_repo_path():
+    """repo_path is path-traversal-guarded (same guard as threat_model)."""
+    data = {
+        "run_id": "apd-test",
+        "domains": ["api-security"],
+        "framework_version": "1.7.0",
+        "repos": [{"cbm_project": "x", "repo_path": "../../etc/secrets"}],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "a '..' repo_path must violate the traversal guard"
+
+
+def test_run_config_repos_rejects_empty_array():
+    """repos has minItems:1; an empty array is rejected."""
+    data = {
+        "run_id": "apd-test",
+        "domains": ["api-security"],
+        "framework_version": "1.7.0",
+        "repos": [],
+    }
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "empty repos[] must violate minItems:1"

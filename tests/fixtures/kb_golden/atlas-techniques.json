@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "fetched_at": "2026-06-11",
+    "notes": "MITRE ATLAS techniques projected to {id: name}; sub-technique names are parent-prefixed (Parent: Leaf) for tooltip clarity.",
+    "source": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
+    "source_sha256": "3666629e4a9b2996f9863d970bb3c4e73c6cb96fea452e21519a81b7ecf5036a",
+    "version": "5.6.0"
+  },
+  "techniques": {
+    "AML.T0020": "Poison Training Data",
+    "AML.T0051": "LLM Prompt Injection",
+    "AML.T0051.000": "LLM Prompt Injection: Direct"
+  }
+}

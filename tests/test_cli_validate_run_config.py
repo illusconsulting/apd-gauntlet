@@ -19,3 +19,21 @@ def test_validate_run_config_rejects_invalid_file():
     invalid_path = FIXTURES / "invalid/run-config-traversal-and-bad-enum.yaml"
     result = runner.invoke(main, ["validate-run-config", str(invalid_path)])
     assert result.exit_code != 0
+
+
+def test_validate_run_config_rejects_infra_traversal_glob():
+    """A '..'/leading-'/' infra glob exits non-zero with a Schema error line."""
+    runner = CliRunner()
+    bad = FIXTURES / "invalid/run-config-infra-traversal-glob.yaml"
+    result = runner.invoke(main, ["validate-run-config", str(bad)])
+    assert result.exit_code != 0
+    assert "Schema error:" in result.output
+
+
+def test_validate_run_config_accepts_static_infrastructure():
+    """A well-formed infrastructure.static block validates cleanly."""
+    runner = CliRunner()
+    good = FIXTURES / "valid/run-config-with-infrastructure.yaml"
+    result = runner.invoke(main, ["validate-run-config", str(good)])
+    assert result.exit_code == 0
+    assert "OK" in result.output

@@ -181,7 +181,7 @@ def test_fetch_d3fend_json_passes_timeout() -> None:
     payload = (
         b'{"head":{"vars":[]},"results":{"bindings":[]}}'
     )
-    with patch("apd_gauntlet.refresh_d3fend.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(payload))}
         response.read.return_value = payload
@@ -194,7 +194,7 @@ def test_fetch_d3fend_json_passes_timeout() -> None:
 
 def test_fetch_d3fend_json_rejects_oversize_response_content_length() -> None:
     """Content-Length pre-check rejects responses that advertise > 200 MiB."""
-    with patch("apd_gauntlet.refresh_d3fend.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -209,7 +209,7 @@ def test_fetch_d3fend_json_rejects_oversize_response_post_read(
     """Defense in depth: even with no Content-Length, oversize body raises."""
     monkeypatch.setattr("apd_gauntlet.refresh_d3fend.MAX_RESPONSE_BYTES", 1024)
     fake_oversize = b"x" * 2048
-    with patch("apd_gauntlet.refresh_d3fend.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}
         response.read.return_value = fake_oversize

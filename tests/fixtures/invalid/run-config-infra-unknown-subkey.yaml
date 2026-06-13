@@ -1,0 +1,10 @@
+run_id: apd-20260610-infra-bad
+domains:
+  - pbm
+framework_version: 1.7.0
+infrastructure:
+  mode: static
+  static:
+    k8s:
+      - inputs/k8s/*.yaml
+  bogus_subkey: true

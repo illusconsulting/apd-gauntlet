@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "abstraction": "base",
+      "cwe_id": "CWE-79",
+      "demonstrative_examples_present": true,
+      "name": "Improper Neutralization of Input During Web Page Generation",
+      "observed_examples_present": true,
+      "parents": [
+        "CWE-74"
+      ]
+    },
+    {
+      "abstraction": "base",
+      "cwe_id": "CWE-89",
+      "demonstrative_examples_present": false,
+      "name": "Improper Neutralization of Special Elements used in an SQL Command",
+      "observed_examples_present": false,
+      "parents": [
+        "CWE-74"
+      ]
+    }
+  ],
+  "fetched_at": "2026-06-11T15:52:28.367281+00:00",
+  "source_sha256": "37fdba795c312cfa0e7486f12144e70e5c60202c4539852f474e8ad63ec9c162",
+  "source_url": "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
+}

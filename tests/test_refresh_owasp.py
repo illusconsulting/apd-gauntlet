@@ -100,7 +100,7 @@ def test_refresh_owasp_preserves_edition_in_category_id(tmp_path: Path) -> None:
 def test_fetch_owasp_top10_passes_timeout() -> None:
     """The URL fetch must use DEFAULT_TIMEOUT_SECONDS."""
     payload = json.dumps({"categories": [{"id": "A03:2021", "title": "Injection"}]}).encode()
-    with patch("apd_gauntlet.refresh_owasp.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(payload))}
         response.read.return_value = payload
@@ -113,7 +113,7 @@ def test_fetch_owasp_top10_passes_timeout() -> None:
 
 def test_fetch_json_rejects_oversize_response_content_length() -> None:
     """Content-Length pre-check rejects responses that advertise > 200 MiB."""
-    with patch("apd_gauntlet.refresh_owasp.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -131,7 +131,7 @@ def test_fetch_json_rejects_oversize_response_post_read(
     """
     monkeypatch.setattr("apd_gauntlet.refresh_owasp.MAX_RESPONSE_BYTES", 1024)
     fake_oversize_payload = b"x" * 2048
-    with patch("apd_gauntlet.refresh_owasp.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}  # No Content-Length advertised.
         response.read.return_value = fake_oversize_payload
@@ -151,7 +151,7 @@ def test_fetch_owasp_api_top10_projects_categories() -> None:
             ]
         }
     ).encode()
-    with patch("apd_gauntlet.refresh_owasp.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(payload))}
         response.read.return_value = payload
@@ -168,7 +168,7 @@ def test_fetch_owasp_llm_top10_projects_categories() -> None:
     payload = json.dumps(
         {"categories": [{"id": "LLM01", "title": "Prompt Injection"}]}
     ).encode()
-    with patch("apd_gauntlet.refresh_owasp.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(payload))}
         response.read.return_value = payload

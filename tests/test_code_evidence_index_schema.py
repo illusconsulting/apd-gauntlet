@@ -57,3 +57,33 @@ def test_excerpt_token_limit_enforced_by_validator_not_schema():
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors == []  # token-count check is done by linters.py later
+
+
+def test_multirepo_index_with_per_entry_repo_passes():
+    """Top-level repos[] provenance + per-entry repo validates."""
+    data = yaml.safe_load(
+        (FIXTURES / "valid/code-evidence-index-multirepo.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []
+    idx = data["code_evidence_index"]
+    assert len(idx["repos"]) == 2
+    assert idx["entries"][0]["repo"] == "payments-api"
+
+
+def test_multirepo_provenance_requires_per_entry_repo():
+    """When top-level repos[] is present, every entry must carry repo (if/then)."""
+    data = yaml.safe_load(
+        (FIXTURES / "invalid/code-evidence-index-multirepo-missing-repo.yaml").read_text()
+    )
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors, "entry without repo under multi-repo provenance must be rejected"
+    messages = " ".join(e.message for e in errors)
+    assert "repo" in messages
+
+
+def test_single_repo_index_still_valid_without_repos():
+    """Back-compat: the existing single-repo fixture (no repos[], no per-entry repo) stays valid."""
+    data = yaml.safe_load((FIXTURES / "valid/code-evidence-index.yaml").read_text())
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
+    assert errors == []

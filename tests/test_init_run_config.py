@@ -254,3 +254,28 @@ def test_scaffold_operator_taxonomies_merge_with_pack(tmp_path):
     assert tax.count("masvs") == 1           # dedupe held
     errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
     assert errors == [], [e.message for e in errors]
+
+
+def test_scaffold_run_emits_commented_infrastructure_skeleton(tmp_path):
+    """scaffold_run writes a commented infrastructure skeleton so operators can
+    discover static IaC intake; it stays commented so the emitted config remains
+    minimal and schema-valid."""
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+
+    run_dir = scaffold_run("run-infra", inputs, ["pbm"], tmp_path / "runs")
+    raw = (run_dir / ".apd-run.yaml").read_text()
+
+    # The skeleton is present, commented, and names every static sub-key.
+    assert "# infrastructure:" in raw
+    assert "#   mode: static" in raw
+    assert "#   static:" in raw
+    for sub in ("k8s", "istio_linkerd", "terraform", "helm", "cert_secret_managers"):
+        assert f"#     {sub}:" in raw
+
+    # Commented => parsed config has no infrastructure key and still validates.
+    cfg = yaml.safe_load(raw)
+    assert "infrastructure" not in cfg
+    errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
+    assert errors == [], [e.message for e in errors]

@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "category_id": "LLM01",
+      "name": "Prompt Injection"
+    }
+  ],
+  "fetched_at": "2026-06-11T15:52:28.370235+00:00",
+  "source_sha256": "30f860275f147a733d8b3e53368c80e82d573083ed04f11afc21ce1d1204d89e",
+  "source_url": "https://raw.githubusercontent.com/OWASP/www-project-top-10-for-large-language-model-applications/main/categories.json"
+}

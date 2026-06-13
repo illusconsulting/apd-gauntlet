@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "commit": "c0db792d48206186874b8b10818e117226eb1d68",
+    "count": 3,
+    "fetched_at": "2026-06-11",
+    "source": "https://raw.githubusercontent.com/OWASP/masvs/c0db792d48206186874b8b10818e117226eb1d68/OWASP_MASVS.yaml",
+    "source_sha256": "f15588d55582db6f5daacec6d24e78ba2bbb2b84f4db5836f924a9e7ee2c8200",
+    "version": "v2.1.0"
+  },
+  "controls": {
+    "MASVS-CRYPTO-1": {
+      "category": "MASVS-CRYPTO",
+      "category_title": "Cryptography",
+      "title": "The app employs current strong cryptography."
+    },
+    "MASVS-STORAGE-1": {
+      "category": "MASVS-STORAGE",
+      "category_title": "Storage",
+      "title": "The app securely stores sensitive data."
+    },
+    "MASVS-STORAGE-2": {
+      "category": "MASVS-STORAGE",
+      "category_title": "Storage",
+      "title": "The app prevents leakage of sensitive data."
+    }
+  }
+}

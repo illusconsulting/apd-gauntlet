@@ -1,0 +1,7 @@
+run_id: apd-20260610-bad-multirepo
+domains:
+  - api-security
+framework_version: 1.7.0
+repos:
+  - role: primary
+    repo_path: services/api

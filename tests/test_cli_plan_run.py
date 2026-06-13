@@ -171,3 +171,16 @@ def test_plan_run_phase_names_consistent_with_workflow(tmp_path):
     # everything else in the plan must be a real runner phase.
     leftover = plan_phases - workflow_phases - tier_aliases
     assert not leftover, f"plan emitted phases not in the runner: {leftover}"
+
+
+def test_plan_run_code_recon_step_mentions_cross_repo(tmp_path):
+    """The code-recon step outputs string names the multi-repo cross-repo pass
+    so an operator driving foreground knows it can span repos[]."""
+    run_dir = _write_run(tmp_path, FULL_CFG)
+    runner = CliRunner()
+    result = runner.invoke(main, ["plan-run", "--json", str(run_dir)])
+    assert result.exit_code == 0, result.output
+    plan = json.loads(result.output)
+    recon = [s for s in plan if s["ref"] == "apd-code-recon"]
+    assert recon, "code-recon step must be present"
+    assert "cross-repo" in recon[0]["outputs"], recon[0]["outputs"]

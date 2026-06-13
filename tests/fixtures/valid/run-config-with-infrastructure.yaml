@@ -1,0 +1,17 @@
+run_id: apd-20260610-infra
+domains:
+  - pbm
+framework_version: 1.7.0
+infrastructure:
+  mode: static
+  static:
+    k8s:
+      - inputs/k8s/**/*.yaml
+    istio_linkerd:
+      - inputs/istio/*.yaml
+    terraform:
+      - inputs/terraform/**/*.tf
+    helm:
+      - inputs/charts/**/templates/*.yaml
+    cert_secret_managers:
+      - inputs/cert-manager/*.yaml

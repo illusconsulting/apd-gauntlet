@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "category_id": "API3:2023",
+      "name": "Broken Object Property Level Authorization"
+    }
+  ],
+  "fetched_at": "2026-06-11T15:52:28.370102+00:00",
+  "source_sha256": "0d841346adfd39267f3afab21e68325e61746212d44df4aef9b48c8bd318dd45",
+  "source_url": "https://raw.githubusercontent.com/OWASP/API-Security/master/editions/2023/en/categories.json"
+}

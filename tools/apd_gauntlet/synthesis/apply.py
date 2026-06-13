@@ -24,6 +24,7 @@ capabilities".
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,13 @@ _MATURITY_BY_RANK = {v: k for k, v in _MATURITY_RANK.items()}
 
 class AdjudicationMissing(Exception):
     """Raised when cluster-decisions.yaml is absent or malformed."""
+
+
+class SerializationIntegrityError(Exception):
+    """Raised when a schema-string field holds a non-str value or a value that
+    matches a Python-repr signature (dict/list coerced to text) at the single
+    emit point. Loud/blocking defense-in-depth so a poisoned record never
+    reaches disk."""
 
 
 @dataclass
@@ -130,6 +138,7 @@ def _merge_capabilities(
     decision: dict[str, Any],
     c_src: list[dict[str, Any]],
     members: list[str],
+    result: ApplyResult,
 ) -> dict[str, Any]:
     """Build ONE merged capability from a cross-lens CAPABILITY cluster.
 
@@ -150,10 +159,25 @@ def _merge_capabilities(
         or decision.get("merged_detail")
         or primary.get("description", "")
     )
-    # Unique, order-preserving (by source id) non-empty scopes.
+    # Unique, order-preserving (by source id) non-empty STRING scopes.
+    # W0: a non-string scope is a schema violation (capability.schema.json
+    # requires scope: string). Skip it and log a failed_validation reject row
+    # instead of str()-coercing a dict into "{'components': ...}" repr-poison.
     scopes: list[str] = []
     for s in sorted(c_src, key=lambda r: r["id"]):
-        sc = str(s.get("scope", "")).strip()
+        raw_scope = s.get("scope", "")
+        if not isinstance(raw_scope, str):
+            result.rejected.append({
+                "id": s.get("id", "unknown"),
+                "category": "failed_validation",
+                "reason": (
+                    f"capability scope is {type(raw_scope).__name__}, not str; "
+                    "skipped during capability merge to avoid repr-poisoning "
+                    "(capability.schema.json requires scope: string)"
+                ),
+            })
+            continue
+        sc = raw_scope.strip()
         if sc and sc not in scopes:
             scopes.append(sc)
     scope = "; ".join(scopes)
@@ -246,7 +270,7 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
             if len(c_src) >= 2 and not f_src:
                 # CAPABILITY merge.
                 consumed_caps.update(members)
-                merged_caps.append(_merge_capabilities(decision, c_src, members))
+                merged_caps.append(_merge_capabilities(decision, c_src, members, result))
                 continue
             if not (len(f_src) >= 2 and not c_src):
                 # UNRESOLVED: mixed kinds, or <2 resolvable in either index.
@@ -422,9 +446,48 @@ def _ordered_records(by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     )
 
 
+# Anchored Python-repr signature: a string whose entire value is a dict/list
+# literal of strings (e.g. "{'components': ...}" or "['a', 'b']") — the
+# fingerprint of a str()-coerced structured field. A quote is required right
+# after the opening bracket so legitimate prose like "[N/A]" or "[redacted]" is
+# NOT flagged; Python str() of a dict or list-of-strings always quotes its
+# keys/elements, so real repr-poison is still caught.
+_REPR_SIGNATURE = re.compile(r"^\s*[\{\[][\"'].*[\}\]]\s*$", re.DOTALL)
+
+# Schema-string scalar fields per record kind that must never hold a non-str
+# value or a repr signature. Kept narrow (the emitted-scalar fields) — nested
+# object/array fields are guarded by the schema gate, not this string check.
+_FINDING_STRING_FIELDS = ("title", "summary", "detail")
+_CAPABILITY_STRING_FIELDS = ("title", "description", "scope")
+
+
+def _repr_signature_check(records: list[dict[str, Any]], fields: tuple[str, ...]) -> None:
+    """Raise SerializationIntegrityError if any named field on any record is a
+    non-str or matches an anchored Python-repr signature."""
+    for rec in records:
+        rid = rec.get("id", "<no-id>")
+        for fld in fields:
+            if fld not in rec:
+                continue
+            val = rec[fld]
+            if not isinstance(val, str):
+                raise SerializationIntegrityError(
+                    f"record {rid}: field '{fld}' is {type(val).__name__}, not str"
+                )
+            if _REPR_SIGNATURE.match(val):
+                raise SerializationIntegrityError(
+                    f"record {rid}: field '{fld}' matches a Python-repr signature "
+                    f"(coerced structured value): {val[:80]!r}"
+                )
+
+
 def _write_outputs(run_dir: Path, result: ApplyResult) -> None:
     synth = run_dir / "40-synthesis"
     synth.mkdir(parents=True, exist_ok=True)
+    # W0: pre-write integrity guard — never emit a repr-poisoned schema-string
+    # field. Loud/blocking defense-in-depth around the type-respecting accessor.
+    _repr_signature_check(result.findings, _FINDING_STRING_FIELDS)
+    _repr_signature_check(result.capabilities, _CAPABILITY_STRING_FIELDS)
     # Merged records sort last (id starts 'merged-'); keep tier order for the rest.
     findings_sorted = sorted(
         result.findings,

@@ -20,6 +20,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Validate bundled example
         run: apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
+      - name: Validate second bundled example
+        run: apd-gauntlet validate examples/apd-20260602-acme-mobile-banking/expected/
       - name: Validate domain pack
         run: apd-gauntlet validate-domain pbm
       - name: Meta-validate all schemas

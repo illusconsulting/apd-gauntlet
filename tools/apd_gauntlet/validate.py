@@ -316,6 +316,30 @@ def _validate_code_evidence_index(
     for err in validator.iter_errors(data):
         report.errors.append(Violation(path, None, err.message, "/".join(map(str, err.path))))
 
+    # Partial-index signal (non-blocking). Only when multi-repo provenance is
+    # declared on the index itself. A declared repo with no attributed entry is
+    # the symptom of a half-completed index (e.g. CBM provider-discovery defect).
+    idx = data.get("code_evidence_index") or {}
+    declared = idx.get("repos")
+    if isinstance(declared, list) and declared:
+        attributed = {
+            e.get("repo")
+            for e in (idx.get("entries") or [])
+            if isinstance(e, dict) and e.get("repo")
+        }
+        for repo in declared:
+            name = repo.get("cbm_project") if isinstance(repo, dict) else None
+            if name and name not in attributed:
+                report.warnings.append(
+                    Violation(
+                        path,
+                        None,
+                        f"declared repo '{name}' has zero attributed entries "
+                        "(partial index — provider-discovery may be incomplete; "
+                        "see docs/running-the-gauntlet.md multi-repo upstream caveat)",
+                    )
+                )
+
 
 def _validate_synthesis_rollups(
     run_dir: pathlib.Path,

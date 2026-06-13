@@ -4,9 +4,12 @@ from __future__ import annotations
 import copy
 import json
 import pathlib
+import shutil
 
 import pytest
 import yaml
+from apd_gauntlet.cli import main
+from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
@@ -121,3 +124,17 @@ def test_capability_without_id_or_schema_version_is_valid():
     validator = _build_validator()
     errors = list(validator.iter_errors(rec))
     assert errors == [], f"Unexpected errors: {[e.message for e in errors]}"
+
+
+def test_validate_cli_rejects_dict_scope_capability(tmp_path):
+    """W0-T1: a dict-valued capability scope (schema violation, capability.schema.json:24)
+    must make the `validate` CLI exit 1 and cite the scope/type at the boundary."""
+    runs = REPO / "tests" / "fixtures" / "runs"
+    run = tmp_path / "run"
+    shutil.copytree(runs / "clean-run", run)
+    fixture = yaml.safe_load((FIXTURES / "invalid" / "capability-dict-scope.yaml").read_text())
+    (run / "10-trustworthiness" / "poisoned.capabilities.yaml").write_text(
+        yaml.safe_dump(fixture, sort_keys=False))
+    result = CliRunner().invoke(main, ["validate", str(run)])
+    assert result.exit_code == 1, result.output
+    assert "scope" in result.output.lower()

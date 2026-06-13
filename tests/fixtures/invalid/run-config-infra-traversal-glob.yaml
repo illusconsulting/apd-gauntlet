@@ -1,0 +1,10 @@
+run_id: apd-20260610-infra-trav
+domains:
+  - pbm
+framework_version: 1.7.0
+infrastructure:
+  mode: static
+  static:
+    k8s:
+      - ../../etc/k8s/*.yaml
+      - /absolute/manifests/*.yaml

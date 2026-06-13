@@ -12,6 +12,21 @@
     "subject":           { "type": "string", "minLength": 1, "description": "Human-readable name of the system under review, shown as the report title/subject. When omitted, the report build derives a name from cbm_project (repo name) and falls back to the run id." },
     "code_recon":        { "type": "string", "enum": ["enabled", "auto", "disabled"] },
     "cbm_project":       { "type": "string", "minLength": 1 },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Optional multi-repo declaration. Each entry names one CBM project the system spans. When present, code-recon attributes per-repo evidence and may request a cross-repo-intelligence pass. cbm_project (singular) remains valid for single-repo runs; prefer subject: for the report title in multi-repo mode.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cbm_project"],
+        "properties": {
+          "cbm_project": { "type": "string", "minLength": 1, "description": "CBM project name for this repo (must match the operator's indexed project)." },
+          "role":        { "type": "string", "enum": ["primary", "dependency", "peer"], "description": "Optional role of this repo in the system. The primary repo seeds report titling and crown-jewel proximity." },
+          "repo_path":   { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$", "description": "Optional path-traversal-guarded relative location of this repo's source under inputs/, for cross-referencing." }
+        }
+      }
+    },
     "taxonomies": {
       "type": "array",
       "uniqueItems": true,
@@ -65,6 +80,30 @@
           "minimum": 2,
           "maximum": 50,
           "description": "Minimum number of enumerated paths an edge must appear on to be tagged as a bottleneck edge for the D3FEND overlay."
+        }
+      }
+    },
+    "infrastructure": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Declarative infrastructure-as-code intake. mode discriminates the introspection depth; absent is treated as disabled. Only static is implemented today; the live mode and its sub-block are reserved for a future release.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["disabled", "static", "live"],
+          "description": "disabled (no infra parsing) | static (parse declared IaC globs) | live (privileged read-only cluster introspection — reserved for a future release, not yet implemented). Absent is treated as disabled."
+        },
+        "static": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "IaC parsing globs, each relative to the run's inputs/ directory. Path-traversal-guarded: no leading '/' and no '..' segment.",
+          "properties": {
+            "k8s":                 { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" } },
+            "istio_linkerd":       { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" } },
+            "terraform":           { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" } },
+            "helm":                { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" } },
+            "cert_secret_managers": { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" } }
+          }
         }
       }
     }

@@ -708,3 +708,96 @@ def test_capability_merge_outputs_reproducible(tmp_path):
     apply_clusters(run)
     out2 = (run / "40-synthesis" / "deduped-capabilities.yaml").read_text()
     assert out1 == out2
+
+
+def test_capability_merge_skips_dict_scope_and_logs_reject(tmp_path):
+    """W0-T2: a source capability with a non-string (dict) scope must NOT be
+    str()-coerced into the merged scope; it is skipped and a failed_validation
+    reject row is logged naming the scope/type."""
+    run = _scaffold_two_capability_run(tmp_path)
+    # Poison conf-cap-11111111's scope into a dict on disk.
+    # _scaffold_two_capability_run writes both caps to the same file.
+    caps_path = run / "10-trustworthiness" / "confidentiality.capabilities.yaml"
+    doc = yaml.safe_load(caps_path.read_text())
+    for c in doc["capability"]:
+        if c["id"] == "conf-cap-11111111":
+            c["scope"] = {"components": ["claims"], "not_addressed": ["kafka"]}
+    caps_path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    result = apply_clusters(run)
+    merged = next(c for c in result.capabilities if c["id"].startswith("cap-merged-"))
+    # The dict scope is NOT repr-poisoned into the merged scope.
+    assert "{" not in merged["scope"] and "components" not in merged["scope"]
+    # The surviving string scope from conf-cap-22222222 IS present.
+    assert "TLS on every PHI transport hop in flight" in merged["scope"]
+    # A failed_validation reject row names the poisoned source + its non-string scope.
+    poison = [r for r in result.rejected
+              if r["id"] == "conf-cap-11111111" and r["category"] == "failed_validation"]
+    assert len(poison) == 1, result.rejected
+    # The reason pins the offending field AND the actual non-str type, for debugging.
+    assert "scope" in poison[0]["reason"]
+    assert "dict" in poison[0]["reason"]
+    # The reject row is also persisted to rejected-records.yaml (the contract the
+    # guard's comment promises), not just held in-memory.
+    rej_disk = yaml.safe_load((run / "40-synthesis" / "rejected-records.yaml").read_text())
+    assert any(r["id"] == "conf-cap-11111111" and r["category"] == "failed_validation"
+               for r in rej_disk["rejected"])
+
+
+def test_write_outputs_raises_on_repr_poisoned_field(tmp_path):
+    """W0-T3: a string field whose VALUE matches a Python-repr signature
+    (e.g. a coerced dict/list) is caught at the single emit point and raises
+    SerializationIntegrityError loud/blocking."""
+    from apd_gauntlet.synthesis.apply import (
+        ApplyResult,
+        SerializationIntegrityError,
+        _write_outputs,
+    )
+
+    run = tmp_path / "run"
+    (run / "40-synthesis").mkdir(parents=True)
+    result = ApplyResult()
+    result.capabilities = [{
+        "schema_version": 1, "id": "cap-merged-deadbeef", "agent": "synthesizer",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality",
+        "title": "Poisoned capability for the integrity guard test",
+        "description": "A capability whose scope was coerced from a dict to repr text.",
+        "maturity": "implemented",
+        # Repr-poisoned scope: a dict that was str()-coerced upstream.
+        "scope": "{'components': ['claims'], 'not_addressed': ['kafka']}",
+        "evidence": [{"artifact": "x.md", "locator": "§1", "excerpt": "x"}],
+        "control_mappings": {"nist_800_53r5": ["SC-28"]},
+    }]
+    try:
+        _write_outputs(run, result)
+        raise AssertionError("expected SerializationIntegrityError")
+    except SerializationIntegrityError as exc:
+        assert "scope" in str(exc)
+        assert "cap-merged-deadbeef" in str(exc)
+
+
+def test_cli_apply_clusters_exits_nonzero_on_integrity_error(tmp_path, monkeypatch):
+    """W0-T3: SerializationIntegrityError surfacing from _write_outputs is
+    caught by apply_clusters_cmd and exits non-zero with a clear message."""
+    from apd_gauntlet.cli import main
+    from apd_gauntlet.synthesis import apply as apply_mod
+    from click.testing import CliRunner
+
+    run = _scaffold_two_capability_run(tmp_path)
+
+    def _poisoned_merge(decision, c_src, members, result):
+        # Force a merged record whose scope is repr-poisoned, to fire the guard.
+        return {
+            "schema_version": 1, "id": "cap-merged-cafef00d", "agent": "synthesizer",
+            "apd_tier": "trustworthiness", "apd_goal": "confidentiality",
+            "title": "Forced poisoned capability for the CLI integrity test",
+            "description": "Merged capability whose scope is a coerced dict repr.",
+            "maturity": "tested",
+            "scope": "{'components': ['claims']}",
+            "evidence": [{"artifact": "x.md", "locator": "§1", "excerpt": "x"}],
+            "control_mappings": {"nist_800_53r5": ["SC-28"]},
+        }
+
+    monkeypatch.setattr(apply_mod, "_merge_capabilities", _poisoned_merge)
+    res = CliRunner().invoke(main, ["apply-clusters", str(run)])
+    assert res.exit_code != 0, res.output
+    assert "integrity" in res.output.lower()

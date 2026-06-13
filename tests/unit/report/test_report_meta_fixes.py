@@ -155,3 +155,42 @@ def test_count_artifact_types_recurses_into_subdirs(tmp_path: pathlib.Path) -> N
 def test_count_artifact_types_empty_when_no_inputs(tmp_path: pathlib.Path) -> None:
     assert _count_artifact_types(tmp_path) == (0, [])
     assert _count_artifact_types(None) == (0, [])
+
+
+# ---------------------------------------------------------------------------
+# W1b T5 — multi-repo repos[] back-stop for _extract_subject
+# ---------------------------------------------------------------------------
+
+def test_extract_subject_explicit_wins_over_repos() -> None:
+    """An explicit subject always wins, even when repos[] is declared."""
+    run_cfg = {
+        "subject": "Polyglot Payments Platform",
+        "repos": [{"cbm_project": "payments-api", "role": "primary"}],
+    }
+    assert _extract_subject(run_cfg) == "Polyglot Payments Platform"
+
+
+def test_extract_subject_falls_back_to_primary_repo() -> None:
+    """No subject, no cbm_project, but repos[] present => use the primary repo name."""
+    run_cfg = {
+        "repos": [
+            {"cbm_project": "payments-worker", "role": "dependency"},
+            {"cbm_project": "payments-api", "role": "primary"},
+        ]
+    }
+    assert _extract_subject(run_cfg) == "payments-api"
+
+
+def test_extract_subject_falls_back_to_first_repo_when_no_primary() -> None:
+    """No role: primary => first repos[] entry's cbm_project is the back-stop."""
+    run_cfg = {"repos": [{"cbm_project": "svc-one"}, {"cbm_project": "svc-two"}]}
+    assert _extract_subject(run_cfg) == "svc-one"
+
+
+def test_extract_subject_cbm_project_still_wins_over_repos() -> None:
+    """A top-level cbm_project (single-repo back-compat) is preferred over repos[]."""
+    run_cfg = {
+        "cbm_project": "open-notebook",
+        "repos": [{"cbm_project": "payments-api", "role": "primary"}],
+    }
+    assert _extract_subject(run_cfg) == "open-notebook"

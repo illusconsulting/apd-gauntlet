@@ -44,7 +44,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
+
+from .kb_fetch import fetch_pinned
 
 D3FEND_JSON_URL = (
     "https://d3fend.mitre.org/api/ontology/inference/d3fend-full-mappings.json"
@@ -59,27 +60,11 @@ MAX_RESPONSE_BYTES = 200 * 1024 * 1024  # 200 MiB
 def fetch_d3fend_json() -> bytes:
     """Fetch the D3FEND full-mappings document. Returns the raw bytes.
 
-    Raises ``ValueError`` if the response exceeds :data:`MAX_RESPONSE_BYTES`
-    (checked twice: once via ``Content-Length``, once after reading).
+    Delegates the size-cap + timeout discipline to :func:`kb_fetch.fetch_pinned`.
     """
-    with urlopen(D3FEND_JSON_URL, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        content_length = response.headers.get("Content-Length")
-        if content_length is not None:
-            try:
-                advertised = int(content_length)
-            except (TypeError, ValueError):
-                advertised = None
-            if advertised is not None and advertised > MAX_RESPONSE_BYTES:
-                raise ValueError(
-                    f"D3FEND response Content-Length ({advertised}) "
-                    f"exceeds maximum ({MAX_RESPONSE_BYTES})"
-                )
-        body: bytes = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise ValueError(
-            f"D3FEND response body exceeds maximum ({MAX_RESPONSE_BYTES} bytes); "
-            "refusing to load. Verify the upstream feed before retrying."
-        )
+    body, _meta = fetch_pinned(
+        D3FEND_JSON_URL, max_bytes=MAX_RESPONSE_BYTES, timeout=DEFAULT_TIMEOUT_SECONDS
+    )
     return body
 
 

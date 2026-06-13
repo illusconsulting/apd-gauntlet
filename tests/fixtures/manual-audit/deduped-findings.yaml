@@ -1,0 +1,104 @@
+finding:
+  - schema_version: 1
+    id: dist-11111111
+    agent: distributed
+    apd_tier: scalability
+    apd_goal: distributed
+    disposition: blocked
+    severity: high
+    confidence: low
+    title: "NetworkPolicy enforcement state unknown for claim-events namespace"
+    summary: "A deny-all NetworkPolicy is declared but live CNI enforcement is unverified."
+    detail: "Static manifest declares intent; runtime enforcement needs cluster introspection."
+    evidence:
+      - artifact: inputs/k8s/netpol.yaml
+        locator: "metadata.name=deny-all-default"
+        excerpt: "podSelector: {}"
+    prerequisite_evidence:
+      - "Live confirmation that the cluster CNI enforces NetworkPolicy objects."
+    recommendation:
+      posture: required
+      summary: "Confirm NetworkPolicy enforcement at runtime."
+      detail: "Inspect the running cluster for active NetworkPolicy enforcement."
+  - schema_version: 1
+    id: auth-22222222
+    agent: authenticity
+    apd_tier: trustworthiness
+    apd_goal: authenticity
+    disposition: blocked
+    severity: high
+    confidence: low
+    title: "istio PeerAuthentication runtime mTLS mode unverified"
+    summary: "PeerAuthentication declares STRICT but the effective runtime mode is unknown."
+    detail: "Workload-level policies can override the namespace default at runtime."
+    evidence:
+      - artifact: inputs/istio/peer-auth.yaml
+        locator: "spec.mtls.mode=STRICT"
+        excerpt: "mode: STRICT"
+    prerequisite_evidence:
+      - "Effective runtime mTLS mode after workload-level PeerAuthentication overrides."
+    recommendation:
+      posture: required
+      summary: "Verify the effective runtime mTLS mode."
+      detail: "Read the merged PeerAuthentication policy on the live mesh."
+  - schema_version: 1
+    id: ephem-33333333
+    agent: ephemeral
+    apd_tier: trustworthiness
+    apd_goal: ephemeral
+    disposition: blocked
+    severity: medium
+    confidence: low
+    title: "istio workload secret rotation lifetime not observable from manifests"
+    summary: "Certificate lifetime issued by istio to the production workload is runtime-only."
+    detail: "The issued workload certificate TTL is set by the control plane at runtime."
+    evidence:
+      - artifact: inputs/istio/mesh-config.yaml
+        locator: "meshConfig"
+        excerpt: "workloadCertTtl not pinned"
+    prerequisite_evidence:
+      - "Actual issued workload certificate TTL on the production namespace."
+    recommendation:
+      posture: recommended
+      summary: "Inspect the issued workload certificate lifetime."
+      detail: "Read the live istio-issued secret for the production workload."
+  - schema_version: 1
+    id: conf-44444444
+    agent: confidentiality
+    apd_tier: trustworthiness
+    apd_goal: confidentiality
+    disposition: blocked
+    severity: medium
+    confidence: low
+    title: "KMS DEK rotation cadence not specified in artifacts"
+    summary: "No keyword maps this finding to an infra command; it falls back to manual review."
+    detail: "A blocked finding with no infra keyword still appears with its prerequisite evidence."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§3"
+        excerpt: "rotation cadence not specified"
+    prerequisite_evidence:
+      - "DEK rotation policy document with cadence and revocation runbook."
+    recommendation:
+      posture: required
+      summary: "Document the DEK rotation policy."
+      detail: "Define cadence, automation, and revocation."
+  - schema_version: 1
+    id: integ-55555555
+    agent: integrity
+    apd_tier: trustworthiness
+    apd_goal: integrity
+    disposition: gap
+    severity: high
+    confidence: high
+    title: "This non-blocked finding must NOT appear in the prompts file"
+    summary: "Only disposition:blocked records are rendered."
+    detail: "A gap is already actionable; it carries no prerequisite evidence to unblock."
+    evidence:
+      - artifact: tech_plan.md
+        locator: "§4"
+        excerpt: "n/a"
+    recommendation:
+      posture: required
+      summary: "n/a"
+      detail: "n/a"

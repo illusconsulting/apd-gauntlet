@@ -160,6 +160,46 @@ Inspect the supplied artifacts for surfaces that suggest additional taxonomies t
 
 Write the result into the context brief as a `taxonomy_suggestions:` block (see template). Specialists are bound by the operator-accepted scope (i.e., what's in `taxonomies:` at run time) — auto-suggestions are advisory only and must not drive specialist mappings unless the operator re-runs with them added.
 
+### Step 4b: Static infrastructure classification (v1.7+)
+
+If `.apd-run.yaml` declares an `infrastructure:` block with `mode: static`,
+expand each glob under `infrastructure.static.*` against `inputs/` (the globs
+are relative to `inputs/` and are path-traversal-guarded by the run-config
+schema). For every matched manifest, classify it by `static` key and content,
+and record it in the artifact index with `type: iac`:
+
+- **k8s** — Kubernetes manifests. Recognize `kind: NetworkPolicy`,
+  `kind: Role`/`ClusterRole`/`RoleBinding` (RBAC), `kind: Secret`,
+  `kind: ServiceAccount`.
+- **istio_linkerd** — service-mesh policy. Recognize
+  `kind: PeerAuthentication` (mTLS mode), `kind: AuthorizationPolicy`,
+  `kind: DestinationRule`.
+- **terraform** — `*.tf` HCL declaring cloud resources, IAM, KMS, network.
+- **helm** — chart templates under `templates/` (rendered values are not
+  available statically; treat parameterized values as unknowns).
+- **cert_secret_managers** — cert-manager `Certificate`/`Issuer`, external
+  secret-store manifests.
+
+This is **strictly static parsing of declared files**. You read the *declared
+intent* in the manifests; you do NOT observe a live cluster (that is the
+live-introspection mode, off by default and out of scope for intake).
+
+**Runtime-only unknowns become evidence gaps.** A static manifest declares
+intent, not deployed reality. Any property whose true value can only be read
+from a running cluster MUST be recorded as an evidence gap (Step 6), never
+asserted as fact. Examples of runtime-only unknowns:
+
+- Whether a declared `NetworkPolicy` is actually *enforced* (depends on the
+  CNI plugin installed in the live cluster).
+- The effective istio mTLS mode at runtime (a `PeerAuthentication` manifest
+  with `mtls.mode: STRICT` can be overridden by a narrower workload-level policy).
+- Whether RBAC bindings have drifted from the committed manifests.
+- Live secret/certificate rotation state and actual expiry.
+
+Record each such unknown as a specific evidence gap so a specialist can emit a
+`blocked` finding whose `prerequisite_evidence` names exactly what live signal
+would close it.
+
 ### Step 5: Trust boundary map
 
 Identify the trust boundaries the change crosses. A trust boundary is a point where data or control passes between entities with different trust assumptions. Examples:
@@ -187,6 +227,8 @@ This section seeds the `prerequisite_evidence` pool every specialist draws from.
 - "Encryption mentioned generically; KMS hierarchy and DEK rotation policy not in artifacts."
 - "Authentication described from member perspective; service-to-service authentication design not in artifacts."
 - "Audit log mentioned; format, retention, and storage tier not specified."
+- "NetworkPolicy `deny-all-default` declared in `inputs/k8s/netpol.yaml` but live CNI enforcement state is unknown (runtime-only; needs cluster introspection)."
+- "istio `PeerAuthentication` declares `mtls.mode: STRICT` in `inputs/istio/peer-auth.yaml`, but the effective runtime mTLS mode after workload-level overrides is unknown."
 
 Be specific. "Missing security details" is not useful. "Missing: Kafka topic ACL design for the claim-events topic" is useful.
 

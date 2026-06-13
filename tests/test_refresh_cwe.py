@@ -42,7 +42,7 @@ def sample_cwe_zip_bytes(sample_cwe_xml_bytes: bytes) -> bytes:
 
 @pytest.fixture
 def mock_urlopen(sample_cwe_zip_bytes: bytes):
-    with patch("apd_gauntlet.refresh_cwe.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(sample_cwe_zip_bytes))}
         response.read.return_value = sample_cwe_zip_bytes
@@ -102,7 +102,7 @@ def test_fetch_cwe_xml_passes_timeout(mock_urlopen: MagicMock) -> None:
 
 def test_fetch_cwe_xml_rejects_oversize_response_content_length() -> None:
     """Content-Length pre-check rejects responses that advertise > 200 MiB."""
-    with patch("apd_gauntlet.refresh_cwe.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -119,7 +119,7 @@ def test_fetch_cwe_xml_rejects_oversize_response_post_read(monkeypatch: pytest.M
     """
     monkeypatch.setattr("apd_gauntlet.refresh_cwe.MAX_RESPONSE_BYTES", 1024)
     fake_oversize_payload = b"x" * 2048
-    with patch("apd_gauntlet.refresh_cwe.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}  # No Content-Length advertised.
         response.read.return_value = fake_oversize_payload

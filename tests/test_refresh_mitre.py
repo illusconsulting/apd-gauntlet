@@ -81,7 +81,7 @@ def test_refresh_mitre_size_cap_is_200_mib() -> None:
 def test_fetch_and_project(tmp_path):
     out = tmp_path / "out.json"
     body = json.dumps(FAKE_BUNDLE).encode()
-    with patch("apd_gauntlet.refresh_mitre.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         mock.return_value.__enter__.return_value = _mock_response(body, str(len(body)))
         mock.return_value.__exit__.return_value = False
         fetch_and_project(out)
@@ -91,7 +91,7 @@ def test_fetch_and_project(tmp_path):
 
 def test_fetch_mitre_bundle_passes_timeout() -> None:
     body = json.dumps(FAKE_BUNDLE).encode()
-    with patch("apd_gauntlet.refresh_mitre.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         mock.return_value.__enter__.return_value = _mock_response(body, str(len(body)))
         mock.return_value.__exit__.return_value = False
         fetch_mitre_bundle()
@@ -101,7 +101,7 @@ def test_fetch_mitre_bundle_passes_timeout() -> None:
 
 def test_fetch_mitre_bundle_rejects_oversize_response_content_length() -> None:
     """Content-Length pre-check rejects responses that advertise > 200 MiB."""
-    with patch("apd_gauntlet.refresh_mitre.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -173,7 +173,7 @@ def test_fetch_mitre_bundle_rejects_oversize_response_post_read(
     """
     monkeypatch.setattr("apd_gauntlet.refresh_mitre.MAX_RESPONSE_BYTES", 1024)
     oversize = b"x" * 2048
-    with patch("apd_gauntlet.refresh_mitre.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}  # No Content-Length advertised.
         response.read.return_value = oversize

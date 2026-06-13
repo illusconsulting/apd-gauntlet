@@ -25,3 +25,5 @@ jobs:
       - run: pytest --cov --cov-report=term-missing
       - name: Check precompiled report-template bundle freshness
         run: python tools/check_report_template_freshness.py
+      - name: Check KB cache provenance freshness
+        run: python tools/check_kb_cache_freshness.py

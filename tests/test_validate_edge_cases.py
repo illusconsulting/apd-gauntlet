@@ -434,3 +434,86 @@ def test_lint_agent_missing_name_and_description(tmp_path: pathlib.Path) -> None
     assert any("name" in e for e in errors)
     assert any("description" in e for e in errors)
     assert any("receipt" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# W1b T4: partial-index warning — declared repo with zero entries
+# ---------------------------------------------------------------------------
+
+
+def test_declared_repo_with_zero_entries_warns_not_errors(tmp_path):
+    """A code-evidence-index whose top-level repos[] names a repo that NO entry
+    attributes to => a non-blocking WARNING (partial-index signal), never an error."""
+    import yaml as _yaml  # noqa: PLC0415
+    from apd_gauntlet import validate  # noqa: PLC0415
+
+    ctx = tmp_path / "00-context"
+    ctx.mkdir(parents=True)
+    index = {
+        "code_evidence_index": {
+            "indexed_commit_sha": "a" * 40,
+            "cbm_project": "repo-a",
+            "generated_at": "2026-06-10T12:00:00Z",
+            "repos": [
+                {"cbm_project": "repo-a", "indexed_commit_sha": "a" * 40},
+                {"cbm_project": "repo-b", "indexed_commit_sha": "b" * 40},
+            ],
+            "entries": [
+                {
+                    "id": "cev-1a2b3c4d",
+                    "qualified_name": "repo_a.x.y",
+                    "kind": "function",
+                    "file_path": "repo-a/x.py",
+                    "line_range": "L1-L2",
+                    "excerpt": "def y(): pass",
+                    "apd_relevance": ["integrity"],
+                    "repo": "repo-a",
+                }
+            ],
+        }
+    }
+    (ctx / "code-evidence-index.yaml").write_text(
+        _yaml.safe_dump(index, sort_keys=False), encoding="utf-8"
+    )
+
+    report = validate.run_schema_pass(tmp_path)
+    # No schema error (the index is well-formed).
+    assert report.is_clean, [v.render() for v in report.errors]
+    # repo-b has zero attributed entries => exactly one warning naming repo-b.
+    warn_msgs = [v.message for v in report.warnings]
+    assert any("repo-b" in m for m in warn_msgs), warn_msgs
+    assert all("repo-a" not in m for m in warn_msgs)  # repo-a IS attributed; no warn
+
+
+def test_fully_attributed_multirepo_index_no_warning(tmp_path):
+    """Every declared repo has at least one entry => no partial-index warning."""
+    import yaml as _yaml
+    from apd_gauntlet import validate
+
+    ctx = tmp_path / "00-context"
+    ctx.mkdir(parents=True)
+    index = {
+        "code_evidence_index": {
+            "indexed_commit_sha": "a" * 40,
+            "cbm_project": "repo-a",
+            "generated_at": "2026-06-10T12:00:00Z",
+            "repos": [
+                {"cbm_project": "repo-a", "indexed_commit_sha": "a" * 40},
+                {"cbm_project": "repo-b", "indexed_commit_sha": "b" * 40},
+            ],
+            "entries": [
+                {"id": "cev-1a2b3c4d", "qualified_name": "a.x", "kind": "function",
+                 "file_path": "repo-a/x.py", "line_range": "L1", "excerpt": "x",
+                 "apd_relevance": ["integrity"], "repo": "repo-a"},
+                {"id": "cev-2b3c4d5e", "qualified_name": "b.y", "kind": "function",
+                 "file_path": "repo-b/y.py", "line_range": "L1", "excerpt": "y",
+                 "apd_relevance": ["integrity"], "repo": "repo-b"},
+            ],
+        }
+    }
+    (ctx / "code-evidence-index.yaml").write_text(
+        _yaml.safe_dump(index, sort_keys=False), encoding="utf-8"
+    )
+    report = validate.run_schema_pass(tmp_path)
+    assert report.is_clean
+    assert not any("zero attributed" in v.message for v in report.warnings)

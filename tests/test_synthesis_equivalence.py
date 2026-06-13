@@ -88,3 +88,76 @@ def test_rollup_reproduces_nist_projection(tmp_path):
     for cid, proj in golden.items():
         assert cid in produced, f"rollup dropped control {cid}"
         assert produced[cid] == proj, f"control {cid} projection differs"
+
+
+def test_apply_clusters_roundtrip_drops_dict_scope_preserves_str_types(tmp_path):
+    """W0-T4: a planted dict-scope capability is dropped from the merged scope,
+    and the re-emitted deduped-capabilities.yaml round-trips with every scope a
+    str and no string value equal to its own repr (no repr-poisoning survives)."""
+    run = tmp_path / "run"
+    (run / "10-trustworthiness").mkdir(parents=True)
+    (run / "40-synthesis").mkdir()
+    (run / ".apd-run.yaml").write_text("run_id: t\ndomain: pbm\n")
+    good = {
+        "schema_version": 1, "id": "conf-cap-aaaaaaaa", "agent": "confidentiality",
+        "apd_tier": "trustworthiness", "apd_goal": "confidentiality",
+        "maturity": "tested",
+        "title": "TLS enforced on every PHI transport hop in flight",
+        "description": "TLS 1.3 is enforced on all PHI transport hops between services.",
+        "scope": "TLS on every PHI transport hop in flight across services",
+        "evidence": [{"artifact": "tp.md", "locator": "§5.2", "excerpt": "TLS 1.3 enforced"}],
+        "control_mappings": {"nist_800_53r5": ["SC-8"]},
+    }
+    poisoned = {
+        **good,
+        "id": "conf-cap-bbbbbbbb",
+        "title": "Envelope encryption on PHI columns at rest in the datastore",
+        "description": "Field-level envelope encryption protects PHI columns at rest.",
+        # Dict scope — the poison.
+        "scope": {"components": ["claims"], "not_addressed": ["kafka"]},
+        "evidence": [{"artifact": "tp.md", "locator": "§5.1", "excerpt": "encryption at rest"}],
+    }
+    (run / "10-trustworthiness" / "confidentiality.capabilities.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "capability": [good, poisoned]}, sort_keys=False))
+    decisions = {
+        "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
+        "decisions": [{
+            "group_id": "cluster-cap-0001", "disposition": "merge",
+            "merged_title": "PHI is encrypted at rest and in transit end to end",
+            "merged_summary": "Envelope encryption at rest plus TLS in transit cover PHI.",
+            "merged_detail": "Both lenses confirm complementary PHI protection layers here.",
+        }],
+        "contradictions": [],
+        "_members": {"cluster-cap-0001": ["conf-cap-aaaaaaaa", "conf-cap-bbbbbbbb"]},
+    }
+    (run / "40-synthesis" / "cluster-decisions.yaml").write_text(
+        yaml.safe_dump(decisions, sort_keys=False))
+
+    result = apply_clusters(run)
+
+    merged = next(
+        (c for c in result.capabilities if c["id"].startswith("cap-merged-")), None)
+    assert merged is not None, f"no merged capability produced: {result.capabilities}"
+    # The dict scope was dropped; only the good string scope survives (exact match
+    # also proves the dict was not coerced-and-appended via "; ").
+    assert merged["scope"] == "TLS on every PHI transport hop in flight across services"
+    # A failed_validation reject row names the poisoned source.
+    assert any(r["id"] == "conf-cap-bbbbbbbb" and r["category"] == "failed_validation"
+               for r in result.rejected)
+
+    # Round-trip: reload the emitted YAML and assert type integrity.
+    emitted = yaml.safe_load(
+        (run / "40-synthesis" / "deduped-capabilities.yaml").read_text())["capability"]
+    for cap in emitted:
+        assert isinstance(cap["scope"], str), cap["id"]
+        # No emitted string field equals its own repr (the repr-poison fingerprint).
+        for fld in ("title", "description", "scope"):
+            val = cap.get(fld)
+            if isinstance(val, str):
+                # Catches a string that leaked through Python repr (extra quotes),
+                # e.g. "'foo'" instead of "foo".
+                assert val != repr(val), (cap["id"], fld)
+                # The real dict-scope fingerprint: a value wholly wrapped in braces
+                # or brackets (a coerced structured field).
+                assert not (val.startswith(("{", "[")) and val.endswith(("}", "]"))), (
+                    cap["id"], fld)

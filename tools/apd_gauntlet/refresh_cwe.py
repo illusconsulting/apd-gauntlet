@@ -21,8 +21,9 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
 from xml.etree import ElementTree as ET
+
+from .kb_fetch import fetch_pinned
 
 CWE_XML_URL = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
 
@@ -41,27 +42,11 @@ _NS = f"{{{CWE_NAMESPACE}}}"
 def fetch_cwe_xml() -> bytes:
     """Fetch and unzip the latest CWE XML. Returns the raw XML bytes.
 
-    Raises ``ValueError`` if the response exceeds :data:`MAX_RESPONSE_BYTES`
-    (checked twice: once via ``Content-Length``, once after reading).
+    Delegates the size-cap + timeout discipline to :func:`kb_fetch.fetch_pinned`.
     """
-    with urlopen(CWE_XML_URL, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        content_length = response.headers.get("Content-Length")
-        if content_length is not None:
-            try:
-                advertised = int(content_length)
-            except (TypeError, ValueError):
-                advertised = None
-            if advertised is not None and advertised > MAX_RESPONSE_BYTES:
-                raise ValueError(
-                    f"CWE XML response Content-Length ({advertised}) "
-                    f"exceeds maximum ({MAX_RESPONSE_BYTES})"
-                )
-        zipped = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(zipped) > MAX_RESPONSE_BYTES:
-        raise ValueError(
-            f"CWE XML response body exceeds maximum ({MAX_RESPONSE_BYTES} bytes); "
-            "refusing to load. Verify the upstream feed before retrying."
-        )
+    zipped, _meta = fetch_pinned(
+        CWE_XML_URL, max_bytes=MAX_RESPONSE_BYTES, timeout=DEFAULT_TIMEOUT_SECONDS
+    )
     with zipfile.ZipFile(io.BytesIO(zipped)) as zf:
         xml_name = next(name for name in zf.namelist() if name.endswith(".xml"))
         return zf.read(xml_name)

@@ -32,9 +32,10 @@ import hashlib
 import json
 import pathlib
 from typing import Any
-from urllib.request import urlopen
 
 import yaml
+
+from .kb_fetch import fetch_pinned
 
 # ``v2.1.0`` is the human display label (the content IS the v2.1.0 standard),
 # but OWASP_MASVS.yaml does not exist at that git tag — the consolidated
@@ -75,27 +76,11 @@ _DATA = pathlib.Path(__file__).resolve().parent / "data"
 def fetch_url(url: str) -> bytes:
     """Fetch ``url``. Returns the raw bytes.
 
-    Raises ``ValueError`` if the response exceeds :data:`MAX_RESPONSE_BYTES`
-    (checked twice: once via ``Content-Length``, once after reading).
+    Delegates the size-cap + timeout discipline to :func:`kb_fetch.fetch_pinned`.
     """
-    with urlopen(url, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        content_length = response.headers.get("Content-Length")
-        if content_length is not None:
-            try:
-                advertised = int(content_length)
-            except (TypeError, ValueError):
-                advertised = None
-            if advertised is not None and advertised > MAX_RESPONSE_BYTES:
-                raise ValueError(
-                    f"MAS response Content-Length ({advertised}) "
-                    f"exceeds maximum ({MAX_RESPONSE_BYTES})"
-                )
-        body: bytes = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise ValueError(
-            f"MAS response body exceeds maximum ({MAX_RESPONSE_BYTES} bytes); "
-            "refusing to load. Verify the upstream feed before retrying."
-        )
+    body, _meta = fetch_pinned(
+        url, max_bytes=MAX_RESPONSE_BYTES, timeout=DEFAULT_TIMEOUT_SECONDS
+    )
     return body
 
 

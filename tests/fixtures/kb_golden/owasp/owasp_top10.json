@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "category_id": "A03:2021",
+      "name": "Injection"
+    },
+    {
+      "category_id": "A05:2021",
+      "name": "Security Misconfiguration"
+    }
+  ],
+  "fetched_at": "2026-06-11T15:52:28.369964+00:00",
+  "source_sha256": "320d8a15831f74115dc6c4a180047a708c77b18a07f0ddb5f8940468ff0ce6fd",
+  "source_url": "https://raw.githubusercontent.com/OWASP/Top10/master/2021/docs/categories.json"
+}

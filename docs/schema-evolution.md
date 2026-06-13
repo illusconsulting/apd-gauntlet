@@ -80,6 +80,63 @@ Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-autho
 
 Packs and consumers need no changes: every change is a relaxation, and post-assembly records carry the same id forms as before.
 
+## v1.7.0 — Static infrastructure intake
+
+Additive within v1.x; framework version held at 1.7.0.
+
+- **2026-06-10** — `run-config.schema.json` gains an optional `infrastructure`
+  object (`additionalProperties:false`) with a `mode` enum (`disabled` |
+  `static` | `live`; absent == disabled) and a `static` sub-object of
+  path-traversal-guarded glob arrays (`k8s`, `istio_linkerd`, `terraform`,
+  `helm`, `cert_secret_managers`), each using the same `^(?!/)(?!.*\.\.).+$`
+  guard as `threat_model`. Only `mode` + `static` are implemented; the `live`
+  sub-block is reserved for a future release. New derived artifact
+  `40-synthesis/manual-audit-prompts.md` (from `apd-gauntlet
+  manual-audit-prompts`; no schema — a generated markdown report).
+
+## v1.7.0 — Multi-repo code reconnaissance (additive)
+
+Additive within v1.x. The framework version is held at 1.7.0; these are
+optional-field additions sequenced by dependency phase, not a release bump.
+
+- `run-config.schema.json` — gains an optional `repos[]` array. Each entry is
+  `{cbm_project (required), role? (enum: primary|dependency|peer),
+  repo_path? (path-traversal-guarded)}`. Declares a multi-repo system for
+  `apd-code-recon`. `cbm_project` (singular) is unchanged and remains valid for
+  single-repo runs.
+- `code-evidence-index.schema.json` — gains an optional top-level `repos[]`
+  provenance array (`{cbm_project, indexed_commit_sha}` per repo) and an
+  optional per-entry `repo` string. An `if/then` requires `repo` on every entry
+  when top-level `repos[]` is present. Existing single-repo indexes (no
+  `repos[]`, no per-entry `repo`) stay valid unchanged.
+
+Nothing removed; no `schema_version` bump (these are optional fields, Minor by
+the breaking-change table above). `framework_compat ">=1.0.0,<2.0.0"` packs
+consume v1.7.0 without changes. The cross-repo graph edges
+(`CROSS_HTTP_CALLS` / `CROSS_ASYNC_CALLS` / `CROSS_CHANNEL`) consumed by
+`apd-code-recon` are recorded as `kind: edge` index entries and need no CBM-side
+schema. See ADR-0019. The upstream CBM provider-discovery defect (partial
+index) is detected via a non-blocking `validate` warning and tracked
+out-of-band; pin a minimum CBM version here once the upstream fix ships.
+
+## v1.7.0 — Cross-cutting connective tissue (dated additive entries)
+
+The framework version is held at 1.7.0; these are dated, additive, non-breaking
+entries — no schema field is removed and no `framework_compat` range changes.
+
+### 2026-06-11 — `data/*.json` cache `_meta` mini-shape standardized
+
+Every fetched `tools/apd_gauntlet/data/*.json` carries a provenance block — a
+`source` (or `source_url`), a `source_sha256` (or, for commit-pinned sources, a
+`commit`), and a `fetched_at` — either nested under a `_meta` object or at the
+top level. This is a **CI assertion** (`tools/check_kb_cache_freshness.py`, wired
+into `python-tests.yml`), not a JSON Schema rule, because the data files are
+caches, not run artifacts. The shared `tools/apd_gauntlet/kb_fetch.py`
+(`fetch_pinned`) returns this block so the six refreshers populate it uniformly.
+Legacy/hand-maintained files are documented exemptions in the gate; backfilling
+their provenance is follow-on work. No finding/capability/run-config schema field
+is added. See [CI gate model](ci-gate-model.md) and [Infra reuse map](infra-reuse-map.md).
+
 ## v1.2.0 — Multi-framework taxonomy mappings (Phase A)
 
 Additive within v1.x. Extensions:

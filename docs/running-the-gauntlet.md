@@ -131,6 +131,51 @@ If CBM is unreachable when the recon agent runs:
 - Under `code_recon: enabled`, the run halts; surface the CBM availability issue, then either fix it or relax to `auto`.
 - Under `code_recon: auto`, the agent writes `00-context/code-recon-skipped.md` and the run proceeds without code-grounded evidence.
 
+### Multi-repo systems
+
+A system that spans more than one repository (e.g. an API service, an async
+worker, and a frontend, each its own CBM project) declares all of them with a
+`repos[]` array in `.apd-run.yaml`:
+
+```yaml
+subject: Polyglot Payments Platform   # prefer an explicit title in multi-repo mode
+code_recon: enabled
+repos:
+  - cbm_project: payments-api
+    role: primary                     # seeds the report title and crown-jewel proximity
+    repo_path: services/api           # optional, relative to inputs/
+  - cbm_project: payments-worker
+    role: dependency
+  - cbm_project: payments-frontend
+```
+
+`cbm_project` (singular) remains valid for single-repo runs; `repos[]` is the
+multi-repo form. When `repos[]` is declared, `apd-code-recon`:
+
+1. Runs its passes once per repo, calling every CBM tool with that repo's
+   `project:`, and tags each evidence entry with `repo: <cbm_project>`.
+2. Requests CBM's `index_repository(mode='cross-repo-intelligence', ...)` to
+   link the projects, then records the returned `CROSS_HTTP_CALLS` /
+   `CROSS_ASYNC_CALLS` / `CROSS_CHANNEL` edges as `kind: edge` index entries.
+   These cross-service edges let attack-path analysis traverse hops that cross
+   a repo boundary instead of stopping inside one service.
+3. Records per-repo provenance in `code-evidence-index.yaml`'s top-level
+   `repos[]` (one `{cbm_project, indexed_commit_sha}` per repo).
+
+In multi-repo mode prefer an explicit `subject:` for the report title; absent
+one, the report falls back to the `role: primary` repo (else the first).
+
+> **Upstream caveat (CBM provider-discovery defect).** A separate CBM defect
+> can leave only a subset of extraction providers registered (the observed
+> "1/6 providers indexed" symptom), producing a *partial* index that silently
+> yields confidently-wrong "no auth on this path" conclusions. This repo can
+> only **detect and surface** that: `validate` emits a non-blocking warning of
+> the form `declared repo '<name>' has zero attributed entries (partial
+> index ...)` when a declared repo contributes no evidence. The provider-
+> discovery fix itself is **upstream CBM**, not patchable here. Once the
+> upstream fix ships, pin a minimum CBM version in this section and in the
+> setup steps above. Track: file the upstream CBM issue and reference it here.
+
 ### Taxonomy scope (v1.2+)
 
 Declare taxonomies in `.apd-run.yaml` or pass `--taxonomies cwe,mitre_attack,d3fend,owasp_api_top10` to `init-run`. CWE, ATT&CK, and D3FEND are default-on; OWASP variants are opt-in (gated on the SUT having the relevant web/API/LLM surface). To include MITRE ATLAS coverage (adversarial ML technique IDs of the form `AML.T####`), add `mitre_atlas` to the `taxonomies` list in `.apd-run.yaml`:
@@ -292,6 +337,7 @@ is already isolated and on `PATH`. That is a nudge, not a gate.
 | CBM reachable + codebase indexed | codebase-memory-mcp `index_status` / server registered | if `code_recon: enabled`/`auto` |
 | Threat-model file exists at declared path | inspect `inputs/` against the `threat_model:` path | if `threat_model:` declared |
 | `crown_jewels` + `attacker_positions` declared | inspect `.apd-run.yaml` (or the active pack's `domain.yaml`) | if you want attack-path output |
+| Static infra globs resolve under `inputs/` | inspect `infrastructure.static.*` globs against `inputs/` | if `infrastructure.mode: static` |
 | Dry-run the gated phase order | `apd-gauntlet plan-run runs/<id>` | recommended last step |
 
 The final check — `plan-run` — doubles as your confidence check and as the entry
@@ -465,6 +511,34 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 ### Specialist hit two retries and was dropped
 
 The runner allows up to two retries per agent when validation fails. If a specialist still fails after two retries, the runner surfaces the failure and proceeds without that agent's output for the affected record. This is rare; investigate the agent's input (sometimes the tech plan section it's being asked about is genuinely undecidable).
+
+## Local accuracy benchmark (out-of-band)
+
+CI enforces structure (schemas validate, refactors stay byte-stable, the cache
+carries provenance) against committed synthetic fixtures only. Holistic accuracy
+— how much redundancy collapsed, how many false "unknowns" became cited
+assumptions, how many chokepoints surfaced — is measured **locally**, never in
+CI, because it requires a real gauntlet run and `runs/` is gitignored by policy.
+
+To record your own baseline:
+
+1. Run the gauntlet against your subject as usual (`init-run` → run the
+   `apd-gauntlet` workflow). The run lands under `runs/<run-id>/`, which is
+   gitignored.
+2. Read the canonical metrics block: `runs/<run-id>/40-synthesis/metrics.yaml`.
+   It is produced by `compute_metrics` (`tools/apd_gauntlet/synthesis/metrics.py`)
+   and is the single source of truth for the report summary numbers.
+3. Record the figures you care about (findings totals, redundancy collapsed,
+   chokepoint count, assumption-promotion count) as a baseline `B0` in your own
+   private notes **outside this repository**.
+4. Judge later runs' deltas against `B0`.
+
+> **Out-of-band rule.** All outputs of all real runs — the run tree, the report,
+> and even bare metric counts including `B0` itself — stay fully out-of-band.
+> Never commit them. The committed `examples/*/expected/` and `tests/fixtures/`
+> are hand-authored synthetic fixtures with no real-subject data; they are the
+> sole basis for CI. See [CI gate model](ci-gate-model.md) and
+> [ADR-0017](adrs/0017-local-only-accuracy-benchmark.md).
 
 ## See also
 

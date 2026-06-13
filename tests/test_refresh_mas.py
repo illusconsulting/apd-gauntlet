@@ -167,7 +167,7 @@ def test_project_maswe_deprecated_follows_path_category() -> None:
 
 
 def test_fetch_url_passes_timeout() -> None:
-    with patch("apd_gauntlet.refresh_mas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(_MASVS_YAML))}
         response.read.return_value = _MASVS_YAML
@@ -179,7 +179,7 @@ def test_fetch_url_passes_timeout() -> None:
 
 
 def test_fetch_url_rejects_oversize_content_length() -> None:
-    with patch("apd_gauntlet.refresh_mas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -190,7 +190,7 @@ def test_fetch_url_rejects_oversize_content_length() -> None:
 
 def test_fetch_url_rejects_oversize_post_read(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("apd_gauntlet.refresh_mas.MAX_RESPONSE_BYTES", 1024)
-    with patch("apd_gauntlet.refresh_mas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}
         response.read.return_value = b"x" * 2048

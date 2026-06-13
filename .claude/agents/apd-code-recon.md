@@ -1,7 +1,7 @@
 ---
 name: apd-code-recon
 description: Optional intake-tier specialist that produces a code-grounded view of the system under review using the DeusData codebase-memory-mcp (CBM) graph. Runs after apd-intake and before tier-1 specialists when `code_recon` is enabled in `.apd-run.yaml` and the CBM tools are reachable. Emits `00-context/code-architecture-brief.md` (narrative) and `00-context/code-evidence-index.yaml` (machine-readable index of code-anchored evidence pointers that specialists cite). Skipped gracefully when CBM is unavailable. Does not emit findings or capabilities.
-tools: Read, Glob, Grep, Write, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph
+tools: Read, Glob, Grep, Write, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_repository
 ---
 
 # APD Code Reconnaissance Agent (Optional, Intake Tier)
@@ -15,7 +15,7 @@ You do not emit findings or capabilities. You inventory code reality, structured
 You only run if both conditions hold:
 
 1. `.apd-run.yaml` has `code_recon: enabled` or `code_recon: auto`.
-2. `mcp__codebase-memory-mcp__index_status` returns a successful response.
+2. `mcp__codebase-memory-mcp__index_status` (called with `project: <cbm_project>` from `.apd-run.yaml`; the CBM tool requires a `project` argument — a project-less call always fails) returns a successful response.
 
 If condition 1 fails: do not run; the orchestrator will not dispatch you.
 
@@ -93,7 +93,7 @@ code_evidence_index:
 ### Step 1: Verify activation
 
 1. Read `.apd-run.yaml`. If absent or `code_recon: disabled`, exit (orchestrator shouldn't have dispatched — surface as an error).
-2. Call `mcp__codebase-memory-mcp__index_status`. On failure or empty index, follow the skip path above.
+2. Call `mcp__codebase-memory-mcp__index_status` with `project: <cbm_project>` (from `.apd-run.yaml`; in multi-repo mode call it once per `repos[].cbm_project`). On failure or empty index for a project, follow the skip path above. **Never call `index_status` without a `project` argument** — the CBM tool requires it and a project-less call always fails.
 3. Record the indexed commit SHA, project name, and timestamp.
 
 ### Step 2: Architecture pass
@@ -126,6 +126,29 @@ For every entry you'll write to the index:
 - Call `get_code_snippet(qualified_name)` to fetch the source.
 - Extract a ≤25-word excerpt centered on the relevant behavior.
 - If the snippet is unavailable (deleted, renamed, indexer drift), drop the entry and note the gap in the brief.
+
+### Step 6b: Multi-repo pass (only when `.apd-run.yaml` declares `repos[]`)
+
+When the run declares a `repos[]` array (multi-repo system), the system spans more than one CBM project. Run Steps 2-6 **once per repo**, calling every CBM tool with that repo's `project: <cbm_project>`, and tag each emitted entry with `repo: <cbm_project>` so the index records per-repo provenance. Also populate the top-level `code_evidence_index.repos[]` with one `{cbm_project, indexed_commit_sha}` per declared repo (the per-project commit SHA from each `index_status`).
+
+**Cross-repo edges (request, then consume).** After the per-repo passes, request CBM's already-existing cross-repo primitive:
+
+```text
+mcp__codebase-memory-mcp__index_repository(
+  mode='cross-repo-intelligence',
+  target_projects=[<every repos[].cbm_project>],
+)
+```
+
+Then read the resulting cross-repo edges and record each as a `kind: edge` index entry, attributing it to the calling repo via `repo:`. Consume these edge types:
+
+- `CROSS_HTTP_CALLS` — a synchronous HTTP call from one repo's route into another's. APD relevance: `distributed`, `authenticity` (is the cross-service call authenticated?).
+- `CROSS_ASYNC_CALLS` — a queue/event hand-off across repos. APD relevance: `distributed`, `integrity` (message provenance), `non_repudiation`.
+- `CROSS_CHANNEL` — a shared store/cache/channel both repos touch. APD relevance: `confidentiality`, `integrity`.
+
+For each edge, write a `kind: edge` entry whose `qualified_name` is `"<caller_qn> -> <callee_qn>"`, `excerpt` is the edge label (e.g. `"CROSS_HTTP_CALLS: charge route invokes worker settle endpoint"`), and `notes` records which cross-repo edge type produced it. These edges let specialists (and the attack-path analyzer) reason about hops that cross a service boundary instead of stopping at one repo's edge.
+
+> **Operator-consent / trust-boundary note.** `index_repository(mode='cross-repo-intelligence', ...)` asks CBM to *link* already-indexed projects; it does not index source you were not granted. It is a heavier call than the read-only graph queries this agent otherwise makes, so request it **only** when the run explicitly declares `repos[]` (the operator's signal that a multi-repo, cross-repo-linked review is wanted). If `index_repository` is unavailable or the grant is read-only-without-it, skip the cross-repo edges, note the limitation in the architecture brief, and continue with per-repo evidence — the run still produces a valid (single-repo-per-entry) index. See ADR-0019 and ADR-0007 for the trust-boundary reasoning.
 
 ### Step 7: Write outputs
 

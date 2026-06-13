@@ -105,7 +105,7 @@ def test_project_handles_empty_or_missing_matrices() -> None:
 
 
 def test_fetch_atlas_passes_timeout() -> None:
-    with patch("apd_gauntlet.refresh_atlas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(len(_BUNDLE_BYTES))}
         response.read.return_value = _BUNDLE_BYTES
@@ -117,7 +117,7 @@ def test_fetch_atlas_passes_timeout() -> None:
 
 
 def test_fetch_atlas_rejects_oversize_response_content_length() -> None:
-    with patch("apd_gauntlet.refresh_atlas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {"Content-Length": str(MAX_RESPONSE_BYTES + 1)}
         mock.return_value.__enter__.return_value = response
@@ -131,7 +131,7 @@ def test_fetch_atlas_rejects_oversize_response_post_read(
 ) -> None:
     monkeypatch.setattr("apd_gauntlet.refresh_atlas.MAX_RESPONSE_BYTES", 1024)
     fake_oversize = b"x" * 2048
-    with patch("apd_gauntlet.refresh_atlas.urlopen") as mock:
+    with patch("apd_gauntlet.kb_fetch.urlopen") as mock:
         response = MagicMock()
         response.headers = {}
         response.read.return_value = fake_oversize

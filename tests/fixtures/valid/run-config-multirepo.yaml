@@ -1,0 +1,13 @@
+run_id: apd-20260610-polyglot-system
+domains:
+  - api-security
+framework_version: 1.7.0
+subject: Polyglot Payments Platform
+code_recon: enabled
+repos:
+  - cbm_project: payments-api
+    role: primary
+    repo_path: services/api
+  - cbm_project: payments-worker
+    role: dependency
+  - cbm_project: payments-frontend

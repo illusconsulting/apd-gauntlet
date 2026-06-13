@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "commit": "test-commit-abc123",
+    "count": 1,
+    "fetched_at": "2026-06-11",
+    "source": "https://github.com/OWASP/maswe"
+  },
+  "weaknesses": {
+    "MASWE-0001": {
+      "category": "MASVS-STORAGE",
+      "cwe": [
+        209,
+        532
+      ],
+      "masvs_v2": [
+        "MASVS-STORAGE-2"
+      ],
+      "status": "new",
+      "title": "Insertion of Sensitive Information into Log Files"
+    }
+  }
+}

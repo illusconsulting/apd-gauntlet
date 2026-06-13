@@ -20,7 +20,8 @@ import hashlib
 import json
 import pathlib
 from typing import Any
-from urllib.request import urlopen
+
+from .kb_fetch import fetch_pinned
 
 MITRE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 # The ATT&CK Mobile matrix. Mobile-pack runs emit Mobile technique IDs (e.g.
@@ -37,28 +38,12 @@ DEFAULT_TIMEOUT_SECONDS = 60
 def fetch_mitre_bundle(url: str = MITRE_URL) -> bytes:
     """Fetch a MITRE ATT&CK STIX bundle (enterprise by default). Returns raw JSON bytes.
 
-    Pass :data:`MOBILE_URL` to fetch the Mobile matrix. Raises ``ValueError`` if
-    the response exceeds :data:`MAX_RESPONSE_BYTES` (checked twice: once via
-    ``Content-Length``, once after reading).
+    Pass :data:`MOBILE_URL` to fetch the Mobile matrix. Delegates the size-cap +
+    timeout discipline to :func:`kb_fetch.fetch_pinned`.
     """
-    with urlopen(url, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        content_length = response.headers.get("Content-Length")
-        if content_length is not None:
-            try:
-                advertised = int(content_length)
-            except (TypeError, ValueError):
-                advertised = None
-            if advertised is not None and advertised > MAX_RESPONSE_BYTES:
-                raise ValueError(
-                    f"MITRE bundle response Content-Length ({advertised}) "
-                    f"exceeds maximum ({MAX_RESPONSE_BYTES})"
-                )
-        body: bytes = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise ValueError(
-            f"MITRE bundle response body exceeds maximum ({MAX_RESPONSE_BYTES} bytes); "
-            "refusing to load. Verify the upstream feed before retrying."
-        )
+    body, _meta = fetch_pinned(
+        url, max_bytes=MAX_RESPONSE_BYTES, timeout=DEFAULT_TIMEOUT_SECONDS
+    )
     return body
 
 
