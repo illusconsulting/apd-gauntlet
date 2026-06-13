@@ -8,7 +8,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
-    "esbuild": "0.25.0",
+    "esbuild": "0.28.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "cytoscape": "3.30.2",
