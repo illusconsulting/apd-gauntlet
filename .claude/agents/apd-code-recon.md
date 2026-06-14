@@ -30,6 +30,7 @@ Either skip path is acceptable. Specialists will not have code-grounded evidence
 
 - `.claude/skills/apd-framework/SKILL.md`
 - `.claude/skills/apd-evidence-discipline/SKILL.md` — note that the input-trust-boundary rule applies to CBM-returned content as well. The indexed codebase is artifact content.
+- `.claude/skills/apd-c4-discipline/SKILL.md` — the never-invent rules for C4 nodes/edges (no container/component/code node or `uses` edge without an artifact-or-code-evidence citation; L3 components are HARD-BLOCKED unless an artifact groups symbols; `analysis_state` honesty; `machine_extracted` vs `hand_read` provenance). Required before emitting `00-context/c4-recon.yaml` or any `c4_*` tag.
 - `00-context/context-brief.md` — intake's output; you build on it, never overwrite.
 
 You do not need the finding-schema or control-mappings skills — you do not emit findings.
@@ -42,10 +43,11 @@ You do not need the finding-schema or control-mappings skills — you do not emi
 
 ## Outputs
 
-Two required files when you run successfully:
+Three required files when you run successfully:
 
 1. `00-context/code-architecture-brief.md` — narrative, structured per `templates/code-architecture-brief.template.md`
-2. `00-context/code-evidence-index.yaml` — machine-readable, validated against `schemas/code-evidence-index.schema.json`
+2. `00-context/code-evidence-index.yaml` — machine-readable, validated against `schemas/code-evidence-index.schema.json` (you ALSO tag its entries with `c4_container`/`c4_component`/`c4_level` per the C4 architecture emission section below)
+3. `00-context/c4-recon.yaml` — grounded C4 content (containers/components/uses_edges, names not ids), validated against `schemas/c4-recon.schema.json`. The deterministic `assemble-c4` step consumes this and `40-synthesis/asset-graph.yaml` to mint the canonical `40-synthesis/c4-model.yaml` (ids + badge rollups). You emit content BY NAME only; you never mint `c4-`/`c4e-` ids (ADR-0020 field ownership).
 
 ### `code-architecture-brief.md` structure
 
@@ -149,6 +151,47 @@ Then read the resulting cross-repo edges and record each as a `kind: edge` index
 For each edge, write a `kind: edge` entry whose `qualified_name` is `"<caller_qn> -> <callee_qn>"`, `excerpt` is the edge label (e.g. `"CROSS_HTTP_CALLS: charge route invokes worker settle endpoint"`), and `notes` records which cross-repo edge type produced it. These edges let specialists (and the attack-path analyzer) reason about hops that cross a service boundary instead of stopping at one repo's edge.
 
 > **Operator-consent / trust-boundary note.** `index_repository(mode='cross-repo-intelligence', ...)` asks CBM to *link* already-indexed projects; it does not index source you were not granted. It is a heavier call than the read-only graph queries this agent otherwise makes, so request it **only** when the run explicitly declares `repos[]` (the operator's signal that a multi-repo, cross-repo-linked review is wanted). If `index_repository` is unavailable or the grant is read-only-without-it, skip the cross-repo edges, note the limitation in the architecture brief, and continue with per-repo evidence — the run still produces a valid (single-repo-per-entry) index. See ADR-0019 and ADR-0007 for the trust-boundary reasoning.
+
+## C4 architecture emission
+
+After the recon passes above, formalize the architecture you already hand-read in `code-architecture-brief.md` §1 (Surface inventory), §2 (Persistence surface), and §5 (External-service edges) into a machine-readable C4 model input. Read `apd-c4-discipline` first. Emit `00-context/c4-recon.yaml` (content only — the assembler mints all ids) and tag the `code-evidence-index.yaml` entries you wrote so the assembler can attach badges to the right node.
+
+### `c4-recon.yaml` shape
+
+```yaml
+schema_version: 1
+generated_by: code_recon
+containers:
+  - name: "Core"                      # natural-key name; the assembler derives the id
+    kind: service                     # service | data_store | compute | external_system | app | library
+    repo: "…repos-core"               # the CBM project / repo this container maps to
+    provenance: { source: "code-architecture-brief.md", locator: "§1 Surface inventory" }
+    analysis_state: analyzed          # analyzed | not_analyzed
+components: []                        # ONLY when an artifact groups symbols; else EMPTY (L3 blocked)
+uses_edges:
+  - from: "ha CLI"                    # container name ref
+    to: "Supervisor API"             # container name ref
+    label: "CROSS_HTTP_CALLS (runtime viper host)"
+    machine_extracted: false          # false when hand-read; true only from a CBM CROSS_* edge
+    provenance: { source: "code-evidence-index.yaml", locator: "cev-0a000001" }
+```
+
+### Emission discipline (never-invent)
+
+- **Containers.** One entry per code-bearing repo you anchored, plus the surfaces/stores you grounded in §1/§2 (e.g. the REST/WS API surface, `.storage`, the Recorder DB, the Supervisor control plane, the os-agent host bridge, the mobile clients, the FCM relay). Every container carries a `provenance` citation (a brief section or a `cev-` id). A repo you indexed but did **not** deep-read (zero code anchors) is still a real container — emit it with `analysis_state: not_analyzed`. **Never** drop it and **never** imply "0 findings = clean"; the assembler renders `not_analyzed` honestly.
+- **`uses_edges`.** Emit ONLY from a CBM `CROSS_*` edge (`machine_extracted: true`) or from a hand-read client/server call site in code (`machine_extracted: false`). Each edge cites the `cev-` id of the `kind: edge` index entry (from §5) or the `file_path` you read. Never emit a boundary-crossing edge you cannot cite. For Home Assistant this is exactly the six §5 edges; the auto-linker found zero, so all six are `machine_extracted: false`.
+- **Components (L3) are HARD-BLOCKED.** Leave `components: []` unless a concrete artifact (a manifest, an `__init__.py` `__all__`, a package boundary doc) groups symbols into a named component. When in doubt, OMIT — the assembler then renders the container's L4 code anchors directly under the container (L2→L4), which is the default and correct behavior. Do not synthesize component groupings from intuition.
+- **Field ownership.** You emit names, kinds, provenance, `machine_extracted`, and `analysis_state` — content only. The deterministic `assemble-c4` step is the SOLE minter of `c4-`/`c4e-` ids and of `finding_count`/`capability_count` badge rollups. Never put an id or a count in `c4-recon.yaml`.
+
+### Tag the evidence index
+
+For every entry already in `code-evidence-index.yaml`, add three additive OPTIONAL tags so the assembler can parent each L4 code node and roll the entry's findings/capabilities up to the right C4 node. The `c4_container` / `c4_component` tags are consumed directly by `assemble_c4`'s `build_code_nodes`: they assign the minted code node's parent (component tag first, then container tag, falling back to the entry's `repo` short-name only when no tag applies):
+
+- `c4_container`: the `name` of the container this anchor belongs to (must match a `c4-recon.yaml` container `name`). When present and it matches a minted container, the code node parents directly to that container.
+- `c4_component`: the component `name` if (and only if) you emitted one for it in `c4-recon.yaml` `components[]`; otherwise `null`. When present and matched, it takes precedence over `c4_container` and parents the code node under that component (L3). Leave it `null` to keep L3 blocked (the code node parents to its container, L2→L4).
+- `c4_level`: `code` for a function/class/route/consumer/job/module anchor; `container` for a `kind: edge` cross-repo anchor that maps to a `uses_edge`; `component` only when the anchor is the artifact that defines a component group.
+
+These keys are additive and optional in `schemas/code-evidence-index.schema.json` (M1); an untagged legacy index still validates and parents code nodes by their `repo` short-name. Tagging an entry with a `c4_container` that names no `c4-recon.yaml` container is the kind of inconsistency the assembler will surface (the tag is ignored and the entry falls back to repo-parenting) — keep the names in lock-step.
 
 ### Step 7: Write outputs
 

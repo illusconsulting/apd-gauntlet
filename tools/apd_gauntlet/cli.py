@@ -1168,6 +1168,36 @@ def assemble_inventory_cmd(run_dir: Path) -> None:
     )
 
 
+@main.command("assemble-c4")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def assemble_c4_cmd(run_dir: Path) -> None:
+    """Assemble the grounded C4 architecture model -> 40-synthesis/c4-model.yaml.
+
+    Gated on 40-synthesis/asset-graph.yaml; the code tiers (L3/L4) are populated
+    only when 00-context/code-evidence-index.yaml exists. Mints all c4-/c4e- ids
+    and the per-node finding/capability badges (the SOLE minter; ADR-0020).
+    """
+    from .assemble_c4 import assemble_c4
+
+    summary = assemble_c4(run_dir)
+    if not summary:
+        click.echo(
+            f"assemble-c4: no asset-graph.yaml under {run_dir}/40-synthesis/ - skipped"
+        )
+        return
+    click.echo(
+        "assemble-c4: wrote 40-synthesis/c4-model.yaml "
+        f"({summary['node_count']} nodes = "
+        f"{summary['system_count']} system / {summary['person_count']} person / "
+        f"{summary['external_system_count']} external_system / "
+        f"{summary['container_count']} container / "
+        f"{summary['component_count']} component / {summary['code_count']} code; "
+        f"{summary['uses_edge_count']} uses edges; "
+        f"{summary['not_analyzed_container_count']} not_analyzed container(s); "
+        f"{summary['unlocalized_finding_count']} unlocalized finding(s))"
+    )
+
+
 @main.command("canonicalize")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
 def canonicalize_cmd(run_dir: Path) -> None:

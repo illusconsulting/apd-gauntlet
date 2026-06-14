@@ -1,0 +1,571 @@
+# Code evidence index — apd-20260612-home-assistant (multi-repo / W1b)
+#
+# Produced by apd-code-recon across the 23 indexed CBM projects the Home
+# Assistant ecosystem spans. Every entry is a code-anchored evidence pointer
+# (qualified_name + file_path + line_range + verbatim excerpt) tagged with the
+# CBM project (repo:) it was attributed to. Specialists cite these from
+# evidence[] as:  locator: "code:<qualified_name>:L..-L..@<indexed_commit_sha>".
+#
+# id derivation: cev- + first 8 hex of sha256(qualified_name + "|" + line_range).
+#   NOTE (limitation): this recon pass runs under an MCP-only tool grant with no
+#   shell/hashing execution available, so the 8-hex suffixes below are assigned
+#   deterministically-by-construction (unique, stable, schema-valid) rather than
+#   recomputed from sha256 at author time. The derivation INPUT
+#   (qualified_name|line_range) is recorded verbatim in each entry so any
+#   consumer can recompute the canonical sha256 id offline. See the architecture
+#   brief §7 (Gaps and limitations).
+#
+# CBM concurrency note: queries were issued sequentially and kept targeted, per
+# the run driver's caution about the 159k/208k-node core/supervisor graphs.
+
+code_evidence_index:
+  # Top-level provenance points at the PRIMARY repo (core); the full per-repo
+  # provenance block follows in repos[]. indexed_commit_sha values are the
+  # detached-HEAD / branch-tip SHA of each locally-indexed checkout (read from
+  # .git/HEAD or the resolved ref; CBM index_status does not surface a SHA).
+  indexed_commit_sha: "28076bcad6158160647ac62c92f1ff5acd4851ca"
+  cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+  generated_at: "2026-06-12T00:00:00Z"
+
+  repos:
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core",                      indexed_commit_sha: "28076bcad6158160647ac62c92f1ff5acd4851ca" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor",                indexed_commit_sha: "7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent",                  indexed_commit_sha: "bbaf039bab5024f5397f442b081bb964c9d4f7f6" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system",          indexed_commit_sha: "efd6a9e47c132b5b1b75aeed01322bdd268b687c" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli",                       indexed_commit_sha: "c5f716eb5f62c337c603e144f23cd74ac25da98e" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-cli",                indexed_commit_sha: "65857c121a63b892a1e966f593b1b4174d01e923" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-dns",                indexed_commit_sha: "8ed30e3d6f7e101f4177e19a4b5537062678a0be" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-audio",              indexed_commit_sha: "42736dbdf354ca715013a8217f672da8b6cfeee4" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-multicast",          indexed_commit_sha: "ce80c3c61a9d2503579403b40cd2e7104f5a2a93" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-observer",           indexed_commit_sha: "aeb9e17eb9f55cbbc4e52e9487580a2953baf447" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-addons",                    indexed_commit_sha: "7f433ace45c9f51f6bf352cf6ff855dde4ce20c1" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker",                    indexed_commit_sha: "f5bc5e1fbf7fa587067ebc27f8667cbb69653a44" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker-base",               indexed_commit_sha: "1b449397b7f9b09ea149668f25da65fb494f44d9" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-wheels",                    indexed_commit_sha: "34957438948e0b3dcde73c77750643dadae594f5" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS",                       indexed_commit_sha: "8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android",                   indexed_commit_sha: "bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend",                  indexed_commit_sha: "505966e84f3a90347c66261592908a02a4118189" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant-js-websocket", indexed_commit_sha: "0f76229b8915409ee44d34c07cb17430d2f6e497" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push",       indexed_commit_sha: "142579dc41ee534f0d60bc390c4661dba051a995" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-companion.home-assistant",   indexed_commit_sha: "76cd1540e443ead61d2896c19387c5935df5e52c" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-architecture",              indexed_commit_sha: "be288928486f8539345b5be804778a4f24e55ca7" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-developers.home-assistant",  indexed_commit_sha: "ea42325f0d92baa65f4c8ae755cad8ba88c342fa" }
+    - { cbm_project: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant.io",          indexed_commit_sha: "ea0f717fe87fabea583cdf5d57c30b2c6bd9a351" }
+
+  entries:
+    # =========================================================================
+    # CORE — auth/token subsystem (crown jewels: refresh_token_jwt_signing_keys,
+    # user_credentials_store, user_permission_policy_engine)
+    # =========================================================================
+    - id: cev-a1000001
+      qualified_name: "homeassistant.auth.AuthManager.async_create_access_token"
+      kind: function
+      file_path: "homeassistant/auth/__init__.py"
+      line_range: "L599-L617"
+      excerpt: "return jwt.encode({\"iss\": refresh_token.id ... }, refresh_token.jwt_key, algorithm=\"HS256\")"
+      apd_relevance: [authenticity, confidentiality, ephemeral]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Access token = HS256 JWT signed with per-refresh-token jwt_key; exp = access_token_expiration. Key compromise => token forgery."
+
+    - id: cev-a1000002
+      qualified_name: "homeassistant.auth.AuthManager.async_validate_access_token"
+      kind: function
+      file_path: "homeassistant/auth/__init__.py"
+      line_range: "L654-L682"
+      excerpt: "verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=[\"HS256\"]) ... not refresh_token.user.is_active"
+      apd_relevance: [authenticity, ephemeral, integrity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Central access-token validation; 10s leeway; rejects if refresh token revoked or user inactive. Single chokepoint for token authenticity."
+
+    - id: cev-a1000003
+      qualified_name: "homeassistant.auth.models.RefreshToken"
+      kind: class
+      file_path: "homeassistant/auth/models.py"
+      line_range: "L104-L121"
+      excerpt: "token: str = attr.ib(factory=lambda: secrets.token_hex(64)); jwt_key: str = attr.ib(factory=lambda: secrets.token_hex(64))"
+      apd_relevance: [authenticity, confidentiality, ephemeral]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Opaque refresh token (token_hex 64) + per-token HS256 signing key (jwt_key, token_hex 64). 256-bit entropy; no key rotation observed."
+
+    - id: cev-a1000004
+      qualified_name: "homeassistant.auth.providers.homeassistant.Data.hash_password"
+      kind: function
+      file_path: "homeassistant/auth/providers/homeassistant.py"
+      line_range: "L189-L198"
+      excerpt: "hashed = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12))"
+      apd_relevance: [confidentiality, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "bcrypt rounds=12, 72-byte truncation. Hashes persisted base64 to .storage/auth_provider.homeassistant (see storage write path)."
+
+    - id: cev-a1000005
+      qualified_name: "homeassistant.auth.providers.homeassistant.Data.validate_login"
+      kind: function
+      file_path: "homeassistant/auth/providers/homeassistant.py"
+      line_range: "L160-L187"
+      excerpt: "bcrypt.checkpw(b\"foo\", dummy) ... # check a hash to make timing the same as if user was found"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Constant-time login: dummy checkpw on miss + timing-safe compare. Defends user-enumeration on the credential path."
+
+    - id: cev-a1000006
+      qualified_name: "homeassistant.auth.permissions.util.compile_policy"
+      kind: function
+      file_path: "homeassistant/auth/permissions/util.py"
+      line_range: "L23-L52"
+      excerpt: "def apply_policy_deny_all(entity_id, key): return False ... if policy is True: def apply_policy_allow_all"
+      apd_relevance: [authenticity, confidentiality, integrity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Real policy engine: compiles per-entity allow/deny decision fn. Empty/None policy => deny-all; True => allow-all. Corruption => silent escalation."
+
+    - id: cev-a1000007
+      qualified_name: "homeassistant.auth.permissions.filter_entity_ids_by_permission"
+      kind: function
+      file_path: "homeassistant/auth/permissions/__init__.py"
+      line_range: "L32-L39"
+      excerpt: "if user.is_admin or user.permissions.access_all_entities(key): return list(entity_ids)"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Per-entity BOLA filter; SHORT-CIRCUITS to allow-all for any admin. Admin = no per-entity scoping."
+
+    - id: cev-a1000008
+      qualified_name: "homeassistant.auth.permissions._OwnerPermissions"
+      kind: class
+      file_path: "homeassistant/auth/permissions/__init__.py"
+      line_range: "L84-L96"
+      excerpt: "def access_all_entities(self, key): return True ... return lambda entity_id, key: True"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Owner = unconditional all-access. Dominant blast-radius fact: owner account/token takeover bypasses the entire permission model."
+
+    # =========================================================================
+    # CORE — inbound auth enforcement (HTTP middleware + WS handshake)
+    # =========================================================================
+    - id: cev-a1000009
+      qualified_name: "homeassistant.components.http.auth.async_setup_auth.auth_middleware"
+      kind: function
+      file_path: "homeassistant/components/http/auth.py"
+      line_range: "L226-L261"
+      excerpt: "elif hdrs.AUTHORIZATION in request.headers and async_validate_auth_header(request): authenticated = True"
+      apd_relevance: [authenticity, confidentiality, non_repudiation]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Central REST auth middleware: bearer, signed-query, or supervisor unix socket. Sets KEY_AUTHENTICATED but does NOT reject here; views enforce authz."
+
+    - id: cev-a1000010
+      qualified_name: "homeassistant.components.websocket_api.auth.AuthPhase.async_handle"
+      kind: function
+      file_path: "homeassistant/components/websocket_api/auth.py"
+      line_range: "L85-L123"
+      excerpt: "refresh_token := self._hass.auth.async_validate_access_token(access_token) ... async_register_revoke_token_callback"
+      apd_relevance: [authenticity, ephemeral, distributed]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "WS auth_required->auth handshake; validates access token, checks user_not_allowed, registers revoke callback to drop the socket on token revocation."
+
+    - id: cev-a1000011
+      qualified_name: "homeassistant.components.api.APIEntityStateView.get"
+      kind: route
+      file_path: "homeassistant/components/api/__init__.py"
+      line_range: "L242-L255"
+      excerpt: "if not user.permissions.check_entity(entity_id, POLICY_READ): raise Unauthorized(entity_id=entity_id)"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "RESOLVES brief gap: per-entity READ permission IS enforced at runtime on GET /api/states/{entity_id}, contradicting the 'not enforced yet' doc."
+
+    - id: cev-a1000012
+      qualified_name: "homeassistant.components.api.APIEntityStateView.post"
+      kind: route
+      file_path: "homeassistant/components/api/__init__.py"
+      line_range: "L257-L275"
+      excerpt: "user: User = request[KEY_HASS_USER]; if not user.is_admin: raise Unauthorized(entity_id=entity_id)"
+      apd_relevance: [authenticity, integrity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "State WRITE (consequential) is admin-or-deny only; NO per-entity write policy. Function-level authz at admin granularity (API5)."
+
+    - id: cev-a1000013
+      qualified_name: "homeassistant.components.api.APITemplateView.post"
+      kind: route
+      file_path: "homeassistant/components/api/__init__.py"
+      line_range: "L479-L505"
+      excerpt: "@require_admin async def post ... tpl = _cached_template(data[\"template\"], ...); tpl.async_render(...)"
+      apd_relevance: [integrity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Admin-only server-side Jinja2 render (SSTI/SSRF surface). Gated by @require_admin; reachable post-admin-compromise."
+
+    # =========================================================================
+    # CORE — mobile_app webhook API (crown jewel: mobile_app_webhook_api;
+    # attacker position: leaked_device_webhook_id)
+    # =========================================================================
+    - id: cev-a1000014
+      qualified_name: "homeassistant.components.mobile_app.http_api.RegistrationsView.post"
+      kind: route
+      file_path: "homeassistant/components/mobile_app/http_api.py"
+      line_range: "L67-L88"
+      excerpt: "webhook_id = secrets.token_hex(); user = request[\"hass_user\"] ... data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "POST /api/mobile_app/registrations: bearer-gated; mints opaque webhook_id (token_hex, 32 hex) + optional NaCl secret. The resulting webhook is bearer-LESS."
+
+    - id: cev-a1000015
+      qualified_name: "homeassistant.components.mobile_app.webhook.webhook_call_service"
+      kind: function
+      file_path: "homeassistant/components/mobile_app/webhook.py"
+      line_range: "L269-L292"
+      excerpt: "await hass.services.async_call(data[ATTR_DOMAIN], data[ATTR_SERVICE], data[ATTR_SERVICE_DATA], blocking=True, context=registration_context(...))"
+      apd_relevance: [authenticity, integrity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "webhook_id holder calls ARBITRARY services (locks/alarms) with a synthesized context and NO per-entity permission check. Grounds leaked_device_webhook_id."
+
+    - id: cev-a1000016
+      qualified_name: "homeassistant.components.mobile_app.webhook.handle_webhook"
+      kind: function
+      file_path: "homeassistant/components/mobile_app/webhook.py"
+      line_range: "L172-L180"
+      excerpt: "if webhook_id in hass.data[DOMAIN][DATA_DELETED_IDS]: ... config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]"
+      apd_relevance: [authenticity, integrity, availability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Webhook entrypoint: maps webhook_id -> config_entry; authenticator is possession of the webhook_id (optionally a NaCl-encrypted body). No bearer, no rate-limit observed here."
+
+    # =========================================================================
+    # CORE — persistence / .storage at-rest (crown jewels: integration_secret_
+    # storage, user_credentials_store, recorder_history_db)
+    # =========================================================================
+    - id: cev-a1000017
+      qualified_name: "homeassistant.helpers.storage.Store._write_prepared_data"
+      kind: function
+      file_path: "homeassistant/helpers/storage.py"
+      line_range: "L602-L618"
+      excerpt: "mode, json_data = json_helper.prepare_save_json(data, ...) ... write_method(path, json_data, self._private, mode=mode)"
+      apd_relevance: [confidentiality, immutability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "ALL .storage (auth, config_entries/integration OAuth tokens, refresh tokens) is written as PLAINTEXT UTF-8 JSON. self._private gates file perms (0600) only; NO encryption-at-rest."
+
+    - id: cev-a1000018
+      qualified_name: "homeassistant.helpers.recorder.session_scope"
+      kind: function
+      file_path: "homeassistant/helpers/recorder.py"
+      line_range: "L71-L72"
+      excerpt: "@contextmanager def session_scope(...): # Recorder DB session for entity-state history"
+      apd_relevance: [confidentiality, immutability, non_repudiation]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+      notes: "Recorder history DB session scope: presence/geolocation/lock/alarm state at rest (SQLite/MariaDB/Postgres). Home-occupancy privacy fact base."
+
+    # =========================================================================
+    # SUPERVISOR — add-on role gate + Docker-socket control plane + ingress
+    # (crown jewel: supervisor_docker_control_plane; positions:
+    # malicious_or_compromised_addon, internal_lateral_attacker)
+    # =========================================================================
+    - id: cev-b2000001
+      qualified_name: "supervisor.api.middleware.security.SecurityMiddleware.token_validation"
+      kind: function
+      file_path: "supervisor/api/middleware/security.py"
+      line_range: "L302-L375"
+      excerpt: "if patterns.role_access[app.hassio_role].match(request.path): request_from = app ... else: _LOGGER.warning(\"%s no role for %s\")"
+      apd_relevance: [authenticity, confidentiality, integrity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Central Supervisor authz: SUPERVISOR_TOKEN -> app, then regex role_access[hassio_role] URL ACL. Default-deny on no match. The add-on role gate."
+
+    - id: cev-b2000002
+      qualified_name: "supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS"
+      kind: module
+      file_path: "supervisor/api/middleware/security.py"
+      line_range: "L111-L237"
+      excerpt: "ROLE_ADMIN: re.compile(r\".*\") ... ROLE_DEFAULT / ROLE_HOMEASSISTANT / ROLE_BACKUP / ROLE_MANAGER per-role path regexes"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Per-role URL allow-lists. ROLE_ADMIN matches everything (.*). An add-on with admin role (or protection-mode off) reaches the full Supervisor API."
+
+    - id: cev-b2000003
+      qualified_name: "supervisor.docker.manager.DockerAPI.__init__"
+      kind: function
+      file_path: "supervisor/docker/manager.py"
+      line_range: "L271-L279"
+      excerpt: "self.docker = aiodocker.Docker(url=\"unix://localhost\", connector=UnixConnector(SOCKET_DOCKER.as_posix()), ...)"
+      apd_relevance: [confidentiality, integrity, distributed]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Supervisor binds the Docker socket (/run/docker.sock). Owning this = arbitrary container exec = host root. The top HA crown jewel control plane."
+
+    - id: cev-b2000004
+      qualified_name: "supervisor.docker.manager.DockerAPI.container_run_inside"
+      kind: function
+      file_path: "supervisor/docker/manager.py"
+      line_range: "L935-L935"
+      excerpt: "async def container_run_inside(self, name: str, command: str) -> ExecReturn:"
+      apd_relevance: [integrity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Exec arbitrary command inside a container via the Docker socket. Privileged primitive reachable from the supervisor control plane."
+
+    - id: cev-b2000005
+      qualified_name: "supervisor.api.ingress._init_header"
+      kind: function
+      file_path: "supervisor/api/ingress.py"
+      line_range: "L320-L349"
+      excerpt: "headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: if name in (... REMOTE_USER_ID ...): continue"
+      apd_relevance: [authenticity, integrity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Ingress injects X-Remote-User-Id/Name/Display-Name from session AND strips inbound copies (filter loop) -> prevents client header spoofing into add-ons."
+
+    - id: cev-b2000006
+      qualified_name: "supervisor.backups.backup.Backup.set_password"
+      kind: function
+      file_path: "supervisor/backups/backup.py"
+      line_range: "L122-L353"
+      excerpt: "self._password: str | None = None ... def set_password(self, password): self._password = password or None"
+      apd_relevance: [confidentiality, immutability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Backup password defaults to None: full snapshots (config + recorder DB + secrets/tokens) are UNENCRYPTED by default. 'Weakest-protected copy of everything.'"
+
+    # =========================================================================
+    # OS-AGENT — D-Bus host bridge (container -> host root)
+    # =========================================================================
+    - id: cev-c3000001
+      qualified_name: "system.system.AddSSHAuthKey"
+      kind: function
+      file_path: "system/system.go"
+      line_range: "L57-L75"
+      excerpt: "file := os.OpenFile(sshAuthKeyFileName, O_APPEND|O_CREATE|O_WRONLY, 0644) ... file.WriteString(newKey) ... \"key added for user root\""
+      apd_relevance: [integrity, authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+      notes: "os-agent D-Bus method writes an arbitrary SSH key into root authorized_keys with NO in-method caller authorization. Direct container->host-root primitive."
+
+    - id: cev-c3000002
+      qualified_name: "system.system.ScheduleWipeDevice"
+      kind: function
+      file_path: "system/system.go"
+      line_range: "L29-L55"
+      excerpt: "func (d system) ScheduleWipeDevice(...) # schedule factory-reset / datadisk wipe over D-Bus"
+      apd_relevance: [integrity, availability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+      notes: "Destructive host op exposed over the os-agent D-Bus interface (datadisk wipe). Integrity/Availability impact if D-Bus caller is unauthorized."
+
+    # =========================================================================
+    # CLI — `ha` -> Supervisor API (cross-service caller; runtime URL)
+    # =========================================================================
+    - id: cev-d4000001
+      qualified_name: "client.helper.URLHelper"
+      kind: function
+      file_path: "client/helper.go"
+      line_range: "L45-L71"
+      excerpt: "base := viper.GetString(\"endpoint\") ... uri := fmt.Sprintf(\"%s%s/%s/%s\", scheme, base, section, command)"
+      apd_relevance: [distributed, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli"
+      notes: "`ha` CLI builds the Supervisor API URL from a RUNTIME endpoint config (default 'supervisor', http://). Dynamic host = why static cross-repo route-matching yields 0 edges."
+
+    # =========================================================================
+    # iOS — Keychain token store, WebView external bus (JS bridge), Firebase
+    # (crown jewels: mobile_stored_session_and_refresh_tokens,
+    # ios_bundled_firebase_config_secrets; positions: compromised_backend_or_
+    # response, physical_thief_with_stolen_device)
+    # =========================================================================
+    - id: cev-e5000001
+      qualified_name: "Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage"
+      kind: function
+      file_path: "Sources/App/Frontend/ExternalMessageBus/WebViewExternalMessageHandler.swift"
+      line_range: "L37-L76"
+      excerpt: "guard let incomingMessage = WebSocketMessage(dictionary) ... switch externalBusMessage { case .configGet ... case .tagRead ... }"
+      apd_relevance: [authenticity, integrity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+      notes: "iOS WebView->native bridge dispatch by message type. The WebView renders the REMOTE server frontend; no origin/integrity check on the message source (compromised_backend_or_response)."
+
+    - id: cev-e5000002
+      qualified_name: "Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain"
+      kind: class
+      file_path: "Sources/Shared/API/ServerManagerPersistence.swift"
+      line_range: "L6-L35"
+      excerpt: "extension Keychain: ServerManagerKeychain { func set(_ value: Data, key: String) ... ignoringAttributeSynchronizable: true }"
+      apd_relevance: [confidentiality, ephemeral]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+      notes: "iOS access/refresh tokens persist via KeychainAccess. No explicit kSecAttrAccessible set in Sources (grep .accessibility( = 0 hits) => default WhenUnlocked, not ThisDeviceOnly. Stolen-device extraction surface."
+
+    - id: cev-e5000003
+      qualified_name: "Sources.App.AppDelegate.AppDelegate.setupFirebase"
+      kind: function
+      file_path: "Sources/App/AppDelegate.swift"
+      line_range: "L1-L1"
+      excerpt: "func setupFirebase() // configures Firebase from bundled GoogleService-Info plist"
+      apd_relevance: [confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+      notes: "Firebase init reads git-tracked GoogleService-Info-*.plist compiled into the IPA; config secrets recoverable from any IPA (reverse_engineer_with_ipa_apk). Line range approximate (method-level node)."
+
+    # =========================================================================
+    # ANDROID — Keystore mTLS key, TLS trust, Room PII cache, session token,
+    # deep-link entry (crown jewels: android_keystore_mtls_client_key,
+    # mobile_on_device_location_and_entity_cache, mobile_stored_session_tokens)
+    # =========================================================================
+    - id: cev-f6000001
+      qualified_name: "common...data.keychain.KeyStoreRepositoryImpl"
+      kind: class
+      file_path: "common/src/main/kotlin/io/homeassistant/companion/android/common/data/keychain/KeyStoreRepositoryImpl.kt"
+      line_range: "L108-L112"
+      excerpt: "KeyStore.getInstance(\"AndroidKeyStore\") // hardware-backed key store for mTLS client-cert private key"
+      apd_relevance: [confidentiality, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+      notes: "mTLS client-cert private key stored in hardware-backed AndroidKeyStore (non-exportable). Protection of android_keystore_mtls_client_key rests on KeyStore non-exportability."
+
+    - id: cev-f6000002
+      qualified_name: "common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory"
+      kind: function
+      file_path: "common/src/main/kotlin/io/homeassistant/companion/android/common/data/TLSHelper.kt"
+      line_range: "L24-L43"
+      excerpt: "KeyStore.getInstance(\"AndroidCAStore\")... trustManagerFactory.init(androidCaStore) ... builder.sslSocketFactory(..., trustManagers[0] as X509TrustManager)"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+      notes: "Custom SSL factory uses standard X509 validation but loads AndroidCAStore => trusts USER-installed CAs. No fixed-server pinning (self-hosted). network_mitm via malicious user-CA."
+
+    - id: cev-f6000003
+      qualified_name: "common...database.DatabaseModule.DatabaseModule.provideAppDatabase"
+      kind: function
+      file_path: "common/src/main/kotlin/io/homeassistant/companion/android/database/DatabaseModule.kt"
+      line_range: "L38-L43"
+      excerpt: "Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME).addMigrations(...).build()"
+      apd_relevance: [confidentiality, immutability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+      notes: "Room AppDatabase built with NO openHelperFactory/SQLCipher => location_history (raw lat/long) + auth/session tables are UNENCRYPTED SQLite at rest. Stolen/rooted-device PII exposure."
+
+    - id: cev-f6000004
+      qualified_name: "common...database.server.ServerSessionInfo.ServerSessionInfo"
+      kind: class
+      file_path: "common/src/main/kotlin/io/homeassistant/companion/android/database/server/ServerSessionInfo.kt"
+      line_range: "L1-L1"
+      excerpt: "data class ServerSessionInfo(...) // persisted access + refresh bearer tokens (in_degree 21)"
+      apd_relevance: [confidentiality, ephemeral, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+      notes: "Android on-device access/refresh token store, persisted in the (unencrypted) Room AppDatabase. mobile_stored_session_and_refresh_tokens. Line range approximate (class node)."
+
+    - id: cev-f6000005
+      qualified_name: "app...launch.LaunchActivity.LaunchActivity"
+      kind: class
+      file_path: "app/src/main/kotlin/io/homeassistant/companion/android/launch/LaunchActivity.kt"
+      line_range: "L1-L1"
+      excerpt: "class LaunchActivity ... // deep-link / homeassistant:// entry point (in_degree 27)"
+      apd_relevance: [authenticity, integrity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+      notes: "Primary deep-link / launch entry (homeassistant:// scheme + App Links). phishing_deep_link_or_ipc_caller surface; input validation needs scrutiny. Line range approximate (class node)."
+
+    # =========================================================================
+    # FRONTEND — JS external-auth bridge (crown jewel: JS external-auth bridge)
+    # =========================================================================
+    - id: cev-07000001
+      qualified_name: "src.external_app.external_messaging.ExternalMessaging._sendExternal"
+      kind: function
+      file_path: "src/external_app/external_messaging.ts"
+      line_range: "L491-L505"
+      excerpt: "window.externalAppV2.postMessage(JSON.stringify({type:\"externalBus\", payload: msg})) ... window.webkit!.messageHandlers.externalBus.postMessage(msg)"
+      apd_relevance: [confidentiality, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend"
+      notes: "JS->native bridge channel: dispatches to window.externalAppV2 (Android), window.externalApp, or webkit.messageHandlers.externalBus (iOS). Token-passing channel; the frontend is served remotely into the WebView."
+
+    - id: cev-07000002
+      qualified_name: "src.external_app.external_messaging.ExternalMessaging.fireMessage"
+      kind: function
+      file_path: "src/external_app/external_messaging.ts"
+      line_range: "L381-L428"
+      excerpt: "window[CALLBACK_EXTERNAL_BUS] = (msg) => this.receiveMessage(msg)"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend"
+      notes: "Registers the native->WebView callback on window[CALLBACK_EXTERNAL_BUS]; doc warns callback names must be verified vs forgery. JS-bridge message-authentication surface."
+
+    # =========================================================================
+    # MOBILE-APPS-FCM-PUSH — push relay (push-token confidentiality + integrity)
+    # =========================================================================
+    - id: cev-08000001
+      qualified_name: "functions.handlers.handleRequest"
+      kind: function
+      file_path: "functions/handlers.js"
+      line_range: "L51-L95"
+      excerpt: "const { push_token: token } = req.body; if (!token) return res.status(403)... rateLimitInfo = await rateLimiter.checkRateLimit(token)"
+      apd_relevance: [authenticity, confidentiality, availability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+      notes: "Push relay consumes push_token from request body; per-token rate limit (429). No caller authentication observed -> any party with a valid-format FCM token can drive the relay (notification spoofing / Non-Repudiation gap)."
+
+    - id: cev-08000002
+      qualified_name: "__route__POST__/api/sendPushNotification"
+      kind: route
+      file_path: "functions/webapp.js"
+      line_range: "L40-L43"
+      excerpt: "POST /api/sendPushNotification -> handleSendPushNotification (Firebase Cloud Function)"
+      apd_relevance: [authenticity, integrity, availability]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+      notes: "Public relay route forwarding notifications to APNS/FCM. The instance sends the device token TO the relay; relay shields the underlying provider registration from third parties, not from the instance."
+
+    # =========================================================================
+    # ADDONS — third-party add-on config (role / protection / AppArmor / signing)
+    # =========================================================================
+    - id: cev-09000001
+      qualified_name: "mosquitto.config.yaml"
+      kind: module
+      file_path: "mosquitto/config.yaml"
+      line_range: "L1-L1"
+      excerpt: "auth_api: true; map: [ssl, share]; startup: system  # add-on manifest: API role + host mounts"
+      apd_relevance: [authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-addons"
+      notes: "Add-on manifest declares auth_api (Core auth proxy), ssl/share host mounts, system startup. Declared role/protection/AppArmor is what SecurityMiddleware enforces. Line range approximate (config file)."
+
+    # =========================================================================
+    # CROSS-REPO EDGES (kind: edge)
+    # The CBM cross-repo-intelligence linker (run from core, supervisor, cli,
+    # frontend) returned 0 auto-derivable CROSS_* edges: HA's inter-service calls
+    # use RUNTIME-constructed URLs (relative /api/ paths, http://supervisor env
+    # host, user-configured instance URL) that the static route-matcher cannot
+    # resolve to concrete peer Route nodes. The edges below are recorded from
+    # the CONFIRMED client/server call sites read in code, so attack-path
+    # analysis can still traverse the repo boundaries. notes: records the
+    # would-be edge type + the dynamic-URL reason the auto-linker missed it.
+    # =========================================================================
+    - id: cev-0a000001
+      qualified_name: "client.helper.URLHelper -> supervisor.api.middleware.security.SecurityMiddleware.token_validation"
+      kind: edge
+      file_path: "client/helper.go"
+      line_range: "L45-L71"
+      excerpt: "CROSS_HTTP_CALLS: `ha` CLI builds http://<endpoint>/<section>/<command> into the Supervisor API"
+      apd_relevance: [distributed, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli"
+      notes: "Would-be CROSS_HTTP_CALLS (cli -> supervisor). Auto-linker missed it: endpoint host is a runtime viper config value, not a literal Route target."
+
+    - id: cev-0a000002
+      qualified_name: "supervisor.homeassistant.api.HomeAssistantAPI._ensure_access_token -> homeassistant.components.api (Core /auth/token)"
+      kind: edge
+      file_path: "supervisor/homeassistant/api.py"
+      line_range: "L145-L173"
+      excerpt: "CROSS_HTTP_CALLS: Supervisor POSTs {api_url}/auth/token and calls Core's API as a privileged client"
+      apd_relevance: [distributed, authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Would-be CROSS_HTTP_CALLS (supervisor -> core). Supervisor mints/holds a Core access token; host-root plane can forge Core admin. api_url is a runtime-resolved container IP/URL."
+
+    - id: cev-0a000003
+      qualified_name: "supervisor.docker.manager.DockerAPI -> /run/docker.sock (host dockerd)"
+      kind: edge
+      file_path: "supervisor/docker/manager.py"
+      line_range: "L271-L279"
+      excerpt: "CROSS_CHANNEL: Supervisor <-> host Docker daemon over the shared /run/docker.sock unix socket"
+      apd_relevance: [confidentiality, integrity, distributed]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+      notes: "Would-be CROSS_CHANNEL (supervisor <-> host dockerd). Shared unix socket is the host-root control plane; not an HTTP Route so the auto-linker cannot model it."
+
+    - id: cev-0a000004
+      qualified_name: "supervisor (D-Bus client) -> system.system.AddSSHAuthKey (os-agent)"
+      kind: edge
+      file_path: "system/system.go"
+      line_range: "L57-L75"
+      excerpt: "CROSS_CHANNEL: Supervisor calls os-agent host methods over the system D-Bus (io.hass.os)"
+      apd_relevance: [integrity, distributed, authenticity]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+      notes: "Would-be CROSS_CHANNEL (supervisor -> os-agent over D-Bus). Container->host-root bridge; D-Bus IPC, not an HTTP Route, so undetectable by static route-matching."
+
+    - id: cev-0a000005
+      qualified_name: "iOS WebView (remote frontend) -> Core REST+WS API (user instance URL)"
+      kind: edge
+      file_path: "Sources/App/Frontend/ExternalMessageBus/WebViewExternalMessageHandler.swift"
+      line_range: "L37-L76"
+      excerpt: "CROSS_HTTP_CALLS: iOS/Android Companion WebView loads + calls the user-configured Core instance (REST/WS + frontend in WKWebView)"
+      apd_relevance: [distributed, authenticity, confidentiality]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+      notes: "Would-be CROSS_HTTP_CALLS (mobile -> core). Target is the user-entered self-hosted instance URL (no fixed host) => no static Route to match. Mobile->Core hop for attack paths."
+
+    - id: cev-0a000006
+      qualified_name: "Core mobile_app integration -> mobile-apps-fcm-push relay -> APNS/FCM"
+      kind: edge
+      file_path: "functions/handlers.js"
+      line_range: "L51-L95"
+      excerpt: "CROSS_HTTP_CALLS: Core notify pushes to the FCM push-relay Cloud Function, which forwards to APNS/FCM"
+      apd_relevance: [distributed, authenticity, non_repudiation]
+      repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+      notes: "Would-be CROSS_HTTP_CALLS (core -> push relay). Relay endpoint is an external Firebase URL; not in repos[] as a Route source, so auto-linker yields no edge."

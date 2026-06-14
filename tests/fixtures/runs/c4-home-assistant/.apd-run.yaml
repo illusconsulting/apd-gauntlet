@@ -1,0 +1,192 @@
+run_id: apd-20260612-home-assistant
+subject: Home Assistant
+domains:
+  - api-security        # declared-order primary lens: Core REST/WS API + Supervisor privileged API + add-on role model + token lifecycle
+  - mobile-applications # iOS + Android Companion clients, on-device secrets, WebView/JS-bridge, deep links, push relay
+framework_version: 1.7.0
+
+# Home Assistant spans 23 repositories, EACH indexed as its own CBM project
+# (confirmed via list_projects). Code recon is hard-required: every finding must
+# be grounded in real call-graph behavior across the relevant repo's graph, not
+# design-doc intent. Multi-repo mode (W1b): code-recon runs once per repo with
+# that repo's project:, tags evidence with repo:, and requests a
+# cross-repo-intelligence pass so attack paths can traverse repo boundaries
+# (mobile -> Core API -> integration; add-on -> supervisor -> docker -> host).
+code_recon: enabled
+
+repos:
+  # --- Backend / API surface (api-security) ---
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core
+    role: primary                    # HA Core: REST/WS API, auth subsystem, recorder DB, 2000+ in-process integrations
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor
+    role: dependency                 # host-root-equivalent: Docker socket, add-on lifecycle, scoped tokens, ingress
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent
+    role: dependency                 # Go D-Bus host agent (datadisk/AppArmor/system) — container->host bridge
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system
+    role: dependency                 # HAOS appliance image (Buildroot)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli
+    role: dependency                 # `ha` CLI -> Supervisor API
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-cli
+    role: dependency                 # Supervisor CLI plugin container
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-dns
+    role: dependency                 # CoreDNS plugin container
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-audio
+    role: dependency                 # PulseAudio plugin container
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-multicast
+    role: dependency                 # multicast/mDNS plugin container (LAN discovery)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-observer
+    role: dependency                 # health/observer plugin container
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-addons
+    role: dependency                 # official add-on collection (third-party Docker containers; config.yaml role/AppArmor/signing)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker
+    role: dependency                 # container build + image
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker-base
+    role: dependency                 # base images (alpine/debian/ubuntu) — supply-chain floor
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-wheels
+    role: dependency                 # Python wheel build infrastructure
+  # --- Clients (mobile-applications + frontend) ---
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS
+    role: dependency                 # native Swift iOS Companion app (Keychain, WebView, APNS, biometric lock)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android
+    role: dependency                 # native Kotlin Android Companion app (Keystore, WebView, FCM, App Links, Wear/Auto)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend
+    role: dependency                 # Lit/TS SPA served by Core + embedded in mobile WebViews
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant-js-websocket
+    role: peer                       # JS WS client library (auth handshake + connection lifecycle)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push
+    role: dependency                 # push-relay (APNS/FCM) — notification integrity + push-token confidentiality
+  # --- Documentation / reference ---
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-companion.home-assistant
+    role: peer                       # companion-app docs site
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-architecture
+    role: peer                       # architecture ADRs
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-developers.home-assistant
+    role: peer                       # developer docs (API/auth/native-app/supervisor)
+  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant.io
+    role: peer                       # end-user docs (authentication, companion app)
+
+taxonomies:
+  - cwe                 # default-on
+  - mitre_attack        # default-on
+  - d3fend              # default-on
+  - owasp_top10         # Lit/TS frontend + Core REST web surface (XSS->token, CSRF, SSRF, misconfig)
+  - owasp_api_top10     # Core REST/WS + Supervisor API (API1 BOLA on entity/user IDs, API2 broken-auth/token, API5 function-level authz, API7 SSRF via integrations, API8 misconfig, API10 unsafe consumption)
+  - masvs               # auto-seeded by mobile-applications pack
+  - maswe               # auto-seeded by mobile-applications pack
+
+# ---------------------------------------------------------------------------
+# CROWN JEWELS — code-grounded, all 20 candidate patterns (8 api-security + 12
+# mobile-applications) evaluated against the 23 CBM graphs; 16 confirmed
+# present/partial, 4 ruled ABSENT (see EXCLUDED). Tokens renamed to HA-specific
+# asset names where clearer. Entry-surface patterns (js_bridge,
+# deep_link_and_ipc) are modeled as attacker POSITIONS below, not targets.
+# ---------------------------------------------------------------------------
+crown_jewels:
+  # --- Backend / Core + Supervisor (api-security) ---
+  # [present/high] bcrypt password hashes (Data.hash_password, rounds=12) + MFA/TOTP
+  # seeds (TotpAuthModule._add_ota_secret) persisted to .storage/auth_provider.homeassistant
+  # and .storage/auth via private Store. Account-takeover root.
+  - user_credentials_store
+  # [present/high; was session_token_signing_keys] HA token model: refresh tokens are
+  # opaque (secrets.token_hex(64)) but ACCESS tokens are JWTs signed HS256 with a
+  # per-refresh-token jwt_key (auth/models.py RefreshToken; auth/__init__.py
+  # async_create_access_token / async_validate_access_token). Key compromise = token forgery.
+  - refresh_token_jwt_signing_keys
+  # [present/high; was authorization_decision_engine] Real policy engine:
+  # auth/permissions/util.py::compile_policy compiles per-entity allow/deny decision fns,
+  # wrapped by PolicyPermissions; owner=all. Corruption => silent privilege escalation.
+  - user_permission_policy_engine
+  # [present/high; was third_party_integration_secrets] core.config_entries Store + the
+  # OAuth2 token-storage helper (config_entry_oauth2_flow.async_ensure_token_valid) hold
+  # device/cloud credentials + tokens for 2000+ integrations. The integration-secret vault.
+  - integration_secret_storage
+  # [present/high; was pii_profile_store] Recorder history DB (helpers/recorder.session_scope)
+  # + person/device_tracker geolocation (PersonStorageCollection). Home-occupancy/state/
+  # presence privacy fact base.
+  - recorder_history_db
+  # [present/high; was backup_artifact_store] Supervisor backups (backups/manager._do_backup)
+  # bundle config + recorder DB + secrets into full/partial archives; optional password
+  # (backup.set_password). Weakest-protected copy of everything.
+  - supervisor_backup_archive
+  # [CUSTOM present/high — completeness] The host-root control plane: SUPERVISOR_TOKEN +
+  # the Docker socket (/run/docker.sock route; docker/manager.DockerAPI.container_run_inside)
+  # gated only by api/middleware/security.SecurityMiddleware add-on role checks. Owning it =
+  # arbitrary container exec = host root. The top HA crown jewel; in neither pack's catalog.
+  - supervisor_docker_control_plane
+  # --- Mobile clients (mobile-applications) ---
+  # [present/high] iOS Keychain (ServerManagerKeychain via TokenInfo) + Android
+  # ServerSessionInfo persist the OAuth access/refresh bearer tokens on device. Stolen-device
+  # / extracted-token pivot into the backend.
+  - mobile_stored_session_and_refresh_tokens
+  # [present/high; was keystore_secure_enclave_keys] Android KeyStoreRepositoryImpl stores the
+  # mTLS client-cert private key in the hardware-backed AndroidKeyStore (TLSHelper
+  # getMTLSKeyManagerForOKHTTP). Non-exportability is the protection.
+  - android_keystore_mtls_client_key
+  # [present/high; was cached_pii_phi_on_device] Android Room AppDatabase location_history
+  # table (raw lat/long/zones) + iOS AppEntityRegistryTable. On-device PII at rest.
+  - mobile_on_device_location_and_entity_cache
+  # [present/high; was embedded_api_keys_and_secrets] git-tracked GoogleService-Info-*.plist
+  # (Firebase config secrets) compiled into the iOS bundle (AppDelegate.setupFirebase).
+  # Recoverable from any IPA.
+  - ios_bundled_firebase_config_secrets
+  # [present/high; was app_signing_identity] Release signing keystore/cert + provenance
+  # (Android AndroidApplicationConventionPlugin signingConfig + CI inflate-secrets; iOS
+  # fastlane provisioning). Compromise => trusted trojaned build across the install base.
+  - app_signing_identity
+  # [present/high; was mobile_backend_api_surface] The mobile_app integration backend in core:
+  # RegistrationsView (POST /api/mobile_app/registrations) + webhook.handle_webhook /
+  # webhook_call_service. Where the app's authn/authz/business rules actually live.
+  - mobile_app_webhook_api
+  # EXCLUDED (verified ABSENT, adversarially confirmed) — do NOT add:
+  #   payment_methods_store        : no PCI/cardholder data; only 3rd-party field-names HA redacts.
+  #   audit_log_store              : no security audit log (only logbook/logger) — a Non-Repudiation
+  #                                  GAP finding, not a protectable target.
+  #   attestation_tokens_and_jwts  : no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere.
+  #   js_app_bundle_and_ota_channel: native apps render the REMOTE server frontend in a WebView;
+  #                                  no bundled JS/Dart + no OTA code-push (CodePush/EAS) channel.
+  #   biometric_gated_secrets      : Android app-lock is UI-only (gates re-entry, not key release) —
+  #                                  a defense-in-depth control, covered by the rooted-device position.
+  #   sdk_collected_data_and_consent_records : real (Sentry/Firebase) but modeled via the
+  #                                  malicious_in_process_sdk facet of supply_chain_attacker below.
+  #   js_bridge_native_surface, deep_link_and_ipc_entry_points : entry SURFACES, modeled as the
+  #                                  compromised_backend_or_response / phishing_deep_link positions.
+
+# ---------------------------------------------------------------------------
+# ATTACKER POSITIONS — curated UNION (api-security + mobile-applications + 2
+# HA-specific customs), each with a code-grounded reachable surface toward the
+# jewels above. 2 candidates ruled out (see EXCLUDED).
+# ---------------------------------------------------------------------------
+attacker_positions:
+  # --- External / network (api-security) ---
+  - unauthenticated_internet            # HA exposed via reverse-proxy / Nabu Casa; pre-auth onboarding + auth flow + WS auth_required handshake
+  - network_mitm                        # no fixed-server cert pinning possible (self-hosted instances); TLSHelper custom SSL factory + self-signed/custom-CA trust
+  - compromised_user_session_token      # stolen access(JWT)/refresh/long-lived token; model expiry+revocation (async_validate_access_token, refresh-token delete)
+  # --- Authenticated / authz (api-security) ---
+  - authenticated_low_priv_user_with_bola_target  # non-admin user + per-entity filtering (filter_entity_ids_by_permission) => IDOR/BOLA target surface on entity_id/device_id
+  - compromised_admin_session           # owner/admin (require_admin) reaches config, users, add-on install, supervisor proxy, backups
+  # --- Integration / supply-chain / host (api-security) ---
+  - compromised_third_party_integration # forged inbound webhooks + hostile device/cloud responses the integration trusts (API10 unsafe consumption)
+  - supply_chain_attacker               # PyPI wheels, npm (frontend), add-on images, base images, GH Actions; incl. malicious in-process mobile SDK (Sentry/Firebase) facet
+  - internal_lateral_attacker           # post-breach east-west: add-on container -> Supervisor API -> /run/docker.sock (DockerAPI.container_run_inside) -> host root; os-agent D-Bus
+  - malicious_or_compromised_addon      # [CUSTOM] third-party add-on container with elevated API role / protection-mode disabled (SecurityMiddleware role gate) -> supervisor + docker
+  - leaked_device_webhook_id            # [CUSTOM] holder of a per-device mobile_app webhook_id (webhook_id_from_device_id / cloudhook URL) pushes data + calls services into Core sans bearer
+  # --- Mobile client (mobile-applications) ---
+  - physical_thief_with_stolen_device   # physical possession/backup: read on-device tokens + location cache at rest; app-lock is UI-only
+  - rooted_device_attacker_with_frida   # no root/jailbreak/Frida detection; client-side controls (app-lock, mTLS) assume an honest client
+  - reverse_engineer_with_ipa_apk       # static analysis of the IPA/APK recovers bundled Firebase secrets + the Core endpoint inventory
+  - phishing_deep_link_or_ipc_caller    # crafted custom-scheme/Universal-Link/intent (IncomingURLHandler, CallServiceIntentHandler, LaunchActivity) drives in-app actions
+  - compromised_backend_or_response     # MitM/hostile server response rendered by the WebView + reaching native via the external-bus JS bridge (handleExternalBusMessage)
+  # EXCLUDED (verified NOT applicable):
+  #   compromised_oauth_client_credentials : HA IndieAuth client_id IS the redirect URL; no confidential client secret to steal.
+  #   malicious_ota_update                 : no OTA/code-push channel (js_app_bundle absent); the remote-frontend-trust facet is compromised_backend_or_response.
+  #   co_resident_malicious_app            : folded into phishing_deep_link_or_ipc_caller (custom-scheme hijack) + physical/rooted device on-device threats.
+
+# Bounded enumeration. HA is more layered than a flat single-service app
+# (mobile -> Core API -> integration -> device; add-on -> supervisor -> docker
+# socket -> host-root; internet -> reverse-proxy -> Core -> recorder DB), so
+# allow a slightly deeper hop budget than the flat open-notebook run. 13 jewels
+# x 15 positions = 195 pairs; cap paths-per-pair to keep enumeration tractable.
+attack_path_analysis:
+  max_hop: 7
+  max_paths_per_pair: 12
+  bottleneck_threshold: 3

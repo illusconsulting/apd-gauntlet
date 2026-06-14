@@ -243,6 +243,7 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
     # C-21: Phase C synthesis artifacts
     "asset-graph.yaml":            "asset-graph.schema.json",
+    "c4-model.yaml":               "c4-model.schema.json",
     "attack-paths.yaml":           "attack-path.schema.json",
     "defense-graph.yaml":          "defense-graph.schema.json",
     # D: HTML report input
@@ -290,6 +291,11 @@ CONTEXT_ROLLUPS: dict[str, str] = {
     "threat-model-supplied-normalized.yaml": "threat-model-normalized.schema.json",
     # C-21: Phase C intake artifact (emitted by the intake step).
     "asset-inventory.yaml":         "asset-inventory.schema.json",
+    # C4: grounded C4 input authored by code-recon. OPTIONAL (presence-gated,
+    # like asset-graph) — _validate_context_rollups silently skips it when
+    # absent; the deterministic assemble-c4 step consumes it into
+    # 40-synthesis/c4-model.yaml.
+    "c4-recon.yaml":                "c4-recon.schema.json",
 }
 
 

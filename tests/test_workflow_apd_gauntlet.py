@@ -185,7 +185,7 @@ def test_referenced_commands_cover_the_pipeline() -> None:
     # existing scaffold via pyStep('validate', ...) rather than creating it.
     for c in ("build-domain-skill", "validate-domain", "validate",
               "cluster-candidates", "apply-clusters", "rollup", "build-report",
-              "audit-report", "summarize"):
+              "audit-report", "summarize", "assemble-c4"):
         assert f"pyStep('{c}'" in text, f"pipeline command {c} not invoked via pyStep"
     assert "pyStep('init-run'" not in text, (
         "init-run must NOT be dispatched: the run is pre-scaffolded; setup validates it"
@@ -651,6 +651,33 @@ def test_graph_view_is_shared_cytoscape_component() -> None:
     assert "window.mermaid" not in comp
 
 
+def test_graph_view_kind_passthrough_is_additive_and_guarded() -> None:
+    """EN2: GraphView's C4 node-kind passthrough is ADDITIVE — it only sets
+    cytoscape ``data.kind`` when the node carries a ``kind`` (guarded by
+    ``if (n.kind)``), so callers whose nodes have no kind (AttackPaths,
+    ThreatModel) are entirely unaffected. The per-kind stylesheet rules select
+    on ``node[kind=…]`` so they never match a kind-less node.
+
+    Regression guard against a shared-component change that would alter the
+    AttackPaths/ThreatModel graph behavior: those screens must not start
+    emitting a ``kind`` field on their graph nodes."""
+    comp = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # Additive + guarded passthrough in buildElements.
+    assert "if (n.kind) data.kind = n.kind;" in comp
+    # Per-kind cytoscape styling selects on data(kind) — never fires on a
+    # kind-less node, so the shared component stays behavior-neutral for callers
+    # that don't set kind.
+    assert 'node[kind="data_store"]' in comp
+    assert 'node[kind="external_system"]' in comp
+    # The non-C4 GraphView callers must NOT set a kind on their graph nodes
+    # (which would change their render). They build node objects with id/label/
+    # type but no kind field.
+    ap = (REPO / "report-template" / "screens" / "AttackPaths.jsx").read_text(encoding="utf-8")
+    tm = (REPO / "report-template" / "screens" / "ThreatModel.jsx").read_text(encoding="utf-8")
+    assert "kind:" not in ap, "AttackPaths must not set a graph-node kind (EN2 is C4-only)"
+    assert "kind:" not in tm, "ThreatModel must not set a graph-node kind (EN2 is C4-only)"
+
+
 def test_attack_paths_uses_graphview_with_path_selection() -> None:
     ap = (REPO / "report-template" / "screens" / "AttackPaths.jsx").read_text(encoding="utf-8")
     assert "GraphView" in ap and "MermaidGraph" not in ap
@@ -694,6 +721,64 @@ def test_threat_model_screen_exists_and_renders_blocks() -> None:
     assert "contradiction" in src                                 # block E
     # conditional blocks
     assert "surface_coverage" in src and "comparator_delta" in src
+
+
+# ── C4 architecture scene (Cytoscape compound) ───────────────────────────────
+def test_c4_screen_exists_and_renders_blocks() -> None:
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # component declared + exported on window (bundle registration contract)
+    assert "function C4(" in src and "window.C4 = C4" in src
+    # consumes the contracted window key shape
+    assert "data.c4_model" in src
+    # reuses the shared compound-capable Cytoscape renderer with fcose layout
+    assert "GraphView" in src and "MermaidGraph" not in src
+    assert "compound={true}" in src or "compound" in src
+    assert 'layout="fcose"' in src
+    # drill-down level state: default L1+L2, click container -> components/code
+    assert "selectedContainer" in src and "selectedComponent" in src
+    # honest banner: unlocalized findings + not-analyzed containers
+    assert "unlocalized_findings" in src and "not_analyzed_count" in src
+    # not_analyzed styling hook on nodes
+    assert "analysis_state" in src and "not_analyzed" in src
+    # finding-badge deep-link into the Findings tab
+    assert "onOpenFinding" in src
+    # reuses the report design language, not bespoke styling
+    assert "section-eyebrow" in src and "section-title" in src
+
+
+def test_c4_screen_surfaces_node_kind_chip() -> None:
+    """EN2: the C4 scene renders the container/code ``kind`` (service /
+    data_store / external_system / function / class / route / module …) as a
+    small type chip in the drill-list, and the kind-chip CSS class is styled.
+    Regression guard so the C4-style typing cue can't silently drop out."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # The drill-list row references the node kind and renders the typed chip.
+    assert "n.kind" in src
+    assert "c4-kind-chip" in src
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    assert ".c4-kind-chip" in css
+
+
+def test_c4_overlay_join_uses_from_id_to_id() -> None:
+    """The attack-path overlay's asset->C4 join MUST read the hop's from_id/to_id
+    (the asset-graph node ids the transform's edges_detailed emit), NOT the bare
+    h.from/h.to (which the hop objects never carry). Regression guard for the
+    dead-lookup bug where the join never fired."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # The asset-endpoint lookup array uses the *_id keys.
+    assert "[h.from_id, h.to_id]" in src
+    # The bare-key dead fallbacks must be gone from the join + unmapped strip.
+    assert "h.from," not in src and "h.to," not in src
+    assert "|| h.from " not in src and "|| h.to " not in src
+    # Per-node deep-link reads FX1's first_finding_id off node provenance.
+    assert "provenance.first_finding_id" in src
+    assert "onOpenFinding(findingId)" in src
+
+
+def test_c4_screen_registered_in_bundle_entry() -> None:
+    entry = (REPO / "report-template" / ".build" / "entry.jsx").read_text(encoding="utf-8")
+    # The screen MUST be a side-effect import or window.C4 is never set in the bundle.
+    assert 'import "../screens/C4.jsx";' in entry
 
 
 def test_threat_model_tab_is_conditional_and_routed() -> None:
@@ -814,3 +899,190 @@ def test_report_stage_interruption_distinct_from_completeness_gate() -> None:
     assert "run interrupted at phase" in text, "distinct resume error must exist"
     assert "plan-run" in text, "resume error should point to the foreground plan-run path"
     assert "still FAILED a STRUCTURAL check" in text, "genuine structural gate must remain"
+
+
+def test_assemble_c4_wired_after_apath_before_canonicalize() -> None:
+    """assemble-c4 is the deterministic C4 assembler: it runs in the synthesis
+    flow after the tmeval/apath parallel barrier (so asset-graph.yaml exists)
+    and before the canonicalize-tmeval + rollup steps. Mirrors assemble-inventory."""
+    text = _text()
+    assert "pyStep('assemble-c4'" in text, "assemble-c4 must be dispatched via pyStep"
+    apath_close = text.index("phase('apath')")
+    c4_at = text.index("pyStep('assemble-c4'")
+    # Anchor on the canonicalize-tmeval label specifically: an earlier per-tier
+    # pyStep('canonicalize', ...) (label canonicalize-<tier>) precedes the apath
+    # barrier, so a bare text.index("pyStep('canonicalize'") would match THAT one.
+    canon_at = text.index("canonicalize-tmeval")
+    rollup_at = text.index("pyStep('rollup'")
+    assert apath_close < c4_at < canon_at, (
+        "assemble-c4 must run after the apath barrier and before canonicalize-tmeval"
+    )
+    assert c4_at < rollup_at, "assemble-c4 must run before rollup"
+
+
+def test_c4_tab_is_conditional_and_routed() -> None:
+    src = (REPO / "report-template" / "app.jsx").read_text(encoding="utf-8")
+    # tab entry present, gated on data.c4_model && data.c4_model.present (omit when absent)
+    assert 'id: "c4"' in src and 'label: "Architecture"' in src
+    assert "data.c4_model" in src and "data.c4_model.present" in src
+    # routed to the screen, passing data + onOpenFinding
+    assert 'activeTab === "c4"' in src and "<C4" in src
+    assert "onOpenFinding={onOpenFinding}" in src.split('activeTab === "c4"')[1][:200]
+    # placed after attack_paths, before annexes (engineering view sits late)
+    i_ap = src.index('id: "attack_paths"')
+    i_c4 = src.index('id: "c4"')
+    i_annex = src.index('id: "annexes"')
+    assert i_ap < i_c4 < i_annex
+    # the conditional spread uses the SAME numbering machinery (sigil-aware map)
+    assert "_tabNum" in src
+
+
+def test_c4_scene_styles_present() -> None:
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    # scene container + section headers reuse the design tokens
+    assert ".c4-scene" in css and ".c4-scene__section-h" in css
+    # honest banner + its warning emphasis
+    assert ".c4-banner" in css and ".c4-banner__warn" in css
+    # per-node list + badges
+    assert ".c4-node-list" in css and ".c4-node-row" in css
+    assert ".c4-badge--finding" in css and ".c4-badge--capability" in css
+    # not_analyzed must be styled DISTINCTLY (muted/striped), never as clean
+    assert ".c4-node-row--not-analyzed" in css and ".c4-badge--not-analyzed" in css
+    # level chips for the four C4 tiers
+    assert ".c4-level-chip" in css
+    # all colors come from CSS custom properties (theme-aware), no hex literals
+    c4_block = css[css.index(".c4-scene"):]
+    assert "var(--" in c4_block
+
+
+def test_bundle_contains_c4_scene() -> None:
+    # The precompiled bundle must carry the C4 component + its compound graph use.
+    app_js = (
+        REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
+    ).read_text(encoding="utf-8")
+    assert "window.C4" in app_js            # screen exported into the bundle
+    assert "c4_model" in app_js             # consumes the contracted window key
+    assert "GraphView" in app_js            # reuses the shared Cytoscape renderer
+    assert "fcose" in app_js                # compound layout requested
+    assert "Architecture" in app_js         # the tab label is bundled
+
+
+def _seed_load_run_required(synthesis: pathlib.Path) -> None:
+    """Seed the synthesis artifacts ``load_run`` requires but the C4 fixture omits.
+
+    The committed ``c4-home-assistant`` fixture ships *exactly the artifacts the
+    C4 pipeline reads* (asset-graph, code-evidence-index, deduped findings /
+    capabilities). ``load_run`` additionally requires four whole-report synthesis
+    rollups. We stub them minimally so ``load_run`` -> ``build_apd_data`` succeeds
+    while the assembler still consumes the real (14 zero-anchor repo) inputs, which
+    keeps ``not_analyzed_count >= 1`` honest. None of these stubs feed the
+    ``c4_model`` section under test. Mirrors the helper in
+    tests/unit/report/test_c4_model_real_run.py.
+    """
+    seeds = {
+        "nist-coverage.yaml": 'schema_version: 1\ngenerated_at: "2026-06-12"\ncoverage: []\n',
+        "attack-exposure.yaml": (
+            'schema_version: 1\ngenerated_at: "2026-06-12"\nexposed_assets: []\n'
+        ),
+        "apd-coverage-matrix.yaml": (
+            'schema_version: 1\ngenerated_at: "2026-06-12"\nmatrix: []\n'
+        ),
+        "metrics.yaml": (
+            'schema_version: 1\ngenerated_at: "2026-06-12"\n'
+            "totals: {findings: 0, capabilities: 0}\n"
+        ),
+    }
+    for name, body in seeds.items():
+        target = synthesis / name
+        if not target.exists():
+            target.write_text(body, encoding="utf-8")
+
+
+def test_built_report_renders_c4_tab_from_home_assistant_run(tmp_path: pathlib.Path) -> None:
+    """End-to-end: assemble c4-model.yaml for the real Home Assistant run, build
+    the report data, and assert the C4 tab is enabled (data.c4_model.present).
+    runs/*/report-html is gitignored, so we assemble + build into tmp."""
+    import shutil
+
+    import yaml
+    from apd_gauntlet.assemble_c4 import assemble_c4
+    from apd_gauntlet.report.loader import load_run
+    from apd_gauntlet.report.transform import build_apd_data
+
+    src_run = REPO / "tests" / "fixtures" / "runs" / "c4-home-assistant"
+    assert src_run.is_dir(), "ground-truth run missing"
+    run = tmp_path / "run"
+    shutil.copytree(src_run, run)
+
+    # Assemble the canonical c4-model.yaml (assembler is the sole id minter).
+    summary = assemble_c4(run)
+    c4_path = run / "40-synthesis" / "c4-model.yaml"
+    assert c4_path.is_file(), "assemble_c4 did not write 40-synthesis/c4-model.yaml"
+    c4_doc = yaml.safe_load(c4_path.read_text(encoding="utf-8"))
+    assert c4_doc["generated_by"] == "assemble_c4"
+    # Code tiers present because this run HAS a code-evidence-index.yaml.
+    assert summary["container_count"] >= 1
+    assert summary["not_analyzed_container_count"] >= 1   # 14 empty repos -> some not_analyzed
+
+    # ADAPTATION: the minimal fixture omits the four whole-report rollups that
+    # load_run requires; seed them so load_run -> build_apd_data succeeds while
+    # the assembler above still consumed the real C4 inputs.
+    _seed_load_run_required(run / "40-synthesis")
+
+    artifacts = load_run(run)
+    assert artifacts.c4_model is not None                 # loader picked it up
+    data = build_apd_data(artifacts, run_dir=run)
+    assert data["c4_model"] is not None
+    assert data["c4_model"]["present"] is True            # the tab will render
+    # honest fields are surfaced through to the view
+    assert "unlocalized_findings" in data["c4_model"]
+    assert "not_analyzed_count" in data["c4_model"]
+    assert data["c4_model"]["not_analyzed_count"] >= 1
+    # nodes carry the level + badge contract the scene consumes
+    sample = data["c4_model"]["nodes"][0]
+    for key in ("id", "label", "type", "parent", "badge", "analysis_state"):
+        assert key in sample, f"c4_model node missing {key}"
+
+
+def test_c4_attack_path_overlay() -> None:
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # consumes the existing enumerated paths (no new data source)
+    assert "data.attack_paths" in src
+    # a selectable overlay control + its selection state
+    assert "selectedOverlayPath" in src and "setSelectedOverlayPath" in src
+    # consumes the DETERMINISTIC join, never computes a mapping client-side
+    assert "asset_to_c4" in src and "finding_to_c4" in src
+    # reuses GraphView's cross-highlight contract (overlay path -> highlighted c4 nodes)
+    assert "overlayHighlight" in src or "overlayPaths" in src
+    # honest partial overlay: hops with no C4 mapping go on a PARALLEL asset strip
+    assert "c4-overlay-strip" in src and "no C4 mapping" in src
+    # never invent: an unmapped hop is labelled, not rendered as a C4 hop
+    assert "unmappedHops" in src
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    assert ".c4-overlay-strip" in css and ".c4-overlay-strip__hop--unmapped" in css
+
+
+def test_c4_graph_node_tap_drives_drill() -> None:
+    """A graph node click must drive C4 drill-down (container -> components/code,
+
+    component -> code), mirroring the NodeRow button. The OLD wiring abused
+    GraphView's path-resolution contract with synthetic tapTargets carrying
+    empty edgeIds — which ALWAYS resolved to null and confusingly reset the
+    view. That misuse must be gone; the scene must pass a dedicated onNodeTap
+    callback to GraphView instead.
+    """
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # The C4 scene wires GraphView with a dedicated node-tap callback.
+    assert "onNodeTap={onNodeTap}" in src
+    # The broken empty-edgeIds tapTargets-for-drill pattern is gone.
+    assert "edgeIds: []" not in src
+    assert "tapTargets" not in src
+    # onNodeTap is no longer (mis)used to drive onSelectPath for drilling.
+    assert "onSelectPath={onNodeTap}" not in src
+    assert "onSelectPath={overlayHighlight ? () => {} : onNodeTap}" not in src
+    # GraphView itself accepts and honors the onNodeTap prop.
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "onNodeTap" in comps
+    # The cytoscape node-tap handler reports the tapped node id when wired.
+    assert "onNodeTap(ev.target.id())" in comps or "onNodeTap(node.id())" in comps

@@ -1,0 +1,115 @@
+schema_version: 1
+generated_by: code_recon
+# Grounded C4 input for apd-20260612-home-assistant. Containers + uses_edges are
+# the §1/§2/§5 architecture the code-recon agent hand-read; names are natural keys
+# (the assemble-c4 step mints c4-/c4e- ids and badge counts). L3 is blocked.
+# NOTE: provenance.source is the schema enum (artifact|code_evidence); the source
+# filename is folded into the locator to satisfy schemas/c4-recon.schema.json.
+containers:
+  - name: "Core"
+    kind: service
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1 Surface inventory (REST /api, WS /api/websocket, mobile_app webhook)"
+    analysis_state: analyzed
+  - name: "Supervisor"
+    kind: service
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1 Supervisor privileged API + ingress; §3 SecurityMiddleware.token_validation"
+    analysis_state: analyzed
+  - name: "os-agent"
+    kind: compute
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitives)"
+    analysis_state: analyzed
+  - name: "ha CLI"
+    kind: app
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000001 (ha CLI -> Supervisor API)"
+    analysis_state: analyzed
+  - name: "iOS Companion"
+    kind: app
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §2 ServerManagerKeychain (default Keychain accessibility class)"
+    analysis_state: analyzed
+  - name: "Android Companion"
+    kind: app
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §2 DatabaseModule.provideAppDatabase (unencrypted Room); §1 LaunchActivity"
+    analysis_state: analyzed
+  - name: "Frontend"
+    kind: app
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §5 Mobile WebView -> Core REST/WS external-auth bridge"
+    analysis_state: analyzed
+  - name: "FCM push relay"
+    kind: external_system
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-08000001 (Firebase Cloud Function POST /api/sendPushNotification)"
+    analysis_state: analyzed
+  - name: "Operating System"
+    kind: compute
+    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §7 indexed + reachable but intentionally not deep-read (thin build shell)"
+    analysis_state: not_analyzed
+components: []
+uses_edges:
+  - from: "ha CLI"
+    to: "Supervisor"
+    label: "CROSS_HTTP_CALLS — CLI invokes Supervisor API (runtime viper host)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000001"
+  - from: "Supervisor"
+    to: "Core"
+    label: "CROSS_HTTP_CALLS — Supervisor calls Core /auth/token + API (runtime container IP)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000002"
+  - from: "Supervisor"
+    to: "os-agent"
+    label: "CROSS_CHANNEL — Supervisor -> dockerd via shared /run/docker.sock"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000003"
+  - from: "Supervisor"
+    to: "os-agent"
+    label: "CROSS_CHANNEL — Supervisor -> os-agent host ops via system D-Bus IPC"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000004"
+  - from: "Frontend"
+    to: "Core"
+    label: "CROSS_HTTP_CALLS — mobile WebView -> Core REST/WS (user-entered instance URL)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000005"
+  - from: "Core"
+    to: "FCM push relay"
+    label: "CROSS_HTTP_CALLS — Core -> FCM push relay -> APNS/FCM (external Firebase URL)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000006"

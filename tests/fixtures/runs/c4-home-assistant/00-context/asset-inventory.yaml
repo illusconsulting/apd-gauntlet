@@ -1,0 +1,602 @@
+schema_version: 1
+generated_by: intake
+
+# ---------------------------------------------------------------------------
+# Home Assistant ecosystem asset/identity/trust-boundary inventory.
+# Produced by apd-intake from the document artifacts under inputs/ (74 files)
+# and the run-config crown_jewels (.apd-run.yaml). asset_id/identity_id/
+# boundary_id are deterministic sha8(name) placeholders; the assembler
+# canonicalizes ids on assembly (ADR-0020). realizes_crown_jewels[] maps each
+# crown-jewel asset to its run-config token verbatim so the attack-path
+# analyzer's crown-jewel floor resolves without back-filling.
+# Code recon (code_recon: enabled) will add code-evidence later; this inventory
+# is grounded in the supplied DESIGN-INTENT docs only (confidence calibrated
+# accordingly: prose-described => medium; structurally declared (IaC/run-config
+# crown_jewels) => high; inferred-from-ambiguous-prose => low).
+# ---------------------------------------------------------------------------
+
+assets:
+  # ===== Core / backend services (api-security) =====
+  - asset_id: "asset-7f3c1a92"
+    name: "Home Assistant Core (Python asyncio app)"
+    asset_type: service
+    data_classifications: [confidential, secret, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#what-home-assistant-is, para 1"
+    confidence: high
+
+  - asset_id: "asset-b2d4e017"
+    name: "Core REST API (/api/, port 8123)"
+    asset_type: service
+    data_classifications: [confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/rest.md"
+      locator: "#rest-api, lines 6-15"
+    confidence: high
+
+  - asset_id: "asset-3a8c6f51"
+    name: "Core WebSocket API (/api/websocket)"
+    asset_type: service
+    data_classifications: [confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/websocket.md"
+      locator: "#websocket-api, lines 5-20 (auth_required handshake)"
+    confidence: high
+
+  - asset_id: "asset-9e1b4d28"
+    name: "Core auth subsystem (providers, users, groups, tokens)"
+    asset_type: service
+    data_classifications: [secret, confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/auth_index.md"
+      locator: "#authentication, full doc"
+    confidence: high
+
+  - asset_id: "asset-5c7a2e83"
+    name: "Core user permission policy engine"
+    asset_type: service
+    data_classifications: [internal]
+    realizes_crown_jewels: ["user_permission_policy_engine"]
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/auth_permissions.md"
+      locator: "#permissions, lines 5-48 (policy/groups, owner=all)"
+    confidence: high
+
+  - asset_id: "asset-1d6f9b40"
+    name: "mobile_app integration backend (registrations + webhook in Core)"
+    asset_type: service
+    data_classifications: [confidential, internal]
+    realizes_crown_jewels: ["mobile_app_webhook_api"]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/native-app/setup.md"
+      locator: "#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)"
+    confidence: high
+
+  - asset_id: "asset-8b3e5c17"
+    name: "Core integration runtime (2000+ in-process integrations)"
+    asset_type: service
+    data_classifications: [confidential, secret, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#what-home-assistant-is + repo map core row"
+    confidence: high
+
+  - asset_id: "asset-4f9d2a68"
+    name: "Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)"
+    asset_type: service
+    data_classifications: [secret, confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#repository-map supervisor row, lines 34"
+    confidence: high
+
+  - asset_id: "asset-6a1c8e35"
+    name: "Privileged Supervisor API (http://supervisor/)"
+    asset_type: service
+    data_classifications: [secret, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/supervisor/endpoints.md"
+      locator: "#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)"
+    confidence: high
+
+  - asset_id: "asset-2e7b9f14"
+    name: "os-agent (Go D-Bus host daemon)"
+    asset_type: service
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#repository-map os-agent row, line 35"
+    confidence: high
+
+  - asset_id: "asset-c3d8a572"
+    name: "Supervisor ingress proxy (X-Remote-User-* header injection)"
+    asset_type: service
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/supervisor-apps-security.md"
+      locator: "#authenticating-a-user-when-using-ingress, lines 40-48"
+    confidence: high
+
+  - asset_id: "asset-d1f4b609"
+    name: "Lit/TS web frontend SPA"
+    asset_type: service
+    data_classifications: [confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#repository-map frontend row, line 52"
+    confidence: high
+
+  # ===== Data stores (api-security) =====
+  - asset_id: "asset-a5e2c738"
+    name: "Recorder history DB (SQLite/MariaDB/PostgreSQL)"
+    asset_type: data_store
+    data_classifications: [confidential, pii, internal]
+    realizes_crown_jewels: ["recorder_history_db"]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)"
+    confidence: high
+
+  - asset_id: "asset-8d3f1a96"
+    name: ".storage/auth + auth_provider.homeassistant (user credentials store)"
+    asset_type: secret_store
+    data_classifications: [secret, pii, internal]
+    realizes_crown_jewels: ["user_credentials_store"]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#sensitive-data-inventory, lines 96-97 (password hashes, auth records)"
+    confidence: high
+
+  - asset_id: "asset-3c9b5e27"
+    name: "Refresh-token / JWT signing key store (per-refresh-token jwt_key)"
+    asset_type: secret_store
+    data_classifications: [secret, internal]
+    realizes_crown_jewels: ["refresh_token_jwt_signing_keys"]
+    provenance:
+      source: artifact
+      artifact: ".apd-run.yaml"
+      locator: "crown_jewels: refresh_token_jwt_signing_keys, lines 91-94"
+    confidence: medium
+
+  - asset_id: "asset-7b2e4d81"
+    name: ".storage config_entries + OAuth2 token storage (integration secret vault)"
+    asset_type: secret_store
+    data_classifications: [secret, confidential, internal]
+    realizes_crown_jewels: ["integration_secret_storage"]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device creds for 2000+ integrations)"
+    confidence: high
+
+  - asset_id: "asset-1f6a8c40"
+    name: "Supervisor backup archive store (full/partial snapshots)"
+    asset_type: data_store
+    data_classifications: [secret, confidential, pii, internal]
+    realizes_crown_jewels: ["supervisor_backup_archive"]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)"
+    confidence: high
+
+  - asset_id: "asset-9a4d2f63"
+    name: "configuration.yaml + .storage config directory"
+    asset_type: data_store
+    data_classifications: [secret, confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/rest.md"
+      locator: "#get-apiconfig, lines 110-128 (config_dir, latitude/longitude, whitelist_external_dirs)"
+    confidence: high
+
+  # ===== Host / supply-chain (api-security) =====
+  - asset_id: "asset-e7c1b958"
+    name: "Docker socket / host-root control plane (/run/docker.sock)"
+    asset_type: compute
+    data_classifications: [secret, internal]
+    realizes_crown_jewels: ["supervisor_docker_control_plane"]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 5 + supervisor row (Docker socket = host root)"
+    confidence: high
+
+  - asset_id: "asset-2b8f4c61"
+    name: "HAOS appliance image (Buildroot operating-system)"
+    asset_type: compute
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/architecture/adr/0015-home-assistant-os.md"
+      locator: "ADR-0015 (HAOS appliance image)"
+    confidence: medium
+
+  - asset_id: "asset-5d1a7e29"
+    name: "Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)"
+    asset_type: compute
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/infra/addon-mosquitto-config.yaml"
+      locator: "addon config.yaml (auth_api, map ssl/share, ports, startup: system)"
+    confidence: high
+
+  - asset_id: "asset-8e3c6a14"
+    name: "Container base images (alpine/debian) + wheels/npm supply chain"
+    asset_type: external_dependency
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/infra/supervisor-Dockerfile"
+      locator: "line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48"
+    confidence: high
+
+  # ===== Mobile clients (mobile-applications) =====
+  - asset_id: "asset-4a9d1b72"
+    name: "iOS Companion app (Swift, WKWebView, Keychain, APNS)"
+    asset_type: service
+    data_classifications: [secret, pii, confidential]
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/iOS-CLAUDE.md"
+      locator: "#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)"
+    confidence: high
+
+  - asset_id: "asset-6c2f8a35"
+    name: "Android Companion app (Kotlin, WebView, Keystore, FCM)"
+    asset_type: service
+    data_classifications: [secret, pii, confidential]
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/android-CLAUDE.md"
+      locator: "#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)"
+    confidence: high
+
+  - asset_id: "asset-1b7e5d93"
+    name: "On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)"
+    asset_type: secret_store
+    data_classifications: [secret, internal]
+    realizes_crown_jewels: ["mobile_stored_session_and_refresh_tokens"]
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/frontend-external-authentication.md"
+      locator: "#get-access-token, lines 44-55 (external app stores access_token, expires_in)"
+    confidence: high
+
+  - asset_id: "asset-3e9c4f08"
+    name: "Android hardware-backed Keystore (mTLS client-cert private key)"
+    asset_type: secret_store
+    data_classifications: [secret, internal]
+    realizes_crown_jewels: ["android_keystore_mtls_client_key"]
+    provenance:
+      source: artifact
+      artifact: ".apd-run.yaml"
+      locator: "crown_jewels: android_keystore_mtls_client_key, lines 121-124"
+    confidence: medium
+
+  - asset_id: "asset-7d2a6b51"
+    name: "On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)"
+    asset_type: data_store
+    data_classifications: [pii, confidential]
+    realizes_crown_jewels: ["mobile_on_device_location_and_entity_cache"]
+    provenance:
+      source: artifact
+      artifact: ".apd-run.yaml"
+      locator: "crown_jewels: mobile_on_device_location_and_entity_cache, lines 125-127"
+    confidence: medium
+
+  - asset_id: "asset-9f4c1e87"
+    name: "iOS-bundled GoogleService-Info plist (Firebase config secrets)"
+    asset_type: secret_store
+    data_classifications: [secret]
+    realizes_crown_jewels: ["ios_bundled_firebase_config_secrets"]
+    provenance:
+      source: artifact
+      artifact: ".apd-run.yaml"
+      locator: "crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131"
+    confidence: medium
+
+  - asset_id: "asset-2d8b5a64"
+    name: "Mobile app release signing identity (Android keystore/cert, iOS provisioning)"
+    asset_type: secret_store
+    data_classifications: [secret]
+    realizes_crown_jewels: ["app_signing_identity"]
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/iOS-CLAUDE.md"
+      locator: "#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml lines 132-135"
+    confidence: medium
+
+  - asset_id: "asset-5a3f9c20"
+    name: "JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)"
+    asset_type: service
+    data_classifications: [secret, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/frontend-external-authentication.md"
+      locator: "#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)"
+    confidence: high
+
+  # ===== External dependencies / push (mobile-applications) =====
+  - asset_id: "asset-8c1d7e46"
+    name: "mobile-apps-fcm-push relay (Firebase Cloud Functions)"
+    asset_type: external_dependency
+    data_classifications: [secret, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/mobile-apps-fcm-push-README.md"
+      locator: "#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)"
+    confidence: high
+
+  - asset_id: "asset-3b6a2f95"
+    name: "APNS / FCM push providers"
+    asset_type: external_dependency
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)"
+    confidence: medium
+
+  - asset_id: "asset-6e4c8d13"
+    name: "Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)"
+    asset_type: external_dependency
+    data_classifications: [confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/native-app/setup.md"
+      locator: "registration response, lines 74-79 (cloudhook_url, remote_ui_url)"
+    confidence: medium
+
+  - asset_id: "asset-1a9f3c58"
+    name: "External devices / cloud services reached by integrations (outbound)"
+    asset_type: external_dependency
+    data_classifications: [confidential, internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)"
+    confidence: medium
+
+  - asset_id: "asset-4d7b1e82"
+    name: "mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)"
+    asset_type: network
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/api/instance_discovery.md"
+      locator: "#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)"
+    confidence: high
+
+  - asset_id: "asset-9c2e6a47"
+    name: "Reverse-proxy / internet edge to Core (port 8123)"
+    asset_type: network
+    data_classifications: [internal]
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu Casa)"
+    confidence: high
+
+identities:
+  - identity_id: "idn-7a3c9f12"
+    name: "Owner user (onboarding user, all permissions)"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/auth_index.md"
+      locator: "#owner, lines 27-29 (always all permissions)"
+    confidence: high
+
+  - identity_id: "idn-2b8e4d61"
+    name: "Non-admin / low-priv user (group-scoped permission policy)"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/auth_permissions.md"
+      locator: "#permissions, lines 9-12 (group membership grants permissions)"
+    confidence: high
+
+  - identity_id: "idn-5c1a7b94"
+    name: "Long-Lived Access Token holder"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/api/rest.md"
+      locator: "#rest-api, line 15 (Long-Lived Access Token from /profile)"
+    confidence: high
+
+  - identity_id: "idn-9d4f2c38"
+    name: "System user (HAOS / Supervisor system tokens, never exposed)"
+    identity_type: service_account
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/auth_index.md"
+      locator: "#refresh-token-types, line 51 (System tokens for HA OS and Supervisor)"
+    confidence: high
+
+  - identity_id: "idn-3e7b8a05"
+    name: "Add-on / app principal (SUPERVISOR_TOKEN + declared API role)"
+    identity_type: service_account
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/supervisor-apps-security.md"
+      locator: "#api-role, lines 7-19 (default<homeassistant<backup<manager<admin)"
+    confidence: high
+
+  - identity_id: "idn-6a2d9c47"
+    name: "Ingress-authenticated user (X-Remote-User-Id/Name headers)"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/supervisor-apps-security.md"
+      locator: "#authenticating-a-user-when-using-ingress, lines 40-48"
+    confidence: high
+
+  - identity_id: "idn-1f5c8b23"
+    name: "Registered mobile device (webhook_id / cloudhook holder)"
+    identity_type: external_party
+    provenance:
+      source: artifact
+      artifact: "inputs/api/native-app/setup.md"
+      locator: "registration response, lines 74-79 (webhook_id, secret)"
+    confidence: high
+
+  - identity_id: "idn-8c3e6d51"
+    name: "IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)"
+    identity_type: external_party
+    provenance:
+      source: artifact
+      artifact: "inputs/api/native-app/setup.md"
+      locator: "#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)"
+    confidence: medium
+
+  - identity_id: "idn-4b9a2f76"
+    name: "Trusted-networks / command-line / legacy auth provider principal"
+    identity_type: human_role
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#authentication-authorization-model, lines 67-69"
+    confidence: medium
+
+  - identity_id: "idn-2e8c5a19"
+    name: "Push-relay service account (Firebase Cloud Functions identity)"
+    identity_type: service_account
+    provenance:
+      source: artifact
+      artifact: "inputs/mobile/mobile-apps-fcm-push-README.md"
+      locator: "#deploy-your-own, lines 27-47 (firebase deploy, functions:config)"
+    confidence: medium
+
+  - identity_id: "idn-7d1b4c83"
+    name: "Third-party integration / device principal (untrusted device/cloud)"
+    identity_type: external_party
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 6 (untrusted device/cloud responses)"
+    confidence: medium
+
+trust_boundaries:
+  - boundary_id: "tb-9a3c7f21"
+    name: "Internet/LAN edge -> Core REST+WS API (bearer-token; reverse-proxy/Nabu Casa)"
+    crosses:
+      - "asset-9c2e6a47"  # reverse-proxy/internet edge
+      - "asset-b2d4e017"  # Core REST API
+      - "asset-3a8c6f51"  # Core WS API
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 1, line 85"
+
+  - boundary_id: "tb-2b6e8d43"
+    name: "Mobile app (untrusted, possibly rooted) -> Core API"
+    crosses:
+      - "asset-4a9d1b72"  # iOS app
+      - "asset-6c2f8a35"  # Android app
+      - "asset-1d6f9b40"  # mobile_app webhook backend
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 2, line 86"
+
+  - boundary_id: "tb-5c1a9b67"
+    name: "Browser/WebView frontend -> Core WS/REST + JS external-auth bridge to native"
+    crosses:
+      - "asset-d1f4b609"  # frontend SPA
+      - "asset-5a3f9c20"  # JS external-auth bridge
+      - "asset-1b7e5d93"  # on-device token store
+    provenance:
+      source: artifact
+      artifact: "inputs/auth/frontend-external-authentication.md"
+      locator: "#external-authentication, lines 9-42 + overview item 3"
+
+  - boundary_id: "tb-8d4f2c95"
+    name: "Add-on container -> Supervisor API & Core proxy (scoped token + role + protection mode)"
+    crosses:
+      - "asset-5d1a7e29"  # add-on containers
+      - "asset-6a1c8e35"  # Supervisor API
+      - "asset-c3d8a572"  # ingress proxy
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 4, line 88"
+
+  - boundary_id: "tb-3e7b1a58"
+    name: "Supervisor -> Docker socket (host root) & os-agent (D-Bus host ops)"
+    crosses:
+      - "asset-4f9d2a68"  # Supervisor service
+      - "asset-e7c1b958"  # Docker socket / host-root control plane
+      - "asset-2e7b9f14"  # os-agent
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 5, line 89"
+
+  - boundary_id: "tb-6a2d8c14"
+    name: "Core integration -> external device/cloud (outbound LAN+internet; SSRF)"
+    crosses:
+      - "asset-8b3e5c17"  # Core integration runtime
+      - "asset-1a9f3c58"  # external devices/cloud services
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 6, line 90"
+
+  - boundary_id: "tb-1f5c9a83"
+    name: "HA instance <-> mobile-apps-fcm-push relay <-> APNS/FCM"
+    crosses:
+      - "asset-1d6f9b40"  # mobile_app webhook backend
+      - "asset-8c1d7e46"  # push relay
+      - "asset-3b6a2f95"  # APNS/FCM providers
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 7, line 91"
+
+  - boundary_id: "tb-7d3b5e29"
+    name: "Backup artifact <-> storage/restore (full snapshots contain secrets+tokens+DB)"
+    crosses:
+      - "asset-1f6a8c40"  # backup archive store
+      - "asset-a5e2c738"  # recorder history DB
+      - "asset-7b2e4d81"  # integration secret vault
+    provenance:
+      source: artifact
+      artifact: "inputs/00-SYSTEM-OVERVIEW.md"
+      locator: "#trust-boundaries item 8, line 92"
+
+  - boundary_id: "tb-4c8a2f61"
+    name: "Supply-chain ingestion -> Core/Supervisor/mobile builds (base images, wheels, add-on images, SDKs)"
+    crosses:
+      - "asset-8e3c6a14"  # base images + supply chain
+      - "asset-7f3c1a92"  # Core
+      - "asset-4f9d2a68"  # Supervisor
+    provenance:
+      source: artifact
+      artifact: "inputs/infra/supervisor-Dockerfile"
+      locator: "lines 1, 36-48 (base image + wheels) + overview supply-chain framing"
+
+extraction_summary:
+  asset_count: 36
+  identity_count: 11
+  trust_boundary_count: 9
+  high_confidence_count: 34
+  medium_confidence_count: 13
+  low_confidence_count: 0

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-model.schema.json",
+  "title": "APD Gauntlet C4 Architecture Model",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["assemble_c4"] },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "level", "parent", "name", "kind", "provenance", "finding_count", "capability_count", "analysis_state"],
+        "additionalProperties": false,
+        "properties": {
+          "id":     { "type": "string", "pattern": "^c4-[0-9a-f]{8}$" },
+          "level":  { "type": "string", "enum": ["system", "person", "external_system", "container", "component", "code"] },
+          "parent": { "type": ["string", "null"], "pattern": "^c4-[0-9a-f]{8}$" },
+          "name":   { "type": "string", "minLength": 1 },
+          "kind":   { "type": "string" },
+          "provenance": {
+            "type": "object",
+            "required": ["source"],
+            "additionalProperties": false,
+            "properties": {
+              "source":   { "type": "string", "enum": ["artifact", "domain_default", "threat_model", "threat_model_inferred", "code_evidence", "run_config", "asset_inventory"] },
+              "artifact": { "type": "string" },
+              "locator":  { "type": "string" },
+              "repo":     { "type": "string" },
+              "machine_extracted": { "type": "boolean" },
+              "first_finding_id": { "type": "string", "description": "The deterministic first contributing finding id (sorted[0]) for a node whose finding_count > 0; feeds the report's per-node finding deep-link. Only present on nodes/edges with a non-empty finding rollup." }
+            }
+          },
+          "finding_count":    { "type": "integer", "minimum": 0 },
+          "capability_count": { "type": "integer", "minimum": 0 },
+          "analysis_state":   { "type": "string", "enum": ["analyzed", "not_analyzed"] }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "edge_type", "from", "to", "label", "machine_extracted", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "id":        { "type": "string", "pattern": "^c4e-[0-9a-f]{8}$" },
+          "edge_type": { "type": "string", "enum": ["uses"] },
+          "from":      { "type": "string", "pattern": "^c4-[0-9a-f]{8}$" },
+          "to":        { "type": "string", "pattern": "^c4-[0-9a-f]{8}$" },
+          "label":     { "type": "string" },
+          "machine_extracted": { "type": "boolean" },
+          "provenance": { "$ref": "#/properties/nodes/items/properties/provenance" }
+        }
+      }
+    },
+    "build_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_count":                   { "type": "integer", "minimum": 0 },
+        "system_count":                 { "type": "integer", "minimum": 0 },
+        "person_count":                 { "type": "integer", "minimum": 0 },
+        "external_system_count":        { "type": "integer", "minimum": 0 },
+        "container_count":              { "type": "integer", "minimum": 0 },
+        "component_count":              { "type": "integer", "minimum": 0 },
+        "code_count":                   { "type": "integer", "minimum": 0 },
+        "uses_edge_count":              { "type": "integer", "minimum": 0 },
+        "unlocalized_finding_count":    { "type": "integer", "minimum": 0 },
+        "not_analyzed_container_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

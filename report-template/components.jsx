@@ -273,6 +273,11 @@ function _graphStylesheet() {
     { selector: 'node[type="identity"]', style: { "shape": "round-tag" } },
     { selector: 'node[?hot]', style: { "border-color": sevHigh, "background-color": "color-mix(in srgb, " + sevHigh + " 14%, " + paper + ")" } },
     { selector: 'node[type="boundary"]', style: { "background-color": paper, "background-opacity": 0.04, "border-style": "dashed", "border-color": ink3, "label": "data(label)", "text-valign": "top", "text-halign": "center", "font-size": 9, "color": ink3, "shape": "round-rectangle" } },
+    // C4 node-kind cues (additive — only fire on nodes carrying data(kind),
+    // i.e. the C4 scene; AttackPaths/ThreatModel nodes have no `kind`). A
+    // data_store reads as a barrel; an external_system as a dashed cut-corner.
+    { selector: 'node[kind="data_store"]', style: { "shape": "barrel", "border-color": accent } },
+    { selector: 'node[kind="external_system"]', style: { "shape": "cut-rectangle", "border-style": "dashed", "border-color": ink3 } },
     { selector: "edge", style: {
         "width": 1.4, "line-color": rule, "target-arrow-color": rule,
         "target-arrow-shape": "triangle", "curve-style": "bezier", "arrow-scale": 0.8 } },
@@ -286,7 +291,7 @@ function _graphStylesheet() {
   ];
 }
 
-function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPathId = null, onSelectPath = null, compound = false }) {
+function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPathId = null, onSelectPath = null, onNodeTap = null, compound = false }) {
   const ref = React.useRef(null);
   const cyRef = React.useRef(null);
   const tipRef = React.useRef(null);
@@ -298,6 +303,11 @@ function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPath
       if (n.parent) data.parent = n.parent;
       if (n.hot) data.hot = true;
       if (n.provenance) data._prov = n.provenance;
+      // Additive C4 typing passthrough: when a node carries a `kind`
+      // (data_store/external_system/service/… from the C4 model), expose it so
+      // the stylesheet can cue distinctive node kinds. Guarded — callers whose
+      // nodes have no `kind` (AttackPaths/ThreatModel) are entirely unaffected.
+      if (n.kind) data.kind = n.kind;
       els.push({ data });
     });
     (g.edges || []).forEach((e) => {
@@ -345,6 +355,10 @@ function GraphView({ graph, layout = "dagre", idBase, paths = null, selectedPath
     // Click-to-highlight.
     cy.on("tap", "node", (ev) => {
       const nodeId = ev.target.id();
+      // Dedicated node-tap callback (C4 drill-down): report the tapped node's
+      // own id so the caller can branch on its level. Additive — does NOT
+      // replace the onSelectPath path-resolution contract below.
+      if (onNodeTap) { onNodeTap(ev.target.id()); }
       if (paths && onSelectPath) {
         // pick the first path whose edges touch this node
         const hit = paths.find((p) => (p.edgeIds || []).some((eid) => {

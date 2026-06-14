@@ -1229,3 +1229,202 @@
 }
 .apath-strip__above { bottom: calc(50% + 6px); }
 .apath-strip__below { top: calc(50% + 6px); }
+
+/* ── C4 architecture scene ────────────────────────────────────────────── */
+.c4-scene {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.c4-scene__section-h {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: var(--space-3) 0 var(--space-1);
+}
+.c4-banner {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.c4-banner__warn {
+  color: var(--sev-high);
+  font-weight: 600;
+}
+.c4-crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+.c4-crumbs__sep { color: var(--rule); }
+.c4-crumbs__here { color: var(--ink); font-weight: 600; }
+.c4-node-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.c4-node-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+/* not_analyzed: distinctly muted + striped — must NOT read as a clean container */
+.c4-node-row--not-analyzed {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--paper-2),
+    var(--paper-2) 6px,
+    var(--paper) 6px,
+    var(--paper) 12px
+  );
+  border-style: dashed;
+  border-color: var(--ink-3);
+  opacity: 0.85;
+}
+.c4-node-row__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+.c4-node-row__name:hover { color: var(--accent); }
+.c4-level-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.c4-level-chip--container { color: var(--accent); border-color: var(--accent); }
+.c4-level-chip--component { color: var(--ink-2); }
+.c4-level-chip--code { color: var(--ink-3); }
+/* EN2: C4-style typing chip — a small muted pill next to a node row carrying
+   its container/code kind (service / data_store / external_system / function …).
+   Distinct from the level chip (which carries the C4 tier) so a reader can see
+   both the L1–L4 level AND the C4 element kind at a glance. */
+.c4-kind-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  margin-left: var(--space-1);
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+/* Two distinctive kinds get a subtle accent so they read at a glance; all
+   other kinds use the muted default above (no per-kind rule required). */
+.c4-kind-chip--data_store { color: var(--accent); border-color: var(--accent); }
+.c4-kind-chip--external_system { border-style: dashed; }
+.c4-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+.c4-badge--finding {
+  background: color-mix(in srgb, var(--sev-high) 15%, var(--paper));
+  color: var(--sev-high);
+  border-color: var(--sev-high);
+  cursor: pointer;
+}
+.c4-badge--finding:hover { text-decoration: underline; }
+.c4-badge--capability {
+  background: color-mix(in srgb, var(--sev-low) 15%, var(--paper));
+  color: var(--sev-low);
+  border-color: var(--sev-low);
+}
+.c4-badge--clean { color: var(--ink-3); }
+.c4-badge--not-analyzed {
+  color: var(--ink-3);
+  border-style: dashed;
+  border-color: var(--ink-3);
+  font-style: italic;
+}
+
+/* ── C4 attack-path overlay (stretch) ─────────────────────────────────── */
+.c4-overlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+.c4-overlay__label { color: var(--ink-2); }
+.c4-overlay__select {
+  font: inherit;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  max-width: 28rem;
+}
+.c4-overlay-strip {
+  border: 1px dashed var(--sev-high);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--sev-high) 6%, var(--paper));
+  padding: var(--space-2) var(--space-3);
+}
+.c4-overlay-strip__head {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+  margin-bottom: var(--space-2);
+}
+.c4-overlay-strip__hops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.c4-overlay-strip__hop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.c4-overlay-strip__hop--unmapped {
+  border-left: 3px solid var(--sev-high);
+  padding-left: var(--space-2);
+}
+.c4-overlay-strip__arrow { color: var(--ink-3); }

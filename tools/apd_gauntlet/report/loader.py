@@ -146,6 +146,16 @@ class RunArtifacts:
     # emit data.meta.active_taxonomies (drives which taxonomy chips the report
     # advertises). Empty when the run declared no taxonomies key.
     active_taxonomies: list[str] = field(default_factory=list)
+    # M4 / ADR-0021: the code-evidence-index (00-context/code-evidence-index.yaml)
+    # is the grounded source for L4 code anchors + per-entry c4_* tags. Optional —
+    # None on runs without code_recon. Consumed by the C4 architecture scene's
+    # code tier. Loaded verbatim; the transform does not re-derive ids from it.
+    code_evidence_index: dict[str, Any] | None = None
+    # M4 / ADR-0021: the assembled C4 model (40-synthesis/c4-model.yaml, minted by
+    # assemble_c4). Optional — None when assemble-c4 did not run (no asset-graph,
+    # or pre-feature run). Consumed by transform.c4_model_view -> window.APD_DATA.
+    # .c4_model. Presence-gated exactly like asset_graph.
+    c4_model: dict[str, Any] | None = None
 
 
 def _required(run_dir: pathlib.Path, rel: str) -> pathlib.Path:
@@ -603,6 +613,11 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     # omits the MAS scenes/meta gracefully.
     masvs_coverage = _yaml_optional(synth / "masvs-coverage.yaml")
     maswe_coverage = _yaml_optional(synth / "maswe-coverage.yaml")
+    # M4 / ADR-0021: grounded C4 architecture inputs. The code-evidence-index is
+    # the L4/code-tier source; c4-model.yaml is the assembled (id-minted) model.
+    # Both optional — None on runs without code_recon / without assemble-c4.
+    code_evidence_index = _yaml_optional(context / "code-evidence-index.yaml")
+    c4_model = _yaml_optional(synth / "c4-model.yaml")
 
     # Optional artifacts are hashed via the existing single-read helper:
     # they are already loaded above and we tolerate the second read here
@@ -622,6 +637,12 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         source_hashes["masvs-coverage.yaml"] = _hash(synth / "masvs-coverage.yaml")
     if maswe_coverage is not None:
         source_hashes["maswe-coverage.yaml"] = _hash(synth / "maswe-coverage.yaml")
+    if code_evidence_index is not None:
+        source_hashes["code-evidence-index.yaml"] = _hash(
+            context / "code-evidence-index.yaml"
+        )
+    if c4_model is not None:
+        source_hashes["c4-model.yaml"] = _hash(synth / "c4-model.yaml")
 
     return RunArtifacts(
         run_id=run_cfg.get("run_id", run_dir.name),
@@ -663,4 +684,6 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         masvs_coverage=masvs_coverage,
         maswe_coverage=maswe_coverage,
         active_taxonomies=_extract_str_list(run_cfg, "taxonomies"),
+        code_evidence_index=code_evidence_index,
+        c4_model=c4_model,
     )

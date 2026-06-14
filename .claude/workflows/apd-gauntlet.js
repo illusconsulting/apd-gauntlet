@@ -637,6 +637,21 @@ parallel([
   },
 ]);
 
+// 5c.4 assemble-c4 (Python) — deterministic C4 model assembler. Runs HERE,
+// after the tmeval/apath barrier so 40-synthesis/asset-graph.yaml exists, and
+// BEFORE canonicalize/rollup. Mirrors assemble-inventory (ADR-0020 field
+// ownership): the agent-authored 00-context/c4-recon.yaml + asset-graph.yaml
+// are content-only; assemble-c4 is the SOLE minter of c4-/c4e- ids and the
+// finding_count/capability_count badge rollups it writes to
+// 40-synthesis/c4-model.yaml. It runs whenever asset-graph.yaml exists and
+// includes the L4/L3 code tiers only when 00-context/code-evidence-index.yaml
+// is present (the C4 scene then renders whatever c4-model.yaml contains).
+pyStep('assemble-c4', {
+  phase: 'apath', label: 'assemble-c4',
+  outputs: runDir + '/40-synthesis/c4-model.yaml (c4-/c4e- ids minted; finding/capability badges rolled up)',
+  alwaysRun: true,
+});
+
 // 5c.5 canonicalize — mint tmeval-* ids from the evaluator's tmeval_key BEFORE
 // rollup. The evaluator now emits a structured tmeval_key (not a hand-computed
 // id); the assembler is the sole author of tmeval-<sha8>. This MUST run after the

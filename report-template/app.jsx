@@ -29,6 +29,8 @@ function App() {
     ...(data.threat_model && data.threat_model.present
       ? [{ id: "threat_model", label: "Threat model" }] : []),
     { id: "attack_paths", label: "Attack paths" },
+    ...(data.c4_model && data.c4_model.present
+      ? [{ id: "c4", label: "Architecture" }] : []),
     { id: "annexes", label: "Annexes" },
   ];
   let _tabNum = 0;
@@ -141,6 +143,9 @@ function App() {
         {activeTab === "threat_model" && <ThreatModel data={data} />}
         {activeTab === "attack_paths" && (
           <AttackPaths data={data} onOpenFinding={onOpenFinding} focusPathId={focusPathId} />
+        )}
+        {activeTab === "c4" && (
+          <C4 data={data} onOpenFinding={onOpenFinding} />
         )}
         {activeTab === "annexes" && (
           <Annexes data={data} onOpenFinding={onOpenFinding} />

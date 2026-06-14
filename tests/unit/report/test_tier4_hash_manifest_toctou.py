@@ -133,6 +133,12 @@ def test_load_run_hashes_match_file_content() -> None:
         "defense-graph.yaml": run_dir / "40-synthesis" / "defense-graph.yaml",
         "report-data.yaml": run_dir / "40-synthesis" / "report-data.yaml",
         "metrics.yaml": run_dir / "40-synthesis" / "metrics.yaml",
+        # M4 / ADR-0021 optional C4 inputs — present on this fixture (it seeds
+        # a code-evidence-index.yaml) / when assemble-c4 has run.
+        "code-evidence-index.yaml": run_dir
+        / "00-context"
+        / "code-evidence-index.yaml",
+        "c4-model.yaml": run_dir / "40-synthesis" / "c4-model.yaml",
     }
 
     assert artifacts.source_hashes, "expected at least required-artifact hashes"

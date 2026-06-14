@@ -30,3 +30,16 @@ def test_lint_agents_catches_missing_frontmatter(tmp_path):
     result = runner.invoke(main, ["lint-agents", "--agent-dir", str(agent_dir)])
     assert result.exit_code == 1
     assert "frontmatter" in result.output.lower()
+
+
+def test_code_recon_required_reading_resolves_c4_discipline() -> None:
+    """The C4 extension adds .claude/skills/apd-c4-discipline/SKILL.md to
+    code-recon's Required reading; lint_agent_file must resolve it (no
+    'required reading target not found' error)."""
+    from apd_gauntlet.lint_agents import lint_agent_file
+
+    repo_root = pathlib.Path(__file__).resolve().parent.parent
+    agent = repo_root / ".claude" / "agents" / "apd-code-recon.md"
+    errors = lint_agent_file(agent, repo_root)
+    assert errors == [], errors
+    assert "apd-c4-discipline" in agent.read_text()

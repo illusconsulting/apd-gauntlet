@@ -1320,6 +1320,206 @@ def _asset_graph_view_focused(
     return {"nodes": nodes, "edges": edges}
 
 
+# Canonical C4 level ordering (top → bottom). Drives levels_present ordering so
+# the scene renders L1 System → … → L4 Code deterministically regardless of the
+# node emission order in c4-model.yaml.
+_C4_LEVEL_ORDER = ("system", "person", "external_system", "container", "component", "code")
+
+# A ``code:<qualified_name>[:Lx-Ly][@sha]`` evidence locator. Group 1 is the
+# bare qualified_name (the overlay join key), stopping at the first ':' or '@'.
+# Mirrors assemble_c4._CODE_LOCATOR_RE so finding_to_c4 reuses the SAME join the
+# C4 finding badges already compute.
+_C4_CODE_LOCATOR_RE = re.compile(r"^code:([^:@]+)")
+
+
+def _first_code_qname(finding: dict[str, Any]) -> str | None:
+    """The qualified_name of a finding's FIRST ``code:`` evidence locator, or
+    None when the finding is doc-anchored only (no code locator)."""
+    for ev in finding.get("evidence") or []:
+        m = _C4_CODE_LOCATOR_RE.match(str((ev or {}).get("locator") or ""))
+        if m:
+            return m.group(1)
+    return None
+
+
+def c4_model_view(artifacts: RunArtifacts) -> dict[str, Any]:
+    """Structured C4-architecture view for window.APD_DATA.c4_model.
+
+    Pure, side-effect-free transform of the assembled c4-model.yaml (already
+    id-minted by assemble_c4 — this fn mints nothing). Mirrors _asset_graph_view
+    in style: it shapes nodes/edges for the Cytoscape scene and passes through
+    the assembler's grounded badge counts and rollups verbatim.
+
+    Returns ``{"present": False, ...}`` (empty collections, zero rollups) when
+    the run has no c4-model.yaml, so the scene is gated cleanly.
+
+    Node shape:  {id, label, type(=level), parent, badge(=finding_count|None),
+                  capability_badge, analysis_state, provenance}
+      - ``badge`` is the assembler's finding_count, or None when 0 so a
+        zero-finding element renders no chip (never "0 findings = clean").
+    Edge shape:  {id, source, target, label, machine_extracted}
+    Plus rollups: ``unlocalized_findings`` and ``not_analyzed_count`` (read off
+    build_summary when present; not_analyzed_count falls back to a node scan),
+    and ``levels_present`` (distinct node levels in canonical L1→L4 order).
+    """
+    model = artifacts.c4_model
+    if not isinstance(model, dict):
+        return {
+            "present": False,
+            "nodes": [],
+            "edges": [],
+            "unlocalized_findings": 0,
+            "not_analyzed_count": 0,
+            "levels_present": [],
+        }
+
+    nodes: list[dict[str, Any]] = []
+    levels_seen: set[str] = set()
+    not_analyzed_fallback = 0
+    # qualified_name -> rendered (safe) L4 code-node id. The assembler mints one
+    # code node per qualified_name with name == qualified_name; this is the join
+    # target for finding_to_c4 (and the only artifact-grounded c4 surface an
+    # asset->code link could resolve to). Built here so we map to the SAME id the
+    # renderer sees (post _safe_node_id), not the raw model id.
+    code_id_by_qname: dict[str, str] = {}
+    for n in model.get("nodes", []):
+        if not isinstance(n, dict):
+            continue
+        level = str(n.get("level") or "container")
+        levels_seen.add(level)
+        finding_count = n.get("finding_count")
+        try:
+            fc = int(finding_count or 0)
+        except (TypeError, ValueError):
+            fc = 0
+        cap_count = n.get("capability_count")
+        try:
+            cc = int(cap_count or 0)
+        except (TypeError, ValueError):
+            cc = 0
+        analysis_state = str(n.get("analysis_state") or "analyzed")
+        if level == "container" and analysis_state == "not_analyzed":
+            not_analyzed_fallback += 1
+        node: dict[str, Any] = {
+            "id": _safe_node_id(str(n.get("id") or ""), fallback_seed="c4"),
+            "label": _safe_label(str(n.get("name") or n.get("id") or "")),
+            "type": level,
+            "parent": (str(n["parent"]) if n.get("parent") else None),
+            # Grounded badge: None (no chip) when zero — never render "0 = clean".
+            "badge": (fc if fc > 0 else None),
+            "capability_badge": cc,
+            "analysis_state": analysis_state,
+            # EN2: surface the c4-model node's C4-style ``kind``
+            # (service/data_store/compute/external_system/app/library for
+            # containers; function/class/route/module for code). Passed through
+            # verbatim — assemble_c4 mints it, this transform never invents. None
+            # when the model omits it so the scene renders no chip.
+            "kind": (str(n["kind"]) if n.get("kind") else None),
+        }
+        prov = n.get("provenance")
+        if isinstance(prov, dict):
+            # first_finding_id is FX1's per-node deep-link key (assemble_c4
+            # records it on nodes whose finding_count > 0); pass it through so
+            # the C4 scene's ⚑ badge can open the contributing finding.
+            node["provenance"] = {
+                k: prov.get(k)
+                for k in ("source", "locator", "repo", "machine_extracted",
+                          "first_finding_id")
+                if prov.get(k) is not None
+            }
+        else:
+            node["provenance"] = {}
+        nodes.append(node)
+        if level == "code":
+            qname = str(n.get("name") or "")
+            if qname:
+                code_id_by_qname.setdefault(qname, node["id"])
+
+    edges: list[dict[str, Any]] = []
+    for e in model.get("edges", []):
+        if not isinstance(e, dict):
+            continue
+        edges.append({
+            "id": str(e.get("id") or ""),
+            "source": _safe_node_id(str(e.get("from") or ""), fallback_seed="c4"),
+            "target": _safe_node_id(str(e.get("to") or ""), fallback_seed="c4"),
+            "label": _safe_label(str(e.get("label") or "")),
+            "machine_extracted": bool(e.get("machine_extracted")),
+        })
+
+    summary = model.get("build_summary") or {}
+    try:
+        unlocalized = int(summary.get("unlocalized_finding_count", 0))
+    except (TypeError, ValueError):
+        unlocalized = 0
+    not_analyzed_raw = summary.get("not_analyzed_container_count")
+    if not_analyzed_raw is None:
+        not_analyzed = not_analyzed_fallback
+    else:
+        try:
+            not_analyzed = int(not_analyzed_raw)
+        except (TypeError, ValueError):
+            not_analyzed = not_analyzed_fallback
+
+    levels_present = [lvl for lvl in _C4_LEVEL_ORDER if lvl in levels_seen]
+
+    # ── Attack-path overlay crosswalk producers ────────────────────────────
+    # finding_to_c4: {finding_id -> c4 CODE-node id}. For each deduped finding
+    # with a code: locator, resolve its FIRST qualified_name to the L4 code node
+    # the assembler minted for it (name == qualified_name). This is the SAME
+    # code-locator join the C4 finding badges use; we just expose the id. Doc-
+    # anchored findings (no code locator) and locators whose qualified_name has
+    # no minted code node are SKIPPED — never invented onto the graph.
+    finding_to_c4: dict[str, str] = {}
+    for f in artifacts.deduped_findings or []:
+        fid = str(f.get("id") or "")
+        if not fid:
+            continue
+        find_qname = _first_code_qname(f)
+        if not find_qname:
+            continue
+        cid = code_id_by_qname.get(find_qname)
+        if cid is not None:
+            finding_to_c4[fid] = cid
+
+    # asset_to_c4: {asset-graph node_id -> c4 node id}, GROUNDED-ONLY. An entry
+    # is created only when an asset node's provenance DETERMINISTICALLY names a
+    # code-evidence anchor (provenance.source == "code_evidence" and locator is a
+    # code: pointer / bare qualified_name resolving to a minted code node) — the
+    # ONLY artifact-grounded asset->c4 link. NEVER fuzzy name-substring matching:
+    # on runs whose asset nodes carry doc (source == "artifact") provenance only,
+    # this map is honestly EMPTY (the disjoint-id-space limitation).
+    asset_to_c4: dict[str, str] = {}
+    for an in (artifacts.asset_graph or {}).get("nodes") or []:
+        if not isinstance(an, dict):
+            continue
+        aid = str(an.get("node_id") or "")
+        if not aid:
+            continue
+        prov = an.get("provenance")
+        if not isinstance(prov, dict):
+            continue
+        if str(prov.get("source") or "") != "code_evidence":
+            continue
+        loc = str(prov.get("locator") or "")
+        m = _C4_CODE_LOCATOR_RE.match(loc)
+        asset_qname = m.group(1) if m else loc
+        cid = code_id_by_qname.get(asset_qname)
+        if cid is not None:
+            asset_to_c4[aid] = cid
+
+    return {
+        "present": True,
+        "nodes": nodes,
+        "edges": edges,
+        "unlocalized_findings": unlocalized,
+        "not_analyzed_count": not_analyzed,
+        "levels_present": levels_present,
+        "finding_to_c4": finding_to_c4,
+        "asset_to_c4": asset_to_c4,
+    }
+
+
 def _build_node_edge_maps(
     asset_graph: dict[str, Any] | None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
@@ -2041,6 +2241,16 @@ def build_apd_data(
         ("attack_paths",
          lambda: attack_paths_data(artifacts),
          None),
+        ("c4_model",
+         lambda: c4_model_view(artifacts),
+         {
+             "present": False,
+             "nodes": [],
+             "edges": [],
+             "unlocalized_findings": 0,
+             "not_analyzed_count": 0,
+             "levels_present": [],
+         }),
         ("next_steps",
          lambda: next_steps_section(supplement.get("next_steps")),
          []),

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-recon.schema.json",
+  "title": "APD C4 Recon (agent-authored, content-only)",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "containers", "components", "uses_edges"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["code_recon"] },
+    "containers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind", "repo", "provenance", "analysis_state"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["service", "data_store", "compute", "external_system", "app", "library"] },
+          "repo": { "type": "string", "minLength": 1 },
+          "provenance": { "$ref": "#/$defs/provenance" },
+          "analysis_state": { "type": "string", "enum": ["analyzed", "not_analyzed"] }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "description": "ONLY populated when an artifact groups symbols into a component; otherwise empty (L3 is blocked and the report renders container->code directly).",
+      "items": {
+        "type": "object",
+        "required": ["name", "container", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "name":      { "type": "string", "minLength": 1 },
+          "container": { "type": "string", "minLength": 1, "description": "Name reference to a containers[].name." },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "uses_edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "label", "machine_extracted", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "from":  { "type": "string", "minLength": 1, "description": "Source container name." },
+          "to":    { "type": "string", "minLength": 1, "description": "Target container name." },
+          "label": { "type": "string", "minLength": 1 },
+          "machine_extracted": { "type": "boolean", "description": "true => derived from a CROSS_* code edge (machine_extracted); false => hand_read code evidence (file_path)." },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["source", "locator"],
+      "additionalProperties": false,
+      "properties": {
+        "source":  { "type": "string", "enum": ["code_evidence", "artifact"] },
+        "locator": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -64,7 +64,10 @@
           "items": { "type": "string", "enum": ["confidentiality", "integrity", "availability", "distributed", "resilient", "ephemeral", "authenticity", "non_repudiation", "immutability"] }
         },
         "notes":          { "type": "string" },
-        "repo":           { "type": "string", "minLength": 1, "description": "Optional CBM project name this entry was attributed to. Required when top-level repos[] is present (multi-repo provenance)." }
+        "repo":           { "type": "string", "minLength": 1, "description": "Optional CBM project name this entry was attributed to. Required when top-level repos[] is present (multi-repo provenance)." },
+        "c4_container":   { "type": "string", "minLength": 1, "description": "Optional C4 container name this code anchor belongs to (additive; consumed by assemble_c4)." },
+        "c4_component":   { "type": ["string", "null"], "minLength": 1, "description": "Optional C4 component name; null when L3 is blocked (no artifact groups this symbol)." },
+        "c4_level":       { "type": "string", "enum": ["container", "component", "code"], "description": "Optional C4 level this anchor maps to." }
       }
     }
   }

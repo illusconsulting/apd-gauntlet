@@ -1,0 +1,19 @@
+schema_version: 1
+generated_by: intake
+containers:
+  - name: "Core"
+    kind: not-a-kind
+    repo: "repos-core"
+    provenance:
+      source: "code-architecture-brief.md"
+      locator: "§1"
+    analysis_state: maybe
+components: []
+uses_edges:
+  - from: "Core"
+    to: "Supervisor"
+    label: "x"
+    machine_extracted: yes-please
+    provenance:
+      source: "code-evidence-index.yaml"
+      locator: "cev-0a000002"

@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-12",
+    "date": "2026-06-13",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -8200,6 +8200,14 @@ window.APD_DATA = {
       "finding_derived_edge_count": 1,
       "capability_derived_edge_count": 0
     }
+  },
+  "c4_model": {
+    "present": false,
+    "nodes": [],
+    "edges": [],
+    "unlocalized_findings": 0,
+    "not_analyzed_count": 0,
+    "levels_present": []
   },
   "next_steps": [
     {
