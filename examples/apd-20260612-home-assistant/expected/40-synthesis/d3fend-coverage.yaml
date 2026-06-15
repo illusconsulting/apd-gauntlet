@@ -1,0 +1,180 @@
+schema_version: 1
+generated_by: synthesizer
+defensive_entries:
+- d3fend_id: D3-CBAN
+  name: Certificate-based Authentication
+  capability_count: 1
+  capability_ids:
+  - conf-cap-01c47d42
+  counters_attack:
+  - T1409
+- d3fend_id: D3-CH
+  name: Credential Hardening
+  capability_count: 1
+  capability_ids:
+  - conf-cap-1044dbb3
+  counters_attack:
+  - T1110
+counter_coverage:
+- attack_technique: T1005
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-a49cb674
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1070
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1078
+  exposed_by_finding_count: 4
+  exposed_by_finding_ids:
+  - auth-3f2314a4
+  - auth-7162fd48
+  - ephem-053957f3
+  - ephem-9915ab91
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1098
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  - merged-66801b1b
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1190
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1195
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - auth-8f0d8172
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1213
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-ef49b4b0
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1409
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-205c53a5
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1417
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-3060c50e
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1490
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1499
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - avail-4be2dd70
+  - avail-a292763c
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1525
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - immut-5a5ef5bd
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1528
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - auth-3dbf15e7
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1530
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-a49cb674
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1543
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - auth-6924f467
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1550
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - ephem-f19f24f9
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1552
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-a49cb674
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1557
+  exposed_by_finding_count: 3
+  exposed_by_finding_ids:
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1565
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1577
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-7a74a4a0
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1606
+  exposed_by_finding_count: 2
+  exposed_by_finding_ids:
+  - merged-1119b0be
+  - merged-a49cb674
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false
+- attack_technique: T1634
+  exposed_by_finding_count: 1
+  exposed_by_finding_ids:
+  - conf-a30cca33
+  countered_by_d3fend: []
+  countered_by_capability_ids: []
+  has_capability_coverage: false

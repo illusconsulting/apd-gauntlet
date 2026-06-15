@@ -4,7 +4,7 @@ description: |
   5b judgment-only agent. Reads ONLY 40-synthesis/cluster-candidates.yaml (the
   candidate groups + minimal per-record fields the cluster-candidates command
   extracted — kilobytes, never the 18 raw files). For each candidate group,
-  decides disposition merge|link|separate (bias to link on ambiguity). For
+  decides the `decision` field merge|link|separate (bias to link on ambiguity). For
   merges, authors the rewritten merged summary/detail/recommendation and the
   per-lens lens_perspectives narrative, classifies finding-vs-capability
   contradictions (compatible|contradicted|stale), and supplies chosen_severity
@@ -30,10 +30,11 @@ model: opus
 Judgment only. Fresh, small context. Your ONLY corpus input is
 `40-synthesis/cluster-candidates.yaml`. For each `group`:
 
-- **Decide disposition.** `merge` when the records describe the same root cause
-  through different lenses; `link` when they share evidence but are distinct;
-  `separate` when the mechanical signal was spurious. **Bias to `link` on
-  ambiguity** — a link is reversible, a merge is not.
+- **Decide the `decision` field** (enum `merge` | `link` | `separate`). `merge`
+  when the records describe the same root cause through different lenses; `link`
+  when they share evidence but are distinct; `separate` when the mechanical
+  signal was spurious. **Bias to `link` on ambiguity** — a link is reversible, a
+  merge is not.
 - **For `merge`:** author `merged_title`, `merged_summary`, `merged_detail`,
   and a combined `merged_recommendation` (reconcile conflicting remediation —
   surface the conflict if paths diverge, integrate if they reinforce). The

@@ -10,9 +10,9 @@
     "agent_severities": {
       "type": "object",
       "minProperties": 2,
-      "additionalProperties": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] }
+      "additionalProperties": { "$ref": "_defs.schema.json#/$defs/severity" }
     },
-    "chosen_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+    "chosen_severity": { "$ref": "_defs.schema.json#/$defs/severity" },
     "rationale": { "type": "string", "minLength": 30 }
   }
 }

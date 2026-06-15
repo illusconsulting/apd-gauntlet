@@ -1,0 +1,1048 @@
+finding:
+- schema_version: 1
+  id: nonrep-9b5f6283
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Home Assistant Core has no security audit log; consequential actions leave only logbook/logger, with no attributable security-event record
+  summary: No audit_log_store exists in Core; the only traces are the user-facing logbook (state history) and the diagnostic logger, neither of which is an attributable, security-purposed audit trail over the consequential-action surface.
+  detail: 'The defining Non-Repudiation fact for this system, confirmed code-grounded by
+
+    recon and the threat-model author across every surface: Home Assistant Core
+
+    ships NO security audit log. The persistence layer holds only (a) the Recorder
+
+    history DB (cev-a1000018 `session_scope`) — entity-state history, not a
+
+    security-event log — and (b) the diagnostic `logger`. There is no
+
+    `audit_log_store` (run-config EXCLUDED it after adversarial confirmation).
+
+
+    Measured against the consequential-action surfaces in BOTH active packs
+
+    (api-security consequential-actions: authentication events, authorization
+
+    decisions, session/token lifecycle, administrative configuration; and
+
+    mobile-applications consequential-actions: device-initiated backend
+
+    transactions, the authoritative server-side record), the coverage is zero
+
+    for security-event purposes. None of the following produces an attributable,
+
+    tamper-evident audit record: interactive login success/failure, MFA challenge
+
+    outcome, token/long-lived-token issuance/refresh/revocation (cev-a1000001/3),
+
+    permission allow/deny decisions (cev-a1000006/11), state writes and service
+
+    calls that actuate locks/alarms (cev-a1000012, cev-a1000015), administrative
+
+    configuration changes, add-on install, or backup create/restore.
+
+
+    The user-facing `logbook` is a state-change history surfaced to end users, not
+
+    a security audit: the brief''s own `/api/logbook` sample shows
+
+    `"context_user_id": null`, i.e. the actor is frequently absent even from the
+
+    state-history view (see Finding nonrep-00000002 for the attribution facet).
+
+
+    Severity is HIGH under the api-security rubric clause "Partial audit gap on
+
+    consequential-action flows" — here the gap is not partial but total over the
+
+    authentication/authorization/configuration surface, which impairs incident
+
+    reconstruction and breach-notification readiness. It is bounded below
+
+    CRITICAL ("Audit trail loss covering credential or payment events" in a
+
+    PCI/regulated context) because Home Assistant is a self-hosted home-automation
+
+    platform with no PCI/cardholder scope and no regulatory audit mandate that the
+
+    artifacts assert; the harm is loss of breach reconstruction and dispute
+
+    response across the privileged-action surface (presence/lock/alarm), which is
+
+    the rubric''s HIGH band, not its regulated-CRITICAL band. This is the maximum
+
+    across packs (the mobile pattern "audit trail for consequential actions exists
+
+    only on the device / no durable server-anchored record" is also HIGH).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state history'
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#sensitive-data-inventory, line 100-102'
+    excerpt: History / state DB (Recorder) ... presence, geolocation, camera/voice events, lock/alarm state
+  - artifact: api/rest.md
+    locator: /api/logbook sample, lines 360-383
+    excerpt: '"context_user_id": null'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-3(1)
+    - AU-12
+    - AU-6
+    - AU-10
+    mitre_attack: []
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Introduce a dedicated security audit-event stream in Core, separate from the Recorder history DB and the diagnostic logger, covering the enumerated consequential-action surface.
+    detail: 'Replace the implicit reliance on Recorder history (cev-a1000018) and the
+
+      diagnostic `logger` as the de-facto record with a purpose-built audit
+
+      subsystem in Core. Concretely: emit a structured audit event — with
+
+      timestamp, actor (the resolved user/refresh-token/system principal),
+
+      action, target resource, and outcome — at each enforcement chokepoint that
+
+      already exists: the REST auth middleware (cev-a1000009), the WS auth handshake
+
+      (cev-a1000010), token create/validate (cev-a1000001/2), the permission
+
+      decision points (cev-a1000006/11), the admin-gated state write
+
+      (cev-a1000012), and the service-call dispatch reached by webhook_call_service
+
+      (cev-a1000015). Route this stream to a sink distinct from `logbook`/`logger`
+
+      with its own retention and access controls. Tamper-resistance of that sink is
+
+      an Immutability concern (see related_concerns); attribution strength of the
+
+      actor field is an Authenticity concern.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-3, AU-12'
+    - 'external: CWE-778 Insufficient Logging'
+  related_concerns:
+  - immutability
+  - authenticity
+  - availability
+  cross_references:
+  - intg-4768c0f0
+- schema_version: 1
+  id: nonrep-af1c55d3
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: logbook entries carry null context_user_id, so even the state-history surface lacks an attributable actor for consequential state changes
+  summary: The only persisted trace of state changes (logbook) records context_user_id as null in the documented sample, so a consequential action cannot be tied to the user, token, or principal that caused it.
+  detail: 'Even setting aside that `logbook` is a history surface and not a security
+
+    audit (Finding nonrep-00000001), the trace it does provide lacks actor
+
+    attribution. The brief''s `/api/logbook` sample shows `"context_user_id": null`
+
+    — the field that would name the acting user is empty. AU-3 (Content of Audit
+
+    Records) and AU-10 (Non-Repudiation) both require that each record bind the
+
+    action to an actor; a null actor field defeats both.
+
+
+    This is structurally worse than a "system account" attribution because there
+
+    is no actor at all to even disambiguate. Two paths make the actor
+
+    unrecoverable by construction: (1) the bearer-less webhook path —
+
+    webhook_call_service runs every service call under a SYNTHESIZED
+
+    `registration_context` (cev-a1000015), not a user identity, so a leaked
+
+    webhook_id holder who actuates a lock is attributable to no human; and
+
+    (2) the supervisor-socket and signed-query auth paths in the middleware
+
+    (cev-a1000009) authenticate a request without necessarily resolving it to a
+
+    named interactive user.
+
+
+    Severity HIGH under the api-security rubric "Partial audit gap on
+
+    consequential-action flows" — attribution loss specifically named in that
+
+    clause ("logged ... without actor attribution; impairs incident
+
+    reconstruction"). The actor field is only as strong as the authentication
+
+    that would populate it; that strength question is Authenticity''s (the webhook
+
+    possession-only model and synthesized context are already filed there).
+
+    '
+  evidence:
+  - artifact: api/rest.md
+    locator: /api/logbook sample response, lines 360-383
+    excerpt: '"context_user_id": null'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'async_call(... context=registration_context(...)) # synthesized context, no per-entity permission check'
+  control_mappings:
+    nist_800_53r5:
+    - AU-3
+    - AU-3(1)
+    - AU-10
+    - AU-10(1)
+    - AU-12
+    mitre_attack: []
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Populate a resolved actor identity on every audit record, and for the synthesized webhook context record the registering device/user as the on-behalf-of principal.
+    detail: 'On the new audit stream (Finding nonrep-00000001), require a non-null actor
+
+      on every record. For interactive REST/WS requests the actor is the resolved
+
+      user from the validated access token (cev-a1000002). For the webhook path
+
+      (cev-a1000015), the synthesized `registration_context` must carry — and the
+
+      audit record must capture — the device''s `webhook_id`-to-config_entry binding
+
+      and the registering user (the bearer principal recorded at
+
+      cev-a1000014 registration time) as the on-behalf-of actor, so a
+
+      lock/alarm actuation through a leaked webhook_id is attributable to the
+
+      registered device rather than to no one. For supervisor-socket and
+
+      signed-query auth (cev-a1000009), record the service principal explicitly
+
+      rather than emitting a null actor.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-3, AU-10'
+  related_concerns:
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: nonrep-12328d11
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Consequential device-actuation calls (POST /api/states, service calls actuating locks/alarms) generate no attributable audit record
+  summary: The admin-gated state write and the arbitrary service-call dispatch that actuate physical devices (locks, alarms, switches) emit no security audit record naming who actuated what, defeating dispute response on the highest-impact action path.
+  detail: 'The system''s analogue to a PBM adjudication decision is device control + state
+
+    mutation. POST /api/states/{entity_id} (cev-a1000012, admin-or-deny) and the
+
+    service-call dispatch reached via webhook_call_service (cev-a1000015) actuate
+
+    physical devices — including locks and alarms, the highest-consequence
+
+    entities in the data inventory. Neither path writes a security audit record:
+
+    there is no audit_log_store (Finding nonrep-00000001), and the only trace is a
+
+    logbook state-change entry with a null actor (Finding nonrep-00000002).
+
+
+    The api-security consequential-action surface lists "Authorization decisions —
+
+    Allow and deny decisions on consequential operations (every decision, not just
+
+    denials)"; here the permission engine (cev-a1000006/11) makes a real allow/deny
+
+    decision per entity for reads and an admin gate for writes, but the decision
+
+    outcome is never recorded. A homeowner cannot, after the fact, prove which
+
+    token unlocked a door or disarmed an alarm, and an operator investigating an
+
+    incident has no record of which principal drove the actuation.
+
+
+    Severity HIGH under the api-security rubric "Partial audit gap on
+
+    consequential-action flows": the consequential-action path (device control) is
+
+    precisely the flow the clause protects, and the gap impairs incident
+
+    reconstruction and dispute response. Not critical: no PCI/credential-event
+
+    regulated mandate applies (per Finding nonrep-00000001''s bounding).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.post:L257-L275@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.is_admin: raise Unauthorized(entity_id=entity_id) # state WRITE admin-or-deny'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'async_call(data[ATTR_DOMAIN], data[ATTR_SERVICE], ... ) # arbitrary service call, no audit'
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000012 POST /api/states admin-or-deny, no audit
+    excerpt: compromised_admin_session actuates state/service with no attributable audit record over the user_permission_policy_engine surface
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-10
+    - AU-12
+    - AU-12(1)
+    mitre_attack: []
+    cwe:
+    - CWE-778
+    owasp_api_top10:
+    - API5:2023
+  recommendation:
+    posture: required
+    summary: Emit an audit record at the service-call dispatch and state-write enforcement points capturing actor, target entity/domain/service, decision outcome, and source.
+    detail: 'Instrument the admin gate at cev-a1000012 and the service-call dispatch at
+
+      cev-a1000015 to emit a structured audit record on every consequential
+
+      actuation: actor (resolved per Finding nonrep-00000002), target (entity_id /
+
+      domain / service), the permission decision outcome (the allow returned by the
+
+      cev-a1000006/11 engine, or the admin-gate pass), the source (REST / WS /
+
+      webhook / integration), and timestamp. This is the AU-2 auditable-events +
+
+      AU-12 generation pairing for the device-actuation surface specifically; the
+
+      record''s actor binding satisfies AU-10 non-repudiation for lock/alarm
+
+      actuation.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-12, AU-10'
+    - 'external: OWASP API Security Top 10 2023 API5 Broken Function Level Authorization'
+  related_concerns:
+  - authenticity
+  - integrity
+  cross_references:
+  - intg-d6c5e666
+  - intg-5df46115
+- schema_version: 1
+  id: nonrep-5dd8b9f0
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Authentication, token-lifecycle, and credential/MFA-change events in Core auth subsystem are not written to any audit record
+  summary: Login success/failure, access/refresh/long-lived token issuance, refresh, and revocation, and password/MFA changes produce no auditable security event, leaving credential-compromise reconstruction impossible.
+  detail: 'The api-security consequential-action surface mandates auditing of
+
+    authentication events (success/failure with categorization, MFA outcome,
+
+    password change), session lifecycle (token issuance/refresh/revocation with the
+
+    token identifier), and administrative credential operations. Home Assistant''s
+
+    auth subsystem performs all of these — it mints HS256 access JWTs per
+
+    refresh-token jwt_key (cev-a1000001), validates them at a central chokepoint
+
+    (cev-a1000002), hashes passwords with bcrypt (cev-a1000004), and revokes by
+
+    deleting the backing refresh token — but none of these lifecycle events is
+
+    recorded to an audit stream (no audit_log_store; Finding nonrep-00000001).
+
+
+    This is the most forensically damaging gap class. Long-lived access tokens are
+
+    user-minted, never auto-expire, and inherit owner all-access when owner-issued
+
+    (cev-a1000008); a leaked LLAT lets a third party act as the user with no
+
+    distinguishing record, and there is no audit of when it was created, last used,
+
+    or revoked. The api-security immutability-class note treats "Authentication
+
+    events" as forensic evidence whose retention should exceed the longest
+
+    detection window — but there is nothing to retain.
+
+
+    Severity HIGH under "Partial audit gap on consequential-action flows" applied
+
+    to the authentication and session-lifecycle surface. The api-security
+
+    CRITICAL clause ("Audit trail loss covering credential or payment events")
+
+    describes exactly this loss, but is scoped by its own text to regulated
+
+    (PCI/credential-event) contexts where "regulators treat absence of audit as
+
+    presumption of breach"; Home Assistant asserts no such regulatory anchor, so
+
+    this lands at HIGH rather than CRITICAL — but it is the strongest HIGH in this
+
+    lens and the closest to the CRITICAL boundary.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'jwt.encode({"iss": refresh_token.id ...}, refresh_token.jwt_key, algorithm="HS256")'
+  - artifact: auth/auth_index.md
+    locator: '#refresh-token-types, lines 49-51'
+    excerpt: Long-Lived Access Token (user-generated, long horizon) ... remain valid until a user deletes it
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-10
+    - AU-12
+    - IA-5
+    mitre_attack: []
+    cwe:
+    - CWE-778
+    owasp_api_top10:
+    - API2:2023
+  recommendation:
+    posture: required
+    summary: Audit every auth-subsystem lifecycle event — login success/failure, MFA outcome, token mint/refresh/revoke (by token id, not the token), and password/MFA change — to the dedicated audit stream.
+    detail: 'Instrument the credential and token chokepoints: emit a login-success and a
+
+      categorized login-failure event from the homeassistant provider''s
+
+      validate_login path (cev-a1000005); emit a token-issuance event capturing the
+
+      refresh-token id (cev-a1000001/cev-a1000003) — never the token or jwt_key
+
+      itself; emit a validation-rejection event when async_validate_access_token
+
+      rejects a revoked or inactive principal (cev-a1000002); emit a revocation
+
+      event on refresh-token delete; and emit password-change and MFA-enrollment
+
+      events from the homeassistant provider. Capturing the LLAT creation event and
+
+      last-use is the specific control that makes a leaked-LLAT incident
+
+      reconstructable. Storage tamper-resistance and retention of these records is
+
+      Immutability (see related_concerns).
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-10, IA-5'
+    - 'external: OWASP API Security Top 10 2023 API2 Broken Authentication'
+  related_concerns:
+  - authenticity
+  - immutability
+  - ephemeral
+  cross_references: []
+- schema_version: 1
+  id: nonrep-3b6ebb6c
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Supervisor privileged API logs only role-DENY misses as a warning; successful add-on install, backup, and container-exec calls leave no audit record
+  summary: SecurityMiddleware emits a diagnostic warning only when a role check fails; the host-root-equivalent operations it permits (add-on lifecycle, backup, Docker container exec) produce no record of the allowed action or its caller.
+  detail: 'The Supervisor is host-root-equivalent: it owns the Docker socket
+
+    (cev-b2000003) and can exec arbitrary commands inside any container including
+
+    Core (cev-b2000004). Its authorization chokepoint, SecurityMiddleware
+
+    token_validation (cev-b2000001), resolves SUPERVISOR_TOKEN to an add-on and
+
+    applies a per-role regex URL ACL. The ONLY logging on this path is a
+
+    `_LOGGER.warning("%s no role for %s")` on the DENY branch — the ALLOW branch
+
+    (the privileged action actually proceeding) emits nothing.
+
+
+    This inverts the audit requirement. The api-security consequential-action
+
+    surface requires "Allow and deny decisions on consequential operations (every
+
+    decision, not just denials)" and lists administrative configuration changes
+
+    (add-on install, backup configuration) as auditable. Here the permitted
+
+    host-root operations — install a third-party container, take/restore a backup
+
+    that bundles the entire secret estate (cev-b2000006), or reach the
+
+    container-exec primitive — are exactly what is NOT recorded, while only the
+
+    blocked attempts produce a transient diagnostic warning that is not a durable,
+
+    attributable audit stream.
+
+
+    Severity HIGH under "Partial audit gap on consequential-action flows" applied
+
+    to the most privileged administrative surface in the system; the
+
+    add-on->supervisor->Docker->host-root chain''s allowed operations are
+
+    unauditable. Tamper-resistance/retention of any future record is Immutability.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): ... else: _LOGGER.warning("%s no role for %s")'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.docker.manager.DockerAPI.container_run_inside:L935-L935@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'async def container_run_inside(self, name: str, command: str) -> ExecReturn:'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-6(3)
+    - AU-12
+    - AC-6(9)
+    mitre_attack: []
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Record an audit event on the ALLOW branch of SecurityMiddleware for every privileged Supervisor operation, naming the add-on principal, the path/operation, and the outcome.
+    detail: 'Extend cev-b2000001 to emit a structured audit event on the ALLOW branch (not
+
+      only the warning on DENY): capture the resolved add-on (`request_from`), the
+
+      requested path/operation, the matched role, and the result. Treat the
+
+      host-root primitives specifically — add-on install, backup create/restore
+
+      (cev-b2000006), and any route that reaches container_run_inside
+
+      (cev-b2000004) — as break-glass-equivalent operations whose audit record is
+
+      routed for independent review (the AC-6(9) privileged-function-logging +
+
+      AU-6(3) correlation pairing). The diagnostic `_LOGGER.warning` is not a
+
+      substitute for a durable, attributable audit stream.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-12, AC-6(9)'
+  related_concerns:
+  - authenticity
+  - immutability
+  cross_references:
+  - intg-d5c5bca5
+- schema_version: 1
+  id: nonrep-177fa3cc
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: os-agent host-root D-Bus methods (AddSSHAuthKey, ScheduleWipeDevice) emit no audit record of the operation or its caller
+  summary: The os-agent methods that write a root SSH key and schedule a destructive datadisk wipe perform the host-root operation with neither in-method caller authorization nor any audit record, so the most destructive host actions are unattributable.
+  detail: 'os-agent is the container-to-host-root bridge. AddSSHAuthKey (cev-c3000001)
+
+    appends an arbitrary key to root''s authorized_keys, and ScheduleWipeDevice
+
+    (cev-c3000002) schedules a datadisk/factory wipe — both over the system D-Bus,
+
+    and both (per the threat model and the code excerpt) with NO in-method caller
+
+    authorization. Neither method writes any audit record of who invoked it or
+
+    what was changed.
+
+
+    These are the single most destructive operations in the entire system, and
+
+    they are precisely the class the api-security break-glass/emergency-action
+
+    audit guidance targets ("Emergency credential rotation", host-level
+
+    override). A root-SSH-key addition that later enables a host compromise, or a
+
+    device wipe that destroys the instance and its backups, is afterward
+
+    attributable to no one at the HA tier. The only possible trace is whatever the
+
+    underlying OS/journald captures, which is outside HA''s audit posture and not
+
+    asserted anywhere in the artifacts.
+
+
+    Severity HIGH under "Partial audit gap on consequential-action flows" applied
+
+    to the host-root operation surface — the destructive, irreversible nature of
+
+    these specific operations (and their reachability from a compromised container)
+
+    makes the audit gap materially worse than a routine config change, but the
+
+    absence of a regulated-event mandate keeps it at HIGH rather than CRITICAL.
+
+    Whether D-Bus access alone should gate these (the missing caller authorization)
+
+    is an Authenticity/authorization concern, routed accordingly.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.AddSSHAuthKey:L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: 'file.WriteString(newKey) ... "key added for user root" # no in-method authz, no audit'
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: 'func (d system) ScheduleWipeDevice(...) # schedule factory-reset / datadisk wipe over D-Bus'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-12
+    - AC-6(9)
+    - AU-10
+    mitre_attack:
+    - technique: T1098
+      sub_technique: T1098.004
+      tactic: TA0003
+      rationale: AddSSHAuthKey writes an attacker-supplied key into root authorized_keys with no audit record, so the persistence-establishing SSH-key modification leaves no attributable trace at the HA tier.
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Have os-agent emit a structured host-operation audit record (operation, supplied parameters, calling D-Bus principal) for every destructive method, shipped off the host.
+    detail: 'Add audit-record emission to the os-agent host methods (cev-c3000001/2):
+
+      record the operation name, the supplied parameters (the SSH key fingerprint
+
+      being added; the wipe target), the D-Bus caller principal, a timestamp, and
+
+      the outcome. Because ScheduleWipeDevice can destroy the local instance and
+
+      its backups, the record must be shipped off-host synchronously (a
+
+      no-audit-no-action posture for the wipe specifically) rather than written
+
+      only locally where the wipe would erase it. The missing in-method caller
+
+      authorization is a separate Authenticity finding.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-12, AC-6(9)'
+  related_concerns:
+  - authenticity
+  - availability
+  - immutability
+  cross_references:
+  - intg-d5c5bca5
+- schema_version: 1
+  id: nonrep-48224ecc
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: FCM push relay forwards notifications without authenticating the caller and keeps no attributable record of who requested each push
+  summary: handleRequest accepts any valid-format push_token and forwards a notification with only per-token rate limiting; no caller authentication and no audit of the requesting party means a spoofed notification is fully deniable.
+  detail: 'The mobile-apps-fcm-push Cloud Function relay consumes a `push_token` from the
+
+    request body and forwards a notification to APNS/FCM, applying only a per-token
+
+    rate limit (429). handleRequest (cev-08000001) performs NO caller
+
+    authentication — any party with a valid-format token can drive the relay — and
+
+    keeps no attributable record of who requested a given push.
+
+
+    Under the mobile consequential-action surface ("push-initiated actions" and
+
+    third-party-integration "Webhook receipt with the signature-verification
+
+    outcome captured"), the relay is an inbound consequential surface whose
+
+    requests should be attributable. Because the relay neither authenticates the
+
+    caller nor records the request, a notification-spoofing event (a hostile party
+
+    pushing a fake "door unlocked" or "alarm disarmed" notification to a user''s
+
+    device) cannot afterward be tied to its origin, and the legitimate sender
+
+    cannot prove it did not send a disputed notification.
+
+
+    Severity MEDIUM under the api-security rubric "Logging gap on non-PII
+
+    operational surfaces" — the relay forwards notification content and shields
+
+    device push tokens from the instance, so the missing audit degrades incident
+
+    response for notification-spoofing but does not by itself expose PII or a
+
+    credential event; the rate-limit (cev-08000001) is a partial compensating
+
+    control that bounds abuse volume. It does not rise to HIGH because the relay is
+
+    a notification-forwarding tier, not the authoritative action recorder, and the
+
+    authoritative action audit gap is captured in the Core findings above.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: 'const { push_token: token } = req.body; if (!token) return res.status(403) ... checkRateLimit(token)'
+  - artifact: mobile/mobile-apps-fcm-push-README.md
+    locator: '#deploy-your-own, lines 27-47'
+    excerpt: forwards notifications ... without exposing device push tokens to the instance
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-10
+    - AU-12
+    mitre_attack: []
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: recommended
+    summary: Authenticate the calling instance to the relay and record an attributable, retained log of each push request (caller, target token reference, outcome).
+    detail: 'Add a caller-authentication step to handleRequest (cev-08000001) — a
+
+      per-instance shared secret or signed request — and emit a retained audit
+
+      record per push: the authenticated caller, a non-reversible reference to the
+
+      target token, the notification category, and the forward outcome. This makes
+
+      a disputed/spoofed notification attributable and lets the legitimate sender
+
+      rebut a denial. The existing per-token rate limit remains as the abuse-volume
+
+      control. Confidentiality of the push-token mapping is a separate concern.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-2, AU-10'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references: []
+- schema_version: 1
+  id: nonrep-ad088fc0
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Device-initiated consequential actions from the iOS/Android Companion apps have no authoritative server-side audit record with device/app-version attribution
+  summary: Backend actions driven from the mobile clients (service calls, webhook data, deep-link-triggered actions) reach Core's unaudited action path, so a forged or repackaged client and a genuine one are indistinguishable in any record — and none is attestation-attributed.
+  detail: 'The mobile-applications pack is explicit that the authoritative audit for a
+
+    device-initiated consequential action must sit server-side, carrying device,
+
+    app-version, and attestation-verdict attribution; an on-device-only trace is
+
+    "an audit gap, not an audit." Home Assistant''s mobile clients drive backend
+
+    actions over the network — service calls and state changes via the Core API
+
+    (cev-0a000005 mobile->Core), and bearer-less data/service calls via the
+
+    mobile_app webhook (cev-a1000015/16). These land on Core''s action path, which
+
+    writes no security audit record (Finding nonrep-00000001) and which, on the
+
+    webhook path, runs under a synthesized context (Finding nonrep-00000002).
+
+
+    Compounding this, the platform has no client-attestation surface at all: the
+
+    run-config confirmed Play Integrity / App Attest / DeviceCheck / SafetyNet are
+
+    ABSENT across both apps. So even if Core began auditing the action, the record
+
+    could not carry an attestation verdict to distinguish a genuine client on a
+
+    genuine device from a repackaged or Frida-instrumented one — the
+
+    mobile-pattern "consequential backend transactions ... logged server-side but
+
+    without device, app-version, or attestation-verdict attribution" applies in
+
+    its strongest form (here there is neither the server-side record NOR the
+
+    attestation signal).
+
+
+    Severity HIGH under the mobile-applications rubric: the mobile common-pattern
+
+    "audit trail for consequential actions ... no durable, server-anchored record"
+
+    is rated HIGH (the client-side-only-enforcement and reversibility modifiers
+
+    load, and the blast-radius modifier loads because the unattributed transaction
+
+    surface pivots to the backend at fleet scale via the shared Core API). The
+
+    device-trust modifier does not lower it because the gap is a missing
+
+    server-side invariant, not a device-local-only weakness.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id] # webhook_id is the authenticator'
+  - artifact: code-evidence-index.yaml
+    locator: code:iOS WebView (remote frontend) -> Core REST+WS API (user instance URL):L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: 'CROSS_HTTP_CALLS: Companion WebView loads + calls the user-configured Core instance'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-3
+    - AU-3(1)
+    - AU-10
+    - AU-12
+    - IA-3
+    mitre_attack: []
+    cwe:
+    - CWE-778
+    masvs:
+    - MASVS-AUTH-3
+  recommendation:
+    posture: required
+    summary: Record each device-initiated consequential action as an authoritative Core audit event carrying the device/registration identity and app version; the on-device event is corroborating only.
+    detail: 'On the new Core audit stream (Finding nonrep-00000001), every consequential
+
+      action originating from a mobile client must produce an authoritative
+
+      server-side record carrying the registered device identity (the
+
+      webhook_id-to-config_entry binding from cev-a1000014/16, or the resolved
+
+      user from the validated bearer for the API path) and the reported app
+
+      version. Treat any on-device log as corroborating, never authoritative. Adding
+
+      a real device-attestation signal (so the record can distinguish a genuine
+
+      from a repackaged client) is the Authenticity prerequisite that would
+
+      strengthen this attribution; its absence is filed under Authenticity.
+
+      '
+    references:
+    - 'external: OWASP MASVS-AUTH-3 (per-transaction step-up / attribution)'
+    - 'external: NIST SP 800-53r5 AU-3, AU-10, IA-3'
+  related_concerns:
+  - authenticity
+  - immutability
+  cross_references:
+  - intg-5df46115
+  - intg-3b33966f
+- schema_version: 1
+  id: nonrep-d23de889
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: Time-source discipline for event ordering (NTP topology, drift bounds, timestamp precision) is unspecified across Core, Supervisor, and os-agent
+  summary: No artifact specifies the time source, NTP discipline, drift bounds, or timestamp precision that any future audit (or the existing logbook timestamps) would rely on for reliable event ordering.
+  detail: 'AU-8 (Time Stamps) requires a reliable, disciplined time source so audit
+
+    events can be ordered and correlated, especially across the Core / Supervisor /
+
+    os-agent / host-Docker tiers that an incident must be reconstructed across. The
+
+    artifacts are silent on the time source: there is no NTP topology, no drift
+
+    bound, no fallback-on-time-source-failure behavior, and no timestamp-precision
+
+    statement (millisecond vs microsecond). The logbook entries carry timestamps
+
+    but the discipline behind them is undocumented.
+
+
+    Per the evidence-discipline block-on-ambiguity rule and the api-security
+
+    non-repudiation common pattern "No time-source policy — disposition:
+
+    uncertainty or blocked", this is recorded as BLOCKED rather than asserted: the
+
+    artifacts neither confirm a disciplined source nor confirm its absence. It is
+
+    pre-loaded here because any remediation of Findings 1-8 (introducing an audit
+
+    stream) depends on a trustworthy time source to make the records orderable and
+
+    correlatable across tiers.
+
+
+    Severity MEDIUM reflects that this is a prerequisite-for-correct-audit concern
+
+    rather than a confirmed gap; it would rise if a cross-tier correlation
+
+    requirement were confirmed against an undisciplined clock.
+
+    '
+  evidence:
+  - artifact: api/rest.md
+    locator: /api/logbook sample, lines 360-383
+    excerpt: '"when": "2016-...Z" # timestamp present; time-source discipline undocumented'
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#deployment-topologies, lines 108-116'
+    excerpt: Home Assistant OS (appliance image) ... Supervised ... Container ... Core
+  prerequisite_evidence:
+  - Time-source specification for Core/Supervisor/os-agent — NTP topology, time authority, drift bounds, behavior on time-source failure, and audit timestamp precision (ms/us)
+  - Whether timestamps are recorded in UTC with monotonic-on-write ordering across the Core/Supervisor/host-Docker tiers
+  control_mappings:
+    nist_800_53r5:
+    - AU-8
+    - AU-8(1)
+    mitre_attack: []
+  recommendation:
+    posture: recommended
+    summary: Specify and enforce a disciplined UTC time source with documented drift bounds for the audit stream introduced by Findings 1-8.
+    detail: 'Document and enforce the time source the audit subsystem (Finding
+
+      nonrep-00000001) will stamp records with: an NTP-disciplined UTC clock on the
+
+      HAOS appliance and the Supervised host, sub-second precision, a documented
+
+      drift bound, and a defined behavior when the time source is unavailable.
+
+      Without this, audit records across the Core / Supervisor / os-agent tiers
+
+      cannot be reliably ordered during incident reconstruction.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-8 Time Stamps'
+  related_concerns: []
+  cross_references: []
+- schema_version: 1
+  id: nonrep-30404306
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: No audit-read access control or segregation of duties is possible because no audit stream exists, and the existing logbook/logger have no separate audit-read role
+  summary: There is no audit-read role distinct from operator roles, no audit-of-audit-access, and no segregation of duties around the diagnostic/logbook traces; whether any future audit stream would have such controls is unspecified.
+  detail: 'AU-9 (Protection of Audit Information) and AC-5 (Separation of Duties) require
+
+    that audit-read access be gated by a role distinct from the operators whose
+
+    actions are audited, and that audit reads themselves be recorded. Because Home
+
+    Assistant has no security audit stream (Finding nonrep-00000001), there is
+
+    nothing to which such controls could attach, and the traces that do exist have
+
+    no segregation: the owner (cev-a1000008) is unconditional all-access and can
+
+    read the logbook/logger like everything else, and there is no audit-of-audit
+
+    meta-record.
+
+
+    This is recorded as BLOCKED on the design of any future audit subsystem: once
+
+    an audit stream is introduced (Findings 1-8), whether its read path is gated by
+
+    a separate role, whether operators who can actuate devices are excluded from
+
+    reading the audit of those actuations, and whether audit reads are themselves
+
+    logged are all open questions the current artifacts cannot answer. The
+
+    owner-all-access fact (cev-a1000008) suggests segregation of duties would be
+
+    difficult to achieve under the present role model without a design change —
+
+    but asserting that as a confirmed gap requires the future audit design, so it
+
+    is blocked rather than a gap.
+
+
+    Severity MEDIUM as a design-prerequisite concern; the owner-all-access model
+
+    makes it more than informational.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def access_all_entities(self, key): return True # owner unconditional all-access'
+  - artifact: auth/auth_index.md
+    locator: '#owner, lines 27-29'
+    excerpt: The onboarding user is the owner (all permissions)
+  prerequisite_evidence:
+  - Design of the audit-read access path for any future audit stream — whether a separate audit-reader role exists distinct from operator/admin/owner
+  - Whether audit reads are themselves recorded (audit-of-audit-access) and whether segregation of duties excludes actors from reading the audit of their own actions
+  control_mappings:
+    nist_800_53r5:
+    - AU-9
+    - AU-9(4)
+    - AU-9(6)
+    - AC-5
+    mitre_attack: []
+  recommendation:
+    posture: recommended
+    summary: When the audit stream is introduced, gate its read path with a dedicated audit-reader role separate from owner/admin/operator and record audit reads as meta-audit events.
+    detail: 'Design the audit subsystem (Finding nonrep-00000001) so its read path is
+
+      gated by a distinct audit-reader role rather than inheriting owner/admin
+
+      all-access (cev-a1000008), exclude an actor from reading the audit of their
+
+      own consequential actions where feasible, and emit a meta-audit event on each
+
+      audit read (AU-9(6) / AU-9(4)). The present owner-all-access model would
+
+      otherwise let the highest-blast-radius principal silently review and act on
+
+      the record of what has been observed.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-9, AC-5 Separation of Duties'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references: []

@@ -33,7 +33,7 @@
               "locator":  { "type": "string" }
             }
           },
-          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+          "confidence": { "$ref": "_defs.schema.json#/$defs/ordinal_level" }
         }
       }
     },
@@ -51,7 +51,7 @@
           "finding_id":    { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged|tmeval|apath)-[0-9a-f]{8}$" },
           "capability_id": { "type": "string", "pattern": "^(conf|intg|avail|dist|resil|ephem|auth|nonrep|immut|merged)-cap-[0-9a-f]{8}$" },
           "provenance": { "$ref": "#/properties/nodes/items/properties/provenance" },
-          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "confidence": { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
           "traversal_cost": { "type": "integer", "minimum": 1, "maximum": 100 }
         },
         "allOf": [

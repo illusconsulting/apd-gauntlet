@@ -1,0 +1,31 @@
+schema_version: 1
+findings_total: 65
+findings_pre_dedup: 65
+cross_lens_merged_clusters: 0
+linked_clusters: 0
+unresolved_authored_merges: 0
+bySeverity:
+  critical: 5
+  high: 40
+  medium: 16
+  low: 4
+  info: 0
+byDisposition:
+  gap: 35
+  blocked: 3
+  risk: 26
+  uncertainty: 1
+  ok: 0
+byTier:
+  trustworthiness: 26
+  scalability: 15
+  auditability: 24
+capabilities_total: 28
+capabilities_pre_dedup: 28
+capabilitiesByMaturity:
+  designed: 2
+  implemented: 26
+  tested: 0
+  operationalized: 0
+contradictions: 3
+severity_disagreements: 3

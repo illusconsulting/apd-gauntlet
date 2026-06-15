@@ -59,6 +59,31 @@
       "type": "string",
       "pattern": "^MASVS-(STORAGE|CRYPTO|AUTH|NETWORK|PLATFORM|CODE|RESILIENCE|PRIVACY)$",
       "description": "OWASP MASVS v2 control category (e.g. MASVS-STORAGE), without a control ordinal."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "informational"],
+      "description": "Canonical APD severity tier. 'informational' is the canonical DATA token used in every stored record. The report TEMPLATE's display token is the short form 'info' (CSS classes / sort keys); the data->display mapping is owned solely by tools/apd_gauntlet/severity.py (so metrics.schema.json — a report-facing rollup — enums 'info' by design). Never write 'info' into a pipeline record."
+    },
+    "ordinal_level": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Three-level ordinal scale reused by several DISTINCT concepts (confidence, feasibility, priority, extraction_confidence). $ref this for the shared SCALE; the field keeps its own name for its meaning."
+    },
+    "apd_goal": {
+      "type": "string",
+      "enum": ["confidentiality", "integrity", "availability", "distributed", "resilient", "ephemeral", "authenticity", "non_repudiation", "immutability"],
+      "description": "One of the nine APD security goals (three per tier)."
+    },
+    "apd_tier": {
+      "type": "string",
+      "enum": ["trustworthiness", "scalability", "auditability"],
+      "description": "One of the three APD tiers."
+    },
+    "disposition": {
+      "type": "string",
+      "enum": ["gap", "risk", "uncertainty", "blocked"],
+      "description": "A FINDING's disposition — what kind of finding it is. Distinct from cluster-decisions' decision field (merge/link/separate): different record type, different field, no shared namespace."
     }
   }
 }

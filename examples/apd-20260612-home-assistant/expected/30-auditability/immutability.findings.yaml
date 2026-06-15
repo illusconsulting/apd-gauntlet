@@ -1,0 +1,513 @@
+finding:
+- schema_version: 1
+  id: immut-1e09d798
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Recorder history DB persists physical-device event history with no append-only, WORM, or content-hash protection, so a compromised actor can silently rewrite or delete it
+  summary: The Recorder DB (session_scope) is an ordinary mutable SQLite/MariaDB/Postgres store; presence, geolocation, and lock/alarm state history can be altered or deleted by anyone with DB or host access, and there is no integrity tag to detect it.
+  detail: 'The Recorder history database is the only durable record of physical-device
+
+    events in Home Assistant — presence, geolocation/zones, camera/voice events,
+
+    and lock/alarm state changes. `helpers.recorder.session_scope` (cev-a1000018)
+
+    opens a plain SQLAlchemy session against an off-the-shelf SQLite/MariaDB/
+
+    Postgres backend; the code recon found no append-only enforcement, no WORM
+
+    storage tier, no row-level content hash or MAC, and no hash-chaining over the
+
+    history rows. An actor with DB-level or host-level access (the
+
+    internal_lateral_attacker or compromised_admin positions, or anyone who
+
+    restores a tampered backup) can UPDATE or DELETE history rows to erase the
+
+    record that a lock was opened or an alarm was disarmed at time T, with no
+
+    detection. Because there is also no separate tamper-evident security audit log
+
+    (run scope confirms audit_log_store ABSENT — only logbook/logger), the Recorder
+
+    DB is in practice the closest thing to a forensic event record, and it is fully
+
+    mutable.
+
+
+    This is the Immutability concern of long-term alteration of historical records,
+
+    distinct from (a) the Integrity write-time-tamper concern on .storage auth/policy
+
+    records, which is filed separately under Integrity (intg-4768c0f0), and distinct
+
+    from (b) the absence of an attributable security audit log, which is a
+
+    Non-Repudiation gap (routed via related_concerns). The whether-the-record-exists-
+
+    with-attribution question is Non-Repudiation; the can-the-existing-record-be-
+
+    silently-altered question is this finding.
+
+
+    Severity is high under the *api-security* rubric clause "Partial audit gap on
+
+    consequential-action flows" — the consequential-action surface here is physical
+
+    device control (locks/alarms/state writes), and the only retrospective record of
+
+    those actions sits in a mutable store with no alteration detection, which impairs
+
+    incident reconstruction. It is not scored critical: exploitation presupposes the
+
+    attacker already holds DB/host access (a lateral-only precondition), and the
+
+    Recorder is history rather than a credential/payment audit trail. The
+
+    api-security Immutability common-pattern "Audit log written to a mutable RDS
+
+    table; no append-only enforcement, no WORM substrate" is the governing template.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state history'
+  - artifact: architecture/adr/0018-supported-databases.md
+    locator: ADR-0018 supported databases (SQLite / MariaDB / PostgreSQL)
+    excerpt: supported recorder databases — SQLite, MariaDB, PostgreSQL
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - AU-9
+    - AU-9(2)
+    - AU-9(3)
+    - SI-7
+    - SI-7(8)
+    - AU-11
+    mitre_attack:
+    - technique: T1565
+      sub_technique: T1565.001
+      tactic: TA0040
+      rationale: A mutable Recorder DB lets an actor with DB/host access edit stored entity-state rows to falsify the record that a lock opened or alarm disarmed, the Stored Data Manipulation procedure.
+    - technique: T1070
+      sub_technique: null
+      tactic: TA0005
+      rationale: Deleting Recorder rows removes the only retrospective trace of a physical-device action, the Indicator Removal procedure, because no WORM/append-only tier preserves prior state.
+    cwe:
+    - CWE-353
+  recommendation:
+    posture: recommended
+    summary: Add an append-only / hash-chained integrity layer over the Recorder history rows so alteration or deletion of physical-event history is detected.
+    detail: 'For the Recorder store accessed via session_scope (cev-a1000018), introduce a
+
+      per-row or per-batch integrity chain: compute a running hash over each newly
+
+      inserted history row (event id, entity_id, state, last_changed) chained to the
+
+      prior row''s hash, store the chain head separately, and verify the chain on
+
+      history read or on a scheduled reconciliation job. For deployments that mandate
+
+      stronger guarantees, support an append-only backend (Postgres with a trigger
+
+      that rejects UPDATE/DELETE on the states/events tables, or WAL archival to a
+
+      WORM object store) as a documented hardening option in ADR-0018. Pair this with
+
+      the separate tamper-evident security audit log recommended by Non-Repudiation —
+
+      the Recorder is history, not the audit trail, and the two controls are
+
+      complementary, not interchangeable.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-9(3), SI-7(8)'
+  related_concerns:
+  - non_repudiation
+  - availability
+  cross_references:
+  - intg-4768c0f0
+- schema_version: 1
+  id: immut-95c2660e
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Supervisor backup archives have no object-lock/WORM/retention enforcement and no snapshot integrity verification, so the weakest-protected copy of everything can be deleted, rewritten, or replayed
+  summary: Full backups bundle config + recorder DB + secrets/tokens with no immutable storage tier, no retention or legal-hold control, and only an optional password (default None) — there is no content MAC, so an archive can be silently tampered and restored to inject state or creds.
+  detail: "Supervisor backups (`backups.backup.Backup.set_password`, cev-b2000006) bundle\nconfiguration, the Recorder DB, and the entire secret/token estate (password\nhashes, refresh-token jwt_keys, integration OAuth tokens) into full/partial\narchives. The only confidentiality control is an OPTIONAL password that defaults\nto None. From the Immutability lens the defect is the absence of any\nimmutability and integrity controls on these archives:\n\n- No WORM / object-lock / vault-lock storage tier (no S3 Object Lock, no Azure\n  immutable blob, no write-locked media) — a single compromised credential or a\n  host-root actor can DELETE the archives, the precise ransomware-resilience\n  gap.\n- No retention or lifecycle enforcement and no legal-hold capability — there is\n  no declared retention period, no automated lifecycle rule, and no override to\n  preserve a specific archive under investigation.\n- No snapshot integrity verification beyond the optional password — when the\n  password\
+    \ is unset (the default) the archive carries no MAC, no signed\n  manifest, and no content hash, so an archive can be modified offline and\n  restored to inject a forged jwt_key, an elevated user record, or falsified\n  recorder history with no tamper detection. Even with a password set, the\n  recon surfaced no separate signed manifest, so integrity rests on the\n  encryption mode rather than an explicit attestation.\n\nThe default-unencrypted property is a Confidentiality concern (routed via\nrelated_concerns); this finding is specifically the immutability/anti-ransomware/\ntamper-evidence gap on the backup tier.\n\nSeverity is high under the *api-security* Immutability common-pattern \"Backup\nretention meets minimum but no object-lock or compliance-mode immutability\napplied\" (here it is worse — no retention is even declared, NIST CP-9/MP-4),\nescalated by the fact that the backup is, per the system overview, the\n\"weakest-protected copy of everything\": its tampering or destruction\n\
+    simultaneously defeats the recorder-history record, the credential store, and\nthe recovery path for the single-host instance. It is not scored critical\nbecause exploitation of the tamper path presupposes write access to the archive\nstore (a lateral-only precondition), and destruction maps to an Availability\noutcome that is filed there.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'self._password: str | None = None ... def set_password(self, password): self._password = password or None'
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: §Sensitive-data inventory, backup artifact line
+    excerpt: full snapshots bundle config + recorder DB + secrets; backup password optional; weakest-protected copy
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CP-9
+    - CP-9(1)
+    - CP-9(8)
+    - MP-4
+    - AU-9(2)
+    - SI-7
+    mitre_attack:
+    - technique: T1490
+      sub_technique: null
+      tactic: TA0040
+      rationale: No object-lock/WORM on backups lets a host-root or credentialed actor delete the only recovery copy, the Inhibit System Recovery procedure, with no immutable tier to fall back to.
+    - technique: T1565
+      sub_technique: T1565.001
+      tactic: TA0040
+      rationale: A default backup has no MAC or signed manifest, so it can be modified offline and restored to inject a forged jwt_key or elevated user record, the Stored Data Manipulation procedure.
+    cwe:
+    - CWE-353
+  recommendation:
+    posture: required
+    summary: Provide an immutable backup destination (object-lock/WORM) with declared retention and legal-hold, and attach a signed integrity manifest to every archive verified on restore.
+    detail: 'Extend the backup path that set_password (cev-b2000006) gates so that (1) the
+
+      archive carries a content hash / signed manifest computed at create time and
+
+      re-verified before any restore, independent of whether the optional password is
+
+      set; (2) the official remote-backup targets document and support an immutable
+
+      tier — S3 Object Lock in compliance mode, Azure immutable blob, or equivalent —
+
+      with an operator-declared retention period and a legal-hold override; and (3)
+
+      the restore flow refuses an archive whose manifest does not verify. This closes
+
+      the ransomware-deletion path (object-lock), the silent-tamper-on-restore path
+
+      (signed manifest), and the no-retention gap in one change, and complements the
+
+      Confidentiality recommendation to make backup encryption non-optional.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 CP-9(8) Cryptographic Protection, MP-4 Media Storage'
+  related_concerns:
+  - confidentiality
+  - availability
+  cross_references:
+  - intg-4768c0f0
+- schema_version: 1
+  id: immut-165d9547
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  disposition: gap
+  severity: high
+  confidence: high
+  title: No hash-chained, append-only, or externally-anchored security log exists, so even the present logbook/logger records can be silently altered with no tamper-evidence
+  summary: Run scope confirms no security audit log (only logbook/logger), and code recon found no hash chain, Merkle anchoring, append-only tier, or external chain-head publication over any log surface — so whatever records do exist carry no alteration detection.
+  detail: 'Home Assistant has no tamper-evident security log. The run scope confirms
+
+    audit_log_store is ABSENT (only logbook/logger), and the Supervisor logs
+
+    privileged role misses merely as `_LOGGER.warning` (cev-b2000001) rather than to
+
+    any durable, protected store. From the Immutability lens specifically, the gap is
+
+    that there is no hash-chain or Merkle tree anchoring any log entries, no
+
+    append-only substrate, no external chain-head anchoring (no periodic publication
+
+    to a separate trust domain), and therefore no on-demand chain-verification
+
+    operation. The consequence: even the records that are produced (logbook entries,
+
+    logger output) can be edited or truncated by a host/file actor with no
+
+    detection, and a post-incident reviewer cannot prove the log they are reading is
+
+    the log that was written.
+
+
+    The Immutability/Non-Repudiation boundary applies cleanly here. The absence of an
+
+    attributable security log — the record-does-not-exist-with-attribution question —
+
+    is a Non-Repudiation gap and is routed there via related_concerns and the
+
+    cross-reference below. This finding is the distinct Immutability concern: even
+
+    granting the records that do exist, there is no mechanism (hash chain, WORM,
+
+    external anchor) that would make their alteration detectable. The synthesizer may
+
+    merge these into a single critical-rated record; per the lens guidance, an absent
+
+    hash-chain alone looks operational, but combined with the no-audit-log gap it
+
+    defeats accountability entirely.
+
+
+    Severity is high under the *api-security* Immutability common-pattern "Audit log
+
+    written to a mutable RDS table; no append-only enforcement, no WORM substrate"
+
+    (here the substrate is absent entirely, which is the strictly-worse case). It is
+
+    not independently critical in this lens because the dominant harm (no attributable
+
+    record at all) is owned by Non-Repudiation; this lens contributes the
+
+    tamper-evidence half of the merged concern.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): ... else: _LOGGER.warning("%s no role for %s")'
+  - artifact: org/SECURITY.md
+    locator: whole file (6-line pointer; no audit/hardening content)
+    excerpt: security-policy pointer to website; no embedded audit or log-protection content
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - AU-9
+    - AU-9(2)
+    - AU-9(3)
+    - AU-11
+    - SI-7(8)
+    mitre_attack:
+    - technique: T1070
+      sub_technique: null
+      tactic: TA0005
+      rationale: With no append-only or hash-chained log tier, an actor can edit or truncate logbook/logger output to remove evidence of their actions, the Indicator Removal procedure, with nothing to detect the gap.
+    cwe:
+    - CWE-778
+  recommendation:
+    posture: required
+    summary: Introduce a hash-chained append-only security log with periodic external chain-head anchoring and an on-demand verification operation.
+    detail: 'Stand up a dedicated security-event log (separate from the logbook/Recorder
+
+      history and from the _LOGGER.warning role-miss path, cev-b2000001) that records
+
+      the consequential-action surface — auth/token lifecycle, permission decisions,
+
+      add-on install, backup create/restore, container exec, host operations. Make it
+
+      append-only with a per-entry hash chained to the prior entry, publish the chain
+
+      head periodically to a separate trust domain (a remote bucket the local
+
+      host-root actor cannot rewrite, or an external timestamp authority), and expose
+
+      a verify-chain operation runnable on demand. This is the Immutability half; the
+
+      Non-Repudiation finding owns the completeness/attribution half (context_user_id
+
+      must be populated). The two together convert today''s silently-editable,
+
+      frequently-unattributed logbook into an accountable record.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AU-9(3) Cryptographic Protection of Audit Information'
+  related_concerns:
+  - non_repudiation
+  cross_references:
+  - intg-4768c0f0
+- schema_version: 1
+  id: immut-8eb14ea4
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Production configuration (configuration.yaml + .storage) has no required version history, signed-commit path, or declared-vs-actual drift detection, so config changes leave no immutable change record
+  summary: Config is YAML plus mutable plaintext .storage written in place by Store._write_prepared_data; there is no version-history requirement, no signed-commit/GitOps path as the only route to change, and no drift detection between a declared state and the running state.
+  detail: "Home Assistant production configuration is split between configuration.yaml and\nthe `.storage` JSON tree. `helpers.storage.Store._write_prepared_data`\n(cev-a1000017) overwrites each .storage record in place as plaintext UTF-8 JSON\ngated only by 0600 file permissions. From the Immutability lens this surfaces\nseveral distinct gaps in configuration-change traceability:\n\n- No required version history. .storage records are mutated in place with no\n  prior-version retention; there is no point-in-time representation of \"what the\n  configuration was at time T\" for root-cause analysis or for reconstructing the\n  formulary-equivalent state (the integration/permission/policy config) at the\n  moment a consequential action was authorized.\n- No config-as-code-only change path with signed commits. There is no requirement\n  that production config changes flow through a version-controlled, signed-commit,\n  protected-branch repository; the GUI and direct file edits write .storage\n\
+    \  directly, so there is no verifiable link between a running configuration and a\n  source commit, and no force-push / history-rewrite protection on any such link.\n- No declared-vs-actual drift detection. There is no declared-state representation\n  of the running configuration (no IaC/GitOps reconciliation), and consequently no\n  automated drift-detection or alert when the running .storage diverges from any\n  intended baseline.\n\nThe at-rest plaintext property and the absence of a write-time integrity MAC are\nhandled by Confidentiality and Integrity (intg-4768c0f0) respectively and are not\nre-litigated here; this finding is the configuration-history / change-traceability\ngap.\n\nSeverity is medium under the *api-security* Immutability common-pattern\n\"Configuration is partly IaC, partly manual; no drift detection between declared\nand actual state.\" The pattern rates RBAC-affecting config higher; here the\npermission/user records DO drive authorization, which argues for the\
+    \ upper end,\nbut the write-time-tamper-of-those-records harm is already filed as a high under\nIntegrity (intg-4768c0f0), so this lens scores the residual change-history /\ndrift gap at medium to avoid double-counting the same escalation harm (the\nrubric's do-not-average / do-not-inflate discipline).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: mode, json_data = json_helper.prepare_save_json(data, ...) ... write_method(path, json_data, self._private, mode=mode)
+  - artifact: architecture/adr/0021-YAML-integration-configuration-deprecation-policy.md
+    locator: ADR-0021 YAML integration configuration deprecation policy
+    excerpt: integration configuration migrates from YAML toward UI/.storage-managed config entries
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - CM-2(2)
+    - CM-2(3)
+    - CM-3
+    - CM-3(1)
+    - CM-6
+    mitre_attack: []
+  recommendation:
+    posture: recommended
+    summary: Retain prior versions of security-relevant .storage records and provide a declared-state drift-detection path so configuration changes leave an immutable, reconstructible history.
+    detail: 'For the security-relevant .storage records written by Store._write_prepared_data
+
+      (cev-a1000017) — auth, config_entries (integration/permission/policy) — retain
+
+      prior versions on each write (a versioned record or an append-only change log of
+
+      before/after snapshots), so the configuration state at any point in time is
+
+      reconstructible for RCA and for reconstructing the policy state that authorized
+
+      a given action. Where operators manage HA via a config repository, document a
+
+      signed-commit, protected-branch, no-force-push workflow as the supported
+
+      change path and provide a reconciliation/drift-check command that compares the
+
+      declared baseline to the running .storage and alerts on divergence. This pairs
+
+      with the Integrity recommendation (intg-4768c0f0) for a write-time integrity MAC
+
+      on the same records.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 CM-2(3) Retention of Previous Configurations, CM-3'
+  related_concerns:
+  - integrity
+  - authenticity
+  cross_references:
+  - intg-4768c0f0
+- schema_version: 1
+  id: immut-5a5ef5bd
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Add-on and base images reference mutable floating tags with no digest pinning or immutable deployment record, so what runs in a container is not reproducible from an immutable provenance reference
+  summary: The mosquitto add-on build_from pins to floating ghcr.io base-debian:trixie tags and the core Dockerfile takes an unpinned BUILD_FROM, so the image actually deployed can change under a fixed reference with no immutable digest, SBOM, or deploy-record linking running container to a frozen artifact.
+  detail: 'Home Assistant''s container build configuration references base images by mutable
+
+    floating tag rather than by immutable content digest. The official mosquitto
+
+    add-on build manifest pins both architectures to `ghcr.io/home-assistant/
+
+    <arch>-base-debian:trixie` — a rolling tag that the registry owner can re-point
+
+    at any time. The core Dockerfile takes `BUILD_FROM` as an unpinned ARG (`FROM
+
+    ${BUILD_FROM}`) and, while it pins the dockerfile *frontend* by digest
+
+    (`# syntax=docker/dockerfile@sha256:...`), the *base image* it builds on is not
+
+    digest-pinned. The Supervisor Dockerfile similarly builds `FROM
+
+    ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0` — a version tag,
+
+    still a mutable reference, not a digest.
+
+
+    From the Immutability lens the defect is twofold: (1) the deployed image is not
+
+    reproducible from an immutable reference — a fixed `:trixie` tag can resolve to
+
+    different content over time, so "the image we ran" cannot be frozen and re-proven;
+
+    and (2) there is no immutable deployment/provenance record — no retained per-deploy
+
+    SBOM, no signed image digest pinned at install, and no link from a running add-on
+
+    container back to a frozen artifact digest. This defeats the
+
+    code-and-artifact-deployment-record immutability class: there is no immutable
+
+    record of what artifact produced the current runtime behavior.
+
+
+    The supply-chain *trust* question (is the image signed/verified at install,
+
+    Cosign) is an Authenticity concern and is routed there via related_concerns; this
+
+    finding is specifically the immutability/reproducibility/deployment-record gap of
+
+    pinning to mutable references and retaining no frozen provenance.
+
+
+    Severity is medium under the *api-security* Immutability common-pattern "SBOM and
+
+    artifact-provenance history not retained — only current SBOM stored," at the
+
+    medium end because no contractual supply-chain-attestation obligation is evidenced
+
+    for this self-hosted platform; it would escalate where such an attestation is
+
+    required. The mosquitto add-on was flagged ephemeral on the `:trixie` floating
+
+    tag in the run scope, corroborating the mutable-reference observation.
+
+    '
+  evidence:
+  - artifact: infra/addon-mosquitto-build.yaml
+    locator: lines 2-4 build_from base-debian tags
+    excerpt: 'build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie; amd64: ...:trixie'
+  - artifact: infra/supervisor-Dockerfile
+    locator: line 1 ARG BUILD_FROM
+    excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0
+  - artifact: code-evidence-index.yaml
+    locator: addon/base mutable floating tag (no digest pin)
+    excerpt: supply_chain_attacker substitutes a mutable-tag image (Implant Internal Image) reaching supervisor_docker_control_plane
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - CM-8
+    - SR-4
+    - SR-4(3)
+    - SI-7
+    - AU-11
+    mitre_attack:
+    - technique: T1525
+      sub_technique: null
+      tactic: TA0003
+      rationale: A mutable floating base tag lets the upstream reference resolve to attacker-altered image content under a fixed build reference, the Implant Internal Image procedure, with no pinned digest to detect substitution.
+    cwe:
+    - CWE-829
+  recommendation:
+    posture: recommended
+    summary: Pin base and add-on images by immutable content digest, retain a per-deploy SBOM and signed digest, and link the running container to that frozen provenance record.
+    detail: 'Replace the floating `:trixie` base references in the add-on build manifests
+
+      (infra/addon-mosquitto-build.yaml lines 3-4) and the unpinned BUILD_FROM in the
+
+      core/supervisor Dockerfiles with `@sha256:<digest>` content-digest pins, mirroring
+
+      the digest pin already applied to the dockerfile syntax frontend in the core
+
+      Dockerfile (line 1). Retain a per-deploy SBOM and the signed image digest as an
+
+      immutable deployment record so the artifact that produced a running container is
+
+      reconstructible after the fact, and surface the deployed digest from the running
+
+      instance so it can be reconciled against that record. Pair this with the
+
+      Authenticity recommendation that add-on/base images be Cosign-signed AND verified
+
+      at install — pinning makes the artifact immutable; signing makes it attributable.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 SR-4(3) Provenance, CM-8 System Component Inventory'
+  related_concerns:
+  - authenticity
+  - integrity
+  cross_references: []

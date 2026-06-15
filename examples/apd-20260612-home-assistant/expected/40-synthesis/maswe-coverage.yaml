@@ -1,0 +1,81 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- maswe_id: MASWE-0006
+  name: Sensitive Data Stored Unencrypted in Private Storage Locations
+  category: MASVS-STORAGE
+  status: new
+  parent_masvs:
+  - MASVS-STORAGE-1
+  - MASVS-CRYPTO-2
+  finding_count: 1
+  finding_ids:
+  - conf-205c53a5
+  surfaces:
+  - code:common...database.DatabaseModule.DatabaseModule.provideAppDatabase:L38-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+- maswe_id: MASWE-0068
+  name: JavaScript Bridges in WebViews
+  category: MASVS-PLATFORM
+  status: placeholder
+  parent_masvs:
+  - MASVS-PLATFORM-2
+  - MASVS-STORAGE-2
+  finding_count: 1
+  finding_ids:
+  - conf-3060c50e
+  surfaces:
+  - '## Get access token, lines 44-55'
+  - code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+  - code:src.external_app.external_messaging.ExternalMessaging._sendExternal:L491-L505@505966e84f3a90347c66261592908a02a4118189
+- maswe_id: MASWE-0052
+  name: Insecure Certificate Validation
+  category: MASVS-NETWORK
+  status: new
+  parent_masvs:
+  - MASVS-NETWORK-1
+  finding_count: 1
+  finding_ids:
+  - auth-1787eae1
+  surfaces:
+  - code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+- maswe_id: MASWE-0099
+  name: Emulator Detection Not Implemented
+  category: MASVS-RESILIENCE
+  status: placeholder
+  parent_masvs:
+  - MASVS-RESILIENCE-1
+  finding_count: 1
+  finding_ids:
+  - auth-3794d338
+  surfaces:
+  - code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - run-config crown_jewels EXCLUDED note (attestation_tokens_and_jwts absent)
+- maswe_id: MASWE-0040
+  name: Insecure Authentication in WebViews
+  category: MASVS-AUTH
+  status: placeholder
+  parent_masvs:
+  - MASVS-AUTH-1
+  - MASVS-PLATFORM-2
+  finding_count: 1
+  finding_ids:
+  - auth-3dbf15e7
+  surfaces:
+  - '#clients, lines 14-23 (client_id is the website; custom-scheme redirect)'
+  - '#token / Authorization code, lines 72-82'
+- maswe_id: MASWE-0072
+  name: Universal XSS
+  category: MASVS-PLATFORM
+  status: placeholder
+  parent_masvs:
+  - MASVS-PLATFORM-2
+  - MASVS-CODE-4
+  finding_count: 1
+  finding_ids:
+  - auth-ea69d3a2
+  surfaces:
+  - '#get-access-token, line 19'
+  - code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+  - code:src.external_app.external_messaging.ExternalMessaging.fireMessage:L381-L428@505966e84f3a90347c66261592908a02a4118189

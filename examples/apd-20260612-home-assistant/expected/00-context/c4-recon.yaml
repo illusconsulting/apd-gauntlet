@@ -1,0 +1,193 @@
+schema_version: 1
+generated_by: code_recon
+# Grounded C4 input for apd-20260612-home-assistant (multi-repo / W1b).
+# Authored by apd-code-recon by TRANSCRIBING the already-completed code
+# reconnaissance into the c4-recon contract — no new CBM/index pass.
+#
+# DISCIPLINE (apd-c4-discipline):
+#   - Every container/edge cites a grounded source (code-architecture-brief.md
+#     §1/§2/§5/§6 or a code-evidence-index cev-* anchor). Nothing invented.
+#   - machine_extracted is FALSE on all six cross-boundary edges: brief §5/§7
+#     records that the CBM cross-repo-intelligence linker returned 0 auto-derivable
+#     CROSS_* edges (HA composes inter-service URLs at runtime / uses unix-socket
+#     + D-Bus IPC); all six were HAND-READ from the confirmed client/server call
+#     sites and re-emitted as kind:edge index anchors (cev-0a0000xx).
+#   - components: [] — L3 is BLOCKED. Brief §6 groups anchors by APD GOAL, not by
+#     architectural component; no artifact assigns symbols to named components.
+#   - The 14 non-code-bearing repos in code-evidence-index.yaml repos[] are NOT
+#     listed here; the assembler derives them as not_analyzed from repos[].
+#   - Containers carry DISPLAY names; assemble_c4 reconciles each process container
+#     to its repo by the `repo` field (PROCESS_KINDS service/compute/app/library),
+#     so the display name + kind ENRICH the repo-derived container and code nodes
+#     parent to it — no duplicate short-name container. data_store/external_system
+#     carry a `repo` for provenance only; they never claim the repo identity.
+#   - provenance.source is the schema enum (artifact|code_evidence); the source
+#     filename is folded into the locator. ids/badge counts are minted by
+#     assemble-c4, never here (ADR-0020).
+
+containers:
+  # --- 9 code-bearing repos (brief §7: every priority repo produced anchors) ---
+  - name: "Home Assistant Core"
+    kind: service
+    repo: "home-assistant-repos-core"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1 Surface inventory (REST /api port 8123, WS /api/websocket handshake, bearer-less mobile_app webhook)"
+    analysis_state: analyzed
+
+  - name: "Supervisor"
+    kind: service
+    repo: "home-assistant-repos-supervisor"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1 Supervisor privileged API (http://supervisor/, SUPERVISOR_TOKEN + per-role URL ACL) + ingress proxy"
+    analysis_state: analyzed
+
+  - name: "os-agent"
+    kind: compute
+    repo: "home-assistant-repos-os-agent"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitive: root SSH-key write)"
+    analysis_state: analyzed
+
+  - name: "ha CLI"
+    kind: app
+    repo: "home-assistant-repos-cli"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-d4000001 (client.helper.URLHelper — ha CLI builds the Supervisor API URL)"
+    analysis_state: analyzed
+
+  - name: "iOS Companion"
+    kind: app
+    repo: "home-assistant-repos-iOS"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1/§2 iOS Companion: WebView external bus + ServerManagerKeychain (default Keychain accessibility class)"
+    analysis_state: analyzed
+
+  - name: "Android Companion"
+    kind: app
+    repo: "home-assistant-repos-android"
+    provenance:
+      source: "artifact"
+      locator: "code-architecture-brief.md §1/§2 Android Companion: LaunchActivity deep-link entry + DatabaseModule.provideAppDatabase (unencrypted Room) + AndroidKeyStore mTLS key"
+    analysis_state: analyzed
+
+  - name: "Frontend (Lit/TS)"
+    kind: app
+    repo: "home-assistant-repos-frontend"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-07000001 (src.external_app.external_messaging.ExternalMessaging._sendExternal — Lit/TS JS external-auth bridge served remotely into the WebView)"
+    analysis_state: analyzed
+
+  - name: "FCM push relay"
+    kind: service
+    repo: "home-assistant-repos-mobile-apps-fcm-push"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-08000002 (__route__POST__/api/sendPushNotification — Firebase Cloud Function push relay)"
+    analysis_state: analyzed
+
+  - name: "Add-ons"
+    kind: service
+    repo: "home-assistant-repos-addons"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-09000001 (mosquitto.config.yaml — add-on manifest declaring auth_api role + host mounts that SecurityMiddleware enforces)"
+    analysis_state: analyzed
+
+  # --- Data stores (brief §2 Persistence surface) ---
+  - name: ".storage (plaintext JSON config/secrets/tokens)"
+    kind: data_store
+    repo: "home-assistant-repos-core"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-a1000017 (Store._write_prepared_data — .storage written as plaintext UTF-8 JSON, no encryption-at-rest; brief §2)"
+    analysis_state: analyzed
+
+  - name: "Recorder history DB"
+    kind: data_store
+    repo: "home-assistant-repos-core"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-a1000018 (recorder.session_scope — presence/geolocation/lock/alarm state history; brief §2)"
+    analysis_state: analyzed
+
+  - name: "Supervisor backup archive store"
+    kind: data_store
+    repo: "home-assistant-repos-supervisor"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-b2000006 (Backup.set_password — full snapshots default to UNENCRYPTED; brief §2)"
+    analysis_state: analyzed
+
+  - name: "Android Room AppDatabase"
+    kind: data_store
+    repo: "home-assistant-repos-android"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-f6000003 (DatabaseModule.provideAppDatabase — unencrypted SQLite: location_history + session-token rows; brief §2)"
+    analysis_state: analyzed
+
+  # --- Host infrastructure outside the repos (makes cev-0a000003 resolvable) ---
+  - name: "host-dockerd"
+    kind: external_system
+    repo: "host-infra"
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000003 (Supervisor <-> host Docker daemon over shared /run/docker.sock; brief §5 — host infra, outside repos[])"
+    analysis_state: not_analyzed
+
+components: []
+
+uses_edges:
+  - from: "ha CLI"
+    to: "Supervisor"
+    label: "CROSS_HTTP_CALLS — ha CLI invokes the Supervisor API (runtime viper endpoint host)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000001"
+
+  - from: "Supervisor"
+    to: "Home Assistant Core"
+    label: "CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls the Core API as a privileged client (runtime container IP)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000002"
+
+  - from: "Supervisor"
+    to: "host-dockerd"
+    label: "CROSS_CHANNEL — Supervisor controls the host Docker daemon over the shared /run/docker.sock unix socket (host-root control plane)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000003"
+
+  - from: "Supervisor"
+    to: "os-agent"
+    label: "CROSS_CHANNEL — Supervisor calls os-agent host primitives over the system D-Bus (io.hass.os; container -> host root)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000004"
+
+  - from: "iOS Companion"
+    to: "Home Assistant Core"
+    label: "CROSS_HTTP_CALLS — iOS Companion WKWebView loads + calls the user-configured Core REST/WS instance (user-entered self-hosted URL)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000005"
+
+  - from: "Home Assistant Core"
+    to: "FCM push relay"
+    label: "CROSS_HTTP_CALLS — Core mobile_app integration pushes to the FCM relay Cloud Function, which forwards to APNS/FCM (external Firebase URL)"
+    machine_extracted: false
+    provenance:
+      source: "code_evidence"
+      locator: "code-evidence-index.yaml#cev-0a000006"

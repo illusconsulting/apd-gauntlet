@@ -10,17 +10,31 @@ import pathlib
 
 import yaml
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
-SCHEMA = REPO / "schemas" / "code-evidence-index.schema.json"
+SCHEMA_DIR = REPO / "schemas"
+SCHEMA = SCHEMA_DIR / "code-evidence-index.schema.json"
 HA_INDEX = (
     REPO / "tests" / "fixtures" / "runs" / "c4-home-assistant"
     / "00-context" / "code-evidence-index.yaml"
 )
 
 
+def _build_registry() -> Registry:
+    # code-evidence-index now $refs _defs.schema.json (apd_relevance); the
+    # registry must carry every schema by $id so the cross-file ref resolves.
+    resources = []
+    for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
+
+
 def _validator() -> Draft202012Validator:
-    return Draft202012Validator(json.loads(SCHEMA.read_text()))
+    return Draft202012Validator(json.loads(SCHEMA.read_text()), registry=_build_registry())
 
 
 def _base_entry() -> dict:

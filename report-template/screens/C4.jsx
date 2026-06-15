@@ -8,26 +8,15 @@
 // (the never-invent default: components are OMITTED unless an artifact grouped
 // symbols, so most runs render L2 -> L4). Clicking a component shows its L4 code.
 //
-// Every node carries a FINDINGS badge (finding_count) rendered by GraphView's
-// own `[badge]` label, plus a separate CAPABILITY badge in the per-node list.
-// The honest banner surfaces unlocalized doc-anchored findings (no code locator)
-// and "not_analyzed" containers (repos with zero code anchors) — never rendered
-// as "0 findings = clean". The interactive render + zoom toolbar live in the
-// shared compound-capable GraphView (components.jsx); we feed it compound=true +
-// fcose so containment (n.parent) lays out as nested boxes.
-
-// EN2: decorate a C4 graph-node label with a terse kind hint for the kinds the
-// cytoscape shape cue can't carry strongly on its own. data_store reads as a
-// store; external_system as an [ext] dependency. Other kinds (service, app,
-// compute, function/class/route/module) keep the bare label — the drill-list
-// kind chip carries the full typing there. Never invents: bare label when no
-// kind. Defined at module scope so it has no per-render identity churn.
-function _c4KindLabel(n) {
-  const label = n.label || "";
-  if (n.kind === "data_store") return `🗄 ${label}`;
-  if (n.kind === "external_system") return `${label} [ext]`;
-  return label;
-}
+// Every node carries a FINDINGS badge (finding_count) plus a separate CAPABILITY
+// badge in the per-node drill list. The honest banner surfaces unlocalized
+// doc-anchored findings (no code locator) and "not_analyzed" containers (repos
+// with zero code anchors) — never rendered as "0 findings = clean". The
+// interactive render is the deterministic tiered system-map C4TierGraph
+// (components.jsx): plain-React+SVG tiers (System → Container → Component →
+// Code) laid out by c4BackboneLayout, with orthogonal connectors drawn by the
+// C4EdgeLayer SVG overlay. data_store / external_system kind cues + the
+// kind chip are rendered by C4TierGraph itself off node.kind.
 
 function C4({ data, onOpenFinding }) {
   const c4 = data.c4_model;
@@ -46,7 +35,7 @@ function C4({ data, onOpenFinding }) {
   }
 
   const allNodes = c4.nodes || [];
-  const allEdges = c4.edges || [];
+  // c4.edges is consumed by C4TierGraph (via model={c4}) / C4EdgeLayer, not here.
   const nodeById = React.useMemo(() => {
     const m = {};
     allNodes.forEach((n) => { m[n.id] = n; });
@@ -119,79 +108,12 @@ function C4({ data, onOpenFinding }) {
     return { c4NodeIds: [...c4NodeIds], unmappedHops };
   }, [selectedOverlayPath, overlayPaths, assetToC4, findingToC4]);
 
-  // Feed the highlight into GraphView via its path-cross-link contract: a single
-  // synthetic "path" whose member nodes are the mapped c4 nodes. GraphView
-  // highlights edges, so we expand to the induced edges between mapped nodes.
-  const overlayHighlight = React.useMemo(() => {
-    if (!overlay.c4NodeIds.length) return null;
-    const idset = new Set(overlay.c4NodeIds);
-    const edgeIds = allEdges
-      .filter((e) => idset.has(e.source) && idset.has(e.target))
-      .map((e) => e.id);
-    return [{ id: "__overlay__", edgeIds, nodeIds: overlay.c4NodeIds }];
-  }, [overlay, c4]);
-
-  // Build the visible subgraph for the current drill level. Memoized so the
-  // GraphView `graph` prop identity is stable across unrelated re-renders.
-  const graph = React.useMemo(() => {
-    const isTop = (lvl) => lvl === "system" || lvl === "person" || lvl === "external_system";
-    let keep = new Set();
-
-    if (!selectedContainer) {
-      // L1 + L2: tops + every container.
-      allNodes.forEach((n) => {
-        if (isTop(n.type) || n.type === "container") keep.add(n.id);
-      });
-    } else if (!selectedComponent) {
-      // Container drill: tops (for context) + the selected container + its
-      // direct children (components) OR, when it has no component children,
-      // its code descendants. Also keep sibling containers dimmed-in for the
-      // "uses" edges to remain meaningful.
-      allNodes.forEach((n) => { if (isTop(n.type) || n.type === "container") keep.add(n.id); });
-      const kids = childrenOf[selectedContainer] || [];
-      const compKids = kids.filter((id) => nodeById[id] && nodeById[id].type === "component");
-      const codeKids = kids.filter((id) => nodeById[id] && nodeById[id].type === "code");
-      (compKids.length ? compKids : codeKids).forEach((id) => keep.add(id));
-      // When components exist, also pull each component's code as a 3rd tier.
-      compKids.forEach((cid) => (childrenOf[cid] || []).forEach((id) => keep.add(id)));
-    } else {
-      // Component drill: the container, the component, and that component's code.
-      allNodes.forEach((n) => { if (isTop(n.type) || n.type === "container") keep.add(n.id); });
-      keep.add(selectedComponent);
-      (childrenOf[selectedComponent] || []).forEach((id) => keep.add(id));
-    }
-
-    const nodes = allNodes
-      .filter((n) => keep.has(n.id))
-      .map((n) => ({
-        id: n.id,
-        // EN2: non-default kinds (data_store / external_system) get a small
-        // inline label hint so the typing reads even where the cytoscape shape
-        // cue is subtle. _c4KindLabel falls back to the bare label otherwise.
-        label: _c4KindLabel(n),
-        type: n.type,
-        // EN2: carry the C4 node kind onto the graph node so GraphView's
-        // additive data(kind) passthrough can cue distinctive kinds
-        // (data_store / external_system …). Purely additive in GraphView.
-        kind: n.kind || null,
-        parent: keep.has(n.parent) ? n.parent : null,
-        badge: n.badge,
-        hot: n.analysis_state === "not_analyzed" ? false : (n.badge ? true : false),
-        provenance: n.provenance,
-      }));
-    const ids = new Set(nodes.map((n) => n.id));
-    const edges = allEdges
-      .filter((e) => ids.has(e.source) && ids.has(e.target))
-      .map((e) => ({ id: e.id, source: e.source, target: e.target, type: "uses", label: e.label }));
-    return { nodes, edges };
-  }, [c4, selectedContainer, selectedComponent]);
-
-  // GraphView reports the tapped node id back to us via its dedicated onNodeTap
-  // callback (the c4 node id IS the cytoscape node id), so a graph node click
-  // drills exactly like the NodeRow buttons. Null-safe: a tap on a node with no
-  // drill target (code / system / person / external_system) is a NO-OP — it
-  // never resets the view to nowhere.
-  const onNodeTap = React.useCallback((nodeId) => {
+  // Drill reducer — a tiered node-box click drills exactly like the NodeRow
+  // buttons. The c4 node id is the DOM box's data-id. Null-safe: a tap on a
+  // node with no drill target (code/system/person/external_system) is a NO-OP
+  // and never resets the view to nowhere. Passed to C4TierGraph as onDrill and
+  // reused by NodeRow.onClick below.
+  const onDrill = React.useCallback((nodeId) => {
     if (!nodeId) return;
     const n = nodeById[nodeId];
     if (!n) return;
@@ -219,7 +141,7 @@ function C4({ data, onOpenFinding }) {
         <button
           type="button"
           className="c4-node-row__name"
-          onClick={() => onNodeTap(n.id)}
+          onClick={() => onDrill(n.id)}
           title={na ? "Not analyzed — no code anchors in this repo" : `Drill into ${n.label}`}
         >
           <span className={`c4-level-chip c4-level-chip--${n.type}`}>{n.type}</span>
@@ -382,14 +304,13 @@ function C4({ data, onOpenFinding }) {
 
       <section className="c4-scene__graph">
         <h3 className="c4-scene__section-h">Architecture graph</h3>
-        <GraphView
-          graph={graph}
-          layout="fcose"
-          compound={true}
-          idBase="apd-c4-graph"
-          paths={overlayHighlight}
-          selectedPathId={overlayHighlight ? "__overlay__" : null}
-          onNodeTap={onNodeTap}
+        <C4TierGraph
+          model={c4}
+          selectedContainer={selectedContainer}
+          selectedComponent={selectedComponent}
+          overlayC4NodeIds={overlay.c4NodeIds}
+          onDrill={onDrill}
+          onOpenFinding={onOpenFinding}
         />
       </section>
 

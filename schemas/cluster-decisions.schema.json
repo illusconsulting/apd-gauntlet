@@ -14,10 +14,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["group_id", "disposition"],
+        "required": ["group_id", "decision"],
         "properties": {
           "group_id": { "type": "string", "minLength": 1 },
-          "disposition": { "type": "string", "enum": ["merge", "link", "separate"] },
+          "decision": { "type": "string", "enum": ["merge", "link", "separate"] },
           "merged_title": { "type": "string", "minLength": 10 },
           "merged_summary": { "type": "string", "minLength": 10 },
           "merged_detail": { "type": "string", "minLength": 20 },
@@ -43,7 +43,7 @@
               }
             }
           },
-          "chosen_severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+          "chosen_severity": { "$ref": "_defs.schema.json#/$defs/severity" },
           "severity_rationale": { "type": "string", "minLength": 10 },
           "links": {
             "type": "array",

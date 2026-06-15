@@ -1,0 +1,249 @@
+capability:
+- schema_version: 1
+  id: ephem-cap-f5d582d0
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Short-lived (1800s) access tokens backed by a separate longer-lived refresh token
+  description: 'Home Assistant separates a short-lived access token from a longer-lived
+
+    refresh token. The token endpoint issues access tokens with
+
+    `"expires_in": 1800` (`auth_api.md` §"Authorization code"), i.e. a 30-minute
+
+    TTL, and the access token is an HS256 JWT carrying an expiry enforced at
+
+    validation: `async_validate_access_token` decodes with a 10-second leeway
+
+    and the issuer/expiry check (cev-a1000002), and `async_create_access_token`
+
+    sets `exp = access_token_expiration` (cev-a1000001). This bounds the window
+
+    in which a stolen access token (as opposed to the refresh token) is usable
+
+    to 30 minutes plus the 10-second clock-skew leeway.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: access-token TTL is 1800s and is enforced at the central
+
+    validation chokepoint (cev-a1000002) for both REST and WS auth. NOT
+
+    addressed by this capability: the backing refresh token never expires and
+
+    is not rotated (finding ephem-0a000001), Long-Lived Access Tokens last 10
+
+    years (ephem-0a000002), and the per-token jwt_key never rotates
+
+    (ephem-0a000003) — so the short access-token TTL is undermined by the
+
+    unbounded refresh-token lifetime behind it. This capability is the
+
+    access-token half only.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: §'Authorization code', lines 86-95
+    excerpt: '"expires_in": 1800'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"])
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - SC-23
+    masvs:
+    - MASVS-AUTH-2
+  caveats:
+  - The 30-minute access-token TTL is undercut by the never-expiring, non-rotating refresh token behind it (ephem-0a000001).
+  - No refresh-token rotation, so the short access-token window is not paired with reuse detection.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: ephem-cap-fb2d6d4d
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Short-lived signed paths with a 30-second default expiry for GET authorization
+  description: 'For GET requests that cannot carry an Authorization header (downloads,
+
+    frontend-initiated links), Home Assistant issues signed paths that are
+
+    "meant to be shortlived" with a documented default expiration of 30 seconds
+
+    (`auth_api.md` §"Signed paths"). The signed path''s validity is additionally
+
+    tied to the lifetime of the creating refresh token: "If the refresh token is
+
+    deleted, the signed url is no longer valid", "If the user is deleted, the
+
+    signed url is no longer valid", and "If Home Assistant is restarted, the
+
+    signed url is no longer valid". This is a genuine ephemeral-by-design
+
+    credential: a tightly time-boxed, revocation-coupled authorization grant.
+
+    '
+  maturity: designed
+  scope: 'Confirmed from the developer auth documentation: signed paths default to a
+
+    30-second expiry and are invalidated on refresh-token deletion, user
+
+    deletion, and restart. Maturity is designed (the evidence is the auth
+
+    reference doc, not a code-recon pointer to the signing/verification
+
+    implementation). NOT addressed: the access check is only at request receipt
+
+    — a response that streams past the expiry continues (documented caveat), and
+
+    this capability covers only the signed-path GET surface, not the bearer or
+
+    webhook paths.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: §'Signed paths', lines 235, 260-265
+    excerpt: Signed paths … are meant to be shortlived. The default expiration is 30 seconds
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - SC-23
+  caveats:
+  - 'Maturity is designed: grounded in the auth reference doc, not a code-recon evidence pointer to the signing implementation.'
+  - Access is validated only at request receipt; a long-running response continues past expiry (documented).
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: ephem-cap-5113fad9
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Immediate refresh-token revocation that cascades to all access tokens and drops live WebSocket sockets
+  description: 'A user-initiated revocation channel exists and is immediate: revoking a
+
+    refresh token "will immediately revoke the refresh token and all access
+
+    tokens that it has ever granted" (`auth_api.md` §"Revoking a refresh
+
+    token"). In code, `async_validate_access_token` rejects any access token
+
+    whose backing refresh token has been revoked or whose user is inactive
+
+    (cev-a1000002), and the WebSocket auth phase registers a revoke callback
+
+    (`async_register_revoke_token_callback`) so that an already-established WS
+
+    connection is torn down when its token is revoked (cev-a1000010). This means
+
+    the system has a working revocation propagation path even though tokens do
+
+    not auto-expire.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: revocation is immediate, cascades from refresh token to all
+
+    derived access tokens, and propagates to live WS sockets via a revoke
+
+    callback (cev-a1000010). NOT addressed: revocation is user-initiated and
+
+    manual — there is no automatic time-based expiry or rotation that would
+
+    fire revocation without a human action (findings ephem-0a000001/0a000002),
+
+    and the WS revoke-callback cross-cuts Distributed for connection-lifecycle.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: §'Revoking a refresh token', line 140
+    excerpt: immediately revoke the refresh token and all access tokens that it has ever granted
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_register_revoke_token_callback
+  - artifact: code-evidence-index.yaml
+    locator: immediate refresh-token revocation cascades to access tokens
+    excerpt: immediate refresh-token revocation cascade mitigates compromised_user_session_token persistence against user_credentials_store
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - AC-12(1)
+    - IA-5
+    - SC-10
+    mitre_attack:
+    - technique: T1550
+      sub_technique: T1550.001
+      tactic: TA0008
+      rationale: Immediate cascade revocation invalidates a stolen application access token at the validation chokepoint, countering its continued use.
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: User-driven account/token management lets an operator immediately revoke a refresh token and all access tokens it granted.
+  caveats:
+  - Revocation is manual/user-initiated; there is no automatic time-based expiry to trigger it (ephem-0a000001).
+  related_concerns:
+  - authenticity
+  - distributed
+- schema_version: 1
+  id: ephem-cap-32f4a499
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Core container image pins base layers and binaries by immutable sha256 digest
+  description: 'The Core container build follows immutable-infrastructure digest pinning:
+
+    the Dockerfile frontend is pinned by digest
+
+    (`# syntax=docker/dockerfile@sha256:2780b5c3…`) and the bundled go2rtc
+
+    binary is copied from a digest-pinned image
+
+    (`go2rtc:1.9.14@sha256:675c318b…`) (`infra/core-Dockerfile` lines 1, 29).
+
+    Pinning by `@sha256:` makes the resolved bytes reproducible across rebuilds
+
+    rather than dependent on what a floating tag points at, which is the
+
+    immutable-infrastructure / deploy-replace property the Ephemeral lens looks
+
+    for at the image layer.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the Core image: the buildkit frontend and the go2rtc binary
+
+    are digest-pinned (IaC evidence, infra/core-Dockerfile). NOT addressed —
+
+    and explicitly contradicted — at the add-on layer: the mosquitto add-on base
+
+    is pinned to the mutable floating `:trixie` tag (finding ephem-0a000007), so
+
+    this capability does not extend to the add-on build path. The `BUILD_FROM`
+
+    arg of the Core image itself is supplied externally and its digest-pinning
+
+    is not visible in this Dockerfile.
+
+    '
+  evidence:
+  - artifact: infra/core-Dockerfile
+    locator: line 1, syntax directive
+    excerpt: '# syntax=docker/dockerfile@sha256:2780b5c3bab67f1f76c781860de469442999ed1a0d7992a5efdf2cffc0e3d769'
+  - artifact: infra/core-Dockerfile
+    locator: line 29, go2rtc COPY --from
+    excerpt: go2rtc:1.9.14@sha256:675c318b23c06fd862a61d262240c9a63436b4050d177ffc68a32710d9e05bae
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - CM-2(2)
+    - SA-15(7)
+  caveats:
+  - Digest pinning is confirmed only for the Core image; the add-on build uses a mutable floating tag (ephem-0a000007).
+  - The Core BUILD_FROM base image arg is external to this Dockerfile; its pinning is not confirmed here.
+  related_concerns:
+  - authenticity
+  - immutability

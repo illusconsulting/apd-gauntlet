@@ -26,18 +26,11 @@
         "synthesizer", "threat_model_evaluator", "attack_path_analyzer"
       ]
     },
-    "apd_tier": { "type": "string", "enum": ["trustworthiness", "scalability", "auditability"] },
-    "apd_goal": {
-      "type": "string",
-      "enum": [
-        "confidentiality", "integrity", "availability",
-        "distributed", "resilient", "ephemeral",
-        "authenticity", "non_repudiation", "immutability"
-      ]
-    },
-    "disposition": { "type": "string", "enum": ["gap", "risk", "uncertainty", "blocked"] },
-    "severity":    { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
-    "confidence":  { "type": "string", "enum": ["high", "medium", "low"] },
+    "apd_tier": { "$ref": "_defs.schema.json#/$defs/apd_tier" },
+    "apd_goal": { "$ref": "_defs.schema.json#/$defs/apd_goal" },
+    "disposition": { "$ref": "_defs.schema.json#/$defs/disposition" },
+    "severity":    { "$ref": "_defs.schema.json#/$defs/severity" },
+    "confidence":  { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
     "title":   { "type": "string", "minLength": 10, "maxLength": 200 },
     "summary": { "type": "string", "minLength": 10 },
     "detail":  { "type": "string", "minLength": 20 },
@@ -125,14 +118,7 @@
     },
     "related_concerns": {
       "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "confidentiality", "integrity", "availability",
-          "distributed", "resilient", "ephemeral",
-          "authenticity", "non_repudiation", "immutability"
-        ]
-      }
+      "items": { "$ref": "_defs.schema.json#/$defs/apd_goal" }
     },
     "cross_references": {
       "type": "array",

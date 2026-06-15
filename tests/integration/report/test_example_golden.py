@@ -18,8 +18,25 @@ from apd_gauntlet.report.build import build_report
 from apd_gauntlet.report.taxonomy import invalidate_all
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-FIXTURE_RUN = REPO / "examples" / "apd-20260601-claim-event-bus" / "expected"
-GOLDEN = REPO / "tests" / "fixtures" / "report-html" / "claim-event-bus-golden-data.js"
+CLAIM_RUN = REPO / "examples" / "apd-20260601-claim-event-bus" / "expected"
+HA_RUN = REPO / "examples" / "apd-20260612-home-assistant" / "expected"
+# (fixture_run, golden_data_js) pairs. The claim-event-bus golden is a small,
+# standalone fixture. The Home Assistant report's data.js is ~4 MB; rather than
+# duplicate it as a second fixture, its golden IS the committed in-tree report
+# data.js — regenerate the report (`apd-gauntlet build-report <run>`) and
+# re-commit when a transform intentionally changes the output.
+GOLDEN_CASES = [
+    pytest.param(
+        CLAIM_RUN,
+        REPO / "tests" / "fixtures" / "report-html" / "claim-event-bus-golden-data.js",
+        id="claim-event-bus",
+    ),
+    pytest.param(
+        HA_RUN,
+        HA_RUN / "40-synthesis" / "report-html" / "data.js",
+        id="home-assistant",
+    ),
+]
 
 
 @pytest.fixture(autouse=True)
@@ -46,10 +63,13 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_data_js_matches_golden(tmp_path: pathlib.Path) -> None:
-    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
+@pytest.mark.parametrize("fixture_run, golden", GOLDEN_CASES)
+def test_data_js_matches_golden(
+    tmp_path: pathlib.Path, fixture_run: pathlib.Path, golden: pathlib.Path
+) -> None:
+    out, _ = build_report(fixture_run, out_dir=tmp_path)
     actual = _normalize((out / "data.js").read_text())
-    expected = _normalize(GOLDEN.read_text())
+    expected = _normalize(golden.read_text())
     if actual != expected:
         diff = "\n".join(difflib.unified_diff(
             expected.splitlines(), actual.splitlines(),
@@ -57,12 +77,15 @@ def test_data_js_matches_golden(tmp_path: pathlib.Path) -> None:
         ))
         pytest.fail(
             "data.js differs from golden — if intentional, update "
-            f"{GOLDEN.relative_to(REPO)} and commit. Diff:\n{diff[:4000]}"
+            f"{golden.relative_to(REPO)} and commit. Diff:\n{diff[:4000]}"
         )
 
 
-def test_all_expected_files_present(tmp_path: pathlib.Path) -> None:
-    out, _ = build_report(FIXTURE_RUN, out_dir=tmp_path)
+@pytest.mark.parametrize(
+    "fixture_run", [CLAIM_RUN, HA_RUN], ids=["claim-event-bus", "home-assistant"]
+)
+def test_all_expected_files_present(tmp_path: pathlib.Path, fixture_run: pathlib.Path) -> None:
+    out, _ = build_report(fixture_run, out_dir=tmp_path)
     expected = {
         "index.html", "app.js", "data.js", "styles.css", "screens.css",
         "vendor-licenses.txt", "build-manifest.txt",

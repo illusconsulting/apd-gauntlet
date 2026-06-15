@@ -1,0 +1,56 @@
+capability:
+- schema_version: 1
+  id: avail-cap-f97d3d6b
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  title: Per-token rate limiting on the Firebase push-relay request handler
+  description: 'The mobile-apps-fcm-push relay request handler (cev-08000001) enforces a
+
+    per-push_token rate limit: it reads push_token from the request body,
+
+    rejects a missing token with 403, and calls
+
+    rateLimiter.checkRateLimit(token), returning 429 when the per-token quota
+
+    is exceeded. This is an identity-dimensioned (per-token) resource-
+
+    consumption control with explicit breach behavior on the one availability
+
+    surface in scope that actually has a throttle.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the push-relay request handler (functions/handlers.js,
+
+    cev-08000001): per-token (push_token) rate limit with a 429 breach
+
+    response. NOT addressed: this is the only rate limit observed anywhere in
+
+    the Home Assistant availability surface — the Core REST boundary, the WS
+
+    auth_required handshake, the bearer-less mobile_app webhook entrypoint, and
+
+    the Supervisor API all lack a documented rate limit (see availability
+
+    findings avail-0002webh, avail-0003rest, and the threat-model D cells). The
+
+    relay limit bounds notification-spam abuse, not relay-outage availability.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: rateLimitInfo = await rateLimiter.checkRateLimit(token)
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+  caveats:
+  - Per-token threshold, time window, and reset behavior are not stated in the artifacts; only the existence of the per-token check and the 429 response are confirmed.
+  - No caller authentication on the relay (Authenticity concern); the rate limit is keyed on an unauthenticated push_token.
+  - This control protects only the push-relay tier, not the Core or Supervisor availability surfaces.
+  related_concerns:
+  - resilient
+  - authenticity

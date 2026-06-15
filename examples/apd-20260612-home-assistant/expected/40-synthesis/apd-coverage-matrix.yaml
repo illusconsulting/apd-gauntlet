@@ -1,0 +1,2184 @@
+components:
+- name: .storage config_entries + OAuth2 token storage (integration secret vault)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: .storage/auth + auth_provider.homeassistant (user credentials store)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: 00-SYSTEM-OVERVIEW.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings:
+      - intg-8b158cfe
+      capabilities: []
+      posture: gapped
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings:
+      - dist-66e3e208
+      - dist-a0ea311c
+      - dist-b98dc00a
+      - dist-d08ed969
+      capabilities:
+      - dist-cap-43ec806f
+      posture: gapped_and_covered
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: 00-context/threat-model-normalized.yaml
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - tmeval-5c02d052
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: 40-synthesis/asset-graph.yaml
+  cells:
+    confidentiality:
+      findings:
+      - apath-5390f103
+      - apath-58d38c18
+      - apath-81ea3f91
+      - apath-b3a517fc
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings:
+      - apath-2f99eb69
+      - apath-9cb7577b
+      capabilities: []
+      posture: gapped
+    availability:
+      findings:
+      - apath-df6be909
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - apath-069b3352
+      - apath-1c6e6d93
+      - apath-6f901446
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings:
+      - apath-37351bc1
+      - apath-5943bd97
+      - apath-89ebba8a
+      - apath-a5e48149
+      - apath-d37b5700
+      - apath-ff51339a
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings:
+      - apath-95a6ebd6
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: 40-synthesis/attack-paths.yaml
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - apath-98522141
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: APNS / FCM push providers
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Android hardware-backed Keystore (mTLS client-cert private key)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Container base images (alpine/debian) + wheels/npm supply chain
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Core REST API (/api/, port 8123)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Core WebSocket API (/api/websocket)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Core auth subsystem (providers, users, groups, tokens)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Core integration runtime (2000+ in-process integrations)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Core user permission policy engine
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Docker socket / host-root control plane (/run/docker.sock)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: External devices / cloud services reached by integrations (outbound)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: HAOS appliance image (Buildroot operating-system)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Home Assistant Core (Python asyncio app)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Lit/TS web frontend SPA
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Privileged Supervisor API (http://supervisor/)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Reverse-proxy / internet edge to Core (port 8123)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Supervisor backup archive store (full/partial snapshots)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Supervisor ingress proxy (X-Remote-User-* header injection)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: api/native-app/sending-data.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings:
+      - intg-2b80f92e
+      capabilities: []
+      posture: gapped
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: api/native-app/setup.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-053957f3
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: api/rest.md
+  cells:
+    confidentiality:
+      findings:
+      - conf-ef49b4b0
+      capabilities: []
+      posture: gapped
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings:
+      - nonrep-af1c55d3
+      - nonrep-d23de889
+      capabilities: []
+      posture: gapped
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: architecture/adr/0018-supported-databases.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings:
+      - dist-69bbaf5c
+      capabilities: []
+      posture: gapped
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: auth/auth_api.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-9915ab91
+      - ephem-db8641be
+      capabilities:
+      - ephem-cap-5113fad9
+      - ephem-cap-f5d582d0
+      - ephem-cap-fb2d6d4d
+      posture: gapped_and_covered
+    authenticity:
+      findings:
+      - auth-3dbf15e7
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: auth/auth_auth_module.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-7162fd48
+      - auth-dfed90e4
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: auth/auth_index.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-a879a34b
+      - ephem-f19f24f9
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: auth/frontend-external-authentication.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-ea69d3a2
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: code-evidence-index.yaml
+  cells:
+    confidentiality:
+      findings:
+      - conf-2029ce78
+      - conf-205c53a5
+      - conf-3060c50e
+      - conf-7a74a4a0
+      - conf-a30cca33
+      - merged-a49cb674
+      capabilities:
+      - conf-cap-01c47d42
+      - conf-cap-1044dbb3
+      - conf-cap-277b2364
+      - conf-cap-88473a97
+      posture: gapped_and_covered
+    integrity:
+      findings:
+      - merged-66801b1b
+      capabilities:
+      - intg-cap-70ef26f7
+      - intg-cap-7a54b1a7
+      - intg-cap-e18bb24c
+      - intg-cap-e88c8857
+      - intg-cap-ecebb879
+      posture: gapped_and_covered
+    availability:
+      findings:
+      - avail-235dacf0
+      - avail-4be2dd70
+      - avail-5af6fee5
+      - avail-754cfc01
+      - avail-a292763c
+      - avail-a2cfd41c
+      capabilities:
+      - avail-cap-f97d3d6b
+      posture: gapped_and_covered
+    distributed:
+      findings: []
+      capabilities:
+      - dist-cap-827afb47
+      posture: covered
+    resilient:
+      findings: []
+      capabilities:
+      - resil-cap-6a038f48
+      - resil-cap-c76c9240
+      - resil-cap-fa365a2d
+      posture: covered
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-1787eae1
+      - auth-23048c0c
+      - auth-3794d338
+      - auth-3f2314a4
+      - auth-6924f467
+      capabilities:
+      - auth-cap-42c6a13f
+      - auth-cap-8144e2be
+      - auth-cap-e9f55df8
+      - auth-cap-eba3a527
+      - auth-cap-f01e6108
+      posture: gapped_and_covered
+    non_repudiation:
+      findings:
+      - merged-0ccd3ea6
+      capabilities:
+      - nonrep-cap-510a35c7
+      - nonrep-cap-e865e0d3
+      posture: gapped_and_covered
+    immutability:
+      findings:
+      - merged-1119b0be
+      capabilities:
+      - immut-cap-5e14aa20
+      posture: gapped_and_covered
+- name: configuration.yaml + .storage config directory
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: infra/addon-mosquitto-build.yaml
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings:
+      - ephem-9c322627
+      capabilities: []
+      posture: gapped
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings:
+      - immut-5a5ef5bd
+      capabilities: []
+      posture: gapped
+- name: infra/core-Dockerfile
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities:
+      - ephem-cap-32f4a499
+      posture: covered
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities:
+      - immut-cap-937d14c1
+      posture: covered
+- name: infra/supervisor-Dockerfile
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-8a380b11
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mobile/supervisor-apps-security.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings:
+      - auth-4e7d1059
+      - auth-8f0d8172
+      capabilities: []
+      posture: gapped
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: mobile_app integration backend (registrations + webhook in Core)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: org/SECURITY.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings:
+      - resil-93866115
+      capabilities: []
+      posture: gapped
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: os-agent (Go D-Bus host daemon)
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings: []
+      capabilities: []
+      posture: silent
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent
+- name: repos/supervisor-README.md
+  cells:
+    confidentiality:
+      findings: []
+      capabilities: []
+      posture: silent
+    integrity:
+      findings: []
+      capabilities: []
+      posture: silent
+    availability:
+      findings:
+      - merged-4f0fe6c1
+      capabilities: []
+      posture: gapped
+    distributed:
+      findings: []
+      capabilities: []
+      posture: silent
+    resilient:
+      findings: []
+      capabilities: []
+      posture: silent
+    ephemeral:
+      findings: []
+      capabilities: []
+      posture: silent
+    authenticity:
+      findings: []
+      capabilities: []
+      posture: silent
+    non_repudiation:
+      findings: []
+      capabilities: []
+      posture: silent
+    immutability:
+      findings: []
+      capabilities: []
+      posture: silent

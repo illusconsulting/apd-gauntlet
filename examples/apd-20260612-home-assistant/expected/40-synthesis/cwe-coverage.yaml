@@ -1,0 +1,312 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- cwe_id: CWE-400
+  name: Uncontrolled Resource Consumption
+  abstraction: class
+  parent_pillar: CWE-664
+  finding_count: 1
+  finding_ids:
+  - avail-235dacf0
+  surfaces:
+  - code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-770
+  name: Allocation of Resources Without Limits or Throttling
+  abstraction: base
+  parent_pillar: CWE-400
+  finding_count: 3
+  finding_ids:
+  - avail-4be2dd70
+  - avail-754cfc01
+  - avail-a292763c
+  surfaces:
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-404
+  name: Improper Resource Shutdown or Release
+  abstraction: class
+  parent_pillar: CWE-664
+  finding_count: 1
+  finding_ids:
+  - avail-5af6fee5
+  surfaces:
+  - code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+  - code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+- cwe_id: CWE-295
+  name: Improper Certificate Validation
+  abstraction: base
+  parent_pillar: CWE-287
+  finding_count: 3
+  finding_ids:
+  - auth-1787eae1
+  - conf-2029ce78
+  - tmeval-5c02d052
+  surfaces:
+  - code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - entries[entry_id=tm-f8db6c3a]
+  - entries[entry_id=tm-f8db6c3a].threat
+  - finding[id=auth-1787eae1]
+  - finding[id=conf-2029ce78]
+- cwe_id: CWE-312
+  name: Cleartext Storage of Sensitive Information
+  abstraction: base
+  parent_pillar: CWE-311
+  finding_count: 3
+  finding_ids:
+  - conf-205c53a5
+  - conf-7a74a4a0
+  - conf-a30cca33
+  surfaces:
+  - code:Sources.App.AppDelegate.AppDelegate.setupFirebase:L1-L1@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+  - code:Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain:L6-L35@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+  - code:common...database.DatabaseModule.DatabaseModule.provideAppDatabase:L38-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+- cwe_id: CWE-922
+  name: Insecure Storage of Sensitive Information
+  abstraction: class
+  parent_pillar: CWE-664
+  finding_count: 1
+  finding_ids:
+  - conf-205c53a5
+  surfaces:
+  - code:common...database.DatabaseModule.DatabaseModule.provideAppDatabase:L38-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+  - code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+- cwe_id: CWE-749
+  name: Exposed Dangerous Method or Function
+  abstraction: base
+  parent_pillar: CWE-284
+  finding_count: 1
+  finding_ids:
+  - conf-3060c50e
+  surfaces:
+  - '## Get access token, lines 44-55'
+  - code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+  - code:src.external_app.external_messaging.ExternalMessaging._sendExternal:L491-L505@505966e84f3a90347c66261592908a02a4118189
+- cwe_id: CWE-200
+  name: Exposure of Sensitive Information to an Unauthorized Actor
+  abstraction: class
+  parent_pillar: CWE-668
+  finding_count: 1
+  finding_ids:
+  - conf-ef49b4b0
+  surfaces:
+  - GET /api/config response, lines 111-128
+  - code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-20
+  name: Improper Input Validation
+  abstraction: class
+  parent_pillar: CWE-707
+  finding_count: 2
+  finding_ids:
+  - intg-2b80f92e
+  - intg-8b158cfe
+  surfaces:
+  - '#response, line 88'
+  - '#update-device-location, gps_accuracy row'
+  - '#what-home-assistant-is, lines 20-22 (trust posture)'
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-345
+  name: Insufficient Verification of Data Authenticity
+  abstraction: class
+  parent_pillar: CWE-693
+  finding_count: 3
+  finding_ids:
+  - auth-23048c0c
+  - auth-3f2314a4
+  - intg-8b158cfe
+  surfaces:
+  - '#what-home-assistant-is, lines 20-22 (trust posture)'
+  - code:client.helper.URLHelper:L45-L71@c5f716eb5f62c337c603e144f23cd74ac25da98e
+  - code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:supervisor.homeassistant.api.HomeAssistantAPI._ensure_access_token -> homeassistant.components.api
+    (Core /auth/token):L145-L173@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+  - registration response, lines 73-87 (webhook_id / secret optional)
+- cwe_id: CWE-1188
+  name: Initialization of a Resource with an Insecure Default
+  abstraction: base
+  parent_pillar: CWE-1419
+  finding_count: 2
+  finding_ids:
+  - dist-66e3e208
+  - dist-69bbaf5c
+  surfaces:
+  - '#decision, lines 36-54'
+  - '#what-home-assistant-is, lines 12-22'
+  - code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-1189
+  name: Improper Isolation of Shared Resources on System-on-a-Chip (SoC)
+  abstraction: base
+  parent_pillar: CWE-653
+  finding_count: 2
+  finding_ids:
+  - dist-b98dc00a
+  - dist-d08ed969
+  surfaces:
+  - '#trust-boundaries, lines 88-89'
+  - '#what-home-assistant-is, lines 20-22'
+  - code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:supervisor.docker.manager.DockerAPI.__init__:L271-L279@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+- cwe_id: CWE-613
+  name: Insufficient Session Expiration
+  abstraction: base
+  parent_pillar: CWE-672
+  finding_count: 3
+  finding_ids:
+  - ephem-053957f3
+  - ephem-9915ab91
+  - ephem-f19f24f9
+  surfaces:
+  - code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - "\xA7'Access and refresh tokens', line 41"
+  - "\xA7'Long-lived access token', line 151"
+  - "\xA7'Refresh token types', line 50"
+  - "\xA7'Registering the device', line 71"
+- cwe_id: CWE-1357
+  name: Reliance on Insufficiently Trustworthy Component
+  abstraction: class
+  parent_pillar: CWE-710
+  finding_count: 1
+  finding_ids:
+  - ephem-9c322627
+  surfaces:
+  - line 29, go2rtc COPY --from
+  - lines 2-4, build_from amd64
+- cwe_id: CWE-269
+  name: Improper Privilege Management
+  abstraction: class
+  parent_pillar: CWE-284
+  finding_count: 1
+  finding_ids:
+  - ephem-a879a34b
+  surfaces:
+  - code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - "\xA7'Owner', lines 28-29"
+- cwe_id: CWE-636
+  name: Not Failing Securely ('Failing Open')
+  abstraction: class
+  parent_pillar: CWE-657
+  finding_count: 1
+  finding_ids:
+  - resil-93866115
+  surfaces:
+  - code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - full file (6 lines)
+- cwe_id: CWE-287
+  name: Improper Authentication
+  abstraction: class
+  parent_pillar: CWE-284
+  finding_count: 1
+  finding_ids:
+  - auth-3dbf15e7
+  surfaces:
+  - '#clients, lines 14-23 (client_id is the website; custom-scheme redirect)'
+  - '#token / Authorization code, lines 72-82'
+- cwe_id: CWE-306
+  name: Missing Authentication for Critical Function
+  abstraction: base
+  parent_pillar: CWE-287
+  finding_count: 2
+  finding_ids:
+  - auth-3f2314a4
+  - auth-6924f467
+  surfaces:
+  - code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:supervisor (D-Bus client) -> system.system.AddSSHAuthKey (os-agent):L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+  - code:system.system.AddSSHAuthKey:L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+  - code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+  - registration response, lines 73-87 (webhook_id / secret optional)
+- cwe_id: CWE-290
+  name: Authentication Bypass by Spoofing
+  abstraction: base
+  parent_pillar: CWE-1390
+  finding_count: 1
+  finding_ids:
+  - auth-4e7d1059
+  surfaces:
+  - '#authenticating-a-user-when-using-ingress, lines 40-48'
+  - code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+- cwe_id: CWE-862
+  name: Missing Authorization
+  abstraction: class
+  parent_pillar: CWE-285
+  finding_count: 1
+  finding_ids:
+  - auth-6924f467
+  surfaces:
+  - code:supervisor (D-Bus client) -> system.system.AddSSHAuthKey (os-agent):L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+  - code:system.system.AddSSHAuthKey:L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+  - code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+- cwe_id: CWE-308
+  name: Use of Single-factor Authentication
+  abstraction: base
+  parent_pillar: CWE-1390
+  finding_count: 1
+  finding_ids:
+  - auth-7162fd48
+  surfaces:
+  - '#owner, lines 27-29'
+  - '#setup-flow, lines 30-31'
+  - code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+- cwe_id: CWE-1395
+  name: Dependency on Vulnerable Third-Party Component
+  abstraction: class
+  parent_pillar: CWE-1357
+  finding_count: 1
+  finding_ids:
+  - auth-8a380b11
+  surfaces:
+  - config.yaml (manifest declares role/mounts, no provenance)
+  - lines 36-56 (build/install, no SBOM/provenance emission)
+- cwe_id: CWE-494
+  name: Download of Code Without Integrity Check
+  abstraction: base
+  parent_pillar: CWE-345
+  finding_count: 1
+  finding_ids:
+  - auth-8f0d8172
+  surfaces:
+  - '#making-a-secure-app, line 33'
+  - line 1 (BUILD_FROM floating tag)
+  - lines 36-48 (wheels install, no attestation)
+- cwe_id: CWE-291
+  name: Reliance on IP Address for Authentication
+  abstraction: variant
+  parent_pillar: CWE-290
+  finding_count: 1
+  finding_ids:
+  - auth-dfed90e4
+  surfaces:
+  - '#authentication-providers, lines 12-16'
+  - '#configuration-example, lines 52-63'
+- cwe_id: CWE-829
+  name: Inclusion of Functionality from Untrusted Control Sphere
+  abstraction: base
+  parent_pillar: CWE-669
+  finding_count: 1
+  finding_ids:
+  - immut-5a5ef5bd
+  surfaces:
+  - line 1 ARG BUILD_FROM
+  - lines 2-4 build_from base-debian tags
+- cwe_id: CWE-778
+  name: Insufficient Logging
+  abstraction: base
+  parent_pillar: CWE-223
+  finding_count: 1
+  finding_ids:
+  - nonrep-af1c55d3
+  surfaces:
+  - /api/logbook sample response, lines 360-383
+  - code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca

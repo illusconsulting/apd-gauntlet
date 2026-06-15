@@ -1,0 +1,1043 @@
+finding:
+- schema_version: 1
+  id: ephem-f19f24f9
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Home Assistant refresh tokens never expire and are not rotated, valid until manual deletion
+  summary: Normal and long-lived refresh tokens have no absolute lifetime, no automatic rotation, and no expiry binding; they remain valid until a user manually deletes them, so a stolen refresh token is replayable indefinitely.
+  detail: 'The authentication model documents verbatim that "refresh tokens will
+
+    remain valid until a user deletes it" (`auth_index.md` line 41), and the
+
+    token endpoint mints new access tokens on each refresh-grant exchange with
+
+    no rotation of the refresh token itself (`auth_api.md` §"Refresh token":
+
+    the response is a fresh `access_token` only — the refresh token is reused).
+
+    The refresh-token record in code is a static `secrets.token_hex(64)`
+
+    created once at issuance, with no `expire_at`/rotation field
+
+    (`homeassistant.auth.models.RefreshToken`, cev-a1000003 — "no key rotation
+
+    observed"). `async_validate_access_token` rejects only on refresh-token
+
+    revocation or an inactive user (cev-a1000002) — there is no time-based
+
+    expiry of the refresh token.
+
+
+    This is the lifetime facet only — the at-rest protection of the token
+
+    store is owned by Confidentiality (the plaintext `.storage` finding
+
+    conf-fdf0fb06 and the on-device stores conf-a30cca33 / conf-205c53a5), and
+
+    the cryptographic strength / device-binding of the token is owned by
+
+    Authenticity. The Ephemeral gap is that there is no rotation cadence and no
+
+    absolute lifetime: a refresh token captured via any of those at-rest paths,
+
+    or via the compromised_user_session_token attacker position, grants the
+
+    holder unbounded access-token minting until and unless the user happens to
+
+    notice and manually delete it. There is no automatic refresh-token rotation
+
+    (the OAuth2.1 hardening pattern) and therefore no refresh-token-reuse
+
+    detection signal that would convert a theft into a detectable event.
+
+
+    This is high severity under the *api-security* rubric clause "JWT
+
+    access-token lifetime exceeds 1 hour with no refresh-token rotation and no
+
+    revocation channel" — the access-token TTL here is a defensible 1800s
+
+    (`auth_api.md` `expires_in: 1800`), but the refresh token that backs it has
+
+    no rotation and an unbounded lifetime, which the rubric''s Ephemeral pattern
+
+    ("refresh-rotation collapses the window") treats as the load-bearing gap.
+
+    A manual user-initiated revocation channel does exist (cev-a1000002 and the
+
+    `action=revoke` endpoint), so this is a rotation/expiry gap, not a total
+
+    revocation gap.
+
+    '
+  evidence:
+  - artifact: auth/auth_index.md
+    locator: §'Access and refresh tokens', line 41
+    excerpt: refresh tokens will remain valid until a user deletes it
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'token: str = attr.ib(factory=lambda: secrets.token_hex(64))'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: not refresh_token.user.is_active
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000003 RefreshToken static jwt_key no rotation
+    excerpt: compromised_user_session_token holding a non-expiring refresh token mints access tokens via refresh_token_jwt_signing_keys
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - IA-5(13)
+    - AC-12
+    mitre_attack:
+    - technique: T1550
+      sub_technique: T1550.001
+      tactic: TA0008
+      rationale: A non-expiring non-rotating refresh token lets a holder mint application access tokens indefinitely, the Application Access Token procedure.
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: recommended
+    summary: Introduce an absolute refresh-token lifetime and refresh-token rotation with reuse detection.
+    detail: 'Augment the `RefreshToken` model (cev-a1000003) with an absolute-expiry
+
+      timestamp and enforce it in `async_validate_access_token` (cev-a1000002)
+
+      alongside the existing revoke/inactive checks, so a refresh token cannot
+
+      outlive a configurable maximum (e.g. 90 days for Normal tokens). Add
+
+      refresh-token rotation in the `auth/token` refresh-grant path so each
+
+      refresh issues a new refresh token and invalidates the prior one, and
+
+      detect reuse of a retired refresh token as a token-family-revocation
+
+      event. Keep the existing user-initiated `action=revoke` channel; this
+
+      adds the time-bound and rotation layer the OAuth2.1 hardening pattern
+
+      expects. The reuse-detection event doubles as a Resilient recovery signal.
+
+      '
+    references:
+    - 'external: OAuth 2.1 draft §6.1 refresh-token rotation'
+    - 'external: NIST SP 800-53r5 IA-5(13) — hardware token-based authentication / expiration'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references:
+  - conf-fdf0fb06
+  - conf-a30cca33
+  - conf-205c53a5
+- schema_version: 1
+  id: ephem-9915ab91
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Long-Lived Access Tokens are valid for 10 years with no rotation, the longest-lived static credential in the system
+  summary: User-generated Long-Lived Access Tokens are issued with a 10-year validity, no rotation mechanism, and no per-token risk-tiered expiry, making each one a decade-long static bearer credential to the full Core API.
+  detail: '`auth_api.md` §"Long-lived access token" states verbatim "Long-lived
+
+    access tokens are valid for 10 years" and that the token string "is not
+
+    saved in Home Assistant; you must record it in a secure place". These are
+
+    backed by a dedicated refresh-token type (`auth_index.md` line 50:
+
+    "Long-lived Access Token … created internally and never exposed to the
+
+    user") that inherits the never-expire refresh-token semantics
+
+    (cev-a1000003). The creation WebSocket command exposes a `lifespan` field
+
+    (`auth_api.md` `"lifespan": 365`), but the documented validity of the
+
+    resulting token is 10 years, with no rotation routine and no
+
+    risk-class-driven shortening for tokens used by third-party integrations
+
+    and webhook-style clients (the stated use case).
+
+
+    Ephemeral owns the lifetime facet: a 10-year static bearer credential to a
+
+    PHI-equivalent home-control API (presence, geolocation, lock/alarm
+
+    actuation) is a grant-and-leave credential rather than a grant-as-needed
+
+    one. Because the token string is recorded out-of-band by the user
+
+    ("record it in a secure place"), it is exactly the leakage-prone class the
+
+    rubric calls out — recoverable from CI logs, config files, scripts, and
+
+    mobile apps — and its decade lifetime means a single leak is exploitable
+
+    for the credential''s full life with no automatic invalidation. The
+
+    cryptographic verifiability of the token and the issuance identity are
+
+    Authenticity concerns; the at-rest protection is Confidentiality.
+
+
+    This is high severity under the *api-security* rubric clause "Service
+
+    account tokens or API keys are static long-lived secrets … with no
+
+    rotation" (broad blast radius on credential leak, no automatic
+
+    invalidation, no detection signal on use of a leaked credential) — a
+
+    Long-Lived Access Token is the api-key-equivalent for HA, and the 10-year
+
+    horizon is the maximal expression of that clause.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: §'Long-lived access token', line 151
+    excerpt: Long-lived access tokens are valid for 10 years
+  - artifact: auth/auth_index.md
+    locator: §'Refresh token types', line 50
+    excerpt: Long-lived Access Token … created internally and never exposed to the user
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'jwt_key: str = attr.ib(factory=lambda: secrets.token_hex(64))'
+  - artifact: code-evidence-index.yaml
+    locator: 10-year Long-Lived Access Token no rotation
+    excerpt: compromised_user_session_token replays a 10-year Long-Lived Access Token against the user_credentials_store-backed surface
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - IA-5(7)
+    - AC-2(3)
+    mitre_attack:
+    - technique: T1078
+      sub_technique: null
+      tactic: TA0003
+      rationale: A leaked 10-year Long-Lived Access Token is a Valid Account credential usable for its decade lifetime with no automatic invalidation.
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: recommended
+    summary: Add a default and maximum lifetime to Long-Lived Access Tokens and a rotation/re-issue workflow.
+    detail: 'Bound the Long-Lived Access Token validity (currently documented as 10
+
+      years in `auth_api.md`) to a configurable default and hard maximum
+
+      (e.g. default 1 year, surface the `lifespan` already present in the
+
+      creation command as the authoritative expiry), and add a profile-page
+
+      rotation flow that re-issues and revokes the prior token in one step so
+
+      operators can rotate without losing integration continuity. Record the
+
+      token''s expiry as a first-class field on its backing internal refresh
+
+      token (cev-a1000003) so `async_validate_access_token` (cev-a1000002)
+
+      enforces it. Surface near-expiry warnings so a rotation is not a
+
+      surprise outage for webhook/integration consumers.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-5(1) — authenticator management, change/refresh'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references:
+  - conf-fdf0fb06
+- schema_version: 1
+  id: ephem-b9625c61
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Per-refresh-token jwt_key HS256 signing key never rotates over the unbounded refresh-token lifetime
+  summary: Each refresh token carries a static per-token HS256 jwt_key generated once at issuance that signs every access token it ever mints; the key is never rotated, so its compromise window is the refresh token's unbounded lifetime.
+  detail: 'Access tokens are HS256 JWTs signed with a per-refresh-token `jwt_key`
+
+    (`homeassistant.auth.AuthManager.async_create_access_token`, cev-a1000001:
+
+    `jwt.encode({...}, refresh_token.jwt_key, algorithm="HS256")`). That
+
+    `jwt_key` is generated once as `secrets.token_hex(64)` when the refresh
+
+    token is created (`RefreshToken`, cev-a1000003) and the recon note records
+
+    "no key rotation observed". Because the backing refresh token never expires
+
+    (ephem-0a000001) and Long-Lived tokens last a decade (ephem-0a000002), the
+
+    signing-key lifetime is effectively unbounded.
+
+
+    The Ephemeral concern is the rotation cadence of the signing key, not its
+
+    cryptographic strength (256-bit entropy, HS256 algorithm choice → these are
+
+    Authenticity''s) and not its at-rest protection (the plaintext `.storage`
+
+    exposure is Confidentiality''s, conf-fdf0fb06). A signing key that never
+
+    rotates means that once a `jwt_key` is disclosed — for example via the
+
+    plaintext `.storage` read path — an attacker can forge access tokens for
+
+    that refresh token indefinitely, because there is no key-rotation cycle
+
+    that would retire the compromised key and no re-issuance that would force a
+
+    new key. For an owner refresh token this is platform-scope forgery
+
+    (`_OwnerPermissions` unconditional all-access, cev-a1000008).
+
+
+    This is high severity under the *api-security* rubric Ephemeral pattern
+
+    "Service account tokens or API keys are static long-lived secrets … with no
+
+    rotation" applied to signing-key material: the key is static, long-lived,
+
+    and its leak has no automatic invalidation. The forgery-on-disclosure harm
+
+    itself (the Confidentiality/Authenticity face of the same `jwt_key`) is
+
+    already filed in tier 1; this finding constrains itself to the missing
+
+    rotation lifecycle.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'jwt_key: str = attr.ib(factory=lambda: secrets.token_hex(64))'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: jwt.encode({...}, refresh_token.jwt_key, algorithm="HS256")
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - SC-12
+    - SC-12(1)
+    mitre_attack:
+    - technique: T1606
+      sub_technique: T1606.001
+      tactic: TA0006
+      rationale: A static never-rotated jwt_key lets a key-disclosure attacker forge Web Credentials (HS256 access-token JWTs) for the key's unbounded life.
+    cwe:
+    - CWE-324
+  recommendation:
+    posture: recommended
+    summary: Couple jwt_key rotation to a bounded refresh-token lifetime and re-issuance cycle.
+    detail: 'Tie the per-token `jwt_key` (cev-a1000003) to the bounded-lifetime and
+
+      rotation lifecycle recommended in ephem-0a000001/ephem-0a000002: when a
+
+      refresh token is rotated or re-issued, generate a fresh `jwt_key` and
+
+      retire the old one so the signing-key compromise window closes on the
+
+      rotation cadence rather than remaining open for years. Where a
+
+      bounded-rotation cycle is infeasible for system tokens, provide an
+
+      operator-invokable "rotate signing key for this refresh token" action
+
+      that re-keys without forcing a full re-authentication. This is the
+
+      lifetime control; pair it with the at-rest encryption recommended under
+
+      conf-fdf0fb06 so the key is both protected and short-lived.
+
+      '
+    references:
+    - 'external: NIST SP 800-57 Part 1 Rev. 5 §5.3 — cryptoperiod for signing keys'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references:
+  - conf-fdf0fb06
+- schema_version: 1
+  id: ephem-053957f3
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Device webhook_id is a permanent bearer-less credential with no rotation or expiry that actuates services
+  summary: The per-device webhook_id minted at mobile registration is a permanent, unscoped, bearer-less secret with no rotation or expiry; possession alone calls arbitrary services for the life of the registration.
+  detail: 'Mobile registration mints a `webhook_id` via `secrets.token_hex()`
+
+    (`RegistrationsView.post`, cev-a1000014) and the registration docs instruct
+
+    the client "You should permanently store this information"
+
+    (`api/native-app/setup.md` §"Registering the device"). The webhook entry
+
+    point authenticates purely on possession of the `webhook_id`
+
+    (`handle_webhook` maps `webhook_id` → config_entry, cev-a1000016 — "No
+
+    bearer", and the deleted-id set is the only invalidation path), and a
+
+    holder can drive `webhook_call_service` to call arbitrary services such as
+
+    locks and alarms (cev-a1000015). The `webhook_id` is opaque and bearer-less
+
+    by design, so it crosses the boundary the OAuth bearer path does not.
+
+
+    Ephemeral''s concern is that this credential has no lifecycle: it is minted
+
+    once and is then a permanent secret with no rotation cadence, no expiry, and
+
+    no automatic re-issuance — the only invalidation is the user deleting the
+
+    whole device registration (the deleted-ids check in cev-a1000016). There is
+
+    no documented webhook_id rotation that a client can perform after suspected
+
+    leakage short of de-registering and re-registering the device. The
+
+    leaked_device_webhook_id attacker position therefore enjoys a credential
+
+    that, once captured (cloudhook URL exposure, on-device extraction from the
+
+    unencrypted stores conf-205c53a5, log leakage), is replayable for the life
+
+    of the registration with no time bound.
+
+
+    This is high severity under the *api-security* rubric Ephemeral pattern
+
+    "Service account tokens or API keys are static long-lived secrets … with
+
+    no rotation" — the webhook_id is a static long-lived shared secret on a
+
+    consequential-action path. The authentication-design weakness of the
+
+    webhook path (bearer-less, no per-entity authz) is already filed under
+
+    Integrity (intg-5df46115); this finding constrains itself to the missing
+
+    rotation/expiry lifecycle of the credential.
+
+    '
+  evidence:
+  - artifact: api/native-app/setup.md
+    locator: §'Registering the device', line 71
+    excerpt: You should permanently store this information
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: webhook_id = secrets.token_hex()
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000015 webhook_call_service
+    excerpt: leaked_device_webhook_id (permanent bearer-less) drives webhook_call_service on mobile_app_webhook_api
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - AC-2(3)
+    - AC-12
+    mitre_attack:
+    - technique: T1078
+      sub_technique: null
+      tactic: TA0003
+      rationale: A permanent unscoped webhook_id is a Valid Account-equivalent credential whose possession actuates services for the registration's full life.
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: recommended
+    summary: Add webhook_id rotation and optional expiry without forcing device re-registration.
+    detail: 'Add a client-invokable webhook_id rotation action that mints a fresh
+
+      `secrets.token_hex()` (cev-a1000014), atomically swaps it into the
+
+      config_entry map consumed by `handle_webhook` (cev-a1000016), and adds
+
+      the prior id to the deleted-ids set — so a device that suspects its
+
+      webhook_id leaked can rotate without tearing down and rebuilding the
+
+      whole registration. Optionally support a registration-level expiry that
+
+      requires periodic webhook_id refresh for high-sensitivity instances.
+
+      Pair this lifetime control with the per-entity write authorization that
+
+      Integrity recommends on the same path (intg-5df46115).
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-5(1) — authenticator management'
+  related_concerns:
+  - integrity
+  - authenticity
+  cross_references:
+  - intg-5df46115
+  - conf-205c53a5
+- schema_version: 1
+  id: ephem-e6671d41
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: high
+  confidence: high
+  title: On-device Companion access/refresh tokens have no client-side wipe on deauth and no device-binding or rotation
+  summary: The iOS Keychain and Android ServerSessionInfo token stores hold long-lived access/refresh bearer tokens with no documented wipe-on-server-deauthorization, no device-binding, and no rotation, so an extracted token is replayable for its full backend lifetime.
+  detail: 'The Companion apps persist access and refresh bearer tokens on device — iOS
+
+    via `ServerManagerKeychain` (cev-e5000002) and Android via
+
+    `ServerSessionInfo` in the Room `AppDatabase` (cev-f6000004). These tokens
+
+    back the same Core refresh-token model that never expires (ephem-0a000001),
+
+    so on the device they are long-lived. The recon evidence shows no
+
+    device-binding material (no DPoP/mTLS-style key custody tying the token to
+
+    the device for the OAuth bearer path; the Android KeyStore mTLS key
+
+    cev-f6000001 is a separate optional client-cert facet, not a binding on the
+
+    bearer token), and there is no documented client-side wipe of these stores
+
+    on logout or on server-side deauthorization, nor any rotation of the stored
+
+    token.
+
+
+    Ephemeral owns the lifetime/wipe/device-binding facet on the client. The
+
+    at-rest protection of these stores is owned by Confidentiality (the iOS
+
+    default-accessibility finding conf-a30cca33 and the unencrypted Android
+
+    Room finding conf-205c53a5), and the token-presentation identity proof is
+
+    Authenticity''s. The Ephemeral gap is that, because the token never expires,
+
+    is not device-bound, and is not wiped on deauthorization, a token extracted
+
+    from a stolen or rooted device (physical_thief_with_stolen_device,
+
+    rooted_device_attacker_with_frida) replays off-device for the token''s full
+
+    backend lifetime — and the only server-side recovery is the user manually
+
+    deleting the backing refresh token, which is the same unbounded-revocation
+
+    gap as ephem-0a000001.
+
+
+    This is high severity under the *mobile-applications* rubric clause "A
+
+    long-lived access or refresh token stored on the device with no server-side
+
+    revocation, rotation, or device-binding — stolen-device or extracted-token
+
+    replay grants the token''s full lifetime" (MASVS-AUTH-2), the Ephemeral
+
+    lifetime face distinct from the MASVS-STORAGE-1 at-rest facet that
+
+    Confidentiality owns. The blast-radius and reversibility modifiers load:
+
+    the extracted credential pivots to the full backend (the home-control API).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain:L6-L35@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: iOS access/refresh tokens persist via KeychainAccess
+  - artifact: code-evidence-index.yaml
+    locator: code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: persisted access + refresh bearer tokens (in_degree 21)
+  - artifact: auth/auth_index.md
+    locator: §'Access and refresh tokens', line 41
+    excerpt: refresh tokens will remain valid until a user deletes it
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(13)
+    - AC-12
+    - SC-12
+    masvs:
+    - MASVS-AUTH-2
+    cwe:
+    - CWE-613
+  recommendation:
+    posture: recommended
+    summary: Bind on-device tokens to the device, wipe them on server-side deauthorization, and rotate refresh tokens.
+    detail: 'Make the stored bearer tokens server-revocable and device-bound: derive a
+
+      device key pair in the Android KeyStore / iOS Secure Enclave (the Android
+
+      app already has KeyStore custody, cev-f6000001) and present a DPoP- or
+
+      mTLS-style proof so an extracted bearer token alone is not replayable
+
+      off-device. Wire a client-side wipe of `ServerManagerKeychain`
+
+      (cev-e5000002) and `ServerSessionInfo` (cev-f6000004) on logout AND on a
+
+      server-side deauthorization signal, paired with the bounded-lifetime
+
+      refresh-token rotation recommended in ephem-0a000001 so the backend, not
+
+      the device''s local clock, decides whether a presented token is alive. The
+
+      missing server-side invariant is server-side token invalidation on
+
+      deauth.
+
+      '
+    references:
+    - 'external: OWASP MASVS-AUTH-2 — stolen/extracted-token replay'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references:
+  - conf-a30cca33
+  - conf-205c53a5
+- schema_version: 1
+  id: ephem-a879a34b
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Owner account holds a standing unconditional all-access grant with no just-in-time elevation for admin operations
+  summary: The owner principal is hard-coded to unconditional all-access for the life of the account, with no just-in-time elevation, time-boxed admin grant, or step-up for consequential operations, so the standing grant is always-on.
+  detail: 'The owner created during onboarding "will always have access to all
+
+    permissions" (`auth_index.md` §"Owner"), and in code `_OwnerPermissions`
+
+    returns `access_all_entities → True` and an unconditional
+
+    `lambda entity_id, key: True` (cev-a1000008). Admin-gated consequential
+
+    operations — state writes (`APIEntityStateView.post`, admin-or-deny,
+
+    cev-a1000012), server-side template render (`APITemplateView.post`,
+
+    `@require_admin`, cev-a1000013), and the per-role Supervisor surface — are
+
+    reachable on the strength of the standing admin/owner session with no
+
+    just-in-time request/approve/time-box and no step-up re-authentication for
+
+    the sensitive action.
+
+
+    Ephemeral owns the access-lifetime facet here: the question is not whether
+
+    the owner''s identity is verified (Authenticity) but whether the
+
+    high-privilege grant is short-lived and requested-as-needed versus
+
+    standing-and-always-on. HA implements the latter — there is no JIT access
+
+    pattern, no time-boxed elevation, and no break-glass-style bounded grant for
+
+    admin operations on a system that controls physical locks/alarms and holds
+
+    home-occupancy data. A compromised_admin_session therefore holds the full
+
+    privilege continuously rather than only during an approved, expiring window.
+
+
+    This is medium severity under the *api-security* rubric clause "Hardening
+
+    weakness exploitable only after adjacent compromise" — the standing grant
+
+    is consequential only once an owner/admin session or token is already
+
+    compromised (the dominant blast-radius fact noted across tier 1), so its
+
+    independent severity is medium, weighed up by the PHI-equivalent
+
+    consequential-action surface and weighed down because JIT elevation is a
+
+    defense-in-depth control HA does not currently model rather than a missing
+
+    mandatory control. The account-takeover blast radius itself is owned by
+
+    Authenticity/Confidentiality.
+
+    '
+  evidence:
+  - artifact: auth/auth_index.md
+    locator: §'Owner', lines 28-29
+    excerpt: The owner … will always have access to all permissions
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def access_all_entities(self, key): return True'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@require_admin async def post'
+  control_mappings:
+    nist_800_53r5:
+    - AC-2
+    - AC-2(2)
+    - AC-6
+    - AC-6(5)
+    mitre_attack: []
+    cwe:
+    - CWE-269
+  recommendation:
+    posture: consider
+    summary: Add an optional just-in-time elevation and step-up for owner/admin consequential operations.
+    detail: 'Consider an optional just-in-time elevation model for the most
+
+      consequential admin operations (template render cev-a1000013, add-on
+
+      install / Supervisor proxy, backup creation): require a step-up
+
+      re-authentication that opens a short, time-boxed elevated window rather
+
+      than relying on the standing owner/admin session that `_OwnerPermissions`
+
+      (cev-a1000008) grants for the account''s whole life. This bounds the
+
+      window in which a compromised_admin_session can exercise the standing
+
+      grant. Frame as defense-in-depth — it does not replace the existing admin
+
+      gate, it time-bounds it.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 AC-6(5) — privileged accounts, limited use'
+  related_concerns:
+  - authenticity
+  - non_repudiation
+  cross_references: []
+- schema_version: 1
+  id: ephem-9c322627
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: Add-on images are pinned to a mutable floating base tag (:trixie) rather than an immutable digest
+  summary: The add-on build pins its base image to the floating :trixie tag while the Core image pins base layers and binaries by sha256 digest, so add-on rebuilds can silently pull a mutated base, undermining immutable-infrastructure guarantees.
+  detail: 'The mosquitto add-on build references its base image by a mutable floating
+
+    tag: `build_from: amd64: ghcr.io/home-assistant/amd64-base-debian:trixie`
+
+    (`infra/addon-mosquitto-build.yaml`), and the add-on manifest declares
+
+    `startup: system` host mounts (`mosquitto/config.yaml`, cev-09000001). By
+
+    contrast the Core image pins its base/buildkit and the go2rtc binary by
+
+    immutable sha256 digest (`infra/core-Dockerfile` lines 1, 29:
+
+    `docker/dockerfile@sha256:…`, `go2rtc:1.9.14@sha256:…`), demonstrating the
+
+    project knows the digest-pinning pattern. The add-on path does not follow
+
+    it, so a rebuild of the add-on against `:trixie` resolves to whatever the
+
+    tag points at that day.
+
+
+    Ephemeral''s immutable-infrastructure lens asks whether infrastructure is
+
+    deploy-replace against a fixed, reproducible artifact. A floating base tag
+
+    means the add-on''s deployed bytes are not reproducible across rebuilds: the
+
+    same add-on version can carry different base-layer contents over time, which
+
+    is the mutable-infrastructure / configuration-drift failure mode the lens
+
+    flags. The signature/provenance of the image (Cosign signing per
+
+    `mobile/supervisor-apps-security.md`) and whether signatures are verified at
+
+    install are Authenticity concerns; the Ephemeral concern is strictly the
+
+    mutable-tag → non-reproducible-rebuild facet.
+
+
+    This is medium severity under the *api-security* rubric Ephemeral pattern
+
+    "Container images mutable in production — `:latest` tags … carrying
+
+    production state" (severity medium to high depending on what''s mutable):
+
+    here the mutable tag is a base image rather than the application layer and
+
+    the Core image is digest-pinned, so the blast radius is bounded — hence
+
+    medium.
+
+    '
+  evidence:
+  - artifact: infra/addon-mosquitto-build.yaml
+    locator: lines 2-4, build_from amd64
+    excerpt: 'amd64: ghcr.io/home-assistant/amd64-base-debian:trixie'
+  - artifact: infra/core-Dockerfile
+    locator: line 29, go2rtc COPY --from
+    excerpt: go2rtc:1.9.14@sha256:675c318b23c06fd862a61d262240c9a63436b4050d177ffc68a32710d9e05bae
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - CM-2(2)
+    - CM-3
+    - SA-15(7)
+    mitre_attack: []
+    cwe:
+    - CWE-1357
+  recommendation:
+    posture: recommended
+    summary: Pin add-on base images by sha256 digest as the Core image already does.
+    detail: 'Pin the add-on `build_from` base images in
+
+      `infra/addon-mosquitto-build.yaml` (and the broader add-on collection)
+
+      by immutable `@sha256:` digest rather than the floating `:trixie` tag,
+
+      mirroring the digest pinning already used in `infra/core-Dockerfile`
+
+      (line 29) for go2rtc and the dockerfile frontend. Advance the pinned
+
+      digest through a deliberate, reviewable base-image update so an add-on
+
+      rebuild is reproducible and a base-layer change is an explicit version
+
+      bump rather than an implicit pull. Pair with Authenticity''s image-signing
+
+      verification so the pinned digest is also provenance-checked.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 CM-2(2) — baseline configuration, automation support'
+  related_concerns:
+  - authenticity
+  - immutability
+  cross_references: []
+- schema_version: 1
+  id: ephem-cf71612d
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: SUPERVISOR_TOKEN and add-on service-account token lifecycle (rotation, expiry, revocation) is unspecified
+  summary: The artifacts and code recon establish that SUPERVISOR_TOKEN gates the privileged Supervisor API per add-on role, but do not establish its rotation cadence, expiry, or revocation-on-add-on-removal, so the service-account credential lifecycle cannot be assessed.
+  detail: '`SUPERVISOR_TOKEN` is the per-add-on service-account credential that
+
+    `SecurityMiddleware.token_validation` resolves to an app and then gates by
+
+    role-based URL ACL (cev-b2000001, cev-b2000002), and the supervisor mints
+
+    and holds a Core access token to call Core as a privileged client
+
+    (cev-0a000002). What the available evidence does NOT establish is the
+
+    Ephemeral lifecycle of these service-account tokens: whether
+
+    SUPERVISOR_TOKEN is rotated on a cadence or is static for the add-on''s
+
+    install lifetime, whether it carries an expiry, whether it is revoked and
+
+    re-minted when an add-on is reinstalled or its protection mode toggles, and
+
+    whether the supervisor''s held Core token (cev-0a000002) rotates. The
+
+    System-token type is documented only as "limited to be generated and used
+
+    by system users … never exposed to the user" (`auth_index.md` line 51) with
+
+    no lifetime stated.
+
+
+    Per the block-on-ambiguity rule, the silence in the artifacts and the recon
+
+    index on token rotation/expiry is not evidence of absence — but it is also
+
+    not evidence of a healthy lifecycle. Because these are host-root-equivalent
+
+    service-account credentials, their lifecycle is material and must be
+
+    confirmed from code/config rather than inferred. Severity is provisionally
+
+    medium pending the evidence; it would rise if the tokens prove static and
+
+    long-lived (the same pattern as the user tokens in ephem-0a000001).
+
+
+    No *api-security* rubric clause is cited because this is a blocked finding,
+
+    not a confirmed gap; the governing pattern once resolved would be the
+
+    Ephemeral "static long-lived service-account secret with no rotation"
+
+    clause.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: if patterns.role_access[app.hassio_role].match(request.path)
+  - artifact: auth/auth_index.md
+    locator: §'Refresh token types', line 51
+    excerpt: System … generated and used by system users … never exposed
+  prerequisite_evidence:
+  - SUPERVISOR_TOKEN issuance/rotation/expiry policy (how and when the per-add-on token is minted, rotated, and invalidated)
+  - Revocation behavior on add-on uninstall, reinstall, or protection-mode toggle
+  - Supervisor-held Core access-token (cev-0a000002) lifetime and rotation cadence
+  - System refresh-token (auth_index line 51) lifetime / rotation semantics
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - AC-2
+    - AC-2(3)
+    mitre_attack: []
+  recommendation:
+    posture: consider
+    summary: Confirm the SUPERVISOR_TOKEN and system-token lifecycle from supervisor/core code before relying on it.
+    detail: 'Resolve the prerequisite evidence from the supervisor and core
+
+      repositories — specifically the SUPERVISOR_TOKEN minting and rotation
+
+      path feeding `SecurityMiddleware.token_validation` (cev-b2000001) and the
+
+      supervisor''s Core-token acquisition (cev-0a000002) — to confirm whether
+
+      these host-root-equivalent service-account credentials rotate and expire
+
+      or are static for the add-on lifetime. If static, re-file as a confirmed
+
+      high-severity service-account rotation gap.
+
+      '
+    references: []
+  related_concerns:
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: ephem-db8641be
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: Web/portal session absolute lifetime, idle timeout, and behavior on credential change are unspecified
+  summary: Beyond the documented 1800s access-token TTL and the never-expiring refresh token, the artifacts do not specify a maximum portal session lifetime, idle timeout, or session-invalidation behavior on password or MFA change, so session-lifetime policy cannot be fully assessed.
+  detail: 'The token primitives are partly specified — access tokens expire in 1800s
+
+    (`auth_api.md` `expires_in: 1800`), refresh tokens never expire
+
+    (ephem-0a000001), and the WS handshake registers a revoke callback that
+
+    drops the socket on token revocation (`AuthPhase.async_handle`,
+
+    cev-a1000010). What is NOT specified is the session-management policy as a
+
+    whole: there is no documented maximum absolute session lifetime for the
+
+    frontend/portal session, no idle timeout, and no stated behavior on
+
+    credential change (does changing the password or MFA enrollment revoke all
+
+    existing refresh tokens / sessions, or do they survive?). The
+
+    `auth_permissions.md` and `auth_index.md` docs cover the token model but not
+
+    a session policy.
+
+
+    Per the Ephemeral common pattern "Session lifetime unspecified — no maximum
+
+    absolute lifetime, no idle timeout, no behavior on credential change", the
+
+    correct disposition is blocked rather than asserting a gap: the artifacts
+
+    are silent, and the WS revoke callback shows some session-termination
+
+    machinery exists. The session-lifetime policy is material because the
+
+    never-expiring refresh token (ephem-0a000001) means that, absent a
+
+    revoke-on-password-change rule, a password reset after a suspected
+
+    compromise may not actually log the attacker out.
+
+
+    Severity is provisionally medium pending the evidence. No rubric clause is
+
+    cited because this is blocked; the governing pattern once resolved would be
+
+    the api-security session-management clause.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: §'Authorization code', lines 86-95
+    excerpt: '"expires_in": 1800'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_register_revoke_token_callback
+  prerequisite_evidence:
+  - 'Frontend/portal session-management policy: maximum absolute lifetime and idle timeout'
+  - Behavior on password change and on MFA-enrollment change (revoke all refresh tokens/sessions vs. preserve)
+  - Explicit logout semantics (does logout revoke the backing refresh token server-side)
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - AC-12(1)
+    - IA-5
+    - SC-10
+    mitre_attack: []
+  recommendation:
+    posture: consider
+    summary: Document and confirm the session-management policy, especially revoke-on-credential-change.
+    detail: 'Confirm from frontend and core code the absolute session lifetime, idle
+
+      timeout, and — most importantly given the never-expiring refresh token
+
+      (ephem-0a000001) — whether a password or MFA-enrollment change revokes all
+
+      existing refresh tokens server-side. If credential change does not cascade
+
+      to refresh-token revocation, re-file as a confirmed gap: a post-compromise
+
+      password reset that leaves the attacker''s refresh token alive is the
+
+      load-bearing failure.
+
+      '
+    references: []
+  related_concerns:
+  - authenticity
+  cross_references:
+  - conf-a30cca33

@@ -5,13 +5,27 @@ import json
 import pathlib
 
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 REPO = pathlib.Path(__file__).parent.parent
-SCHEMA = REPO / "schemas" / "cluster-candidates.schema.json"
+SCHEMA_DIR = REPO / "schemas"
+SCHEMA = SCHEMA_DIR / "cluster-candidates.schema.json"
+
+
+def _build_registry():
+    # cluster-candidates now $refs _defs.schema.json (member severity); the
+    # registry must carry every schema by $id so the cross-file ref resolves.
+    resources = []
+    for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
 
 
 def _validator():
-    return Draft202012Validator(json.loads(SCHEMA.read_text()))
+    return Draft202012Validator(json.loads(SCHEMA.read_text()), registry=_build_registry())
 
 
 def _group(**over):

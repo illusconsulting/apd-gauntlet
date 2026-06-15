@@ -1,0 +1,932 @@
+finding:
+- schema_version: 1
+  id: conf-fdf0fb06
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: Core .storage (auth, jwt_keys, integration OAuth tokens) written as plaintext JSON with no encryption at rest
+  summary: All Home Assistant .storage records — password hashes, MFA seeds, per-token jwt signing keys, and 2000+ integration OAuth tokens/API keys — are persisted as plaintext UTF-8 JSON protected only by 0600 file permissions; there is no encryption-at-rest layer or KMS.
+  detail: "`homeassistant.helpers.storage.Store._write_prepared_data` (cev-a1000017)\nserializes every .storage payload with `prepare_save_json` and writes it\nvia `write_method(path, json_data, self._private, mode=mode)`. The\n`self._private` flag governs file permissions (0600) ONLY — there is no\nencryption step in the write path. This is the single persistence path\nfor the entire crown-jewel secret estate:\n\n- `.storage/auth` + `auth_provider.homeassistant` — bcrypt password\n  hashes (cev-a1000004) and TOTP/MFA seeds (user_credentials_store).\n- `.storage/auth` RefreshToken records — the opaque refresh token AND the\n  per-refresh-token `jwt_key` that signs HS256 access tokens\n  (cev-a1000003). Disclosure of a `jwt_key` enables direct access-token\n  forgery (`AuthManager.async_create_access_token`, cev-a1000001),\n  bypassing the central validation chokepoint; if the owner's jwt_key is\n  read, the attacker mints an owner-scoped JWT and inherits unconditional\n  all-access (`_OwnerPermissions`,\
+    \ cev-a1000008).\n- `.storage` config_entries + OAuth2 token storage — device/cloud\n  credentials and tokens for 2000+ integrations (integration_secret_storage).\n\nThere is no DEK/KEK envelope, no KMS, and no separation of key from\nciphertext: any actor that reads these files (host filesystem access, a\nrestored backup, a co-resident container with the data volume mounted, or\nan `os-agent` host-root primitive such as `AddSSHAuthKey` cev-c3000001)\nobtains the full estate in cleartext — yielding offline credential\ncracking, live token forgery, and integration-secret theft simultaneously.\n\nSeverity is critical under the *api-security* rubric clause \"SQL or NoSQL\ninjection on a PII-bearing endpoint\" analog and, more directly, the\n\"Mass PII exfiltration capability\" / \"Forgeable session tokens at platform\nscope\" clauses: a single at-rest read yields platform-scope token forgery\n(the jwt_key compromise => token forgery is the platform-scope-forgeable-\ntokens trigger) plus\
+    \ bulk credential/secret exfiltration. The harm is not\naveraged — the maximum (platform-scope token forgery) governs. The 0600\npermission is a single compensating control, not encryption at rest.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: write_method(path, json_data, self._private, mode=mode)
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'jwt_key: str = attr.ib(factory=lambda: secrets.token_hex(64))'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: jwt.encode({...}, refresh_token.jwt_key, algorithm="HS256")
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000017 plaintext .storage/auth jwt_key
+    excerpt: physical_thief_with_stolen_device reads plaintext .storage to recover refresh_token_jwt_signing_keys
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - SC-12
+    - SC-13
+    - IA-5(1)
+    mitre_attack:
+    - technique: T1552
+      sub_technique: T1552.001
+      tactic: TA0006
+      rationale: 'Plaintext .storage holds credentials and signing keys in unsecured local files, the exact procedure of Unsecured Credentials: Credentials In Files.'
+    cwe:
+    - CWE-312
+    - CWE-256
+  recommendation:
+    posture: required
+    summary: Add an encryption-at-rest layer for the secret subset of .storage with keys held outside the data volume.
+    detail: 'Replace the permissions-only protection in
+
+      `Store._write_prepared_data` (cev-a1000017) with envelope encryption for
+
+      the secret-bearing stores (auth, auth_provider.homeassistant,
+
+      config_entries / OAuth2 token storage). Introduce a DEK that encrypts the
+
+      JSON payload before the write_method call; wrap the DEK with a KEK
+
+      sourced from a key custodian that is NOT co-located with the data volume
+
+      — on HAOS, derive the KEK from an os-agent-held key in the TPM/secure
+
+      element where available, or at minimum from an operator-supplied
+
+      passphrase unsealed at boot rather than a static file beside the
+
+      ciphertext. The per-refresh-token `jwt_key` (cev-a1000003) is the
+
+      highest-value element — even an interim measure that encrypts only the
+
+      RefreshToken `jwt_key` and `token` columns removes the token-forgery
+
+      primitive. Document a key-rotation procedure (no key rotation is observed
+
+      today, cev-a1000003).
+
+      '
+    references:
+    - 'external: NIST SP 800-57 Part 1 Rev. 5 §5.2 (key hierarchy)'
+    - 'external: NIST SP 800-53r5 SC-28(1)'
+  related_concerns:
+  - integrity
+  - ephemeral
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: conf-d814d818
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Supervisor backup archives are unencrypted by default and bundle the entire secret + recorder estate into one artifact
+  summary: '`Backup.set_password` defaults the backup password to None, so full/partial Supervisor snapshots — config, recorder history DB, and all .storage secrets/tokens — are written as a single unencrypted archive: the weakest-protected copy of everything.'
+  detail: '`supervisor.backups.backup.Backup.set_password` (cev-b2000006)
+
+    initializes `self._password: str | None = None` and only sets a password
+
+    when one is explicitly supplied (`self._password = password or None`).
+
+    Backup encryption is therefore OPT-IN; the default-path archive is
+
+    plaintext. The backup is the aggregation of every other crown jewel:
+
+    `_do_backup` bundles configuration, the Recorder history DB
+
+    (recorder_history_db — presence/geolocation/lock/alarm state,
+
+    cev-a1000018), and the plaintext .storage secret estate (cev-a1000017,
+
+    finding conf-st0rag31) into one portable file.
+
+
+    Because the underlying .storage is already plaintext (finding
+
+    conf-st0rag31), an unencrypted backup re-exposes the full estate in a
+
+    form that is trivially exfiltrated as a unit and frequently copied off the
+
+    host (cloud sync, USB, network share). Even where an operator sets a
+
+    backup password, the key is operator-managed and not separated from the
+
+    primary-store custody, so this is the classic "backups are the weakest
+
+    crown jewel" pattern.
+
+
+    This is high severity under the *api-security* rubric clause "Backup
+
+    artifacts unencrypted at rest, or encrypted with a key the primary-store
+
+    team controls" (Confidentiality common-pattern; key-separation failure
+
+    means primary-store compromise yields backup compromise) and, on the
+
+    mobile-shared surface, the *mobile-applications* MASVS-STORAGE-2 backup
+
+    leakage class. The harm is bulk PII + secret exfiltration from a single
+
+    artifact; severity is not lifted to critical only because exploitation
+
+    requires obtaining the archive (off-host copy or restore access) rather
+
+    than a remote read.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'self._password: str | None = None ... self._password = password or None'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  - artifact: code-evidence-index.yaml
+    locator: cev-b2000006 set_password default None (opt-in encryption)
+    excerpt: physical_thief_with_stolen_device reads default-plaintext supervisor_backup_archive bundling the whole secret estate
+  control_mappings:
+    nist_800_53r5:
+    - CP-9
+    - CP-9(8)
+    - SC-28
+    - SC-28(1)
+    - SC-12
+    mitre_attack:
+    - technique: T1530
+      sub_technique: null
+      tactic: TA0009
+      rationale: An unencrypted backup archive bundling the secret + recorder estate is collected as a single data store object, the Data from Cloud Storage / Information Repositories procedure.
+    cwe:
+    - CWE-311
+    masvs:
+    - MASVS-STORAGE-2
+  recommendation:
+    posture: required
+    summary: Make backup encryption the default with a key custody path separate from the primary store.
+    detail: 'Invert the `set_password` default in `Backup.set_password`
+
+      (cev-b2000006) so the supported backup flow requires a password/key, and
+
+      derive the archive DEK from a KEK that is NOT the data-volume passphrase
+
+      — so that a host-filesystem read of .storage does not also yield the
+
+      means to decrypt off-host backup copies. At minimum, refuse to create an
+
+      unencrypted backup of the secret-bearing .storage subset without an
+
+      explicit operator override, and surface the unencrypted state in the
+
+      Supervisor UI. Pair with backup immutability controls (route to
+
+      Immutability — no object-lock/retention is stated).
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 CP-9(8) (cryptographic protection of backups)'
+  related_concerns:
+  - immutability
+  - ephemeral
+  cross_references: []
+- schema_version: 1
+  id: conf-fec577ec
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Recorder history DB persists home-occupancy and geolocation state with no encryption at rest
+  summary: The Recorder history database (SQLite/MariaDB/Postgres) stores raw entity-state history — presence, geolocation/zones, lock and alarm state — with no encryption-at-rest mechanism observed, exposing the high-privacy home-occupancy fact base on any filesystem or DB read.
+  detail: '`homeassistant.helpers.recorder.session_scope` (cev-a1000018) is the
+
+    session scope for the Recorder history DB, which the run scope identifies
+
+    as the home-occupancy privacy fact base: presence, geolocation/zones,
+
+    camera/voice events, and lock/alarm state, persisted as raw state with no
+
+    transformation stated. The code path shows a plain DB session; no
+
+    column-level, row-level, or tablespace encryption is applied, and the
+
+    supported-databases ADR (SQLite default) provides no at-rest crypto.
+
+
+    In the HA threat model this data is the PHI-equivalent sensitivity class
+
+    (high-privacy home-occupancy + geolocation telemetry). A read of the
+
+    SQLite file (host access, mounted volume, or — as in finding
+
+    conf-backupde — a backup copy) discloses a longitudinal record of when
+
+    occupants are home, where they are, and the state of physical security
+
+    devices. This is distinct from the `/api/config` location leak (finding
+
+    conf-apiconfig): that is a point-in-time API exposure; this is the
+
+    persisted historical corpus.
+
+
+    High severity under the *api-security* rubric clause "Mass PII
+
+    exfiltration capability" calibrated to the HA data inventory''s PHI-
+
+    equivalent class (geolocation/occupancy of all tracked persons over the
+
+    retention window). Not critical only because read requires substrate
+
+    access rather than an unauthenticated network path.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#sensitive-data-inventory (presence/geolocation/lock/alarm)'
+    excerpt: 'Recorder history of entity state: presence, geolocation/zones, camera/voice events, lock/alarm state'
+  - artifact: code-evidence-index.yaml
+    locator: Recorder DB no encryption at rest (occupancy/geolocation)
+    excerpt: physical_thief_with_stolen_device reads unencrypted recorder_history_db (presence/geolocation) at rest
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - SC-13
+    - AC-4
+    mitre_attack:
+    - technique: T1005
+      sub_technique: null
+      tactic: TA0009
+      rationale: The unencrypted Recorder DB file is read directly from the local system to collect occupancy and geolocation history, the Data from Local System procedure.
+    cwe:
+    - CWE-311
+  recommendation:
+    posture: required
+    summary: Apply at-rest encryption to the Recorder store, or scope and minimize the retained geolocation/occupancy columns.
+    detail: 'For the SQLite default backing the Recorder (cev-a1000018), adopt an
+
+      encrypted-database option (e.g. SQLCipher-backed SQLite or a
+
+      TDE-capable MariaDB/Postgres profile) with the key held off the data
+
+      volume per the conf-st0rag31 KEK guidance, OR pair retention
+
+      minimization with the at-rest control so the historical geolocation
+
+      corpus is bounded. Treat lock/alarm/geolocation entities as a
+
+      higher-sensitivity class than generic state in any encryption or
+
+      retention policy. Confirm the chosen control also covers the copy that
+
+      lands in backups (finding conf-backupde).
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 SC-28(1)'
+  related_concerns:
+  - immutability
+  - non_repudiation
+  cross_references: []
+- schema_version: 1
+  id: conf-205c53a5
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Android Companion Room database stores location history and bearer tokens as unencrypted SQLite (no SQLCipher)
+  summary: '`DatabaseModule.provideAppDatabase` builds the Room AppDatabase with no SQLCipher/openHelperFactory, so the location_history table (raw lat/long) and the ServerSessionInfo access/refresh tokens persist as unencrypted SQLite, readable from a stolen or rooted device or a device backup.'
+  detail: "`common...database.DatabaseModule.provideAppDatabase` (cev-f6000003)\nconstructs the Room database via\n`Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)...build()`\nwith NO `openHelperFactory` and no SQLCipher integration. The resulting\nSQLite file is plaintext on disk. Two crown-jewel data classes live in\nthis database:\n\n- `location_history` (raw latitude/longitude + zones) — on-device PII at\n  rest (mobile_on_device_location_and_entity_cache).\n- `ServerSessionInfo` (cev-f6000004) — the persisted access AND refresh\n  bearer tokens (mobile_stored_session_and_refresh_tokens), with an\n  observed in-degree of 21 (heavily depended upon).\n\nAgainst the `physical_thief_with_stolen_device` and\n`rooted_device_attacker_with_frida` positions, the app's own intent of\n\"EncryptedSharedPreferences/Keystore\" (android docs) does not extend to\nthis Room store, so a backup extraction or root read yields both the\noccupant's location history and a live refresh\
+    \ token that replays into the\nCore backend (the mobile->Core hop, cev-0a000005). The refresh token's\nlack of server-side rotation/expiry amplifies this (route to Ephemeral).\n\nHigh severity under the *mobile-applications* rubric clause \"Sensitive\ndata — access/refresh tokens, PII/PHI, or keys — persisted in unprotected\non-device storage (… unencrypted SQLite …) rather than the\nKeystore/Keychain, readable from a device backup or a stolen device\"\n(MAS mapping: MASVS-STORAGE-1; MASWE-0006). The reversibility/data-\nsensitivity modifier (a long-lived refresh token + PII) and the\nblast-radius modifier (token pivots to backend) both load.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...database.DatabaseModule.DatabaseModule.provideAppDatabase:L38-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME).addMigrations(...).build()
+  - artifact: code-evidence-index.yaml
+    locator: code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: persisted access + refresh bearer tokens (in_degree 21)
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - SC-13
+    mitre_attack:
+    - technique: T1409
+      sub_technique: null
+      tactic: TA0035
+      rationale: An unencrypted Room SQLite file lets an attacker with device/backup access read stored application data (tokens, location), the Stored Application Data procedure on Android.
+    cwe:
+    - CWE-312
+    - CWE-922
+    masvs:
+    - MASVS-STORAGE-1
+    maswe:
+    - MASWE-0006
+  recommendation:
+    posture: required
+    summary: Encrypt the Room AppDatabase (SQLCipher) with a Keystore-held key, or move tokens out of the plaintext DB.
+    detail: 'Pass a SQLCipher `SupportFactory` to `Room.databaseBuilder` in
+
+      `provideAppDatabase` (cev-f6000003) with the passphrase wrapped by a
+
+      non-exportable AndroidKeyStore key (the app already uses the hardware-
+
+      backed Keystore for the mTLS key, cev-f6000001 — reuse that custody
+
+      path). At minimum, relocate the `ServerSessionInfo` access/refresh
+
+      tokens (cev-f6000004) out of the plaintext Room store into a
+
+      Keystore-backed EncryptedSharedPreferences/DataStore so a backup or root
+
+      read does not yield a replayable backend credential. Pair with
+
+      `android:allowBackup=false` / backup-exclusion for the DB file.
+
+      '
+    references:
+    - 'external: OWASP MASTG MASVS-STORAGE-1 (secure local storage)'
+  related_concerns:
+  - ephemeral
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: conf-a30cca33
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: high
+  confidence: medium
+  title: iOS Companion stores access/refresh tokens in Keychain with default (non-hardened) accessibility
+  summary: '`ServerManagerKeychain` persists the OAuth access/refresh tokens via KeychainAccess with no explicit kSecAttrAccessible set in source, defaulting to AccessibleWhenUnlocked (device-migratable) rather than the ThisDeviceOnly hardening expected for backend credentials.'
+  detail: '`Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain`
+
+    (cev-e5000002) stores the access/refresh tokens via the KeychainAccess
+
+    `set(_:key:)` path with `ignoringAttributeSynchronizable: true`. The recon
+
+    note records zero hits for `.accessibility(` across Sources, so no explicit
+
+    `kSecAttrAccessible` is set — meaning the items default to
+
+    `kSecAttrAccessibleWhenUnlocked`, NOT
+
+    `…WhenUnlockedThisDeviceOnly` or `…WhenPasscodeSetThisDeviceOnly`.
+
+
+    The practical consequence is that the token items are eligible to migrate
+
+    via an unencrypted-or-weakly-protected device backup and are not bound to
+
+    the originating device, widening the `physical_thief_with_stolen_device`
+
+    extraction surface: the tokens are the persisted session/refresh bearer
+
+    estate (mobile_stored_session_and_refresh_tokens) that replays into Core
+
+    (cev-0a000005). The Keychain still provides at-rest protection while the
+
+    device is locked — which is why this is a hardening risk rather than a
+
+    plaintext-storage gap like the Android Room case (conf-androidr).
+
+
+    High severity under the *mobile-applications* rubric clause "Sensitive
+
+    data — access/refresh tokens … persisted in unprotected on-device storage
+
+    … readable from a device backup or a stolen device" (MAS mapping:
+
+    MASVS-STORAGE-1). Confidence is medium because the accessibility class is
+
+    inferred from the absence of an explicit attribute in Sources rather than
+
+    a positive `kSecAttrAccessibleWhenUnlocked` declaration; a code-grounded
+
+    confirmation of the effective accessibility attribute would raise it to
+
+    high confidence.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain:L6-L35@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: 'func set(_ value: Data, key: String) ... ignoringAttributeSynchronizable: true'
+  prerequisite_evidence:
+  - Effective kSecAttrAccessible attribute on the token Keychain items (confirm WhenUnlocked vs WhenUnlockedThisDeviceOnly)
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - SC-28(1)
+    - MP-5
+    mitre_attack:
+    - technique: T1634
+      sub_technique: null
+      tactic: TA0035
+      rationale: Default WhenUnlocked Keychain items are accessible to credential-access tooling on a stolen/migrated device, the Access Stored Application Data / Keychain procedure on iOS.
+    cwe:
+    - CWE-312
+    masvs:
+    - MASVS-STORAGE-1
+  recommendation:
+    posture: recommended
+    summary: Set kSecAttrAccessibleWhenUnlockedThisDeviceOnly on the token Keychain items.
+    detail: 'In `ServerManagerKeychain` (cev-e5000002), set the Keychain
+
+      accessibility on the access/refresh-token items to
+
+      `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` (or
+
+      `…WhenPasscodeSetThisDeviceOnly` where a passcode requirement is
+
+      acceptable) so the items are non-migratable across devices and excluded
+
+      from device backups. This is the iOS analog of the Android Room
+
+      recommendation (conf-androidr) and uses the same KeychainAccess API the
+
+      class already calls.
+
+      '
+    references:
+    - 'external: OWASP MASTG MASVS-STORAGE-1 (Keychain accessibility)'
+  related_concerns:
+  - ephemeral
+  cross_references: []
+- schema_version: 1
+  id: conf-3060c50e
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Access token crosses the native-to-WebView JS external-auth bridge in cleartext to a remotely-served frontend
+  summary: The Companion apps hand the Core access token to the in-WebView frontend over the external-auth JS bridge (window.externalAppV2 / webkit.messageHandlers) in cleartext; the frontend is the remote self-hosted instance's page, so a hostile/MitM'd server response that runs in the WebView can read the bearer token.
+  detail: 'The frontend requests the bearer token from native by posting
+
+    `getExternalAuth` over the bridge, and native replies by calling
+
+    `window.externalAuthSetToken(true, {access_token, expires_in})`
+
+    (frontend-external-authentication.md). On the JS side,
+
+    `ExternalMessaging._sendExternal` (cev-07000001) dispatches to
+
+    `window.externalAppV2.postMessage(...)` /
+
+    `window.webkit.messageHandlers.externalBus.postMessage(msg)`, and the iOS
+
+    native handler `WebViewExternalMessageHandler.handleExternalMessage`
+
+    (cev-e5000001) switches on the message type with NO origin/integrity check
+
+    on the message source. The token therefore transits the bridge as
+
+    cleartext JSON.
+
+
+    The amplifier is that the WebView renders the REMOTE server frontend
+
+    (cev-0a000005): the JS that runs alongside the token-bearing bridge is
+
+    served by the user-configured Core instance over the network. Against the
+
+    `compromised_backend_or_response` and `network_mitm` positions (and the
+
+    Android user-CA trust of conf-androidtls), a hostile or MitM''d frontend
+
+    payload executing in the WebView can call `getExternalAuth` and exfiltrate
+
+    the access token — the doc itself warns that callback names must be
+
+    verified "to ensure the callback has not been forged"
+
+    (frontend-external-authentication.md), confirming the channel''s trust is
+
+    name-based, not origin/integrity-based.
+
+
+    High severity under the *mobile-applications* rubric clause "A WebView
+
+    JavaScript bridge exposes native capability or data to loaded web content
+
+    without origin allowlisting" (MAS mapping: MASVS-PLATFORM-2; here the data
+
+    exposed is the backend bearer token). The blast-radius modifier loads:
+
+    token theft pivots from the device to the Core backend at the token''s full
+
+    privilege. The identity/forgery half of the warned callback-forgery risk
+
+    routes to Authenticity; this finding owns the confidentiality of the token
+
+    on the channel.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:src.external_app.external_messaging.ExternalMessaging._sendExternal:L491-L505@505966e84f3a90347c66261592908a02a4118189
+    excerpt: window.webkit!.messageHandlers.externalBus.postMessage(msg)
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: guard let incomingMessage = WebSocketMessage(dictionary) ... switch externalBusMessage
+  - artifact: auth/frontend-external-authentication.md
+    locator: '## Get access token, lines 44-55'
+    excerpt: 'window.externalAuthSetToken(true, {access_token: "qwere", expires_in: 1800})'
+  - artifact: code-evidence-index.yaml
+    locator: cev-e5000001 handleExternalMessage no origin check
+    excerpt: compromised_backend_or_response invokes JS bridge with no origin check to exfil mobile_stored_session_and_refresh_tokens
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - AC-4
+    - SC-23
+    mitre_attack:
+    - technique: T1417
+      sub_technique: null
+      tactic: TA0006
+      rationale: Web content loaded into the WebView can invoke the unauthenticated bridge to capture the access token, an Input Capture / credential interception via the JS bridge.
+    cwe:
+    - CWE-749
+    masvs:
+    - MASVS-PLATFORM-2
+    maswe:
+    - MASWE-0068
+  recommendation:
+    posture: required
+    summary: Gate the external-auth bridge by verified origin and stop handing the bearer token to remotely-served WebView content.
+    detail: 'On the native handlers (`handleExternalMessage`, cev-e5000001) enforce
+
+      an origin allowlist so only the trusted first-party frontend origin can
+
+      invoke `getExternalAuth`, and reject bridge messages whose source frame
+
+      is not the configured instance origin. Prefer not to expose the raw
+
+      access token to WebView JS at all: scope the bridge to the specific
+
+      operations the frontend needs rather than returning the bearer, or use a
+
+      short-lived, audience-restricted token minted for the WebView session.
+
+      On the JS side (`_sendExternal`, cev-07000001) bind the channel to a
+
+      per-session nonce rather than a stable callback name (the doc''s
+
+      name-verification guidance is necessary but not sufficient against a
+
+      compromised in-WebView origin).
+
+      '
+    references:
+    - 'external: OWASP MASTG MASVS-PLATFORM-2 (WebView/JS-bridge hardening)'
+  related_concerns:
+  - authenticity
+  - integrity
+  cross_references: []
+- schema_version: 1
+  id: conf-2029ce78
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: high
+  confidence: high
+  title: Android Companion trusts user-installed CAs with no certificate pinning, exposing tokens and PII in transit to MitM
+  summary: '`TLSHelper.setupOkHttpClientSSLSocketFactory` initializes the OkHttp trust manager from the AndroidCAStore, which includes user-installed CAs, and applies no fixed-server pinning; a user-installed/malicious CA lets a network MitM decrypt the token- and PII-bearing channel to Core.'
+  detail: '`common...data.TLSHelper.setupOkHttpClientSSLSocketFactory` (cev-f6000002)
+
+    builds the OkHttp SSL socket factory from
+
+    `KeyStore.getInstance("AndroidCAStore")` and initializes the
+
+    `TrustManagerFactory` with that store. The AndroidCAStore trusts
+
+    USER-installed CA certificates, and no certificate/public-key pinning is
+
+    applied (the recon note: "No fixed-server pinning (self-hosted)"). The
+
+    validation itself is standard X509, so this is not a trust-all/disabled-
+
+    validation case — but the trust anchor set is attacker-influenceable.
+
+
+    The confidentiality consequence is in-transit exposure: against the
+
+    `network_mitm` position, an attacker who can get a CA into the user store
+
+    (social engineering, MDM, a malicious profile) or who already controls a
+
+    trusted-but-mis-issued CA can transparently intercept the
+
+    mobile->Core channel (cev-0a000005), which carries the bearer token and
+
+    home-occupancy/location PII. Because HA is self-hosted there is no fixed
+
+    server certificate to pin to a vendor root, so the design accepts a broad
+
+    trust anchor by default.
+
+
+    High severity under the *mobile-applications* rubric clause "No
+
+    certificate or public-key pinning on a high-value channel whose threat
+
+    model includes user-installed MitM CAs or hostile networks" (MAS mapping:
+
+    MASVS-NETWORK-2). High rather than critical because stock-device default
+
+    TLS still defeats the casual on-path attacker who has not placed a CA. The
+
+    *identity*-of-endpoint (pinning-as-authentication) facet routes to
+
+    Authenticity; this finding owns the confidentiality of the data in
+
+    transit.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidCAStore")... builder.sslSocketFactory(..., trustManagers[0] as X509TrustManager)
+  - artifact: code-evidence-index.yaml
+    locator: cev-f6000002 AndroidCAStore user-CA, no pinning
+    excerpt: network_mitm with a user-installed CA (no pinning) reads mobile_stored_session_and_refresh_tokens in transit
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-23
+    - SC-17
+    mitre_attack:
+    - technique: T1557
+      sub_technique: null
+      tactic: TA0006
+      rationale: Trusting user-installed CAs with no pinning lets an attacker-supplied CA terminate TLS as Adversary-in-the-Middle and read the token/PII channel.
+    cwe:
+    - CWE-295
+    masvs:
+    - MASVS-NETWORK-2
+  recommendation:
+    posture: recommended
+    summary: Offer optional public-key pinning / trust-on-first-use and exclude user CAs for the configured instance channel.
+    detail: 'In `TLSHelper.setupOkHttpClientSSLSocketFactory` (cev-f6000002), since a
+
+      fixed vendor root cannot be pinned for self-hosted instances, support a
+
+      trust-on-first-use (TOFU) public-key pin captured at instance
+
+      onboarding and enforced on subsequent connections, and provide a
+
+      user-visible option to exclude user-installed CAs (build the trust
+
+      manager from the system CA store plus the pinned key only). Surface a
+
+      pin-mismatch as a security event. This preserves self-signed/custom-CA
+
+      support for advanced users while removing the silent-MitM default for
+
+      the token/PII channel.
+
+      '
+    references:
+    - 'external: OWASP MASTG MASVS-NETWORK-2 (identity pinning)'
+  related_concerns:
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: conf-ef49b4b0
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: GET /api/config returns instance latitude/longitude, config_dir and whitelist_external_dirs in cleartext to any bearer holder
+  summary: The /api/config response exposes precise instance geolocation, the on-disk config directory, and the external-directory allowlist to any authenticated token holder regardless of scope, with no per-data-element access scoping on these high-sensitivity properties.
+  detail: '`GET /api/config` (api/rest.md lines 110-128) returns `latitude`,
+
+    `longitude`, `elevation`, `config_dir`, and `whitelist_external_dirs` in
+
+    cleartext. Unlike entity-state reads — which the code DOES scope per-entity
+
+    via `APIEntityStateView.get` -> `check_entity(entity_id, POLICY_READ)`
+
+    (cev-a1000011) — `/api/config` applies no per-property access scoping: any
+
+    valid bearer (including a low-privilege user or a non-owner Long-Lived
+
+    Access Token) reads the precise home location and internal filesystem
+
+    layout.
+
+
+    This is an excessive-property-exposure / minimum-necessary failure at
+
+    data-element granularity: the instance''s precise latitude/longitude is the
+
+    single most sensitive privacy datum in the system (it geolocates the home
+
+    itself), and `config_dir` / `whitelist_external_dirs` disclose internal
+
+    paths useful for the path-traversal / file-serving surface. A scope that
+
+    returns aggregate config (units, version) to all holders but reserves
+
+    precise coordinates and filesystem paths to admins would be
+
+    minimum-necessary; the current response is not.
+
+
+    Medium severity under the *api-security* rubric — it matches the
+
+    "excessive property exposure" pattern (OWASP API3 / BOPLA read-side) but
+
+    is bounded: the exposure requires a valid token (not unauthenticated), the
+
+    data set is single-instance (not bulk multi-subject), and the coordinates
+
+    are coarse-home-location rather than per-person tracking. It escalates if
+
+    combined with a low-privilege token issuance path. The path-disclosure
+
+    facet feeding path traversal routes to Integrity.
+
+    '
+  evidence:
+  - artifact: api/rest.md
+    locator: GET /api/config response, lines 111-128
+    excerpt: '"config_dir":"/home/ha/.homeassistant", ... "latitude":45.8781529, ... "longitude":8.458853651'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise Unauthorized(entity_id=entity_id)'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-6
+    - AC-6(1)
+    - SI-15
+    - AC-4
+    mitre_attack:
+    - technique: T1213
+      sub_technique: null
+      tactic: TA0009
+      rationale: Any low-scope token reads precise instance geolocation and config paths from /api/config, the Data from Information Repositories procedure scoped to the config endpoint.
+    cwe:
+    - CWE-200
+    owasp_api_top10:
+    - API3:2023
+  recommendation:
+    posture: recommended
+    summary: Scope precise location and filesystem paths in /api/config to admin/owner, returning coarse or omitted values to non-admin holders.
+    detail: 'Apply the same per-caller scoping that entity reads already enforce
+
+      (cev-a1000011) to the `/api/config` response: gate `latitude`,
+
+      `longitude`, `config_dir`, and `whitelist_external_dirs` behind
+
+      `user.is_admin` (or a dedicated POLICY), and return either coarse
+
+      location (zone name only) or omit the precise coordinates for
+
+      non-admin/non-owner bearers. This converts the endpoint to a
+
+      minimum-necessary response without breaking the units/version/components
+
+      fields the frontend relies on.
+
+      '
+    references:
+    - 'external: OWASP API Security Top 10 API3:2023 (BOPLA)'
+  related_concerns:
+  - integrity
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: conf-7a74a4a0
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: medium
+  confidence: medium
+  title: iOS Companion compiles git-tracked GoogleService-Info Firebase config secrets into the IPA, recoverable by static analysis
+  summary: '`AppDelegate.setupFirebase` initializes Firebase from a git-tracked GoogleService-Info plist bundled into the IPA, so the Firebase project config (API key, sender/app IDs) is recoverable from any installed app by a reverse engineer.'
+  detail: '`Sources.App.AppDelegate.setupFirebase` (cev-e5000003) configures Firebase
+
+    from the bundled `GoogleService-Info-*.plist`, which the run scope
+
+    confirms is git-tracked and compiled into the IPA
+
+    (ios_bundled_firebase_config_secrets). Against the
+
+    `reverse_engineer_with_ipa_apk` position, these config values are
+
+    extractable from any copy of the app — they are binary-recoverable, not
+
+    confidential.
+
+
+    The confidentiality framing must be calibrated: a Firebase
+
+    GoogleService-Info plist is a project CONFIG bundle (API key + sender ID +
+
+    app ID), not a backend signing secret, and Google''s model treats the
+
+    mobile API key as identifying-not-authenticating when backend security
+
+    rules are enforced server-side. So this is not the critical
+
+    "hardcoded backend credential granting backend access for the entire
+
+    install base" case unless the Firebase project''s security rules are
+
+    permissive. It IS a real exposure of a shared-across-the-install-base
+
+    config secret whose abuse (quota/billing abuse, project enumeration,
+
+    push-channel reconnaissance toward the fcm-push relay) is bounded by the
+
+    server-side rules.
+
+
+    Medium severity: it sits below the *mobile-applications* Critical
+
+    "hardcoded backend credential … granting backend or third-party access for
+
+    the entire install base" clause because the recovered material is config,
+
+    not a backend-access secret, but it remains a shared-secret exposure worth
+
+    remediating. Confidence is medium because the abuse ceiling depends on the
+
+    (unseen) Firebase security-rule posture. If code/config evidence shows the
+
+    bundle carries a privileged key or permissive rules, this escalates to
+
+    critical.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.App.AppDelegate.AppDelegate.setupFirebase:L1-L1@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: configures Firebase from bundled GoogleService-Info plist
+  prerequisite_evidence:
+  - Firebase project security-rule posture and whether the bundled key carries privileged scope (determines abuse ceiling)
+  control_mappings:
+    nist_800_53r5:
+    - SC-28
+    - IA-5(7)
+    - SA-15
+    mitre_attack:
+    - technique: T1577
+      sub_technique: null
+      tactic: TA0009
+      rationale: The bundled GoogleService-Info plist is recoverable from the distributed IPA, the Compromise Application Executable / embedded-config disclosure pattern on mobile.
+    cwe:
+    - CWE-312
+    masvs:
+    - MASVS-STORAGE-1
+  recommendation:
+    posture: recommended
+    summary: Treat the Firebase config as non-confidential and enforce the security boundary server-side; remove it from version control.
+    detail: 'Confirm the Firebase project relies on server-side security rules and an
+
+      App Check / attestation gate rather than the bundled key for any
+
+      sensitive operation, so the binary-recoverable config (cev-e5000003)
+
+      confers no backend privilege. Remove the git-tracked
+
+      GoogleService-Info plist from version control (inject at CI build time)
+
+      to limit casual disclosure, and rotate if it ever carried a privileged
+
+      value. Document the asset explicitly as binary-recoverable config so it
+
+      is not relied upon as a secret.
+
+      '
+    references:
+    - 'external: OWASP MASTG MASVS-CRYPTO-2 (no secrets in the app package)'
+  related_concerns:
+  - authenticity
+  cross_references: []

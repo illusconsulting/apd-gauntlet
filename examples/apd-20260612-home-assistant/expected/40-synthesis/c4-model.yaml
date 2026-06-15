@@ -1,0 +1,1066 @@
+schema_version: 1
+generated_by: assemble_c4
+nodes:
+- id: c4-00ca2e01
+  level: container
+  parent: null
+  name: docker-base
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:docker-base
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-07f5a3e6
+  level: container
+  parent: null
+  name: plugin-dns
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:plugin-dns
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-0ebbc6cf
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.providers.homeassistant.Data.hash_password
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.providers.homeassistant.Data.hash_password
+    repo: core
+  finding_count: 0
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-10ca49c1
+  level: code
+  parent: c4-9e5151b7
+  name: Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain
+    repo: iOS
+    first_finding_id: conf-a30cca33
+  finding_count: 2
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-11fbf1b9
+  level: code
+  parent: c4-d304503a
+  name: system.system.AddSSHAuthKey
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: system.system.AddSSHAuthKey
+    repo: os-agent
+    first_finding_id: auth-6924f467
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-123809c8
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.helpers.storage.Store._write_prepared_data
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.helpers.storage.Store._write_prepared_data
+    repo: core
+    first_finding_id: dist-69bbaf5c
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-13cad86b
+  level: container
+  parent: null
+  name: Recorder history DB
+  kind: data_store
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-a1000018 (recorder.session_scope — presence/geolocation/lock/alarm state history; brief §2)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-1f375927
+  level: code
+  parent: c4-a811b55d
+  name: src.external_app.external_messaging.ExternalMessaging.fireMessage
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: src.external_app.external_messaging.ExternalMessaging.fireMessage
+    repo: frontend
+    first_finding_id: auth-ea69d3a2
+  finding_count: 2
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-2085cc3a
+  level: person
+  parent: null
+  name: Long-Lived Access Token holder
+  kind: human_role
+  provenance:
+    source: asset_inventory
+    artifact: inputs/api/rest.md
+    locator: '#rest-api, line 15 (Long-Lived Access Token from /profile)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-21faac85
+  level: code
+  parent: c4-fcee7bf9
+  name: __route__POST__/api/sendPushNotification
+  kind: route
+  provenance:
+    source: code_evidence
+    locator: __route__POST__/api/sendPushNotification
+    repo: mobile-apps-fcm-push
+    first_finding_id: avail-a2cfd41c
+  finding_count: 2
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-22aa1f41
+  level: container
+  parent: null
+  name: companion.home-assistant
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:companion.home-assistant
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-269b85a2
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.mobile_app.webhook.webhook_call_service
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.mobile_app.webhook.webhook_call_service
+    repo: core
+    first_finding_id: avail-754cfc01
+  finding_count: 6
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-274b56cd
+  level: container
+  parent: null
+  name: Supervisor backup archive store
+  kind: data_store
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-b2000006 (Backup.set_password — full snapshots default to UNENCRYPTED; brief §2)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-2b33e14f
+  level: container
+  parent: null
+  name: Home Assistant Core
+  kind: service
+  provenance:
+    source: artifact
+    locator: code-architecture-brief.md §1 Surface inventory (REST /api port 8123, WS /api/websocket handshake, bearer-less mobile_app webhook)
+    first_finding_id: auth-3f2314a4
+  finding_count: 22
+  capability_count: 15
+  analysis_state: analyzed
+- id: c4-2d5eaa33
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.helpers.recorder.session_scope
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.helpers.recorder.session_scope
+    repo: core
+    first_finding_id: avail-235dacf0
+  finding_count: 6
+  capability_count: 1
+  analysis_state: analyzed
+- id: c4-3038589a
+  level: code
+  parent: c4-fcee7bf9
+  name: functions.handlers.handleRequest
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: functions.handlers.handleRequest
+    repo: mobile-apps-fcm-push
+    first_finding_id: auth-23048c0c
+  finding_count: 2
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-30b671c0
+  level: container
+  parent: null
+  name: plugin-audio
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:plugin-audio
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-32b40633
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.permissions.util.compile_policy
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.permissions.util.compile_policy
+    repo: core
+    first_finding_id: merged-1119b0be
+  finding_count: 2
+  capability_count: 3
+  analysis_state: analyzed
+- id: c4-37c54a76
+  level: person
+  parent: null
+  name: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  kind: external_party
+  provenance:
+    source: asset_inventory
+    artifact: inputs/api/native-app/setup.md
+    locator: '#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-3bfb10f9
+  level: person
+  parent: null
+  name: Trusted-networks / command-line / legacy auth provider principal
+  kind: human_role
+  provenance:
+    source: asset_inventory
+    artifact: inputs/00-SYSTEM-OVERVIEW.md
+    locator: '#authentication-authorization-model, lines 67-69'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-3d5dca87
+  level: system
+  parent: null
+  name: Home Assistant
+  kind: software_system
+  provenance:
+    source: run_config
+    locator: subject
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-43797bde
+  level: container
+  parent: null
+  name: plugin-observer
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:plugin-observer
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-4659f23a
+  level: code
+  parent: c4-aa5a3a58
+  name: client.helper.URLHelper
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: client.helper.URLHelper
+    repo: cli
+    first_finding_id: auth-23048c0c
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-4fe61adf
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.AuthManager.async_validate_access_token
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.AuthManager.async_validate_access_token
+    repo: core
+    first_finding_id: ephem-f19f24f9
+  finding_count: 1
+  capability_count: 3
+  analysis_state: analyzed
+- id: c4-530843d4
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.mobile_app.http_api.RegistrationsView.post
+  kind: route
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.mobile_app.http_api.RegistrationsView.post
+    repo: core
+    first_finding_id: auth-3f2314a4
+  finding_count: 2
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-551aad6d
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.models.RefreshToken
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.models.RefreshToken
+    repo: core
+    first_finding_id: ephem-9915ab91
+  finding_count: 4
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-57d74e41
+  level: code
+  parent: c4-78444877
+  name: supervisor.docker.manager.DockerAPI.container_run_inside
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: supervisor.docker.manager.DockerAPI.container_run_inside
+    repo: supervisor
+    first_finding_id: merged-66801b1b
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-58b318f7
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.api.APITemplateView.post
+  kind: route
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.api.APITemplateView.post
+    repo: core
+    first_finding_id: avail-4be2dd70
+  finding_count: 4
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-5cb67c4d
+  level: container
+  parent: null
+  name: plugin-multicast
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:plugin-multicast
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-6068d33e
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.AuthManager.async_create_access_token
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.AuthManager.async_create_access_token
+    repo: core
+    first_finding_id: avail-235dacf0
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-640e24aa
+  level: code
+  parent: c4-f7d01fcf
+  name: common...data.keychain.KeyStoreRepositoryImpl
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: common...data.keychain.KeyStoreRepositoryImpl
+    repo: android
+    first_finding_id: auth-3794d338
+  finding_count: 1
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-66dae27f
+  level: container
+  parent: null
+  name: host-dockerd
+  kind: external_system
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000003 (Supervisor <-> host Docker daemon over shared /run/docker.sock; brief §5 — host infra, outside repos[])
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-6877897a
+  level: container
+  parent: null
+  name: operating-system
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:operating-system
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-693638dc
+  level: code
+  parent: c4-f7d01fcf
+  name: app...launch.LaunchActivity.LaunchActivity
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: app...launch.LaunchActivity.LaunchActivity
+    repo: android
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-69d1a517
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.permissions._OwnerPermissions
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.permissions._OwnerPermissions
+    repo: core
+    first_finding_id: auth-7162fd48
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-69f67c4e
+  level: person
+  parent: null
+  name: Registered mobile device (webhook_id / cloudhook holder)
+  kind: external_party
+  provenance:
+    source: asset_inventory
+    artifact: inputs/api/native-app/setup.md
+    locator: registration response, lines 74-79 (webhook_id, secret)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-6b059adc
+  level: external_system
+  parent: null
+  name: External devices / cloud services reached by integrations (outbound)
+  kind: external_dependency
+  provenance:
+    source: asset_inventory
+    artifact: inputs/00-SYSTEM-OVERVIEW.md
+    locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-714c61de
+  level: external_system
+  parent: null
+  name: APNS / FCM push providers
+  kind: external_dependency
+  provenance:
+    source: asset_inventory
+    artifact: inputs/00-SYSTEM-OVERVIEW.md
+    locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-72dbaac4
+  level: code
+  parent: c4-f7d01fcf
+  name: common...database.server.ServerSessionInfo.ServerSessionInfo
+  kind: class
+  provenance:
+    source: code_evidence
+    locator: common...database.server.ServerSessionInfo.ServerSessionInfo
+    repo: android
+    first_finding_id: conf-205c53a5
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-7637d4e7
+  level: code
+  parent: c4-9e5151b7
+  name: Sources.App.AppDelegate.AppDelegate.setupFirebase
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: Sources.App.AppDelegate.AppDelegate.setupFirebase
+    repo: iOS
+    first_finding_id: conf-7a74a4a0
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-78444877
+  level: container
+  parent: null
+  name: Supervisor
+  kind: service
+  provenance:
+    source: artifact
+    locator: code-architecture-brief.md §1 Supervisor privileged API (http://supervisor/, SUPERVISOR_TOKEN + per-role URL ACL) + ingress proxy
+    first_finding_id: auth-4e7d1059
+  finding_count: 6
+  capability_count: 5
+  analysis_state: analyzed
+- id: c4-7978cb3b
+  level: person
+  parent: null
+  name: Non-admin / low-priv user (group-scoped permission policy)
+  kind: human_role
+  provenance:
+    source: asset_inventory
+    artifact: inputs/auth/auth_permissions.md
+    locator: '#permissions, lines 9-12 (group membership grants permissions)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-7bf521e1
+  level: external_system
+  parent: null
+  name: Container base images (alpine/debian) + wheels/npm supply chain
+  kind: external_dependency
+  provenance:
+    source: asset_inventory
+    artifact: inputs/infra/supervisor-Dockerfile
+    locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-7f55d47c
+  level: external_system
+  parent: null
+  name: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  kind: external_dependency
+  provenance:
+    source: asset_inventory
+    artifact: inputs/mobile/mobile-apps-fcm-push-README.md
+    locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-84087d5b
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.permissions.filter_entity_ids_by_permission
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.permissions.filter_entity_ids_by_permission
+    repo: core
+    first_finding_id: merged-66801b1b
+  finding_count: 1
+  capability_count: 1
+  analysis_state: analyzed
+- id: c4-858fb41b
+  level: code
+  parent: c4-78444877
+  name: supervisor.docker.manager.DockerAPI.__init__
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: supervisor.docker.manager.DockerAPI.__init__
+    repo: supervisor
+    first_finding_id: dist-d08ed969
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-85956d05
+  level: container
+  parent: null
+  name: home-assistant.io
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:home-assistant.io
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-8a7a12d5
+  level: code
+  parent: c4-c4507c07
+  name: mosquitto.config.yaml
+  kind: module
+  provenance:
+    source: code_evidence
+    locator: mosquitto.config.yaml
+    repo: addons
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-8bd848dd
+  level: container
+  parent: null
+  name: plugin-cli
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:plugin-cli
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-9133e640
+  level: code
+  parent: c4-f7d01fcf
+  name: common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory
+    repo: android
+    first_finding_id: auth-1787eae1
+  finding_count: 4
+  capability_count: 1
+  analysis_state: analyzed
+- id: c4-975cfbd4
+  level: container
+  parent: null
+  name: wheels
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:wheels
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-9904ee7d
+  level: person
+  parent: null
+  name: Third-party integration / device principal (untrusted device/cloud)
+  kind: external_party
+  provenance:
+    source: asset_inventory
+    artifact: inputs/00-SYSTEM-OVERVIEW.md
+    locator: '#trust-boundaries item 6 (untrusted device/cloud responses)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-9a8a0efa
+  level: person
+  parent: null
+  name: Owner user (onboarding user, all permissions)
+  kind: human_role
+  provenance:
+    source: asset_inventory
+    artifact: inputs/auth/auth_index.md
+    locator: '#owner, lines 27-29 (always all permissions)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-9e5151b7
+  level: container
+  parent: null
+  name: iOS Companion
+  kind: app
+  provenance:
+    source: artifact
+    locator: 'code-architecture-brief.md §1/§2 iOS Companion: WebView external bus + ServerManagerKeychain (default Keychain accessibility class)'
+    first_finding_id: auth-ea69d3a2
+  finding_count: 7
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-9f32940b
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.mobile_app.webhook.handle_webhook
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.mobile_app.webhook.handle_webhook
+    repo: core
+    first_finding_id: auth-3f2314a4
+  finding_count: 7
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-a697b2ea
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.auth.providers.homeassistant.Data.validate_login
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.auth.providers.homeassistant.Data.validate_login
+    repo: core
+  finding_count: 0
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-a811b55d
+  level: container
+  parent: null
+  name: Frontend (Lit/TS)
+  kind: app
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-07000001 (src.external_app.external_messaging.ExternalMessaging._sendExternal — Lit/TS JS external-auth bridge served remotely into the WebView)
+    first_finding_id: auth-ea69d3a2
+  finding_count: 3
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-aa3d3890
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.websocket_api.auth.AuthPhase.async_handle
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.websocket_api.auth.AuthPhase.async_handle
+    repo: core
+    first_finding_id: avail-4be2dd70
+  finding_count: 3
+  capability_count: 5
+  analysis_state: analyzed
+- id: c4-aa5a3a58
+  level: container
+  parent: null
+  name: ha CLI
+  kind: app
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-d4000001 (client.helper.URLHelper — ha CLI builds the Supervisor API URL)
+    first_finding_id: auth-23048c0c
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-ab1ad354
+  level: external_system
+  parent: null
+  name: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  kind: external_dependency
+  provenance:
+    source: asset_inventory
+    artifact: inputs/api/native-app/setup.md
+    locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-ae94d359
+  level: code
+  parent: c4-78444877
+  name: supervisor.backups.backup.Backup.set_password
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: supervisor.backups.backup.Backup.set_password
+    repo: supervisor
+    first_finding_id: avail-5af6fee5
+  finding_count: 3
+  capability_count: 1
+  analysis_state: analyzed
+- id: c4-bc1e61b2
+  level: container
+  parent: null
+  name: docker
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:docker
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-bddd59fe
+  level: code
+  parent: c4-9e5151b7
+  name: Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage
+    repo: iOS
+    first_finding_id: auth-ea69d3a2
+  finding_count: 4
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-bf3dfe59
+  level: code
+  parent: c4-78444877
+  name: supervisor.api.middleware.security.SecurityMiddleware.token_validation
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: supervisor.api.middleware.security.SecurityMiddleware.token_validation
+    repo: supervisor
+    first_finding_id: merged-1119b0be
+  finding_count: 3
+  capability_count: 3
+  analysis_state: analyzed
+- id: c4-bfb3f82b
+  level: code
+  parent: c4-78444877
+  name: supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS
+  kind: module
+  provenance:
+    source: code_evidence
+    locator: supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS
+    repo: supervisor
+  finding_count: 0
+  capability_count: 1
+  analysis_state: analyzed
+- id: c4-c4507c07
+  level: container
+  parent: null
+  name: Add-ons
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-09000001 (mosquitto.config.yaml — add-on manifest declaring auth_api role + host mounts that SecurityMiddleware enforces)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-cc1569b3
+  level: container
+  parent: null
+  name: home-assistant-js-websocket
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:home-assistant-js-websocket
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-cd46fff5
+  level: code
+  parent: c4-78444877
+  name: supervisor.api.ingress._init_header
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: supervisor.api.ingress._init_header
+    repo: supervisor
+    first_finding_id: auth-4e7d1059
+  finding_count: 1
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-ceca8483
+  level: container
+  parent: null
+  name: developers.home-assistant
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:developers.home-assistant
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-cecf1484
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.api.APIEntityStateView.get
+  kind: route
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.api.APIEntityStateView.get
+    repo: core
+    first_finding_id: conf-ef49b4b0
+  finding_count: 2
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-d1ea3a05
+  level: container
+  parent: null
+  name: .storage (plaintext JSON config/secrets/tokens)
+  kind: data_store
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-a1000017 (Store._write_prepared_data — .storage written as plaintext UTF-8 JSON, no encryption-at-rest; brief §2)
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-d2789629
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.api.APIEntityStateView.post
+  kind: route
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.api.APIEntityStateView.post
+    repo: core
+    first_finding_id: merged-66801b1b
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-d304503a
+  level: container
+  parent: null
+  name: os-agent
+  kind: compute
+  provenance:
+    source: code_evidence
+    locator: 'code-evidence-index.yaml#cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitive: root SSH-key write)'
+    first_finding_id: auth-6924f467
+  finding_count: 4
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-d3b30ed4
+  level: container
+  parent: null
+  name: architecture
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: repos[]:architecture
+  finding_count: 0
+  capability_count: 0
+  analysis_state: not_analyzed
+- id: c4-d439ef43
+  level: person
+  parent: null
+  name: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  kind: human_role
+  provenance:
+    source: asset_inventory
+    artifact: inputs/mobile/supervisor-apps-security.md
+    locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-dac0a1a3
+  level: code
+  parent: c4-a811b55d
+  name: src.external_app.external_messaging.ExternalMessaging._sendExternal
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: src.external_app.external_messaging.ExternalMessaging._sendExternal
+    repo: frontend
+    first_finding_id: conf-3060c50e
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-eab86774
+  level: code
+  parent: c4-d304503a
+  name: system.system.ScheduleWipeDevice
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: system.system.ScheduleWipeDevice
+    repo: os-agent
+    first_finding_id: auth-6924f467
+  finding_count: 4
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-f08b7afb
+  level: code
+  parent: c4-f7d01fcf
+  name: common...database.DatabaseModule.DatabaseModule.provideAppDatabase
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: common...database.DatabaseModule.DatabaseModule.provideAppDatabase
+    repo: android
+    first_finding_id: conf-205c53a5
+  finding_count: 1
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-f7d01fcf
+  level: container
+  parent: null
+  name: Android Companion
+  kind: app
+  provenance:
+    source: artifact
+    locator: 'code-architecture-brief.md §1/§2 Android Companion: LaunchActivity deep-link entry + DatabaseModule.provideAppDatabase (unencrypted Room) + AndroidKeyStore mTLS key'
+    first_finding_id: auth-1787eae1
+  finding_count: 6
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-fb9078ee
+  level: container
+  parent: null
+  name: Android Room AppDatabase
+  kind: data_store
+  provenance:
+    source: code_evidence
+    locator: 'code-evidence-index.yaml#cev-f6000003 (DatabaseModule.provideAppDatabase — unencrypted SQLite: location_history + session-token rows; brief §2)'
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+- id: c4-fcee7bf9
+  level: container
+  parent: null
+  name: FCM push relay
+  kind: service
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-08000002 (__route__POST__/api/sendPushNotification — Firebase Cloud Function push relay)
+    first_finding_id: auth-23048c0c
+  finding_count: 4
+  capability_count: 2
+  analysis_state: analyzed
+- id: c4-fd561b56
+  level: code
+  parent: c4-2b33e14f
+  name: homeassistant.components.http.auth.async_setup_auth.auth_middleware
+  kind: function
+  provenance:
+    source: code_evidence
+    locator: homeassistant.components.http.auth.async_setup_auth.auth_middleware
+    repo: core
+  finding_count: 0
+  capability_count: 0
+  analysis_state: analyzed
+edges:
+- id: c4e-256f048b
+  edge_type: uses
+  from: c4-9e5151b7
+  to: c4-2b33e14f
+  label: CROSS_HTTP_CALLS — iOS Companion WKWebView loads + calls the user-configured Core REST/WS instance (user-entered self-hosted URL)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000005
+- id: c4e-381ea08b
+  edge_type: uses
+  from: c4-78444877
+  to: c4-66dae27f
+  label: CROSS_CHANNEL — Supervisor controls the host Docker daemon over the shared /run/docker.sock unix socket (host-root control plane)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000003
+- id: c4e-384bedb4
+  edge_type: uses
+  from: c4-78444877
+  to: c4-2b33e14f
+  label: CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls the Core API as a privileged client (runtime container IP)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000002
+- id: c4e-60bdd445
+  edge_type: uses
+  from: c4-78444877
+  to: c4-d304503a
+  label: CROSS_CHANNEL — Supervisor calls os-agent host primitives over the system D-Bus (io.hass.os; container -> host root)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000004
+- id: c4e-9e7befef
+  edge_type: uses
+  from: c4-2b33e14f
+  to: c4-fcee7bf9
+  label: CROSS_HTTP_CALLS — Core mobile_app integration pushes to the FCM relay Cloud Function, which forwards to APNS/FCM (external Firebase URL)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000006
+- id: c4e-b1f89879
+  edge_type: uses
+  from: c4-aa5a3a58
+  to: c4-78444877
+  label: CROSS_HTTP_CALLS — ha CLI invokes the Supervisor API (runtime viper endpoint host)
+  machine_extracted: false
+  provenance:
+    source: code_evidence
+    locator: code-evidence-index.yaml#cev-0a000001
+build_summary:
+  node_count: 82
+  system_count: 1
+  person_count: 8
+  external_system_count: 5
+  container_count: 28
+  component_count: 0
+  code_count: 40
+  uses_edge_count: 6
+  unlocalized_finding_count: 10
+  not_analyzed_container_count: 15

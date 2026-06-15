@@ -1,0 +1,59 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- taxonomy: owasp_api_top10
+  category_id: API4:2023
+  name: Unrestricted Resource Consumption
+  finding_count: 2
+  finding_ids:
+  - avail-4be2dd70
+  - avail-a292763c
+  surfaces:
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API3:2023
+  name: Broken Object Property Level Authorization
+  finding_count: 1
+  finding_ids:
+  - conf-ef49b4b0
+  surfaces:
+  - GET /api/config response, lines 111-128
+  - code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API10:2023
+  name: Unsafe Consumption of APIs
+  finding_count: 1
+  finding_ids:
+  - intg-8b158cfe
+  surfaces:
+  - '#what-home-assistant-is, lines 20-22 (trust posture)'
+  - code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+  silent: false
+- taxonomy: owasp_api_top10
+  category_id: API2:2023
+  name: Broken Authentication
+  finding_count: 4
+  finding_ids:
+  - auth-23048c0c
+  - auth-3dbf15e7
+  - auth-3f2314a4
+  - auth-7162fd48
+  surfaces:
+  - '#clients, lines 14-23 (client_id is the website; custom-scheme redirect)'
+  - '#owner, lines 27-29'
+  - '#setup-flow, lines 30-31'
+  - '#token / Authorization code, lines 72-82'
+  - code:client.helper.URLHelper:L45-L71@c5f716eb5f62c337c603e144f23cd74ac25da98e
+  - code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+  - code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+  - code:supervisor.homeassistant.api.HomeAssistantAPI._ensure_access_token -> homeassistant.components.api
+    (Core /auth/token):L145-L173@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+  - registration response, lines 73-87 (webhook_id / secret optional)
+  silent: false

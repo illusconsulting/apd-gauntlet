@@ -1,0 +1,107 @@
+capability:
+- schema_version: 1
+  id: immut-cap-937d14c1
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  title: Core Dockerfile pins the docker/dockerfile build frontend by immutable sha256 content digest
+  description: 'The core image build declares its dockerfile frontend with an immutable
+
+    content-digest reference — `# syntax=docker/dockerfile@sha256:2780b5c3...` —
+
+    rather than a floating tag. This is a genuine, if narrow, immutability control:
+
+    the dockerfile-processing frontend that interprets the build is frozen to an
+
+    exact, reproducible artifact and cannot silently change under the same reference.
+
+    It establishes that the project understands and applies digest pinning in at
+
+    least one place in its build graph.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed ONLY for the dockerfile *syntax frontend* in the core Dockerfile (line
+
+    1). NOT addressed and explicitly absent (see finding immut-img00005): the base
+
+    image itself (core/supervisor build FROM mutable BUILD_FROM / version tags) and
+
+    the add-on base images (mosquitto build_from :trixie floating tags) are NOT
+
+    digest-pinned, and there is no retained per-deploy SBOM or immutable
+
+    deployment-provenance record. This capability covers a single build-frontend pin,
+
+    not the runtime image artifacts.
+
+    '
+  evidence:
+  - artifact: infra/core-Dockerfile
+    locator: line 1 syntax directive
+    excerpt: '# syntax=docker/dockerfile@sha256:2780b5c3bab67f1f76c781860de469442999ed1a0d7992a5efdf2cffc0e3d769'
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - SR-4
+    - SI-7
+  caveats:
+  - Pin covers the dockerfile frontend only; the base image (BUILD_FROM) is NOT digest-pinned.
+  - Add-on base images use floating :trixie tags (infra/addon-mosquitto-build.yaml) — mutable.
+  - No per-deploy SBOM or immutable deployment record links a running container to a frozen digest.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: immut-cap-5e14aa20
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  title: Supervisor backup supports optional password-based archive protection (default off)
+  description: 'The Supervisor backup path exposes Backup.set_password, allowing an operator to
+
+    apply a password to a backup archive. When set, the password-based protection
+
+    raises the cost of silently tampering with or reading the archive offline. From
+
+    the Immutability lens this is the only mechanism that can lend any tamper-
+
+    resistance to the archive content, and it is recorded here for completeness as a
+
+    partial, opt-in control rather than as an effective immutability guarantee.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed present as an OPTIONAL parameter that defaults to None (off) — see
+
+    finding immut-bkp00002 for the gap. NOT addressed: there is no object-lock/WORM/
+
+    retention/legal-hold on the archive store, no signed integrity manifest
+
+    independent of the password, and no default protection — when the password is
+
+    unset (the default) the archive has neither encryption nor any integrity MAC.
+
+    This capability is a per-backup opt-in only; it provides no immutability of the
+
+    storage tier and no protection against deletion.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'self._password: str | None = None ... def set_password(self, password): self._password = password or None'
+  - artifact: code-evidence-index.yaml
+    locator: optional password-based backup protection (default off)
+    excerpt: optional password-based backup protection (default off) partially mitigates physical_thief_with_stolen_device reading supervisor_backup_archive
+  control_mappings:
+    nist_800_53r5:
+    - CP-9(8)
+    - MP-4
+  caveats:
+  - Defaults to None (off) — default backups have neither encryption nor an integrity MAC.
+  - No object-lock/WORM/retention/legal-hold on the archive store — does not prevent deletion.
+  - No signed manifest independent of the password; integrity rests on the encryption mode when set.
+  - Confidentiality of the archive at rest is routed to the Confidentiality lens.
+  related_concerns:
+  - confidentiality
+  - availability

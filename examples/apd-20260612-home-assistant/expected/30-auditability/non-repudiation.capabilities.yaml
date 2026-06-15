@@ -1,0 +1,118 @@
+capability:
+- schema_version: 1
+  id: nonrep-cap-510a35c7
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  title: Recorder history DB with context_user_id field provides a durable, queryable record of entity-state changes
+  description: 'Home Assistant Core persists entity-state history to the Recorder DB
+
+    (cev-a1000018 `session_scope`, backed by SQLite/MariaDB/PostgreSQL), exposed
+
+    to users via /api/history and /api/logbook. Each context carries a
+
+    `context_user_id` field intended to associate a state change with the user who
+
+    caused it. This is a durable, queryable trace of WHAT changed and WHEN, and —
+
+    when the field is populated — a corroborating signal of WHO. It is the only
+
+    structurally durable record of consequential state changes in the system.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: a durable, queryable history of entity-state changes exists in the
+
+    Recorder DB with a context_user_id field for actor association
+
+    (cev-a1000018; /api/logbook in api/rest.md).
+
+    NOT addressed / explicitly out of scope: this is a user-facing state-history
+
+    surface, NOT a security audit log — it does not record authentication events,
+
+    token/credential lifecycle, permission decisions, administrative/Supervisor
+
+    operations, or host-root actions (see findings nonrep-00000001 / 4 / 5 / 6).
+
+    The actor field is observed NULL in the documented sample (context_user_id:
+
+    null), so attribution is frequently absent (finding nonrep-00000002).
+
+    Tamper-resistance and retention of these rows is an Immutability question (the
+
+    rows have no MAC / append-only protection); the recorder is a mutable store.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state history'
+  - artifact: api/rest.md
+    locator: /api/logbook sample response, lines 360-383
+    excerpt: '"context_user_id": null'
+  control_mappings:
+    nist_800_53r5:
+    - AU-3
+    - AU-12
+  caveats:
+  - 'Not a security audit log: covers entity-state history only, not auth/token/permission/admin events.'
+  - context_user_id is observed null in the documented sample, so actor attribution is frequently absent.
+  - Recorder rows are mutable (no MAC / append-only / WORM) — alteration resistance is an Immutability gap.
+  - Owner (cev-a1000008) is unconditional all-access; there is no separate audit-reader role over this history.
+  related_concerns:
+  - immutability
+  - authenticity
+  - confidentiality
+- schema_version: 1
+  id: nonrep-cap-e865e0d3
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  title: Supervisor SecurityMiddleware emits a diagnostic warning naming the add-on on a role-denied privileged API call
+  description: 'The Supervisor authorization chokepoint, SecurityMiddleware token_validation
+
+    (cev-b2000001), emits a `_LOGGER.warning("%s no role for %s")` identifying the
+
+    requesting add-on and the path when a SUPERVISOR_TOKEN-bearing caller is denied
+
+    by the per-role URL ACL. This provides a partial, attributable signal of
+
+    DENIED privileged-access attempts against the host-root-equivalent Supervisor
+
+    API.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: denied (role-miss) privileged Supervisor API calls produce a
+
+    diagnostic warning naming the add-on and path (cev-b2000001).
+
+    NOT addressed / explicitly out of scope: this is a diagnostic logger line, NOT
+
+    a durable, tamper-evident, retained audit stream; and it covers only the DENY
+
+    branch — successful (ALLOWED) privileged operations such as add-on install,
+
+    backup create/restore, and Docker container exec produce NO record (finding
+
+    nonrep-00000005). There is no actor beyond the add-on identity, no separate
+
+    audit sink, and no retention/access-control posture.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'else: _LOGGER.warning("%s no role for %s")'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-12
+  caveats:
+  - Covers only the DENY branch; successful privileged operations are unrecorded (finding nonrep-00000005).
+  - A transient diagnostic logger line, not a durable/retained/tamper-evident audit stream.
+  - No separate audit sink, retention policy, or audit-read access control.
+  related_concerns:
+  - authenticity
+  - immutability

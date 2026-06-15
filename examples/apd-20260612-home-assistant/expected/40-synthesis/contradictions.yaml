@@ -1,0 +1,57 @@
+contradictions:
+- id: contra-067769c7
+  finding_id: intg-4768c0f0
+  capability_id: intg-cap-e18bb24c
+  finding_assertion: Core .storage records have no MAC or content hash, so a directed
+    file-write silently forges refresh-token jwt_keys or escalates a user via the
+    permission policy.
+  capability_assertion: Permission policy compilation fails closed to deny-all on
+    an empty or corrupt policy, so a missing/truncated/unparseable policy denies rather
+    than defaulting open.
+  evidence_comparison: "The capability (compile_policy, apply_policy_deny_all) protects\
+    \ against ACCIDENTAL corruption and truncation \u2014 a malformed policy degrades\
+    \ to deny \u2014 and its own prose explicitly carves out that it does NOT protect\
+    \ against a DIRECTED tamper-to-True/allow-all. The finding is precisely that directed\
+    \ tamper: a file-write that sets policy to True or forges a jwt_key, which fail-closed\
+    \ compilation does not detect or prevent. The two address disjoint threat models\
+    \ (random corruption vs. adversarial write) on the same policy artifact."
+  recommended_resolution: Keep both. The fail-closed capability is a genuine resilience/safe-default
+    property; it neither covers nor weakens the directed-tamper finding. The MAC/content-hash
+    remediation in the finding is the control that would close the directed-tamper
+    gap the capability self-admits it does not.
+- id: contra-7dcf3d1e
+  finding_id: intg-5df46115
+  capability_id: intg-cap-ecebb879
+  finding_assertion: mobile_app webhook_call_service actuates arbitrary services (locks/alarms)
+    with no per-entity write-path authorization, mutating state outside the permission
+    engine.
+  capability_assertion: Per-entity READ permission is enforced at the state view with
+    deny-all-by-default policy compilation; the code-recon pass resolves the brief's
+    load-bearing authz gap to ENFORCED for reads.
+  evidence_comparison: The capability's scope is explicitly the READ path (APIEntityStateView.get,
+    check_entity POLICY_READ, compile_policy fail-closed) and even names the doc note
+    it resolves; the finding's scope is the webhook write path (webhook_call_service,
+    registration_context, no per-entity check) which routes AROUND the permission
+    engine entirely. The capability never claims write-path or webhook-path coverage,
+    so its ENFORCED-for-reads attestation does not touch the finding's claim.
+  recommended_resolution: Keep both. The capability resolves the READ-side documentation
+    staleness; the finding's WRITE-side and webhook-bypass gaps are untouched by it
+    and remain open. No maturity change.
+- id: contra-f45409a0
+  finding_id: intg-d6c5e666
+  capability_id: conf-cap-88473a97
+  finding_assertion: POST /api/states write enforces only is_admin with no per-entity
+    write policy, so any admin token mutates arbitrary entity state.
+  capability_assertion: APIEntityStateView.get enforces per-entity check_entity(POLICY_READ)
+    and filter_entity_ids_by_permission scopes the readable set per the compiled policy,
+    resolving the brief's open question to ENFORCED for reads.
+  evidence_comparison: "The capability cites the GET path (L242-L255, check_entity\
+    \ POLICY_READ) and is explicit that it scopes READS; the finding cites the POST\
+    \ path (L257-L275, is_admin-or-deny) and is explicit that it concerns WRITES.\
+    \ The same permission engine is per-entity on read but coarse admin-or-deny on\
+    \ write \u2014 an asymmetry both records independently observe \u2014 so they\
+    \ describe adjacent, non-overlapping surfaces rather than the same claim."
+  recommended_resolution: 'Keep both: the capability stands as a confirmed READ-path
+    control and the finding stands as an open WRITE-path gap. Neither downgrades the
+    other; the asymmetry itself is the actionable signal (extend per-entity policy
+    to the write path).'

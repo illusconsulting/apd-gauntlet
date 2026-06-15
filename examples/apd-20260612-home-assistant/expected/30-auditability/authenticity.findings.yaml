@@ -1,0 +1,1223 @@
+finding:
+- schema_version: 1
+  id: auth-6924f467
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: os-agent D-Bus host-root methods (AddSSHAuthKey, ScheduleWipeDevice) verify no caller identity before host-root ops
+  summary: os-agent exposes host-root D-Bus methods that perform privileged operations with no cryptographic or platform verification of the calling identity.
+  detail: 'The os-agent Go daemon exposes system D-Bus methods on the io.hass.os interface
+
+    that perform host-root operations — system.system.AddSSHAuthKey appends an
+
+    arbitrary key to root''s authorized_keys (code: L57-L75), and
+
+    system.system.ScheduleWipeDevice schedules a destructive datadisk/factory wipe
+
+    (L29-L55). Neither method performs any in-method authentication of the D-Bus
+
+    caller: there is no verification of the caller''s bus name, uid, PID, or any
+
+    signed/attested token proving the caller is the legitimate Supervisor. The
+
+    identity of the principal invoking a container->host-root bridge is therefore
+
+    unverifiable at the moment of the privileged action — any process able to reach
+
+    the system D-Bus (a compromised add-on container that has escaped to the
+
+    container->host bridge per the internal_lateral_attacker / malicious_or_
+
+    compromised_addon positions) is indistinguishable from the genuine Supervisor.
+
+
+    This is an Authenticity gap (is the claimed identity of the caller verifiable),
+
+    distinct from the write-path-authorization concern Integrity owns: even a correct
+
+    authorization policy cannot be enforced when the caller identity it would gate on
+
+    is never established. This is high severity under the *api-security* rubric clause
+
+    "Authentication bypass to high-privilege functions with no factor required" — a
+
+    host-root primitive reachable with no identity factor — escalated to critical
+
+    because the affected functions are host-root SSH-key injection and device wipe (the
+
+    single most consequential privilege boundary in the system), matching the rubric''s
+
+    framing of authentication bypass to high-privilege functions at its sharpest edge.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.AddSSHAuthKey:L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: file.WriteString(newKey) ... "key added for user root"
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: schedule factory-reset / datadisk wipe over D-Bus
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor (D-Bus client) -> system.system.AddSSHAuthKey (os-agent):L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: 'CROSS_CHANNEL: Supervisor calls os-agent host methods over the system D-Bus (io.hass.os)'
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.AddSSHAuthKey:L57-L75
+    excerpt: internal_lateral_attacker reaches os-agent D-Bus AddSSHAuthKey (no caller authz) -> host-root supervisor_docker_control_plane
+  control_mappings:
+    nist_800_53r5:
+    - IA-3
+    - IA-9
+    - IA-2
+    - SC-23
+    - AC-6
+    mitre_attack:
+    - technique: T1543
+      sub_technique: null
+      tactic: TA0003
+      rationale: An unauthenticated AddSSHAuthKey D-Bus call writes an attacker key into root authorized_keys, establishing persistent host-root access without any caller identity check.
+    cwe:
+    - CWE-306
+    - CWE-862
+  recommendation:
+    posture: required
+    summary: Authenticate the D-Bus caller in each os-agent host-root method before acting.
+    detail: 'Replace the unauthenticated method dispatch in system/system.go with a
+
+      D-Bus PolicyKit / bus-name + uid check (or an io.hass.os Polkit action
+
+      policy) so AddSSHAuthKey and ScheduleWipeDevice verify the caller is the
+
+      Supervisor service identity before performing the host-root operation.
+
+      Bind the privileged interface to a dedicated system bus name restricted by
+
+      a D-Bus policy file that grants the methods only to the Supervisor''s uid,
+
+      and reject calls whose caller credentials (read via the bus daemon''s
+
+      GetConnectionUnixUser / GetConnectionUnixProcessID) do not match. Do not
+
+      rely on the D-Bus socket''s filesystem permissions alone as the identity
+
+      proof for host-root primitives.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-3 Device Identification and Authentication'
+    - 'external: freedesktop.org D-Bus / polkit caller authorization'
+  related_concerns:
+  - integrity
+  - non_repudiation
+  cross_references:
+  - intg-d5c5bca5
+- schema_version: 1
+  id: auth-3f2314a4
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: mobile_app webhook authenticates by possession of a 32-hex webhook_id alone, with no caller identity or signature
+  summary: The mobile_app webhook entrypoint accepts a webhook_id as the sole identity proof — no bearer, no per-request signature, no caller authentication.
+  detail: 'The mobile_app webhook path (handle_webhook, code: L172-L180) maps an inbound
+
+    webhook_id directly to a config_entry; the only authenticator is possession of
+
+    the 32-hex webhook_id (secrets.token_hex, minted at registration —
+
+    RegistrationsView.post L67-L88). The resulting webhook is bearer-LESS: unlike the
+
+    OAuth bearer path validated by async_validate_access_token, no access token, no
+
+    per-request HMAC, and no caller-identity assertion is required. The optional NaCl
+
+    "secret" provides body confidentiality/integrity only if the app enabled
+
+    supports_encryption; it is not a mandatory request authenticator and the registration
+
+    doc presents encryption as optional (supports_encryption flag). Through this path
+
+    webhook_call_service (L269-L292) invokes ARBITRARY services (locks, alarms) under a
+
+    synthesized registration_context.
+
+
+    The identity asserting "I am this registered device" is therefore unverifiable beyond
+
+    a single static bearer-equivalent string. Any holder of a leaked webhook_id or
+
+    cloudhook URL (the leaked_device_webhook_id attacker position) is cryptographically
+
+    indistinguishable from the genuine device. This is high severity under the
+
+    *api-security* rubric clause "MFA bypass or weak MFA on PII or payment surfaces" /
+
+    "Broken Authentication (API2)" applied to a consequential control surface — a single
+
+    possession factor with no proof-of-holder gates physical-device actuation. The
+
+    double-actuation and arbitrary-service concerns route to Integrity; this finding is
+
+    bounded to the unverifiable caller identity.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: webhook_id = secrets.token_hex(); ... data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
+  - artifact: api/native-app/setup.md
+    locator: registration response, lines 73-87 (webhook_id / secret optional)
+    excerpt: '"secret": "qwerty", "webhook_id": "abcdefgh"'
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000016 handle_webhook (possession-only)
+    excerpt: leaked_device_webhook_id authenticates by possession to mobile_app_webhook_api (no bearer / caller identity)
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - IA-9
+    - SC-23
+    - IA-3(1)
+    mitre_attack:
+    - technique: T1078
+      sub_technique: null
+      tactic: TA0001
+      rationale: A leaked webhook_id is a permanent valid credential that authenticates arbitrary service calls into Core with no additional identity proof required.
+    cwe:
+    - CWE-306
+    - CWE-345
+    owasp_api_top10:
+    - API2:2023
+  recommendation:
+    posture: required
+    summary: Make the per-request NaCl signature mandatory and bind webhook calls to a verifiable device identity.
+    detail: 'Require the registration-time secret (the NaCl SecretBox key minted in
+
+      RegistrationsView.post) on every webhook request rather than treating
+
+      supports_encryption as optional, so handle_webhook authenticates a
+
+      per-request MAC/signature over the body and replay-protects it with a nonce,
+
+      instead of trusting bare possession of the webhook_id. For consequential
+
+      webhook_call_service actions, additionally bind the device to the issuing
+
+      user''s refresh-token identity so a leaked webhook_id alone cannot actuate
+
+      locks/alarms. Pair with rate-limiting on the bearer-less entrypoint.
+
+      '
+    references:
+    - 'external: OWASP API Security Top 10 2023 API2 Broken Authentication'
+  related_concerns:
+  - integrity
+  - ephemeral
+  - non_repudiation
+  cross_references:
+  - intg-5df46115
+  - ephem-053957f3
+- schema_version: 1
+  id: auth-3794d338
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Companion apps and Core have no hardware device attestation (Play Integrity / App Attest), so the backend has no genuine-client proof
+  summary: No Play Integrity / App Attest / key attestation anywhere; the backend cannot cryptographically verify a request came from a genuine, untampered app on a genuine device.
+  detail: 'The run''s crown-jewel enumeration confirms attestation_tokens_and_jwts is ABSENT —
+
+    no Play Integrity, App Attest, DeviceCheck, or SafetyNet exists in either Companion
+
+    app or Core. Code recon corroborates: the Android client''s only client-side identity
+
+    controls are the mTLS key in the AndroidKeyStore (KeyStoreRepositoryImpl) and the
+
+    custom TLS factory (TLSHelper), and there is no root/jailbreak/Frida detection
+
+    (rooted_device_attacker_with_frida position). Consequently the backend has no
+
+    cryptographic proof that a request originates from a genuine, untampered Companion
+
+    build running on an uncompromised device — a repackaged or emulated client, or a
+
+    direct API caller replaying extracted tokens, is indistinguishable to Core.
+
+
+    This is the *verifiable* counterpart to the missing runtime-detection signal (which
+
+    Integrity owns as advisory). Per the *mobile-applications* authenticity pattern "No
+
+    hardware attestation (MASVS-RESILIENCE-4)", severity is high here rather than critical
+
+    because the consequential backend writes the client commands (device control via the
+
+    mobile_app webhook / call_service) are additionally guarded by the bearer/permission
+
+    model rather than accepted on the bare client assertion alone; it would be critical if
+
+    a high-value write were accepted on nothing but a client-side root verdict. Recorded as
+
+    the structural gap: the backend has no genuine-client proof at all, so every
+
+    device-trust argument about the mobile clients is unresolvable.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidKeyStore") // hardware-backed key store for mTLS client-cert private key
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidCAStore")... trustManagerFactory.init(androidCaStore)
+  - artifact: mobile/android-CLAUDE.md
+    locator: run-config crown_jewels EXCLUDED note (attestation_tokens_and_jwts absent)
+    excerpt: no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - SI-7
+    - SI-7(6)
+    - SC-23
+    - RA-3
+    mitre_attack: []
+    masvs:
+    - MASVS-RESILIENCE-4
+    maswe:
+    - MASWE-0099
+  recommendation:
+    posture: recommended
+    summary: Request and server-verify a fresh hardware attestation verdict and bind it to high-value actions.
+    detail: 'Add Play Integrity (Android) and DCAppAttest / App Attest (iOS) to the
+
+      Companion apps, request a fresh nonce-bound verdict at session establishment
+
+      and before consequential device-control actions, and verify the
+
+      Google/Apple-signed verdict plus key-attestation chain SERVER-SIDE in the
+
+      mobile_app integration before honoring webhook_call_service / state writes —
+
+      binding the verdict to the issued session or per-action step-up rather than
+
+      logging it. Because self-hosted instances vary, gate this as an opt-in
+
+      hardening tier for users who expose Core to the internet. This is the
+
+      verifiable floor that makes the absent root/Frida heuristics moot.
+
+      '
+    references:
+    - 'external: OWASP MASVS-RESILIENCE-4 (hardware-backed attestation)'
+    - 'external: Google Play Integrity API / Apple App Attest'
+  related_concerns:
+  - integrity
+  - non_repudiation
+  cross_references: []
+- schema_version: 1
+  id: auth-1787eae1
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Android Companion verifies the server with default CA trust plus user-installed CAs and no pinning, so the backend identity is forgeable to a MitM
+  summary: The custom TLS factory trusts user-installed CAs with no certificate/public-key pinning, so a MitM with an installed CA impersonates the self-hosted backend.
+  detail: 'The Android Companion''s TLSHelper.setupOkHttpClientSSLSocketFactory loads the
+
+    AndroidCAStore into its trust manager (code: L24-L43), which includes USER-installed
+
+    CAs, and performs standard X509 validation with no certificate or public-key (SPKI)
+
+    pinning. Because the backend is a user-entered self-hosted instance URL with no fixed
+
+    certificate, the client cannot verify the SERVER''s identity beyond "some CA in the
+
+    device trust store signed this leaf". An on-path adversary who can get a CA into the
+
+    store (a user-installed MitM CA, an enterprise/MDM CA, or a compromised public CA —
+
+    the network_mitm position) presents a certificate the client accepts, impersonating
+
+    the Home Assistant backend and harvesting the bearer token passed over the channel or
+
+    rewriting responses the WebView/native bridge then trusts.
+
+
+    This is the server-identity-verification face of Authenticity (verifying who the
+
+    server is), distinct from the eavesdropping/confidentiality face. Per the
+
+    *mobile-applications* authenticity pattern "No certificate or public-key pinning on a
+
+    high-value channel (MASVS-NETWORK-2)" this is high: stock-device default TLS still
+
+    holds against the casual on-path case with no installed CA, but the device-trust
+
+    assumption is low for the installed-CA case and the blast radius pivots to backend
+
+    impersonation and token theft. Pinning a self-hosted, user-chosen server is genuinely
+
+    hard (no fixed cert), so the finding of record is the absent trust-on-first-use pin or
+
+    user-confirmable certificate identity, not a static pin set.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidCAStore")... builder.sslSocketFactory(..., trustManagers[0] as X509TrustManager)
+  - artifact: code-evidence-index.yaml
+    locator: TLSHelper AndroidCAStore no SPKI pinning
+    excerpt: network_mitm forges backend identity (no pinning, user-CA trust) to intercept mobile_stored_session_and_refresh_tokens
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-23
+    - IA-9
+    - SC-17
+    mitre_attack:
+    - technique: T1557
+      sub_technique: null
+      tactic: TA0006
+      rationale: Trusting user-installed CAs with no pinning lets a MitM with an installed CA present an accepted certificate and intercept the bearer token in transit.
+    cwe:
+    - CWE-295
+    masvs:
+    - MASVS-NETWORK-2
+    maswe:
+    - MASWE-0052
+  recommendation:
+    posture: recommended
+    summary: Add trust-on-first-use pinning and exclude user-installed CAs for the configured instance.
+    detail: 'For each configured server, capture the leaf/SPKI on first successful
+
+      connection and pin it (trust-on-first-use) so a later MitM with a different
+
+      certificate is rejected and surfaced to the user, and scope the OkHttp trust
+
+      manager to the system CA store (excluding user-added CAs) for the instance
+
+      channel unless the user explicitly opted into a custom CA. Report a pin /
+
+      certificate-identity mismatch to the user as a security event rather than
+
+      silently proceeding. The eavesdropping face of this same channel is owned by
+
+      the Confidentiality finding on user-installed-CA trust.
+
+      '
+    references:
+    - 'external: OWASP MASVS-NETWORK-2 (server-identity verification / pinning)'
+  related_concerns:
+  - confidentiality
+  - integrity
+  cross_references:
+  - conf-2029ce78
+- schema_version: 1
+  id: auth-3dbf15e7
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: IndieAuth authorization-code flow on the mobile public client omits PKCE, so an intercepted code redeems for tokens
+  summary: The token endpoint binds the authorization code only to a public client_id (the redirect URL) with no PKCE code_verifier, so a code intercepted at a custom-scheme redirect is redeemable.
+  detail: 'Home Assistant''s auth flow is OAuth2 + the IndieAuth extension where the client_id IS
+
+    the application''s website URL and the redirect must share its host (auth_api.md). A
+
+    native app whitelists a custom-scheme redirect such as hass://auth via a link tag. The
+
+    token endpoint requires only that the authorization_code request carry "the exact same
+
+    client_id" used at authorize — there is NO PKCE code_challenge / code_verifier in the
+
+    documented flow (auth_api.md authorize + token sections show client_id and code only).
+
+    A mobile app is an OAuth public client holding no confidential secret (the run-config
+
+    confirms client_id IS the redirect URL, no client secret), so without PKCE the only
+
+    thing binding the authorization code to the requesting app is a PUBLIC client_id that
+
+    any party can replay.
+
+
+    An authorization code delivered to a hijackable custom-scheme redirect (a co-resident
+
+    app registering the same scheme, or the phishing_deep_link_or_ipc_caller position) can
+
+    therefore be intercepted and exchanged for an access+refresh token by an attacker who
+
+    replays the same public client_id — no device-rooting required. Per the
+
+    *mobile-applications* authenticity pattern "OAuth public client performs authorization
+
+    without PKCE (MASVS-AUTH-1)" this is high: code interception by a co-resident app or
+
+    duplicate-scheme registration needs no rooted device, and the intercepted refresh token
+
+    is long-lived (Ephemeral owns the lifetime). The OAuth/OIDC protocol decision routes to
+
+    identity-security; filed here as the mobile-origin authenticity gap.
+
+    '
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: '#token / Authorization code, lines 72-82'
+    excerpt: grant_type=authorization_code& code=12345& client_id=https%3A%2F%2Fhass-auth-demo.glitch.me
+  - artifact: auth/auth_api.md
+    locator: '#clients, lines 14-23 (client_id is the website; custom-scheme redirect)'
+    excerpt: The client ID you need to use is the website of your application ... <link rel='redirect_uri' href='hass://auth'>
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - IA-5
+    - IA-5(2)
+    - IA-8
+    mitre_attack:
+    - technique: T1528
+      sub_technique: null
+      tactic: TA0006
+      rationale: Without PKCE, an authorization code intercepted at a hijackable custom-scheme redirect is exchanged for an access token by replaying the public client_id.
+    cwe:
+    - CWE-287
+    masvs:
+    - MASVS-AUTH-1
+    maswe:
+    - MASWE-0040
+    owasp_api_top10:
+    - API2:2023
+  recommendation:
+    posture: recommended
+    summary: Require PKCE (RFC 7636) on the authorization-code flow and prefer domain-verified redirects over custom schemes.
+    detail: 'Add PKCE support to the /auth/authorize and /auth/token endpoints: require a
+
+      code_challenge (S256) at authorize and a matching code_verifier at token
+
+      exchange, so an intercepted code is unredeemable without the per-flow secret
+
+      held only by the initiating app. In the Companion apps, prefer a
+
+      domain-verified Android App Link / iOS Universal Link redirect over the
+
+      hijackable hass:// custom scheme. Because IndieAuth public clients hold no
+
+      secret, PKCE is the only mechanism that binds the code to the requesting app.
+
+      '
+    references:
+    - 'external: RFC 7636 Proof Key for Code Exchange'
+    - 'external: OWASP MASVS-AUTH-1'
+  related_concerns:
+  - ephemeral
+  - integrity
+  cross_references:
+  - ephem-053957f3
+- schema_version: 1
+  id: auth-23048c0c
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Inter-service calls (Supervisor->Core, CLI->Supervisor, Core->push relay) carry no payload-level signing, relying on bearer/transport identity only
+  summary: Cross-service requests are authenticated by bearer token or local socket only, with no per-message workload-identity signature, so a host-root-plane compromise forges any peer.
+  detail: 'Across the ecosystem, service-to-service authenticity rests on bearer tokens and
+
+    local sockets, never on a signed payload binding the message to a verified workload
+
+    identity. Supervisor acts as a privileged Core client: it POSTs {api_url}/auth/token
+
+    and holds a Core access token (code: x0000002), so the host-root control plane can
+
+    mint/forge Core admin requests; the `ha` CLI builds a runtime endpoint URL into the
+
+    Supervisor API with no mutual workload authentication (URLHelper x0000001); Core''s
+
+    notify path calls the external Firebase push relay (x0000006) whose handler
+
+    authenticates no caller (handleRequest consumes push_token from the body with no
+
+    caller authn). None of these hops attaches a producer signature a consumer verifies;
+
+    there is no SPIFFE/SPIRE, no mTLS between Core and Supervisor (the Android mTLS key is
+
+    a client->Core control, not an internal-mesh control), and no event-bus message
+
+    signing.
+
+
+    Consequently a foothold on any one component (the internal_lateral_attacker /
+
+    malicious_or_compromised_addon positions) cannot be cryptographically distinguished
+
+    from a legitimate peer at the next hop. This is high severity under the *api-security*
+
+    rubric clause "Service-to-service inside the cluster uses shared bearer tokens, not
+
+    mTLS or workload identity" — lateral-movement amplification with no identity binding on
+
+    the credential. The token-lifetime/rotation concern routes to Ephemeral; this finding
+
+    is bounded to the absent per-message workload-identity verification.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.homeassistant.api.HomeAssistantAPI._ensure_access_token -> homeassistant.components.api (Core /auth/token):L145-L173@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'CROSS_HTTP_CALLS: Supervisor POSTs {api_url}/auth/token and calls Core''s API as a privileged client'
+  - artifact: code-evidence-index.yaml
+    locator: code:client.helper.URLHelper:L45-L71@c5f716eb5f62c337c603e144f23cd74ac25da98e
+    excerpt: base := viper.GetString("endpoint") ... uri := fmt.Sprintf("%s%s/%s/%s", scheme, base, section, command)
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: 'const { push_token: token } = req.body; if (!token) return res.status(403)'
+  - artifact: code-evidence-index.yaml
+    locator: cev-0a000002 Supervisor POSTs /auth/token as privileged Core client
+    excerpt: internal_lateral_attacker presents shared bearer/socket; Supervisor mints Core admin requests reaching user_credentials_store
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - IA-3
+    - SC-8(1)
+    - SC-23
+    - SC-23(3)
+    mitre_attack:
+    - technique: T1557
+      sub_technique: null
+      tactic: TA0006
+      rationale: Absent per-message workload-identity signing, a lateral attacker on one service presents the shared bearer/socket and is accepted as a legitimate peer at the next hop.
+    cwe:
+    - CWE-345
+    owasp_api_top10:
+    - API2:2023
+  recommendation:
+    posture: recommended
+    summary: Add workload identity (mTLS or signed payloads) on the Supervisor<->Core and CLI<->Supervisor hops and authenticate the push-relay caller.
+    detail: 'Introduce a workload-identity layer on the internal hops: mutually
+
+      authenticate Supervisor<->Core with mTLS using per-component certificates
+
+      (rather than only a bearer token the host-root plane can replay), and require
+
+      the `ha` CLI to present a verifiable client identity to the Supervisor API
+
+      instead of a runtime-trusted endpoint. For the Core->push-relay hop, require
+
+      the relay to authenticate the calling instance (a signed request or
+
+      per-instance credential) so a third party holding a valid-format FCM token
+
+      cannot drive notifications. Where full mTLS is impractical, sign consequential
+
+      inter-service payloads (e.g. with a per-component key) and verify the
+
+      signature at the consumer.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-9 Service Identification and Authentication'
+    - 'external: SPIFFE/SPIRE workload identity'
+  related_concerns:
+  - ephemeral
+  - confidentiality
+  - non_repudiation
+  cross_references:
+  - ephem-cf71612d
+- schema_version: 1
+  id: auth-7162fd48
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: MFA/TOTP is optional and user-opt-in with no enforced AAL, so the all-access owner account can be password-only
+  summary: TOTP MFA is available but per-user opt-in via the profile page; no surface — including the unconditional all-access owner — mandates a second factor and no AAL target is declared.
+  detail: 'Home Assistant ships a TOTP MFA module, but MFA is purely opt-in: "All available
+
+    modules will be listed in user profile page, user can enable the module he/she wants
+
+    to use" (auth_auth_module.md). The credential path is bcrypt password validation
+
+    (Data.validate_login / hash_password); nothing in the auth flow mandates a second
+
+    factor on any surface. The owner account holds an unconditional all-access grant
+
+    (_OwnerPermissions.access_all_entities returns True; filter short-circuits for admins),
+
+    so a single phished/guessed/breach-reused password on the owner yields total control of
+
+    Core, the integration secret vault, the Recorder DB, and (via the Supervisor proxy) the
+
+    host-root plane — with no second factor required. No NIST 800-63B AAL target is declared
+
+    for any surface.
+
+
+    This is high severity under the *api-security* rubric clause "MFA optional on
+
+    administrative surfaces" — here the administrative surface is the owner all-access
+
+    grant, the dominant blast-radius identity in the system. It is the all-access
+
+    sensitivity that pins it high rather than critical (the rubric reserves critical for an
+
+    outright bypass with NO factor available; here a strong factor exists but is not
+
+    enforced). The AAL erosion from non-rotating long-lived tokens that bypass interactive
+
+    MFA entirely routes to Ephemeral.
+
+    '
+  evidence:
+  - artifact: auth/auth_auth_module.md
+    locator: '#setup-flow, lines 30-31'
+    excerpt: All available modules will be listed in user profile page, user can enable the module he/she wants to use.
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions._OwnerPermissions:L84-L96@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def access_all_entities(self, key): return True ... return lambda entity_id, key: True'
+  - artifact: auth/auth_index.md
+    locator: '#owner, lines 27-29'
+    excerpt: The owner ... will always have access to all permissions.
+  - artifact: code-evidence-index.yaml
+    locator: _OwnerPermissions.access_all_entities returns True; MFA opt-in
+    excerpt: unauthenticated_internet phishes/guesses password-only owner (no enforced MFA) over user_credentials_store
+  control_mappings:
+    nist_800_53r5:
+    - IA-2(1)
+    - IA-2(2)
+    - IA-2(8)
+    - AC-6
+    - AC-6(2)
+    mitre_attack:
+    - technique: T1078
+      sub_technique: null
+      tactic: TA0001
+      rationale: A password-only owner account with no enforced second factor lets a credential-stuffing or phishing attacker authenticate as the all-access principal.
+    cwe:
+    - CWE-308
+    owasp_api_top10:
+    - API2:2023
+  recommendation:
+    posture: recommended
+    summary: Require MFA for the owner / admin surfaces and declare an AAL target per surface.
+    detail: 'Enforce TOTP (or a phishing-resistant FIDO2/WebAuthn factor) as mandatory for
+
+      the owner account and any admin-group user, rather than leaving the existing
+
+      TOTP module opt-in on the profile page; add the enforcement at the
+
+      homeassistant auth provider''s post-validate_login step so a missing factor
+
+      blocks the all-access session. Declare an explicit NIST 800-63B AAL target by
+
+      surface (AAL2 for admin, and consider AAL3/WebAuthn for the owner and for
+
+      host-root-reaching Supervisor proxy access) and gate step-up on consequential
+
+      admin operations. Couples to the Ephemeral findings on long-lived tokens that
+
+      sidestep interactive MFA.
+
+      '
+    references:
+    - 'external: NIST SP 800-63B Authenticator Assurance Levels'
+    - 'external: OWASP API Security Top 10 2023 API2'
+  related_concerns:
+  - ephemeral
+  - non_repudiation
+  cross_references:
+  - ephem-9915ab91
+  - ephem-a879a34b
+- schema_version: 1
+  id: auth-8f0d8172
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Add-on image signing (Cosign) is a developer recommendation, not enforced by admission control, and base images are pinned to a mutable tag
+  summary: Image signing is advisory best-practice with no verification gate at install/run, and the Supervisor base image is a floating tag — unsigned/tampered artifacts run unverified.
+  detail: 'Supply-chain artifact authenticity is unenforced. Add-on image signing is documented
+
+    only as a developer best-practice — "Sign published images (the supported publishing
+
+    workflow can sign images with Cosign)" (supervisor-apps-security.md) — with no
+
+    statement that the Supervisor VERIFIES a Cosign signature before installing or running
+
+    an add-on image, and the add-on manifest (mosquitto config.yaml) declares role / mounts
+
+    / startup with no signature requirement. The Supervisor build itself derives from a
+
+    base image pinned to a registry tag (BUILD_FROM ghcr.io/home-assistant/base-python:
+
+    3.14-alpine3.22-2026.05.0) rather than an immutable digest, and installs Python wheels
+
+    with no signature/attestation step. There is therefore no admission-control policy that
+
+    blocks an unsigned or tampered image from running in production, and the identity of a
+
+    pulled artifact (is this the image the publisher signed?) is not verified at deploy time.
+
+
+    This is high severity under the *api-security* authenticity pattern "Container images
+
+    deployed without signature verification or admission control" — a supply-chain
+
+    compromise vector where a swapped add-on image or a tampered base/wheel runs with no
+
+    authenticity check, and add-ons can escalate to the supervisor/Docker host-root plane.
+
+    The artifact-immutability / digest-pinning lifecycle concern routes to Immutability /
+
+    Ephemeral; this finding is bounded to the absent signature verification.
+
+    '
+  evidence:
+  - artifact: mobile/supervisor-apps-security.md
+    locator: '#making-a-secure-app, line 33'
+    excerpt: Sign published images (the supported publishing workflow can sign images with Cosign)
+  - artifact: infra/supervisor-Dockerfile
+    locator: line 1 (BUILD_FROM floating tag)
+    excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0
+  - artifact: infra/supervisor-Dockerfile
+    locator: lines 36-48 (wheels install, no attestation)
+    excerpt: uv pip install --compile-bytecode --no-cache --no-build -r requirements.txt
+  - artifact: code-evidence-index.yaml
+    locator: '#making-a-secure-app line 33 (Cosign not enforced)'
+    excerpt: supply_chain_attacker ships unsigned add-on/base image (no admission verify) escalating to supervisor_docker_control_plane
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - SR-4
+    - SR-4(3)
+    - SR-11
+    - CM-5
+    mitre_attack:
+    - technique: T1195
+      sub_technique: T1195.002
+      tactic: TA0001
+      rationale: With no signature verification at install, a tampered add-on or base image runs unverified, giving an upstream attacker code execution that can escalate to the Docker host-root plane.
+    cwe:
+    - CWE-494
+  recommendation:
+    posture: required
+    summary: Enforce Cosign signature verification at add-on install/run and pin base images by digest with attestation.
+    detail: 'Make image signature verification a hard admission gate in the Supervisor''s
+
+      add-on install/start path: verify a Cosign signature (and ideally a
+
+      keyless/Fulcio identity) against the expected publisher before pulling/running
+
+      any add-on image, and fail closed on an unsigned or mismatched image rather
+
+      than treating signing as a publisher courtesy. Pin the supervisor/core base
+
+      images by immutable digest (FROM ...@sha256:...) instead of the floating
+
+      base-python tag, and verify wheel integrity hashes/attestations at build.
+
+      Pair with SBOM/provenance (see the SBOM finding) so the verified signature
+
+      attests a known artifact.
+
+      '
+    references:
+    - 'external: Sigstore / cosign image signing and verification'
+    - 'external: NIST SP 800-53r5 SR-4 Provenance'
+  related_concerns:
+  - ephemeral
+  - immutability
+  - integrity
+  cross_references:
+  - ephem-9c322627
+- schema_version: 1
+  id: auth-8a380b11
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: gap
+  severity: medium
+  confidence: medium
+  title: No SBOM or SLSA build provenance over Core/Supervisor/add-on/mobile builds, so a swapped dependency or artifact is unattested
+  summary: Build artifacts ship with no generated/signed SBOM and no build-provenance attestation, so the composition and origin of a release cannot be verified.
+  detail: 'The build inputs reviewed (supervisor-Dockerfile, the add-on manifest) show no
+
+    generation of a CycloneDX/SPDX SBOM, no SLSA-style build-provenance attestation, and
+
+    no in-toto link metadata accompanying the images or wheels. The Supervisor image
+
+    installs requirements via `uv pip install` from a requirements file plus optional
+
+    local wheels with no recorded, signed manifest of what went in, and there is no
+
+    evidence of a continuous process to evaluate new vulnerabilities against a stored SBOM.
+
+    Consequently, for any Core/Supervisor/add-on/mobile release there is no attested record
+
+    of the components it contains or of the build that produced it — a swapped, backdoored,
+
+    or typosquatted dependency (the supply_chain_attacker / malicious_in_process_sdk
+
+    positions) leaves no provenance trail that would let a consumer detect it.
+
+
+    This is medium severity under the *api-security* rubric clause "Unsafe consumption /
+
+    supply-chain hardening weakness" framing: the absent SBOM/provenance is a supply-chain
+
+    attestation gap that does not itself grant access but removes the authenticity record
+
+    needed to detect a component swap. Marked medium confidence because the review covers
+
+    the Dockerfiles and manifest in scope and the CI/release pipeline configuration that
+
+    would generate provenance is not in the artifact set — if a CI provenance step exists
+
+    out-of-band, this downgrades. Pairs with the image-signing finding (a signature is only
+
+    meaningful when it attests a known SBOM).
+
+    '
+  evidence:
+  - artifact: infra/supervisor-Dockerfile
+    locator: lines 36-56 (build/install, no SBOM/provenance emission)
+    excerpt: uv pip install --no-cache -e ./supervisor && python3 -m compileall ./supervisor/supervisor
+  - artifact: infra/addon-mosquitto-config.yaml
+    locator: config.yaml (manifest declares role/mounts, no provenance)
+    excerpt: 'auth_api: true; map: [ssl, share]; startup: system'
+  prerequisite_evidence:
+  - CI/release pipeline configuration showing whether a CycloneDX/SPDX SBOM is generated and signed per release
+  - Whether SLSA build-provenance / in-toto attestations are produced and verified for Core/Supervisor/add-on/mobile artifacts
+  control_mappings:
+    nist_800_53r5:
+    - SR-3
+    - SR-4
+    - SR-4(4)
+    - SR-11
+    - SI-7
+    mitre_attack: []
+    cwe:
+    - CWE-1395
+  recommendation:
+    posture: recommended
+    summary: Generate, sign, and store an SBOM and SLSA provenance per release and verify it at deploy.
+    detail: 'Emit a CycloneDX or SPDX SBOM as a build step for the Core, Supervisor,
+
+      add-on, and mobile artifacts, sign it, and store it alongside the release;
+
+      produce SLSA Level 2+ build provenance (e.g. via the build platform''s
+
+      attestation, in-toto, or GitHub Actions provenance) and verify the provenance
+
+      at the deploy/admission boundary together with the image signature. Wire a
+
+      continuous job that re-evaluates new CVEs against the stored SBOM so a newly
+
+      disclosed component vulnerability is detectable across releases.
+
+      '
+    references:
+    - 'external: SLSA build provenance levels'
+    - 'external: CycloneDX / SPDX SBOM'
+  related_concerns:
+  - immutability
+  - integrity
+  cross_references: []
+- schema_version: 1
+  id: auth-ea69d3a2
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: Native<->WebView external-auth bridge dispatches on remote-frontend messages with only doc-only, unenforced callback-origin verification
+  summary: The JS bridge that carries the access token native<->WebView relies on a documented 'verify the callback name' convention with no enforced origin/integrity check on the remotely-served frontend message source.
+  detail: 'The external-auth bridge moves the access token between the native Companion app and
+
+    the frontend loaded in the WebView. The frontend dispatches to native via
+
+    window.externalAppV2 / webkit.messageHandlers (ExternalMessaging._sendExternal, code:
+
+    L491-L505) and registers the native->WebView callback on window[CALLBACK_EXTERNAL_BUS]
+
+    (fireMessage L381-L428); the iOS native handler switches on the incoming message TYPE
+
+    with no origin/integrity check (WebViewExternalMessageHandler.handleExternalMessage
+
+    L37-L76). The only stated protection against a forged message is a DOCUMENTED
+
+    convention: "Apps should verify the callback name matches the expected value to ensure
+
+    the callback has not been forged" (frontend-external-authentication.md). This is
+
+    guidance, not an enforced control, and the WebView renders the REMOTE, user-configured
+
+    server frontend — so a compromised backend or MitM-substituted response
+
+    (compromised_backend_or_response position) is the very source the bridge trusts.
+
+
+    The identity of the party sending a bridge message (is this really the genuine frontend,
+
+    not hostile injected content?) is therefore not verifiable: there is no per-message
+
+    authentication binding the message to a trusted origin, only a stable callback name an
+
+    attacker who controls the rendered content already knows. This is high severity under
+
+    the *mobile-applications* authenticity pattern for unverified bridge/caller identity
+
+    (MASVS-PLATFORM-1/2): untrusted web content crosses into native capability, and the
+
+    blast radius includes the access token the bridge carries. The input-validation and
+
+    token-confidentiality faces route to Integrity and Confidentiality respectively.
+
+    '
+  evidence:
+  - artifact: auth/frontend-external-authentication.md
+    locator: '#get-access-token, line 19'
+    excerpt: Apps should verify the callback name matches the expected value to ensure the callback has not been forged.
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: switch externalBusMessage { case .configGet ... case .tagRead ... } // no origin/integrity check
+  - artifact: code-evidence-index.yaml
+    locator: code:src.external_app.external_messaging.ExternalMessaging.fireMessage:L381-L428@505966e84f3a90347c66261592908a02a4118189
+    excerpt: window[CALLBACK_EXTERNAL_BUS] = (msg) => this.receiveMessage(msg)
+  - artifact: code-evidence-index.yaml
+    locator: cev-e5000001 external-bus unenforced origin
+    excerpt: compromised_backend_or_response forges external-bus message (unenforced origin) to capture mobile_stored_session_and_refresh_tokens
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - SC-23
+    - AC-4
+    - SI-10
+    mitre_attack: []
+    masvs:
+    - MASVS-PLATFORM-2
+    maswe:
+    - MASWE-0072
+  recommendation:
+    posture: recommended
+    summary: Enforce origin/integrity verification on the bridge rather than relying on a documented callback-name convention.
+    detail: 'Make the bridge authenticate its peer rather than trusting a stable callback
+
+      name: on Android, use the WebViewFeature.WEB_MESSAGE_LISTENER (the V2 path
+
+      already required) with an allowlisted origin so only the genuine
+
+      same-origin frontend can post, and on iOS validate message.frameInfo /
+
+      securityOrigin in the WKScriptMessageHandler against the configured instance
+
+      origin before dispatching on the message type. Minimize the native
+
+      capability the bridge exposes to untrusted content, and never release the
+
+      access token to a message whose origin is not the verified instance frontend.
+
+      '
+    references:
+    - 'external: OWASP MASVS-PLATFORM-2 (WebView / JS bridge)'
+    - 'external: Android WebViewCompat WebMessageListener allowlisted origins'
+  related_concerns:
+  - integrity
+  - confidentiality
+  cross_references:
+  - intg-3b33966f
+  - conf-3060c50e
+- schema_version: 1
+  id: auth-4e7d1059
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: Add-on user identity is asserted via unsigned X-Remote-User-* headers the add-on must trust on faith
+  summary: Ingress conveys the authenticated user to an add-on as plain injected X-Remote-User-* headers with no signature, so the add-on cannot independently verify the asserted identity.
+  detail: 'When an add-on is reached via Supervisor ingress, the authenticated user is conveyed by
+
+    Supervisor injecting X-Remote-User-Id / X-Remote-User-Name / X-Remote-User-Display-Name
+
+    headers (supervisor-apps-security.md; ingress._init_header code: L320-L349). Supervisor
+
+    does strip inbound copies of these headers in the same loop, which prevents a client
+
+    from spoofing them THROUGH ingress (a real and credited control — see the corresponding
+
+    capability). The residual Authenticity gap is that the asserted user identity reaching
+
+    the add-on is an UNSIGNED plaintext header: the add-on has no cryptographic means to
+
+    verify the identity claim, and the model collapses to "trust whatever sets these
+
+    headers". An add-on placed on the host network, reached by a path that bypasses ingress,
+
+    or a co-resident container able to call the add-on directly, can present forged
+
+    X-Remote-User-* headers the add-on will treat as a genuine identity, because identity
+
+    here is conveyed by header position, not by a verifiable token.
+
+
+    This is medium severity under the *api-security* rubric clause "Defense-in-depth gap
+
+    where a single compensating control is the only barrier" — the inbound-strip is the only
+
+    thing standing between the header-trust model and identity forgery, and it is enforced
+
+    at the ingress hop only. Recorded as the header-trust authenticity weakness, with the
+
+    anti-spoof strip credited as a partial control in the capabilities file.
+
+    '
+  evidence:
+  - artifact: mobile/supervisor-apps-security.md
+    locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+    excerpt: the supervisor then adds some headers identifying the user ... X-Remote-User-Id / X-Remote-User-Name
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: ... continue'
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - SC-23
+    - IA-8
+    - AC-4
+    mitre_attack: []
+    cwe:
+    - CWE-290
+  recommendation:
+    posture: consider
+    summary: Convey ingress user identity as a signed, add-on-verifiable token rather than a bare header.
+    detail: 'For add-ons that make authorization decisions on the conveyed identity,
+
+      replace (or supplement) the plaintext X-Remote-User-* headers with a
+
+      short-lived signed assertion (e.g. a Supervisor-signed JWT carrying the user
+
+      id/name) the add-on can verify against a Supervisor public key, so the
+
+      identity is verifiable rather than positional. Continue stripping inbound
+
+      copies, document that add-ons reached outside ingress must not trust these
+
+      headers, and keep add-ons off the host network so the ingress strip remains
+
+      the sole inbound path.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-9 Service Identification and Authentication'
+  related_concerns:
+  - integrity
+  - non_repudiation
+  cross_references: []
+- schema_version: 1
+  id: auth-dfed90e4
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: medium
+  confidence: medium
+  title: trusted_networks (IP-address) and legacy api_password auth providers accept network position or a static shared secret as identity proof
+  summary: Auth providers include IP-address-based trusted_networks and a legacy shared api_password, both of which prove no individual identity and are spoofable/replayable.
+  detail: 'The auth-provider set includes, alongside the homeassistant password provider,
+
+    trusted_networks (which authenticates a user by the SOURCE IP being in a configured
+
+    range) and the legacy_api_password provider (a single static shared secret), per the
+
+    MFA configuration example listing legacy_api_password as a selectable provider
+
+    (auth_auth_module.md) and the run/overview''s record of trusted_networks + legacy
+
+    api_password as enabled provider options. An IP address is not an identity: behind a
+
+    reverse proxy, on a shared LAN, or under source-IP spoofing, "in the trusted range"
+
+    proves only network position, and a trusted_networks user typically bypasses the
+
+    password factor entirely. A shared api_password is a single bearer secret common to all
+
+    callers, with no per-user identity and no second factor.
+
+
+    Neither provider yields a verifiable individual identity, and trusted_networks in
+
+    particular substitutes network topology for authentication. This is medium severity
+
+    under the *api-security* rubric clause "Defense-in-depth / weak authentication on
+
+    surfaces" — these providers are opt-in and a hardened deployment uses the password
+
+    provider, but where enabled they materially weaken identity assurance. Medium confidence
+
+    because the precise default-enabled state and per-deployment configuration are
+
+    operator-controlled and not fixed in the reviewed artifacts.
+
+    '
+  evidence:
+  - artifact: auth/auth_auth_module.md
+    locator: '#configuration-example, lines 52-63'
+    excerpt: 'auth_providers: - type: homeassistant - type: legacy_api_password'
+  - artifact: auth/auth_index.md
+    locator: '#authentication-providers, lines 12-16'
+    excerpt: It's up to the authentication provider to choose the method of authentication and the backend to use.
+  prerequisite_evidence:
+  - Whether trusted_networks / legacy_api_password are enabled by default or only on explicit operator configuration, and whether trusted_networks bypasses the password/MFA step
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - IA-8
+    - IA-2(8)
+    - SC-7
+    mitre_attack: []
+    cwe:
+    - CWE-291
+  recommendation:
+    posture: consider
+    summary: Deprecate IP-as-identity and shared-secret providers, or constrain them with MFA and proxy-aware source validation.
+    detail: 'Treat trusted_networks as a convenience gate, not an authenticator: where it
+
+      is used, still require the homeassistant password provider plus MFA for any
+
+      consequential action, and ensure the source IP is derived from a trusted proxy
+
+      configuration (not a client-settable X-Forwarded-For) so it cannot be spoofed.
+
+      Retire legacy_api_password in favor of per-user credentials and long-lived
+
+      tokens with identity. Document that IP-range trust proves location, not
+
+      identity, and must not gate admin/owner access.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 IA-2 Identification and Authentication'
+  related_concerns:
+  - ephemeral
+  cross_references: []

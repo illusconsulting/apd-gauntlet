@@ -98,7 +98,7 @@ def _scaffold_two_finding_run(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-cand-0001", "disposition": "merge",
+            "group_id": "cluster-cand-0001", "decision": "merge",
             "merged_title": "Audit log is unsigned and stored in a mutable table",
             "merged_summary": "The audit_log lacks both signing and storage-layer immutability.",
             "merged_detail": "Both lenses identified this risk from complementary angles together.",
@@ -314,7 +314,7 @@ def test_link_adds_reciprocal_cross_references(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-link-0001", "disposition": "link",
+            "group_id": "cluster-link-0001", "decision": "link",
             "links": [{"from": "conf-aaaaaaaa", "to": "conf-bbbbbbbb"}],
         }],
         "contradictions": [],
@@ -360,7 +360,7 @@ def test_separate_copies_both_unchanged(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-sep-0001", "disposition": "separate",
+            "group_id": "cluster-sep-0001", "decision": "separate",
             "_members": ["conf-cccccccc", "conf-dddddddd"],
         }],
         "contradictions": [],
@@ -484,7 +484,7 @@ def _scaffold_two_capability_run(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-cap-0001", "disposition": "merge",
+            "group_id": "cluster-cap-0001", "decision": "merge",
             "merged_title": "PHI is encrypted at rest and in transit end to end",
             "merged_summary": "Envelope encryption at rest plus TLS in transit cover PHI.",
             "merged_detail": "Both lenses confirm complementary PHI protection layers together.",
@@ -569,7 +569,7 @@ def test_capability_link_adds_reciprocal_cross_refs_and_marker(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-cap-link-0001", "disposition": "link",
+            "group_id": "cluster-cap-link-0001", "decision": "link",
             "links": [{"from": "conf-cap-aaaaaaaa", "to": "conf-cap-bbbbbbbb"}],
         }],
         "contradictions": [],
@@ -614,7 +614,7 @@ def test_link_finding_sets_linked_perspectives_marker(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-link-marker", "disposition": "link",
+            "group_id": "cluster-link-marker", "decision": "link",
             "links": [{"from": "conf-a1a1a1a1", "to": "conf-b2b2b2b2"}],
         }],
         "contradictions": [], "_members": {},
@@ -647,7 +647,7 @@ def test_unresolved_authored_merge_is_counted_not_silent(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-ghost-0001", "disposition": "merge",
+            "group_id": "cluster-ghost-0001", "decision": "merge",
             "merged_title": "Merge of two records that do not exist in the corpus",
             "merged_summary": "These members are absent.",
             "merged_detail": "Neither member id resolves in findings or capabilities.",
@@ -684,7 +684,7 @@ def test_cli_apply_clusters_warns_on_unresolved_merge(tmp_path):
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-ghost-0001", "disposition": "merge",
+            "group_id": "cluster-ghost-0001", "decision": "merge",
             "merged_title": "Merge of two records that do not exist in the corpus",
             "merged_summary": "These members are absent.",
             "merged_detail": "Neither member id resolves in findings or capabilities.",

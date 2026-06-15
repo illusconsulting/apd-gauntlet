@@ -259,7 +259,7 @@ def apply_clusters(run_dir: Path) -> ApplyResult:
     cross_refs: dict[str, list[str]] = {}
 
     for decision in doc.get("decisions") or []:
-        disp = decision.get("disposition")
+        disp = decision.get("decision")
         members = _members_for(doc, decision)
         if disp == "merge":
             # PR3: resolve members against BOTH indexes so authored CAPABILITY

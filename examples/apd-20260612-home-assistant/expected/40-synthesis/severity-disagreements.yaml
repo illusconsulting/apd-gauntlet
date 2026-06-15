@@ -1,0 +1,23 @@
+severity_disagreements:
+- finding_id: merged-1119b0be
+  agent_severities:
+    immutability: high
+    integrity: critical
+  chosen_severity: critical
+  rationale: Highest-severity-wins across the merged lens severities; no adjudicator
+    rationale was supplied for this cluster.
+- finding_id: merged-66801b1b
+  agent_severities:
+    integrity: medium
+    non_repudiation: high
+  chosen_severity: high
+  rationale: Highest-severity-wins across the merged lens severities; no adjudicator
+    rationale was supplied for this cluster.
+- finding_id: merged-a49cb674
+  agent_severities:
+    confidentiality: high
+    distributed: medium
+    ephemeral: high
+  chosen_severity: critical
+  rationale: Highest-severity-wins across the merged lens severities; no adjudicator
+    rationale was supplied for this cluster.

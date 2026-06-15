@@ -1,0 +1,252 @@
+schema_version: 1
+generated_by: threat_model_evaluator
+methodology: stride
+# Authored baseline (generated_by: threat_model_author). Anti-tautology carve-out
+# applied: coverage-gap (Rule 5) and silence (Rule 7) passes are NOT run against the
+# authored skeleton; contradiction (Rule 6) + specialist corroboration are run.
+# categories_present lists STRIDE letters with a GROUNDED entry (prerequisite_evidence
+# empty); blocked-placeholder cells (non-empty prerequisite_evidence) are gap-markers
+# and are NOT counted as present (Step 2b rule 4) -- they appear in categories_absent.
+# No supplied sibling TM exists, so supplied_vs_authored is omitted.
+surface_coverage:
+- surface: Owner user (onboarding user, all permissions)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-901336d8, tm-a8308c32]
+- surface: Non-admin / low-priv user (group-scoped permission policy)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-7262344c, tm-d166c7bb]
+- surface: Long-Lived Access Token holder
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-534bc7ae, tm-331532ab]
+- surface: System user (HAOS / Supervisor system tokens, never exposed)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-a5fd5328, tm-04c15c93]
+- surface: Add-on / app principal (SUPERVISOR_TOKEN + declared API role)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-5663cdc9, tm-61482e8c]
+- surface: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-43df4808, tm-46f50930]
+- surface: Registered mobile device (webhook_id / cloudhook holder)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-381aed73, tm-8a0b033a]
+- surface: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-1dfd4541, tm-e49b3dbb]
+- surface: Trusted-networks / command-line / legacy auth provider principal
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-773d9d0f, tm-da8b9f9b]
+- surface: Push-relay service account (Firebase Cloud Functions identity)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-593427c6, tm-48524d2c]
+- surface: Third-party integration / device principal (untrusted device/cloud)
+  categories_present: [S]
+  categories_absent: [T, R, I, D, E]
+  tm_entry_count: 2
+  tm_entry_ids: [tm-5581f604, tm-fc2d13cb]
+- surface: Home Assistant Core (Python asyncio app)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-8b2483ae, tm-d98660ae, tm-034d8894, tm-3ebbf8c2, tm-296e2800, tm-6f42b4af]
+- surface: Core REST API (/api/, port 8123)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-fb8b1371, tm-dde53c5a, tm-841cca2b, tm-884e404c, tm-04eb6424, tm-2779d4b1]
+- surface: Core WebSocket API (/api/websocket)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-28df35dc, tm-0fca74f6, tm-115e4d83, tm-39544c8f, tm-621d5347, tm-fdef926a]
+- surface: Core auth subsystem (providers, users, groups, tokens)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-12599787, tm-d49a5c2c, tm-20cda232, tm-007126ca, tm-6fab88e3, tm-60a45180]
+- surface: Core user permission policy engine
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-2bcdae8a, tm-a6e02b81, tm-14a13137, tm-ea14166e, tm-26b09566, tm-0e5f56b3]
+- surface: mobile_app integration backend (registrations + webhook in Core)
+  categories_present: [S, T, I, E]
+  categories_absent: [R, D]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-a813ab7d, tm-f964734c, tm-7427c10e, tm-64a028f3, tm-1203ba47, tm-9f54bb91]
+- surface: Core integration runtime (2000+ in-process integrations)
+  categories_present: [T, I, D, E]
+  categories_absent: [S, R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-662c2c87, tm-e185c6a7, tm-9868b14b, tm-501228cd, tm-35a0b188, tm-9595acc2]
+- surface: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-e0a1020f, tm-83f43c8e, tm-5e0436b2, tm-246a2088, tm-a0f83d51, tm-4bba1be4]
+- surface: Privileged Supervisor API (http://supervisor/)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-7d06bd2e, tm-30e1a69b, tm-405c57e7, tm-5b0b8e8a, tm-c46f2f91, tm-dccad466]
+- surface: os-agent (Go D-Bus host daemon)
+  categories_present: [S, T, D, E]
+  categories_absent: [R, I]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-84f5b977, tm-7ae600ba, tm-88de85e3, tm-8eb3e214, tm-c0430282, tm-cbe50d76]
+- surface: Supervisor ingress proxy (X-Remote-User-* header injection)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-b765be05, tm-878b0188, tm-a7ebe899, tm-1b0f8b9b, tm-cf80c56b, tm-bd9502a0]
+- surface: Lit/TS web frontend SPA
+  categories_present: [S, T, I, E]
+  categories_absent: [R, D]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-937208ec, tm-ccaa9eea, tm-0bdb57ea, tm-5199affd, tm-7b77729d, tm-5913deca]
+- surface: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  categories_present: [I]
+  categories_absent: [S, T, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-aa630f88, tm-1ea8de08, tm-25b57db5, tm-60f1d9cf]
+- surface: .storage/auth + auth_provider.homeassistant (user credentials store)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-1664593a, tm-fb976d98, tm-d4d9131b, tm-c055843b]
+- surface: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-b6c184d3, tm-3e2f6dac, tm-5be27fb3, tm-616ce590]
+- surface: .storage config_entries + OAuth2 token storage (integration secret vault)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-0658b916, tm-ffb69ecc, tm-d1119d6f, tm-bdbbb94b]
+- surface: Supervisor backup archive store (full/partial snapshots)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-1cb7c806, tm-e84e01cf, tm-f8a986ad, tm-28d50718]
+- surface: configuration.yaml + .storage config directory
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-a507af64, tm-67e353ef, tm-11fd082b, tm-8dc1a7c4]
+- surface: Docker socket / host-root control plane (/run/docker.sock)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-0ca13dd2, tm-42938636, tm-bd2dcd63, tm-b886e929, tm-6b0bab0c, tm-660eac1c]
+- surface: HAOS appliance image (Buildroot operating-system)
+  categories_present: []
+  categories_absent: [S, T, R, I, D, E]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-066f1b11, tm-1a891a66, tm-18f9de76, tm-b4ffca28, tm-9862b495, tm-901c537d]
+- surface: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-69555745, tm-bfc533ab, tm-892e4bee, tm-cb1ddd65, tm-f74f8baa, tm-e8b7b03d]
+- surface: Container base images (alpine/debian) + wheels/npm supply chain
+  categories_present: []
+  categories_absent: [S, T, R, I, D, E]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-84bf55a6, tm-f3d38c9b, tm-da2ebede, tm-f8b6c907, tm-ac973d02, tm-c25ef551]
+- surface: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  categories_present: [S, T, I]
+  categories_absent: [R, D, E]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-1b38c9ee, tm-243e5056, tm-fd996e6d, tm-7da4d153, tm-0ea69aaa, tm-20129245]
+- surface: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  categories_present: [S, T, I, E]
+  categories_absent: [R, D]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-f8db6c3a, tm-2fdbdeea, tm-5658e96d, tm-c649ef59, tm-4fccdc51, tm-960550ab]
+- surface: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-f00c1fb7, tm-75cfc845, tm-468940f8, tm-077b8873]
+- surface: Android hardware-backed Keystore (mTLS client-cert private key)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-ed1a9115, tm-c3af6dfd, tm-65afa3ba, tm-68bfeb45]
+- surface: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-6699a702, tm-5ae72b27, tm-ab01a9be, tm-968980a2]
+- surface: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-0c13aa3c, tm-704e3d88, tm-f8b9b826, tm-e8a7e647]
+- surface: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  categories_present: []
+  categories_absent: [S, T, R, I, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-ca73a79e, tm-40ae677d, tm-8638cc30, tm-7eb0d7d4]
+- surface: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  categories_present: [S, T, I, E]
+  categories_absent: [R, D]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-3a76ded8, tm-8491797c, tm-f99c12f0, tm-b8fe51db, tm-870fe5b0, tm-96285f29]
+- surface: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-d0dd247d, tm-fd37651f, tm-aebd71d9, tm-c59365be, tm-66c3bf93, tm-2c895d92]
+- surface: APNS / FCM push providers
+  categories_present: []
+  categories_absent: [S, T, R, I, D, E]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-fddd907b, tm-dff1d910, tm-8baa9866, tm-af13296d, tm-8c1aef52, tm-a1a40116]
+- surface: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  categories_present: [S, T]
+  categories_absent: [R, I, D, E]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-6a45ae45, tm-ef0b94ea, tm-60ffc638, tm-43936a6a, tm-9592581b, tm-6890dfec]
+- surface: External devices / cloud services reached by integrations (outbound)
+  categories_present: [S, T, I, D, E]
+  categories_absent: [R]
+  tm_entry_count: 6
+  tm_entry_ids: [tm-5b52595e, tm-a4327892, tm-b1c43116, tm-088f10f7, tm-17b14550, tm-98e3ee34]
+- surface: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  categories_present: [T, I]
+  categories_absent: [S, R, D, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-59b8e735, tm-a6bbab5d, tm-a84cafab, tm-b72b2a31]
+- surface: Reverse-proxy / internet edge to Core (port 8123)
+  categories_present: [T, I, D]
+  categories_absent: [S, R, E]
+  tm_entry_count: 4
+  tm_entry_ids: [tm-8e1f31d6, tm-add7ed4f, tm-7b776181, tm-278ff0eb]
+summary:
+  total_entries: 212
+  contradictions_emitted: 1
+  silences_emitted: 0
+  coverage_gaps_emitted: 0
+  surfaces_examined: 47

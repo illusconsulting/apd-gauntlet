@@ -36,7 +36,7 @@
           },
           "source": { "type": "string", "const": "deterministic" },
           "default_target_pack": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-          "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+          "priority": { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
           "asset_name": { "type": "string" },
           "data_classifications": { "type": "array", "items": { "type": "string" } },
           "crosses": { "type": "array", "items": { "type": "string" } },

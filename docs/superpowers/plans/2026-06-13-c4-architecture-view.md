@@ -47,8 +47,9 @@ Execute milestones **in order** — each is independently testable and builds on
 | **M4** | Report data path — loader + `c4_model_view` transform + build wiring | `window.APD_DATA.c4_model` | M2 (artifact shape) |
 | **M5** | C4 report scene + bundle rebuild + freshness gate | `screens/C4.jsx`, registered tab, rebuilt `app.js` | M4 (window data) |
 | **M6** | Attack-path overlay (stretch) on the C4 scene | path highlight over grounded C4 elements | M5 |
+| **M7** | Tiered C4 render redesign (from the design handoff) — replace `fcose` with a tiered "system-map" (orthogonal connectors + in-node badges + deterministic layout); folds the 4 gap-fixes | `C4TierGraph` renderer; rewritten `C4.jsx` render; rebuilt bundle | M5/M6 (render-only; no data change) |
 
-**Total: 32 tasks** (M0:1, M1:5, M2:9, M3:5, M4:5, M5:5, M6:2). Each task is TDD (failing test → minimal impl → green → commit). Run the repo's full gate before any PR: `pytest -q && ruff check . && mypy tools/apd_gauntlet && markdownlint-cli2 "docs/**/*.md" && python tools/check_report_template_freshness.py`.
+**Total: 41 tasks** (M0:1, M1:5, M2:9, M3:5, M4:5, M5:5, M6:2, **M7:9**). M0–M6 are **complete (PR #108)**; **Milestone 7 is the new work** added from the design handoff. Each task is TDD (failing test → minimal impl → green → commit). Run the repo's full gate before any PR: `pytest -q && ruff check . && mypy tools/apd_gauntlet && markdownlint-cli2 "docs/**/*.md" && python tools/check_report_template_freshness.py`.
 
 > **Why Milestone 0 exists (correctness fix to the as-drafted plan):** the repo's `.gitignore` ignores the **entire `runs/` tree** ("Gauntlet run outputs … are LOCAL … never commit them"), with the carve-out `!tests/fixtures/runs/**`. Tests must therefore depend on a *committed* fixture under `tests/fixtures/runs/`, never on the local `runs/apd-20260612-home-assistant` run (which is absent in CI and fresh checkouts/worktrees). Milestone 0 builds that fixture once, as a faithful copy of the C4-relevant artifacts, so every downstream assertion (`code_count == 40`, `not_analyzed == 14`, etc.) holds in CI. The Home Assistant run is a **public** project, so the sensitivity caveat behind the ignore rule does not apply to this fixture.
 
@@ -5901,3 +5902,2987 @@ Notes for the implementer that are load-bearing across both milestones:
 - The C4 scene reuses `GraphView`'s existing `paths`/`selectedPathId`/`onSelectPath` cross-link contract (components.jsx:289, tap handler at :346-360) for BOTH drill-down (M5, `onSelectPath={onNodeTap}`) and overlay highlight (M6, a single synthetic `__overlay__` path). No change to `GraphView` is required; `compound={true}` + `n.parent` (components.jsx:298) already render containment as nested boxes under `fcose` (layoutOpts at :311).
 - `data.c4_model` is the contracted window key (loader field `c4_model`, transform `c4_model_view`) delivered by M1–M4; M5/M6 only read it. The render test in Task 5 exercises the committed fixture run `tests/fixtures/runs/c4-home-assistant` (built in Milestone 0 from the local Home Assistant run: 46 code-evidence entries across 9 code-bearing repos + 14 empty repos → ≥1 `not_analyzed` container, 27 finding-edges feeding badge counts) end-to-end, so it fails loudly if any M1–M4 piece regresses.
 - `runs/*/report-html` is gitignored, so Task 5's render test copies the run into `tmp_path` and assembles/builds there — matching the established "build-report first" pattern from the report-completeness gate (#71).
+
+---
+
+## Milestone 7: Tiered C4 render redesign (from the design handoff)
+
+> **Source of truth:** `docs/superpowers/design_handoff_c4_architecture_view/` (README + `prototype/`). Folds in the four gap-fixes surfaced by the handoff analysis. **Render-only** — NO change to `transform.py`, `assemble_c4.py`, or the schemas; the existing `window.APD_DATA.c4_model` is consumed verbatim using the **REAL** field names (`capability_badge`, `analysis_state`, `provenance.first_finding_id`, `machine_extracted`) — never the prototype fixture's abbreviated `cap`/`state`/`ff`/`me`.
+
+**Why:** M5 shipped the C4 scene on Cytoscape `fcose`, but real runs are edge-sparse (Home Assistant: 82 nodes / 6 edges), so the force layout scatters the ~76 disconnected nodes into an unreadable grid. This milestone replaces it with a **tiered "system-map"** — L1 System context → L2 Container → L3 Component → L4 Code, left-gutter labels, orthogonal right-angle rounded SVG connectors (only on the grounded `edges[]`), finding (⚑) / capability (🛡) badges **inside** node boxes, and a data-driven L3 with honest empty states. `GraphView` (Cytoscape) stays untouched so AttackPaths/ThreatModel are unaffected.
+
+**The four gap-fixes folded in** (the parts the handoff under-budgeted): **(1)** test-rewrite FIRST (Task 1) — the hard C4 tests currently assert the very Cytoscape strings being removed, so they are inverted before any impl; **(2)** data-fidelity fix (Task 2) — the prototype fixture used abbreviated/renamed keys + omitted `present`/`asset_to_c4`/`finding_to_c4`, so it is regenerated to the literal model shape + a README crosswalk; **(3)** the previously prose-only pieces made concrete — deterministic backbone layout (Task 3), deterministic short edge-label derivation (Task 4), and the SVG overlay-highlight rebuild (Task 8); **(4)** mandatory bundle rebuild + the triple-enforced freshness/audit gates + the full acceptance checklist (Task 9).
+
+**New code** (plain React + SVG + DOM measurement — no Cytoscape, no new deps), all window-exported from `report-template/components.jsx`: pure helpers `c4BackboneLayout(nodes, edges)` + `c4ShortEdgeLabel(rawLabel)`, the router `c4Anchors`/`c4RouteWaypoints`/`c4RoundedPath`, the `C4EdgeLayer` SVG overlay, and the `C4TierGraph` component. `report-template/screens/C4.jsx` **keeps** its drill-state machine, honest banner, attack-path overlay *resolution* (`asset_to_c4`/`finding_to_c4` + unmapped-hops), `NodeRow`/badges + `onOpenFinding` deep-link, breadcrumb, and `c4-kind-chip`; it **swaps** the render from `<GraphView layout="fcose" compound>` to `<C4TierGraph/>` (removing the GraphView subgraph memo + the `overlayHighlight` synthetic-path).
+
+**Files touched:** `report-template/screens/C4.jsx`, `report-template/components.jsx`, `report-template/screens.css`, `tests/test_workflow_apd_gauntlet.py`, the regenerated bundle (`report-template/app.js` + `tools/apd_gauntlet/data/report-template/` + `.source-hash`), and `docs/superpowers/design_handoff_c4_architecture_view/prototype/archx-data.js` (+ a README crosswalk note). The `assemble_c4.py` `level: component` (L3) modeling and the schemas are **already** in place from M1–M2 — the new L3 tier just renders them when present.
+
+**9 tasks** — TDD, executed in order. Task 1 (the inverted tests) is the RED bar for the whole milestone; Tasks 3/4/5 are pure deterministic helpers; Tasks 6–8 are the renderer + integration + overlay; Task 9 rebuilds the bundle and closes the acceptance checklist.
+
+---
+
+### Task 1: Test-rewrite FIRST (TDD) — redefine the 4 hard C4 string-assertion tests for the TIERED scene
+
+This task runs **FIRST** and stays **RED** until the Milestone-7 impl tasks (the `C4TierGraph` component + helpers in `components.jsx`, the C4.jsx render rewrite, and the bundle rebuild in Task 9) land. That is intentional and is the TDD red bar for the whole milestone. The 5 still-valid C4 tests and all shared-GraphView tests must stay GREEN throughout, because `GraphView` is untouched and the C4 data contract / banner / kind-chip / overlay-join / tab-routing are unchanged.
+
+**Files:**
+
+- Modify: `tests/test_workflow_apd_gauntlet.py` (rewrite 4 tests; the module globals `REPO` at line 18 and `_text()` at line 60 are reused as-is — no new imports)
+
+**Pre-flight: pin the baseline so the red→green transition is auditable.**
+
+- [ ] **Step 0: Record the current (Cytoscape) state of the 4 targets + the keepers — they are GREEN against the shipped PR #108 C4.jsx.**
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "test_c4_screen_exists_and_renders_blocks or test_bundle_contains_c4_scene \
+or test_c4_attack_path_overlay or test_c4_graph_node_tap_drives_drill" -v; echo "exit=$?"
+```
+
+Expected (baseline GREEN, `exit=0`): all 4 pass against the current Cytoscape C4.jsx. This is the "before" the rewrite inverts.
+
+---
+
+**The 4 rewrites.** Each block below is the exact old→new replacement for one test. Apply them verbatim. After all four, run RED (Step 5).
+
+- [ ] **Step 1: `test_c4_screen_exists_and_renders_blocks` (line ~727).** Drop the GraphView/`compound`/`fcose` assertions; require the tiered scene + the `C4TierGraph` component + the SVG edge layer + in-node badges + the deterministic backbone helper. KEEP the unchanged contract assertions (export, `data.c4_model`, drill state, honest banner, `not_analyzed` hook, `onOpenFinding`, design-language classes).
+
+OLD:
+
+```python
+def test_c4_screen_exists_and_renders_blocks() -> None:
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # component declared + exported on window (bundle registration contract)
+    assert "function C4(" in src and "window.C4 = C4" in src
+    # consumes the contracted window key shape
+    assert "data.c4_model" in src
+    # reuses the shared compound-capable Cytoscape renderer with fcose layout
+    assert "GraphView" in src and "MermaidGraph" not in src
+    assert "compound={true}" in src or "compound" in src
+    assert 'layout="fcose"' in src
+    # drill-down level state: default L1+L2, click container -> components/code
+    assert "selectedContainer" in src and "selectedComponent" in src
+    # honest banner: unlocalized findings + not-analyzed containers
+    assert "unlocalized_findings" in src and "not_analyzed_count" in src
+    # not_analyzed styling hook on nodes
+    assert "analysis_state" in src and "not_analyzed" in src
+    # finding-badge deep-link into the Findings tab
+    assert "onOpenFinding" in src
+    # reuses the report design language, not bespoke styling
+    assert "section-eyebrow" in src and "section-title" in src
+```
+
+NEW:
+
+```python
+def test_c4_screen_exists_and_renders_blocks() -> None:
+    """M7 tiered redesign: the C4 scene renders a stacked TIERED 'system-map'
+    (L1 System context -> L2 Container -> L3 Component -> L4 Code) via the new
+    plain-React+SVG `C4TierGraph` renderer, NOT the Cytoscape `GraphView`
+    force-graph. GraphView stays in components.jsx for AttackPaths/ThreatModel
+    but C4 no longer consumes it. The data contract (data.c4_model), drill-state
+    machine, honest banner, not_analyzed hook, and onOpenFinding deep-link are
+    UNCHANGED (render-only redesign)."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # component declared + exported on window (bundle registration contract)
+    assert "function C4(" in src and "window.C4 = C4" in src
+    # consumes the contracted window key shape (UNCHANGED data model)
+    assert "data.c4_model" in src
+    # renders the NEW tiered renderer; the Cytoscape force-graph is GONE from C4.
+    assert "C4TierGraph" in src
+    assert "GraphView" not in src, "C4 must no longer consume the Cytoscape GraphView"
+    assert 'layout="fcose"' not in src, "the fcose force-graph is removed from C4"
+    assert "compound={true}" not in src, "the compound force-layout prop is removed from C4"
+    assert "MermaidGraph" not in src
+    # drill-down level state: default L1+L2, click container -> components/code
+    assert "selectedContainer" in src and "selectedComponent" in src
+    # honest banner: unlocalized findings + not-analyzed containers (UNCHANGED)
+    assert "unlocalized_findings" in src and "not_analyzed_count" in src
+    # not_analyzed styling hook on nodes (UNCHANGED)
+    assert "analysis_state" in src and "not_analyzed" in src
+    # finding-badge deep-link into the Findings tab (UNCHANGED)
+    assert "onOpenFinding" in src
+    # reuses the report design language, not bespoke styling (UNCHANGED)
+    assert "section-eyebrow" in src and "section-title" in src
+```
+
+- [ ] **Step 2: `test_bundle_contains_c4_scene` (line ~958).** The packaged `app.js` must carry the tiered renderer, not `GraphView`/`fcose`. KEEP `window.C4`, `c4_model`, and the `Architecture` tab label (the tab + data contract are unchanged).
+
+OLD:
+
+```python
+def test_bundle_contains_c4_scene() -> None:
+    # The precompiled bundle must carry the C4 component + its compound graph use.
+    app_js = (
+        REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
+    ).read_text(encoding="utf-8")
+    assert "window.C4" in app_js            # screen exported into the bundle
+    assert "c4_model" in app_js             # consumes the contracted window key
+    assert "GraphView" in app_js            # reuses the shared Cytoscape renderer
+    assert "fcose" in app_js                # compound layout requested
+    assert "Architecture" in app_js         # the tab label is bundled
+```
+
+NEW:
+
+```python
+def test_bundle_contains_c4_scene() -> None:
+    """M7: the precompiled bundle must carry the NEW tiered `C4TierGraph`
+    renderer + the deterministic backbone-layout helper, not the Cytoscape
+    force-graph wiring for C4. (GraphView/fcose still appear ELSEWHERE in app.js
+    because AttackPaths/ThreatModel keep using them — so we assert C4-specific
+    symbols, not the global absence of GraphView/fcose.)"""
+    app_js = (
+        REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
+    ).read_text(encoding="utf-8")
+    assert "window.C4" in app_js            # screen exported into the bundle
+    assert "c4_model" in app_js             # consumes the contracted window key
+    assert "C4TierGraph" in app_js          # the new tiered renderer is bundled
+    assert "c4BackboneLayout" in app_js     # the deterministic layout helper is bundled
+    assert "Architecture" in app_js         # the tab label is bundled
+```
+
+> NOTE — DO NOT assert `"GraphView" not in app_js` or `"fcose" not in app_js` here: those symbols are still bundled for the AttackPaths/ThreatModel scenes, which keep the Cytoscape `GraphView`. The C4-removal of GraphView is asserted at the **source** level in `test_c4_screen_exists_and_renders_blocks` / `test_c4_graph_node_tap_drives_drill`, which read `C4.jsx` (not the shared bundle). esbuild may also minify `window.C4 = C4` to a rename; if a rebuilt bundle ever fails the literal `"window.C4"` check, relax that single assertion to `'C4=' in app_js or "window.C4" in app_js` — but the shipped esbuild config preserves the `window.C4 = C4` assignment (verified against the current bundle), so keep the literal unless the rebuild proves otherwise.
+
+- [ ] **Step 3: `test_c4_attack_path_overlay` (line ~1047).** The overlay is REBUILT for the SVG scene: the `asset_to_c4`/`finding_to_c4` deterministic join, the `selectedOverlayPath` state, the `unmappedHops` parallel strip, and the CSS classes all stay (they are renderer-agnostic). Only the "reuses GraphView cross-highlight" clause is replaced with the new SVG overlay contract: a resolved set of C4 node ids (`overlayC4NodeIds`) handed to `C4TierGraph`, which redraws the induced edges as "live".
+
+OLD:
+
+```python
+def test_c4_attack_path_overlay() -> None:
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # consumes the existing enumerated paths (no new data source)
+    assert "data.attack_paths" in src
+    # a selectable overlay control + its selection state
+    assert "selectedOverlayPath" in src and "setSelectedOverlayPath" in src
+    # consumes the DETERMINISTIC join, never computes a mapping client-side
+    assert "asset_to_c4" in src and "finding_to_c4" in src
+    # reuses GraphView's cross-highlight contract (overlay path -> highlighted c4 nodes)
+    assert "overlayHighlight" in src or "overlayPaths" in src
+    # honest partial overlay: hops with no C4 mapping go on a PARALLEL asset strip
+    assert "c4-overlay-strip" in src and "no C4 mapping" in src
+    # never invent: an unmapped hop is labelled, not rendered as a C4 hop
+    assert "unmappedHops" in src
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    assert ".c4-overlay-strip" in css and ".c4-overlay-strip__hop--unmapped" in css
+```
+
+NEW:
+
+```python
+def test_c4_attack_path_overlay() -> None:
+    """M7: the attack-path overlay survives the redesign but is REBUILT for the
+    SVG scene. The deterministic asset_to_c4 / finding_to_c4 join, the
+    selectedOverlayPath state, and the honest unmapped-hops PARALLEL strip are
+    unchanged (renderer-agnostic). The only swap: instead of synthesizing a
+    GraphView cross-highlight 'path', the scene resolves a SET of grounded C4
+    node ids (overlayC4NodeIds) and hands it to C4TierGraph, which dims
+    non-members and redraws the induced edges as 'live'."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # consumes the existing enumerated paths (no new data source) — UNCHANGED
+    assert "data.attack_paths" in src
+    # a selectable overlay control + its selection state — UNCHANGED
+    assert "selectedOverlayPath" in src and "setSelectedOverlayPath" in src
+    # consumes the DETERMINISTIC join, never computes a mapping client-side — UNCHANGED
+    assert "asset_to_c4" in src and "finding_to_c4" in src
+    # the resolved C4-node-id SET is passed to the tiered renderer for highlight.
+    assert "overlayC4NodeIds" in src
+    # the old GraphView synthetic-path cross-highlight wiring is GONE.
+    assert "overlayHighlight" not in src, "the GraphView synthetic-path highlight is removed"
+    assert "__overlay__" not in src, "the synthetic GraphView overlay path id is removed"
+    # honest partial overlay: hops with no C4 mapping go on a PARALLEL asset strip — UNCHANGED
+    assert "c4-overlay-strip" in src and "no C4 mapping" in src
+    # never invent: an unmapped hop is labelled, not rendered as a C4 hop — UNCHANGED
+    assert "unmappedHops" in src
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    assert ".c4-overlay-strip" in css and ".c4-overlay-strip__hop--unmapped" in css
+```
+
+- [ ] **Step 4: `test_c4_graph_node_tap_drives_drill` (line ~1066).** Drill is now driven by a DOM `onClick` on the SVG-scene node boxes calling the same `onNodeTap` reducer, passed to `C4TierGraph` as `onDrill`. The Cytoscape tap-target contract is fully removed from C4; the broken empty-`edgeIds` `tapTargets` misuse must stay gone. Also assert the badge `stopPropagation` rule (clicking a ⚑ deep-links without drilling), per the SHARED CONTRACT. The `GraphView` tap handler in `components.jsx` stays asserted (it is untouched and still used by the other scenes), so its check is KEPT but reframed: it must exist for AttackPaths/ThreatModel even though C4 no longer wires it.
+
+OLD:
+
+```python
+def test_c4_graph_node_tap_drives_drill() -> None:
+    """A graph node click must drive C4 drill-down (container -> components/code,
+
+    component -> code), mirroring the NodeRow button. The OLD wiring abused
+    GraphView's path-resolution contract with synthetic tapTargets carrying
+    empty edgeIds — which ALWAYS resolved to null and confusingly reset the
+    view. That misuse must be gone; the scene must pass a dedicated onNodeTap
+    callback to GraphView instead.
+    """
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # The C4 scene wires GraphView with a dedicated node-tap callback.
+    assert "onNodeTap={onNodeTap}" in src
+    # The broken empty-edgeIds tapTargets-for-drill pattern is gone.
+    assert "edgeIds: []" not in src
+    assert "tapTargets" not in src
+    # onNodeTap is no longer (mis)used to drive onSelectPath for drilling.
+    assert "onSelectPath={onNodeTap}" not in src
+    assert "onSelectPath={overlayHighlight ? () => {} : onNodeTap}" not in src
+    # GraphView itself accepts and honors the onNodeTap prop.
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "onNodeTap" in comps
+    # The cytoscape node-tap handler reports the tapped node id when wired.
+    assert "onNodeTap(ev.target.id())" in comps or "onNodeTap(node.id())" in comps
+```
+
+NEW:
+
+```python
+def test_c4_graph_node_tap_drives_drill() -> None:
+    """M7: a node click in the tiered SVG scene must drive C4 drill-down
+    (container -> components/code, component -> code), mirroring the NodeRow
+    button. The Cytoscape path-resolution / tapTargets contract is fully removed
+    from C4: drill is now a plain DOM onClick on the node box that calls the
+    onNodeTap reducer, handed to C4TierGraph as `onDrill`. Clicking a ⚑ badge
+    must stopPropagation so it deep-links into Findings WITHOUT drilling. The
+    onNodeTap reducer state machine is unchanged (it still keys off node.type)."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # The drill reducer is handed to the tiered renderer as onDrill (DOM-click driven).
+    assert "onDrill={onNodeTap}" in src
+    # The reducer itself survives the redesign (state machine unchanged).
+    assert "onNodeTap" in src
+    # The Cytoscape tap-resolution misuse is GONE from C4.
+    assert "onNodeTap={onNodeTap}" not in src, "C4 no longer wires GraphView's onNodeTap"
+    assert "edgeIds: []" not in src
+    assert "tapTargets" not in src
+    assert "onSelectPath={onNodeTap}" not in src
+    assert "onSelectPath={overlayHighlight ? () => {} : onNodeTap}" not in src
+    # Clicking a ⚑ badge stops propagation so it deep-links without drilling.
+    assert "stopPropagation" in src
+    # GraphView's tap contract STAYS in components.jsx for the OTHER scenes
+    # (AttackPaths/ThreatModel) — it is untouched, just unused by C4.
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "onNodeTap" in comps
+    assert "onNodeTap(ev.target.id())" in comps or "onNodeTap(node.id())" in comps
+    # The NEW tiered renderer + the deterministic backbone-layout helper exist
+    # and are window-exported alongside GraphView.
+    assert "function C4TierGraph(" in comps
+    assert "function c4BackboneLayout(" in comps
+    assert "C4TierGraph" in comps.split("Object.assign(window")[1]
+    assert "c4BackboneLayout" in comps.split("Object.assign(window")[1]
+```
+
+---
+
+- [ ] **Step 5: Run the rewritten tests — expect RED (the impl has not landed).** This is the documented TDD red bar for Milestone 7.
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "test_c4_screen_exists_and_renders_blocks or test_bundle_contains_c4_scene \
+or test_c4_attack_path_overlay or test_c4_graph_node_tap_drives_drill" -v; echo "exit=$?"
+```
+
+Expected (RED, `exit=1`): all 4 FAIL — `C4TierGraph` / `c4BackboneLayout` / `onDrill` / `overlayC4NodeIds` are not yet in `C4.jsx`/`components.jsx`/`app.js`, and the removed-Cytoscape assertions trip on the still-present `layout="fcose"`/`GraphView`/`overlayHighlight` in the shipped PR #108 source. RECORD this red output in the task notes — it is the failing test that the impl tasks (C4TierGraph + helpers, C4.jsx rewrite, Task 9 rebuild) turn green.
+
+- [ ] **Step 6: Confirm the 5 still-valid C4 tests + the shared-GraphView suite are STILL GREEN** (the rewrite must not collaterally break them — they assert the unchanged contract: kind-chip, the from_id/to_id overlay join, tab routing, bundle-entry import, CSS, and the untouched GraphView).
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "test_c4_screen_surfaces_node_kind_chip or test_c4_overlay_join_uses_from_id_to_id \
+or test_c4_tab_is_conditional_and_routed or test_c4_screen_registered_in_bundle_entry \
+or test_c4_scene_styles_present or graph_view or attack_paths_uses_graphview \
+or threat_model_uses_graphview or kind_passthrough" -v; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`): all pass. NONE of these reference `C4TierGraph`/`fcose`-removal, so they are insensitive to the redesign. If `test_c4_scene_styles_present` or `test_c4_overlay_join_uses_from_id_to_id` go red here, the rewrite leaked a change into the wrong test — revert and re-apply only the 4 blocks above.
+
+> WHY this still passes while Step 5 is red: the keepers read DIFFERENT substrings (`c4-kind-chip`, `[h.from_id, h.to_id]`, `id: "c4"`, `import "../screens/C4.jsx";`, `.c4-banner`) that the redesign preserves verbatim per the SHARED CONTRACT's keep-list. The redesign removes `GraphView`/`fcose` from C4 but the shared-GraphView tests read `components.jsx` (untouched) + `AttackPaths.jsx`/`ThreatModel.jsx` (untouched), so they are green by construction.
+
+- [ ] **Step 7: Commit the failing tests (TDD-first; impl follows).**
+
+```
+git add tests/test_workflow_apd_gauntlet.py
+git commit -m "test(report): redefine C4 string-assertions for the tiered M7 scene (RED)
+
+Rewrite the 4 hard C4 tests to assert the new plain-React+SVG C4TierGraph
+tiered scene (+ deterministic c4BackboneLayout helper, SVG edge-layer,
+in-node badges, onDrill DOM-click drill, overlayC4NodeIds highlight, badge
+stopPropagation) and the ABSENCE of GraphView/fcose/overlayHighlight from
+C4.jsx. The 5 still-valid C4 tests + the shared-GraphView suite stay green
+(GraphView untouched for AttackPaths/ThreatModel). RED until the M7 impl
+tasks land; this is the milestone's TDD red bar.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+**Task 1 exit:** the 4 rewritten tests are RED, the 5 keepers + shared-GraphView suite are GREEN, and the failing output is recorded. The impl tasks (C4TierGraph + helpers, C4.jsx render rewrite, CSS, then Task 9 rebuild) are what flip the 4 to green; no impl is done in this task.
+
+---
+
+### Task 2: Data-fidelity fix — regenerate `archx-data.js` to the LITERAL `c4_model_view` field names + handoff crosswalk note
+
+The prototype fixture `archx-data.js` was written with ABBREVIATED, fabricated
+keys (`cap`/`state`/`ff`/`me`, plus an invented `overlay_paths` array) and it
+DROPS the production rollups (`present`, `not_analyzed_count`, `unlocalized_findings`,
+`levels_present`, `asset_to_c4`, `finding_to_c4`) and the per-node `provenance`,
+`capability_badge`, `analysis_state` fields. Any React scene built against that
+fixture would be coded against keys that do not exist on the real window object.
+
+This task makes `window.C4_DATA` byte-for-byte the same SHAPE as the real
+`window.APD_DATA.c4_model` slice — i.e. exactly what `c4_model_view` emits for
+the home-assistant run — so the prototype and the React `C4TierGraph` consume the
+SAME contract. The values are derived deterministically from the real
+`runs/apd-20260612-home-assistant/40-synthesis/c4-model.yaml` (already read in this
+session) passed through the documented `c4_model_view` rules: `badge = finding_count
+if >0 else null`, `capability_badge = capability_count`, `type = level`,
+`provenance = {source, locator, repo, first_finding_id}` (only the present keys),
+edges `{id, source, target, label, machine_extracted}`. The prototype's own
+backbone/short-label maps (the hard-coded `BACKBONE`/`EDGE_SHORT`/`ANALYZED_SHELF`
+constants in the `.html`) are NOT in the fixture — they are renderer concerns and
+Tasks 3/4 replace them with data-driven helpers.
+
+**Files:**
+- Create: `docs/superpowers/design_handoff_c4_architecture_view/prototype/check-fixture-keys.js` (node assertion harness — the fixture's "test")
+- Modify: `docs/superpowers/design_handoff_c4_architecture_view/prototype/archx-data.js` (rewrite to real keys)
+- Modify: `docs/superpowers/design_handoff_c4_architecture_view/README.md` (add the "Field-name crosswalk (fixture vs production)" note)
+
+**Steps:**
+
+- [ ] **Write the failing key-assertion harness FIRST.** Create
+  `prototype/check-fixture-keys.js`. It loads the fixture, asserts the REAL keys
+  are present and the abbreviation keys are ABSENT, and exits non-zero on any
+  violation. Run it against the *current* (abbreviated) fixture and watch it FAIL.
+
+  ```js
+  // check-fixture-keys.js — node, no deps. Asserts archx-data.js exposes the
+  // REAL window.APD_DATA.c4_model field names (from transform.py::c4_model_view)
+  // and NONE of the prototype-era abbreviations (cap/state/ff/me/overlay_paths).
+  // Usage: node check-fixture-keys.js  → exit 0 = pass, 1 = fail (prints diffs).
+  'use strict';
+  const fs = require('fs');
+  const path = require('path');
+
+  // Evaluate the fixture in a minimal window sandbox.
+  const src = fs.readFileSync(path.join(__dirname, 'archx-data.js'), 'utf8');
+  const window = {};
+  // eslint-disable-next-line no-new-func
+  new Function('window', src)(window);
+  const C4 = window.C4_DATA;
+
+  const fails = [];
+  const ok = (cond, msg) => { if (!cond) fails.push(msg); };
+
+  // ── top-level shape (the full c4_model_view return) ──────────────────────
+  const TOP_REQUIRED = [
+    'present', 'nodes', 'edges', 'unlocalized_findings', 'not_analyzed_count',
+    'levels_present', 'asset_to_c4', 'finding_to_c4',
+  ];
+  TOP_REQUIRED.forEach(k => ok(k in C4, `MISSING top-level key: ${k}`));
+  ok(C4.present === true, 'present must be true (this is a present run slice)');
+  ok(!('overlay_paths' in C4), 'FORBIDDEN fabricated top-level key: overlay_paths');
+  ok(Array.isArray(C4.nodes) && C4.nodes.length > 0, 'nodes must be a non-empty array');
+  ok(Array.isArray(C4.edges) && C4.edges.length > 0, 'edges must be a non-empty array');
+  ok(C4.asset_to_c4 && typeof C4.asset_to_c4 === 'object', 'asset_to_c4 must be an object');
+  ok(C4.finding_to_c4 && typeof C4.finding_to_c4 === 'object', 'finding_to_c4 must be an object');
+
+  // ── node shape ───────────────────────────────────────────────────────────
+  const NODE_REQUIRED = [
+    'id', 'label', 'type', 'kind', 'parent', 'badge', 'capability_badge',
+    'analysis_state', 'provenance',
+  ];
+  const NODE_FORBIDDEN = ['cap', 'state', 'ff', 'me'];
+  C4.nodes.forEach((n, i) => {
+    NODE_REQUIRED.forEach(k => ok(k in n, `node[${i}] (${n.id}) MISSING key: ${k}`));
+    NODE_FORBIDDEN.forEach(k => ok(!(k in n), `node[${i}] (${n.id}) FORBIDDEN abbrev key: ${k}`));
+    // badge is finding_count|null (never the literal 0 'clean' lie)
+    ok(n.badge === null || (typeof n.badge === 'number' && n.badge > 0),
+       `node[${i}] (${n.id}) badge must be null or a positive int, got ${JSON.stringify(n.badge)}`);
+    ok(typeof n.capability_badge === 'number',
+       `node[${i}] (${n.id}) capability_badge must be a number`);
+    ok(n.analysis_state === 'analyzed' || n.analysis_state === 'not_analyzed',
+       `node[${i}] (${n.id}) analysis_state must be analyzed|not_analyzed`);
+    ok(n.provenance && typeof n.provenance === 'object',
+       `node[${i}] (${n.id}) provenance must be an object`);
+  });
+
+  // ── edge shape ─────────────────────────────────────────────────────────────
+  const EDGE_REQUIRED = ['id', 'source', 'target', 'label', 'machine_extracted'];
+  C4.edges.forEach((e, i) => {
+    EDGE_REQUIRED.forEach(k => ok(k in e, `edge[${i}] (${e.id}) MISSING key: ${k}`));
+    ok(!('me' in e), `edge[${i}] (${e.id}) FORBIDDEN abbrev key: me`);
+    ok(typeof e.machine_extracted === 'boolean',
+       `edge[${i}] (${e.id}) machine_extracted must be boolean`);
+    ok(typeof e.label === 'string' && e.label.startsWith('CROSS_'),
+       `edge[${i}] (${e.id}) label must be the full machine string (CROSS_*)`);
+  });
+
+  // ── spot-check the real HA values survived the regeneration ────────────────
+  const core = C4.nodes.find(n => n.id === 'c4-2b33e14f');
+  ok(core && core.badge === 22 && core.capability_badge === 15,
+     'Core (c4-2b33e14f) must keep badge=22, capability_badge=15');
+  const docker = C4.nodes.find(n => n.id === 'c4-bc1e61b2');
+  ok(docker && docker.analysis_state === 'not_analyzed' && docker.badge === null,
+     'docker (c4-bc1e61b2) must be not_analyzed with badge=null');
+
+  if (fails.length) {
+    console.error(`FIXTURE KEY CHECK FAILED (${fails.length}):`);
+    fails.forEach(f => console.error('  - ' + f));
+    process.exit(1);
+  }
+  console.log(`fixture key check OK: ${C4.nodes.length} nodes, ${C4.edges.length} edges, real keys present, abbreviations absent.`);
+  ```
+
+  Run it red:
+  ```bash
+  node "docs/superpowers/design_handoff_c4_architecture_view/prototype/check-fixture-keys.js"
+  # EXPECT: FIXTURE KEY CHECK FAILED — MISSING top-level key: present / node MISSING key: kind / node FORBIDDEN abbrev key: cap … exit 1
+  ```
+
+- [ ] **Regenerate `archx-data.js` honestly.** Overwrite the file with the real
+  `c4_model_view` shape for the home-assistant run. Values are the documented
+  transform of `c4-model.yaml`: `type = level`, `badge = finding_count if >0 else null`,
+  `capability_badge = capability_count`, `provenance` keeps only the present subset
+  of `{source, locator, repo, first_finding_id}`, edges carry `{id, source, target,
+  label(full string), machine_extracted}`. Top-level rollups come from
+  `build_summary` (`not_analyzed_count = 15`, `unlocalized_findings = 10`,
+  `levels_present` in canonical L1→L4 order = `["system","person","external_system","container","code"]`).
+  `asset_to_c4`/`finding_to_c4` are the GROUNDED crosswalks — for this fixture they
+  are honestly `{}` (the HA run's asset nodes carry doc-anchored provenance and
+  this prototype slice does not ship the deduped-findings join), which is itself a
+  faithful representation of the disjoint-id-space limitation documented in
+  `c4_model_view`. (NOTE: labels are already `_safe_label`-truncated to 60 chars in
+  the source values — e.g. `hash_passwor`, `ServerManagerKey` — because the fixture
+  represents the POST-transform window slice; keep those truncations.)
+
+  The full regenerated file (every node + edge from `c4-model.yaml`, real keys):
+
+  ```js
+  // archx-data.js — REGENERATED fixture (Task 2, Milestone 7).
+  // window.C4_DATA is byte-identical in SHAPE to window.APD_DATA.c4_model as
+  // produced by tools/apd_gauntlet/report/transform.py::c4_model_view for the
+  // apd-20260612-home-assistant run (runs/.../40-synthesis/c4-model.yaml).
+  // Real field names ONLY: type/kind/parent/badge/capability_badge/
+  // analysis_state/provenance + machine_extracted on edges. NO cap/state/ff/me,
+  // NO fabricated overlay_paths. Labels are _safe_label-truncated (60 chars),
+  // matching the production transform. See README "Field-name crosswalk".
+  window.C4_DATA = {
+    "present": true,
+    "levels_present": ["system", "person", "external_system", "container", "code"],
+    "unlocalized_findings": 10,
+    "not_analyzed_count": 15,
+    "asset_to_c4": {},
+    "finding_to_c4": {},
+    "nodes": [
+      {"id":"c4-00ca2e01","label":"docker-base","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:docker-base"}},
+      {"id":"c4-07f5a3e6","label":"plugin-dns","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:plugin-dns"}},
+      {"id":"c4-0ebbc6cf","label":"homeassistant.auth.providers.homeassistant.Data.hash_passwor","type":"code","kind":"function","parent":"c4-2b33e14f","badge":null,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.providers.homeassistant.Data.hash_password","repo":"core"}},
+      {"id":"c4-10ca49c1","label":"Sources.Shared.API.ServerManagerPersistence.ServerManagerKey","type":"code","kind":"class","parent":"c4-9e5151b7","badge":2,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"Sources.Shared.API.ServerManagerPersistence.ServerManagerKeychain","repo":"iOS","first_finding_id":"conf-a30cca33"}},
+      {"id":"c4-11fbf1b9","label":"system.system.AddSSHAuthKey","type":"code","kind":"function","parent":"c4-d304503a","badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"system.system.AddSSHAuthKey","repo":"os-agent","first_finding_id":"auth-6924f467"}},
+      {"id":"c4-123809c8","label":"homeassistant.helpers.storage.Store._write_prepared_data","type":"code","kind":"function","parent":"c4-2b33e14f","badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.helpers.storage.Store._write_prepared_data","repo":"core","first_finding_id":"dist-69bbaf5c"}},
+      {"id":"c4-13cad86b","label":"Recorder history DB","type":"container","kind":"data_store","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-a1000018 (recorder.session_scope — presence/geolocation/lock/alarm state history; brief §2)"}},
+      {"id":"c4-1f375927","label":"src.external_app.external_messaging.ExternalMessaging.fireMe","type":"code","kind":"function","parent":"c4-a811b55d","badge":2,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"src.external_app.external_messaging.ExternalMessaging.fireMessage","repo":"frontend","first_finding_id":"auth-ea69d3a2"}},
+      {"id":"c4-2085cc3a","label":"Long-Lived Access Token holder","type":"person","kind":"human_role","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#rest-api, line 15 (Long-Lived Access Token from /profile)"}},
+      {"id":"c4-21faac85","label":"__route__POST__/api/sendPushNotification","type":"code","kind":"route","parent":"c4-fcee7bf9","badge":2,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"__route__POST__/api/sendPushNotification","repo":"mobile-apps-fcm-push","first_finding_id":"avail-a2cfd41c"}},
+      {"id":"c4-22aa1f41","label":"companion.home-assistant","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:companion.home-assistant"}},
+      {"id":"c4-269b85a2","label":"homeassistant.components.mobile_app.webhook.webhook_call_ser","type":"code","kind":"function","parent":"c4-2b33e14f","badge":6,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.mobile_app.webhook.webhook_call_service","repo":"core","first_finding_id":"avail-754cfc01"}},
+      {"id":"c4-274b56cd","label":"Supervisor backup archive store","type":"container","kind":"data_store","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-b2000006 (Backup.set_password — full snapshots default to UNENCRYPTED; brief §2)"}},
+      {"id":"c4-2b33e14f","label":"Home Assistant Core","type":"container","kind":"service","parent":null,"badge":22,"capability_badge":15,"analysis_state":"analyzed","provenance":{"source":"artifact","locator":"code-architecture-brief.md §1 Surface inventory (REST /api port 8123, WS /api/websocket handshake, bearer-less mobile_app webhook)","first_finding_id":"auth-3f2314a4"}},
+      {"id":"c4-2d5eaa33","label":"homeassistant.helpers.recorder.session_scope","type":"code","kind":"function","parent":"c4-2b33e14f","badge":6,"capability_badge":1,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.helpers.recorder.session_scope","repo":"core","first_finding_id":"avail-235dacf0"}},
+      {"id":"c4-3038589a","label":"functions.handlers.handleRequest","type":"code","kind":"function","parent":"c4-fcee7bf9","badge":2,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"functions.handlers.handleRequest","repo":"mobile-apps-fcm-push","first_finding_id":"auth-23048c0c"}},
+      {"id":"c4-30b671c0","label":"plugin-audio","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:plugin-audio"}},
+      {"id":"c4-32b40633","label":"homeassistant.auth.permissions.util.compile_policy","type":"code","kind":"function","parent":"c4-2b33e14f","badge":2,"capability_badge":3,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.permissions.util.compile_policy","repo":"core","first_finding_id":"merged-1119b0be"}},
+      {"id":"c4-37c54a76","label":"IndieAuth OAuth2 client (client_id IS the redirect URL no se","type":"person","kind":"external_party","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)"}},
+      {"id":"c4-3bfb10f9","label":"Trusted-networks / command-line / legacy auth provider princ","type":"person","kind":"human_role","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#authentication-authorization-model, lines 67-69"}},
+      {"id":"c4-3d5dca87","label":"Home Assistant","type":"system","kind":"software_system","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"run_config","locator":"subject"}},
+      {"id":"c4-43797bde","label":"plugin-observer","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:plugin-observer"}},
+      {"id":"c4-4659f23a","label":"client.helper.URLHelper","type":"code","kind":"function","parent":"c4-aa5a3a58","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"client.helper.URLHelper","repo":"cli","first_finding_id":"auth-23048c0c"}},
+      {"id":"c4-4fe61adf","label":"homeassistant.auth.AuthManager.async_validate_access_token","type":"code","kind":"function","parent":"c4-2b33e14f","badge":1,"capability_badge":3,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.AuthManager.async_validate_access_token","repo":"core","first_finding_id":"ephem-f19f24f9"}},
+      {"id":"c4-530843d4","label":"homeassistant.components.mobile_app.http_api.RegistrationsVi","type":"code","kind":"route","parent":"c4-2b33e14f","badge":2,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.mobile_app.http_api.RegistrationsView.post","repo":"core","first_finding_id":"auth-3f2314a4"}},
+      {"id":"c4-551aad6d","label":"homeassistant.auth.models.RefreshToken","type":"code","kind":"class","parent":"c4-2b33e14f","badge":4,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.models.RefreshToken","repo":"core","first_finding_id":"ephem-9915ab91"}},
+      {"id":"c4-57d74e41","label":"supervisor.docker.manager.DockerAPI.container_run_inside","type":"code","kind":"function","parent":"c4-78444877","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.docker.manager.DockerAPI.container_run_inside","repo":"supervisor","first_finding_id":"merged-66801b1b"}},
+      {"id":"c4-58b318f7","label":"homeassistant.components.api.APITemplateView.post","type":"code","kind":"route","parent":"c4-2b33e14f","badge":4,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.api.APITemplateView.post","repo":"core","first_finding_id":"avail-4be2dd70"}},
+      {"id":"c4-5cb67c4d","label":"plugin-multicast","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:plugin-multicast"}},
+      {"id":"c4-6068d33e","label":"homeassistant.auth.AuthManager.async_create_access_token","type":"code","kind":"function","parent":"c4-2b33e14f","badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.AuthManager.async_create_access_token","repo":"core","first_finding_id":"avail-235dacf0"}},
+      {"id":"c4-640e24aa","label":"common...data.keychain.KeyStoreRepositoryImpl","type":"code","kind":"class","parent":"c4-f7d01fcf","badge":1,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"common...data.keychain.KeyStoreRepositoryImpl","repo":"android","first_finding_id":"auth-3794d338"}},
+      {"id":"c4-66dae27f","label":"host-dockerd","type":"container","kind":"external_system","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-0a000003 (Supervisor <-> host Docker daemon over shared /run/docker.sock; brief §5 — host infra, outside repos[])"}},
+      {"id":"c4-6877897a","label":"operating-system","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:operating-system"}},
+      {"id":"c4-693638dc","label":"app...launch.LaunchActivity.LaunchActivity","type":"code","kind":"class","parent":"c4-f7d01fcf","badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"app...launch.LaunchActivity.LaunchActivity","repo":"android"}},
+      {"id":"c4-69d1a517","label":"homeassistant.auth.permissions._OwnerPermissions","type":"code","kind":"class","parent":"c4-2b33e14f","badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.permissions._OwnerPermissions","repo":"core","first_finding_id":"auth-7162fd48"}},
+      {"id":"c4-69f67c4e","label":"Registered mobile device (webhook_id / cloudhook holder)","type":"person","kind":"external_party","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"registration response, lines 74-79 (webhook_id, secret)"}},
+      {"id":"c4-6b059adc","label":"External devices / cloud services reached by integrations (o","type":"external_system","kind":"external_dependency","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)"}},
+      {"id":"c4-714c61de","label":"APNS / FCM push providers","type":"external_system","kind":"external_dependency","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)"}},
+      {"id":"c4-72dbaac4","label":"common...database.server.ServerSessionInfo.ServerSessionInfo","type":"code","kind":"class","parent":"c4-f7d01fcf","badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"common...database.server.ServerSessionInfo.ServerSessionInfo","repo":"android","first_finding_id":"conf-205c53a5"}},
+      {"id":"c4-7637d4e7","label":"Sources.App.AppDelegate.AppDelegate.setupFirebase","type":"code","kind":"function","parent":"c4-9e5151b7","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"Sources.App.AppDelegate.AppDelegate.setupFirebase","repo":"iOS","first_finding_id":"conf-7a74a4a0"}},
+      {"id":"c4-78444877","label":"Supervisor","type":"container","kind":"service","parent":null,"badge":6,"capability_badge":5,"analysis_state":"analyzed","provenance":{"source":"artifact","locator":"code-architecture-brief.md §1 Supervisor privileged API (http://supervisor/, SUPERVISOR_TOKEN + per-role URL ACL) + ingress proxy","first_finding_id":"auth-4e7d1059"}},
+      {"id":"c4-7978cb3b","label":"Non-admin / low-priv user (group-scoped permission policy)","type":"person","kind":"human_role","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#permissions, lines 9-12 (group membership grants permissions)"}},
+      {"id":"c4-7bf521e1","label":"Container base images (alpine/debian) wheels/npm supply chai","type":"external_system","kind":"external_dependency","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48"}},
+      {"id":"c4-7f55d47c","label":"mobile-apps-fcm-push relay (Firebase Cloud Functions)","type":"external_system","kind":"external_dependency","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)"}},
+      {"id":"c4-84087d5b","label":"homeassistant.auth.permissions.filter_entity_ids_by_permissi","type":"code","kind":"function","parent":"c4-2b33e14f","badge":1,"capability_badge":1,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.permissions.filter_entity_ids_by_permission","repo":"core","first_finding_id":"merged-66801b1b"}},
+      {"id":"c4-858fb41b","label":"supervisor.docker.manager.DockerAPI.__init__","type":"code","kind":"function","parent":"c4-78444877","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.docker.manager.DockerAPI.__init__","repo":"supervisor","first_finding_id":"dist-d08ed969"}},
+      {"id":"c4-85956d05","label":"home-assistant.io","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:home-assistant.io"}},
+      {"id":"c4-8a7a12d5","label":"mosquitto.config.yaml","type":"code","kind":"module","parent":"c4-c4507c07","badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"mosquitto.config.yaml","repo":"addons"}},
+      {"id":"c4-8bd848dd","label":"plugin-cli","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:plugin-cli"}},
+      {"id":"c4-9133e640","label":"common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocket","type":"code","kind":"function","parent":"c4-f7d01fcf","badge":4,"capability_badge":1,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory","repo":"android","first_finding_id":"auth-1787eae1"}},
+      {"id":"c4-975cfbd4","label":"wheels","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:wheels"}},
+      {"id":"c4-9904ee7d","label":"Third-party integration / device principal (untrusted device","type":"person","kind":"external_party","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#trust-boundaries item 6 (untrusted device/cloud responses)"}},
+      {"id":"c4-9a8a0efa","label":"Owner user (onboarding user all permissions)","type":"person","kind":"human_role","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#owner, lines 27-29 (always all permissions)"}},
+      {"id":"c4-9e5151b7","label":"iOS Companion","type":"container","kind":"app","parent":null,"badge":7,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"artifact","locator":"code-architecture-brief.md §1/§2 iOS Companion: WebView external bus + ServerManagerKeychain (default Keychain accessibility class)","first_finding_id":"auth-ea69d3a2"}},
+      {"id":"c4-9f32940b","label":"homeassistant.components.mobile_app.webhook.handle_webhook","type":"code","kind":"function","parent":"c4-2b33e14f","badge":7,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.mobile_app.webhook.handle_webhook","repo":"core","first_finding_id":"auth-3f2314a4"}},
+      {"id":"c4-a697b2ea","label":"homeassistant.auth.providers.homeassistant.Data.validate_log","type":"code","kind":"function","parent":"c4-2b33e14f","badge":null,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.auth.providers.homeassistant.Data.validate_login","repo":"core"}},
+      {"id":"c4-a811b55d","label":"Frontend (Lit/TS)","type":"container","kind":"app","parent":null,"badge":3,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-07000001 (src.external_app.external_messaging.ExternalMessaging._sendExternal — Lit/TS JS external-auth bridge served remotely into the WebView)","first_finding_id":"auth-ea69d3a2"}},
+      {"id":"c4-aa3d3890","label":"homeassistant.components.websocket_api.auth.AuthPhase.async_","type":"code","kind":"function","parent":"c4-2b33e14f","badge":3,"capability_badge":5,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.websocket_api.auth.AuthPhase.async_handle","repo":"core","first_finding_id":"avail-4be2dd70"}},
+      {"id":"c4-aa5a3a58","label":"ha CLI","type":"container","kind":"app","parent":null,"badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-d4000001 (client.helper.URLHelper — ha CLI builds the Supervisor API URL)","first_finding_id":"auth-23048c0c"}},
+      {"id":"c4-ab1ad354","label":"Nabu Casa cloud relay / cloudhook (remote access cloudhook_u","type":"external_system","kind":"external_dependency","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"registration response, lines 74-79 (cloudhook_url, remote_ui_url)"}},
+      {"id":"c4-ae94d359","label":"supervisor.backups.backup.Backup.set_password","type":"code","kind":"function","parent":"c4-78444877","badge":3,"capability_badge":1,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.backups.backup.Backup.set_password","repo":"supervisor","first_finding_id":"avail-5af6fee5"}},
+      {"id":"c4-bc1e61b2","label":"docker","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:docker"}},
+      {"id":"c4-bddd59fe","label":"Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessa","type":"code","kind":"function","parent":"c4-9e5151b7","badge":4,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage","repo":"iOS","first_finding_id":"auth-ea69d3a2"}},
+      {"id":"c4-bf3dfe59","label":"supervisor.api.middleware.security.SecurityMiddleware.token_","type":"code","kind":"function","parent":"c4-78444877","badge":3,"capability_badge":3,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.api.middleware.security.SecurityMiddleware.token_validation","repo":"supervisor","first_finding_id":"merged-1119b0be"}},
+      {"id":"c4-bfb3f82b","label":"supervisor.api.middleware.security.SecurityMiddleware.ADDONS","type":"code","kind":"module","parent":"c4-78444877","badge":null,"capability_badge":1,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS","repo":"supervisor"}},
+      {"id":"c4-c4507c07","label":"Add-ons","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-09000001 (mosquitto.config.yaml — add-on manifest declaring auth_api role + host mounts that SecurityMiddleware enforces)"}},
+      {"id":"c4-cc1569b3","label":"home-assistant-js-websocket","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:home-assistant-js-websocket"}},
+      {"id":"c4-cd46fff5","label":"supervisor.api.ingress._init_header","type":"code","kind":"function","parent":"c4-78444877","badge":1,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"supervisor.api.ingress._init_header","repo":"supervisor","first_finding_id":"auth-4e7d1059"}},
+      {"id":"c4-ceca8483","label":"developers.home-assistant","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:developers.home-assistant"}},
+      {"id":"c4-cecf1484","label":"homeassistant.components.api.APIEntityStateView.get","type":"code","kind":"route","parent":"c4-2b33e14f","badge":2,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.api.APIEntityStateView.get","repo":"core","first_finding_id":"conf-ef49b4b0"}},
+      {"id":"c4-d1ea3a05","label":".storage (plaintext JSON config/secrets/tokens)","type":"container","kind":"data_store","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-a1000017 (Store._write_prepared_data — .storage written as plaintext UTF-8 JSON, no encryption-at-rest; brief §2)"}},
+      {"id":"c4-d2789629","label":"homeassistant.components.api.APIEntityStateView.post","type":"code","kind":"route","parent":"c4-2b33e14f","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.api.APIEntityStateView.post","repo":"core","first_finding_id":"merged-66801b1b"}},
+      {"id":"c4-d304503a","label":"os-agent","type":"container","kind":"compute","parent":null,"badge":4,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitive: root SSH-key write)","first_finding_id":"auth-6924f467"}},
+      {"id":"c4-d3b30ed4","label":"architecture","type":"container","kind":"service","parent":null,"badge":null,"capability_badge":0,"analysis_state":"not_analyzed","provenance":{"source":"code_evidence","locator":"repos[]:architecture"}},
+      {"id":"c4-d439ef43","label":"Ingress-authenticated user (X-Remote-User-Id/Name headers)","type":"person","kind":"human_role","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"asset_inventory","locator":"#authenticating-a-user-when-using-ingress, lines 40-48"}},
+      {"id":"c4-dac0a1a3","label":"src.external_app.external_messaging.ExternalMessaging._sendE","type":"code","kind":"function","parent":"c4-a811b55d","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"src.external_app.external_messaging.ExternalMessaging._sendExternal","repo":"frontend","first_finding_id":"conf-3060c50e"}},
+      {"id":"c4-eab86774","label":"system.system.ScheduleWipeDevice","type":"code","kind":"function","parent":"c4-d304503a","badge":4,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"system.system.ScheduleWipeDevice","repo":"os-agent","first_finding_id":"auth-6924f467"}},
+      {"id":"c4-f08b7afb","label":"common...database.DatabaseModule.DatabaseModule.provideAppDa","type":"code","kind":"function","parent":"c4-f7d01fcf","badge":1,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"common...database.DatabaseModule.DatabaseModule.provideAppDatabase","repo":"android","first_finding_id":"conf-205c53a5"}},
+      {"id":"c4-f7d01fcf","label":"Android Companion","type":"container","kind":"app","parent":null,"badge":6,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"artifact","locator":"code-architecture-brief.md §1/§2 Android Companion: LaunchActivity deep-link entry + DatabaseModule.provideAppDatabase (unencrypted Room) + AndroidKeyStore mTLS key","first_finding_id":"auth-1787eae1"}},
+      {"id":"c4-fb9078ee","label":"Android Room AppDatabase","type":"container","kind":"data_store","parent":null,"badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-f6000003 (DatabaseModule.provideAppDatabase — unencrypted SQLite: location_history + session-token rows; brief §2)"}},
+      {"id":"c4-fcee7bf9","label":"FCM push relay","type":"container","kind":"service","parent":null,"badge":4,"capability_badge":2,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"code-evidence-index.yaml#cev-08000002 (__route__POST__/api/sendPushNotification — Firebase Cloud Function push relay)","first_finding_id":"auth-23048c0c"}},
+      {"id":"c4-fd561b56","label":"homeassistant.components.http.auth.async_setup_auth.auth_mid","type":"code","kind":"function","parent":"c4-2b33e14f","badge":null,"capability_badge":0,"analysis_state":"analyzed","provenance":{"source":"code_evidence","locator":"homeassistant.components.http.auth.async_setup_auth.auth_middleware","repo":"core"}}
+    ],
+    "edges": [
+      {"id":"c4e-256f048b","source":"c4-9e5151b7","target":"c4-2b33e14f","label":"CROSS_HTTP_CALLS — iOS Companion WKWebView loads + calls the user-configured Core REST/WS instance (user-entered self-hosted URL)","machine_extracted":false},
+      {"id":"c4e-381ea08b","source":"c4-78444877","target":"c4-66dae27f","label":"CROSS_CHANNEL — Supervisor controls the host Docker daemon over the shared /run/docker.sock unix socket (host-root control plane)","machine_extracted":false},
+      {"id":"c4e-384bedb4","source":"c4-78444877","target":"c4-2b33e14f","label":"CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls the Core API as a privileged client (runtime container IP)","machine_extracted":false},
+      {"id":"c4e-60bdd445","source":"c4-78444877","target":"c4-d304503a","label":"CROSS_CHANNEL — Supervisor calls os-agent host primitives over the system D-Bus (io.hass.os; container -> host root)","machine_extracted":false},
+      {"id":"c4e-9e7befef","source":"c4-2b33e14f","target":"c4-fcee7bf9","label":"CROSS_HTTP_CALLS — Core mobile_app integration pushes to the FCM relay Cloud Function, which forwards to APNS/FCM (external Firebase URL)","machine_extracted":false},
+      {"id":"c4e-b1f89879","source":"c4-aa5a3a58","target":"c4-78444877","label":"CROSS_HTTP_CALLS — ha CLI invokes the Supervisor API (runtime viper endpoint host)","machine_extracted":false}
+    ]
+  };
+  ```
+
+  > NOTE on edge `label`: the FULL machine string is kept verbatim here (the
+  > prototype's `_safe_label` 60-char truncation of edge labels is a render concern
+  > and Task 4's `c4ShortEdgeLabel` re-derives the short display string from this
+  > full string; the full string is also what shows in the hover tooltip).
+
+- [ ] **Run the harness green.**
+  ```bash
+  node "docs/superpowers/design_handoff_c4_architecture_view/prototype/check-fixture-keys.js"
+  # EXPECT: fixture key check OK: 82 nodes, 6 edges, real keys present, abbreviations absent.
+  ```
+
+- [ ] **Verify the prototype `.html` renderer no longer references abbreviation keys.**
+  The prototype script reads `n.state`/`n.cap`/`n.ff`/`e.me`/`C4.overlay_paths` —
+  those are now wrong against the regenerated fixture. Grep to surface every site,
+  then update the prototype's `badgeHTML`/`nodeBox`/`showTip`/`overlaySet` reads to
+  the real keys (`n.analysis_state`/`n.capability_badge`/`n.provenance.first_finding_id`/
+  `e.machine_extracted`; drop the `overlay_paths` toggle entirely — overlays are
+  rebuilt from `attack_paths` in the React scene, NOT shipped on the fixture).
+
+  ```bash
+  grep -nE '\.state\b|\.cap\b|\.ff\b|\.me\b|overlay_paths' \
+    "docs/superpowers/design_handoff_c4_architecture_view/prototype/APD Gauntlet Architecture (C4).html"
+  # EXPECT after edits: no matches (or only matches inside comments/strings, none in live reads)
+  ```
+
+  This keeps the prototype a faithful, self-consistent reference for the React port
+  (Task 5) rather than a misleading one. (If the prototype's L3-demo synthetic
+  toggle still reads `state`/`cap`, delete that toggle now — the shared contract
+  forbids porting it anyway.)
+
+- [ ] **Add the "Field-name crosswalk (fixture vs production)" note to the handoff README.**
+  Insert this subsection immediately after the "Edge labels:" paragraph (README
+  §259-263) and before the `---` separator at §265, so a reader who lands on the
+  layout/edge sections sees the contract right there:
+
+  ```markdown
+  ### Field-name crosswalk (fixture vs production)
+
+  The prototype's `archx-data.js` fixture (`window.C4_DATA`) is now a faithful copy
+  of the **production** `window.APD_DATA.c4_model` slice that
+  `tools/apd_gauntlet/report/transform.py::c4_model_view` emits. The React scene MUST
+  read the production names — there are no abbreviations. Earlier drafts of this
+  fixture used short keys; the table below is the historical crosswalk so reviewers
+  of the prototype `.html` are not confused:
+
+  | Production key (use this)        | Old fixture abbrev (do NOT use) | Notes |
+  |----------------------------------|----------------------------------|-------|
+  | `node.type` (= C4 level)         | —                                | `system\|person\|external_system\|container\|component\|code` |
+  | `node.kind`                      | —                                | service/data_store/compute/app/external_system; function/class/route/module |
+  | `node.badge`                     | —                                | `finding_count` when > 0, else `null` (never `0`; "0 ≠ clean") |
+  | `node.capability_badge`          | `node.cap`                       | integer, `0` when none |
+  | `node.analysis_state`            | `node.state`                     | `analyzed` \| `not_analyzed` |
+  | `node.provenance.first_finding_id` | `node.ff`                      | per-node ⚑ deep-link key (present only when `badge` > 0) |
+  | `node.provenance{source,locator,repo}` | —                          | passed through verbatim from the assembler |
+  | `edge.machine_extracted`         | `edge.me`                        | boolean |
+  | `edge.label`                     | —                                | FULL machine string (e.g. `CROSS_HTTP_CALLS …`); short label derived at render |
+  | top: `present`, `levels_present`, `not_analyzed_count`, `unlocalized_findings`, `asset_to_c4`, `finding_to_c4` | (omitted) | rollups + overlay crosswalks; `asset_to_c4`/`finding_to_c4` are grounded-only and may be `{}` |
+  | (removed) | `overlay_paths` | **fabricated** in the old fixture — attack-path overlays are rebuilt from `data.attack_paths` + `asset_to_c4`/`finding_to_c4`, never shipped on the c4 slice |
+
+  The backbone positions and short edge labels the prototype hard-codes
+  (`BACKBONE` / `EDGE_SHORT` / `ANALYZED_SHELF` constants) are **render-derived in
+  production** by `c4BackboneLayout` / `c4ShortEdgeLabel` (see Layout strategy + Edge
+  labels above) — they are deliberately NOT fixture fields.
+  ```
+
+- [ ] **Commit.** `git add` the regenerated fixture, the new harness, the patched
+  prototype `.html`, and the README; commit
+  `docs(c4): regenerate prototype fixture to real c4_model_view keys + crosswalk note`.
+
+---
+
+### Task 3: `c4BackboneLayout(nodes, edges)` — deterministic layered backbone + analyzed/infra shelves
+
+The prototype hard-codes a `BACKBONE` position map and a curated `ANALYZED_SHELF`
+order for the home-assistant run. Production must derive both deterministically from
+the data so any run renders reproducibly. This task adds the pure helper
+`c4BackboneLayout` to `components.jsx` (window-exported), implementing the README
+"Layout strategy" algorithm (§267-294): partition containers into
+`connected`/`analyzed`/`infra`, lay the `connected` set out in layered longest-path
+columns over the edge subgraph, and emit `analyzed`/`infra` as label-sorted shelves.
+It returns logical `{col,row}` / shelf-order — pixel positions and SVG routing are
+the renderer's job (Task 5), which measures the rendered boxes (router ported
+verbatim), so this helper has no DOM/measurement dependency and is unit-testable
+with node.
+
+**Files:**
+- Modify: `report-template/components.jsx` (add `c4BackboneLayout` + window export)
+- Create: `report-template/__c4_helpers_check.js` (node harness; the helpers' "test" — the report has no JS test runner)
+- Modify: `tests/test_workflow_apd_gauntlet.py` (string-assert the helper exists in source + the bundle)
+
+**Steps:**
+
+- [ ] **Write the failing node harness FIRST** (covers Task 3 and Task 4 — extend
+  it in Task 4). It extracts the helper bodies from `components.jsx` and exercises
+  them; it cannot pass until the helper exists. Create
+  `report-template/__c4_helpers_check.js`:
+
+  ```js
+  // __c4_helpers_check.js — node harness for the pure C4 render helpers.
+  // The report has no JS test runner; this asserts determinism + the real
+  // home-assistant cases for c4BackboneLayout (Task 3) and c4ShortEdgeLabel
+  // (Task 4). Strategy: load components.jsx, strip JSX-bearing lines is unsafe,
+  // so instead we eval ONLY the two pure helper function declarations, which we
+  // locate by name and brace-match. Usage: node __c4_helpers_check.js
+  'use strict';
+  const fs = require('fs');
+  const path = require('path');
+
+  const src = fs.readFileSync(path.join(__dirname, 'components.jsx'), 'utf8');
+
+  // Extract a top-level `function NAME(...) { ... }` by brace matching.
+  function extractFn(name) {
+    const sig = `function ${name}(`;
+    const start = src.indexOf(sig);
+    if (start < 0) throw new Error(`helper not found in components.jsx: ${name}`);
+    let i = src.indexOf('{', start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+    }
+    return src.slice(start, i);
+  }
+
+  // eslint-disable-next-line no-new-func
+  const c4BackboneLayout = new Function(
+    `${extractFn('c4BackboneLayout')}; return c4BackboneLayout;`)();
+  // c4ShortEdgeLabel wired in Task 4:
+  let c4ShortEdgeLabel = null;
+  try {
+    // eslint-disable-next-line no-new-func
+    c4ShortEdgeLabel = new Function(
+      `${extractFn('c4ShortEdgeLabel')}; return c4ShortEdgeLabel;`)();
+  } catch (_) { /* Task 4 not landed yet */ }
+
+  const fails = [];
+  const eq = (a, b, msg) => {
+    const A = JSON.stringify(a), B = JSON.stringify(b);
+    if (A !== B) fails.push(`${msg}\n      got: ${A}\n      exp: ${B}`);
+  };
+  const ok = (c, m) => { if (!c) fails.push(m); };
+
+  // ── c4BackboneLayout: the REAL home-assistant connected subgraph ───────────
+  // 6 grounded edges + the 7 endpoints, plus 2 analyzed-no-edge + 2 infra to
+  // exercise the shelves. (Subset of the real run — only containers matter.)
+  const haNodes = [
+    {id:'c4-9e5151b7',label:'iOS Companion',type:'container',analysis_state:'analyzed',badge:7},
+    {id:'c4-2b33e14f',label:'Home Assistant Core',type:'container',analysis_state:'analyzed',badge:22},
+    {id:'c4-78444877',label:'Supervisor',type:'container',analysis_state:'analyzed',badge:6},
+    {id:'c4-66dae27f',label:'host-dockerd',type:'container',analysis_state:'not_analyzed',badge:null},
+    {id:'c4-d304503a',label:'os-agent',type:'container',analysis_state:'analyzed',badge:4},
+    {id:'c4-fcee7bf9',label:'FCM push relay',type:'container',analysis_state:'analyzed',badge:4},
+    {id:'c4-aa5a3a58',label:'ha CLI',type:'container',analysis_state:'analyzed',badge:1},
+    {id:'c4-a811b55d',label:'Frontend (Lit/TS)',type:'container',analysis_state:'analyzed',badge:3},
+    {id:'c4-f7d01fcf',label:'Android Companion',type:'container',analysis_state:'analyzed',badge:6},
+    {id:'c4-bc1e61b2',label:'docker',type:'container',analysis_state:'not_analyzed',badge:null},
+    {id:'c4-07f5a3e6',label:'plugin-dns',type:'container',analysis_state:'not_analyzed',badge:null},
+    // a code node + a person — must be IGNORED (containers only)
+    {id:'c4-2d5eaa33',label:'session_scope',type:'code',parent:'c4-2b33e14f',analysis_state:'analyzed',badge:6},
+    {id:'c4-9a8a0efa',label:'Owner user',type:'person',analysis_state:'analyzed',badge:null},
+  ];
+  const haEdges = [
+    {source:'c4-9e5151b7',target:'c4-2b33e14f'},
+    {source:'c4-78444877',target:'c4-66dae27f'},
+    {source:'c4-78444877',target:'c4-2b33e14f'},
+    {source:'c4-78444877',target:'c4-d304503a'},
+    {source:'c4-2b33e14f',target:'c4-fcee7bf9'},
+    {source:'c4-aa5a3a58',target:'c4-78444877'},
+  ];
+
+  const out = c4BackboneLayout(haNodes, haEdges);
+
+  // Longest-path columns: ha CLI/iOS = col0; Supervisor = col1;
+  // Core+host-dockerd+os-agent = col2; FCM = col3. Within a column: label asc,
+  // then badge desc. (Verified by hand against the §267-294 algorithm.)
+  eq(out.connected, [
+    {id:'c4-aa5a3a58',col:0,row:0},   // "ha CLI"
+    {id:'c4-9e5151b7',col:0,row:1},   // "iOS Companion"
+    {id:'c4-78444877',col:1,row:0},   // "Supervisor"
+    {id:'c4-2b33e14f',col:2,row:0},   // "Home Assistant Core"
+    {id:'c4-66dae27f',col:2,row:1},   // "host-dockerd"
+    {id:'c4-d304503a',col:2,row:2},   // "os-agent"
+    {id:'c4-fcee7bf9',col:3,row:0},   // "FCM push relay"
+  ], 'c4BackboneLayout connected (HA longest-path columns)');
+
+  // analyzed shelf = analyzed containers NOT in any edge, label asc
+  eq(out.analyzed, ['c4-f7d01fcf','c4-a811b55d'],   // "Android Companion","Frontend (Lit/TS)"
+     'c4BackboneLayout analyzed shelf (label asc)');
+  // infra shelf = not_analyzed containers, label asc
+  eq(out.infra, ['c4-bc1e61b2','c4-07f5a3e6'],       // "docker","plugin-dns"
+     'c4BackboneLayout infra shelf (label asc)');
+
+  // Code/person nodes excluded entirely
+  const allIds = [...out.connected.map(n=>n.id), ...out.analyzed, ...out.infra];
+  ok(!allIds.includes('c4-2d5eaa33'), 'code node must be excluded from layout');
+  ok(!allIds.includes('c4-9a8a0efa'), 'person node must be excluded from layout');
+
+  // ── DETERMINISM: same input → byte-identical output, and INPUT-ORDER stable ─
+  eq(c4BackboneLayout(haNodes, haEdges), out, 'c4BackboneLayout deterministic (re-run)');
+  const shuffled = [...haNodes].reverse();
+  const shufEdges = [...haEdges].reverse();
+  eq(c4BackboneLayout(shuffled, shufEdges), out,
+     'c4BackboneLayout stable under input reordering');
+
+  // ── tiny synthetic fixture: a cycle (break by first-seen) + an isolated edge ─
+  const cyNodes = [
+    {id:'a',label:'Aye',type:'container',analysis_state:'analyzed',badge:1},
+    {id:'b',label:'Bee',type:'container',analysis_state:'analyzed',badge:1},
+    {id:'c',label:'Cee',type:'container',analysis_state:'analyzed',badge:1},
+  ];
+  const cyEdges = [
+    {source:'a',target:'b'},
+    {source:'b',target:'c'},
+    {source:'c',target:'a'},   // cycle back to a — must NOT loop forever
+  ];
+  const cy = c4BackboneLayout(cyNodes, cyEdges);
+  ok(cy.connected.length === 3, 'cycle: all 3 nodes placed');
+  ok(cy.connected.every(n => typeof n.col === 'number' && n.col >= 0),
+     'cycle: every node gets a finite non-negative column (no infinite layering)');
+  eq(c4BackboneLayout(cyNodes, cyEdges), cy, 'cycle layout deterministic');
+
+  // ── helper run on empty/degenerate input ───────────────────────────────────
+  eq(c4BackboneLayout([], []), {connected:[],analyzed:[],infra:[]},
+     'empty input → empty partitions');
+
+  if (c4ShortEdgeLabel) {
+    // ── Task 4 cases (filled in when c4ShortEdgeLabel lands) ─────────────────
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls the Core API as a privileged client (runtime container IP)'),
+       'Supervisor POSTs Core', 'short: Supervisor->Core /auth/token');
+    eq(c4ShortEdgeLabel('CROSS_CHANNEL — Supervisor controls the host Docker daemon over the shared /run/docker.sock unix socket (host-root control plane)'),
+       'Supervisor controls the', 'short: controls daemon');
+    eq(c4ShortEdgeLabel('CROSS_CHANNEL — Supervisor calls os-agent host primitives over the system D-Bus (io.hass.os; container -> host root)'),
+       'Supervisor calls os-agent', 'short: host primitives');
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS — Core mobile_app integration pushes to the FCM relay Cloud Function, which forwards to APNS/FCM (external Firebase URL)'),
+       'Core mobile_app integration', 'short: pushes to FCM');
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS — ha CLI invokes the Supervisor API (runtime viper endpoint host)'),
+       'ha CLI invokes', 'short: ha CLI invokes');
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS — iOS Companion WKWebView loads + calls the user-configured Core REST/WS instance (user-entered self-hosted URL)'),
+       'iOS Companion WKWebView', 'short: iOS loads/calls');
+    // _safe_label may collapse the em dash → space; still strips the prefix
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS Supervisor POSTs Core /auth/token + calls'),
+       'Supervisor POSTs Core', 'short: no-dash variant');
+    eq(c4ShortEdgeLabel(''), '', 'short: empty → empty');
+    eq(c4ShortEdgeLabel(null), '', 'short: null → empty');
+    eq(c4ShortEdgeLabel('no prefix here just plain words'),
+       'no prefix here', 'short: no CROSS_ prefix → first 3 words');
+    eq(c4ShortEdgeLabel('CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls'),
+       c4ShortEdgeLabel('CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls'),
+       'short: deterministic');
+  }
+
+  if (fails.length) {
+    console.error(`C4 HELPERS CHECK FAILED (${fails.length}):`);
+    fails.forEach(f => console.error('  - ' + f));
+    process.exit(1);
+  }
+  console.log(`c4 helpers check OK (c4BackboneLayout${c4ShortEdgeLabel ? ' + c4ShortEdgeLabel' : ''}).`);
+  ```
+
+  Run it red:
+  ```bash
+  node report-template/__c4_helpers_check.js
+  # EXPECT: throws "helper not found in components.jsx: c4BackboneLayout" → exit 1
+  ```
+
+- [ ] **Add the Python string-assertion (red).** Append to
+  `tests/test_workflow_apd_gauntlet.py`:
+
+  ```python
+  def test_c4_backbone_layout_helper_present():
+      """The deterministic backbone-layout helper is defined + window-exported in
+      components.jsx (and so present in the built bundle). It is the data-driven
+      replacement for the prototype's hard-coded BACKBONE map."""
+      src = (REPORT_TEMPLATE_DIR / "components.jsx").read_text(encoding="utf-8")
+      assert "function c4BackboneLayout(" in src
+      # returns the three partitions the tier scene consumes
+      assert "connected" in src and "analyzed" in src and "infra" in src
+      # window-exported alongside the other helpers
+      assert "c4BackboneLayout" in src.split("Object.assign(window")[1]
+      bundle = (REPORT_TEMPLATE_DIR / "app.js").read_text(encoding="utf-8")
+      assert "c4BackboneLayout" in bundle
+  ```
+
+  ```bash
+  .venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_backbone_layout_helper_present -q
+  # EXPECT: FAIL (helper not in source/bundle yet)
+  ```
+
+- [ ] **Implement `c4BackboneLayout` (minimal, pure, deterministic).** Add to
+  `report-template/components.jsx`, near the other pure top-level helpers (NOT
+  inside a component). Algorithm exactly per README §267-294: partition → layered
+  longest-path columns over the connected subgraph (col 0 = no incoming; relax
+  `col[t] = max(col[t], col[s]+1)` to a fixed point, which assigns the LONGEST path
+  and is inherently cycle-safe because columns are bounded by node count) → stable
+  sort within a column (label asc, then badge desc, then id asc as the final
+  tiebreak for byte-stability) → shelves sorted by label asc (then id asc).
+
+  ```jsx
+  // ── C4 tiered-scene pure helpers (no DOM; deterministic; window-exported) ───
+  // c4BackboneLayout: data-driven replacement for the prototype's hard-coded
+  // BACKBONE/ANALYZED_SHELF. Partitions CONTAINER nodes into connected (in any
+  // edge), analyzed (no edge, analysis_state!=="not_analyzed"), infra
+  // (not_analyzed); lays the connected set out in layered longest-path columns
+  // over the edge subgraph and returns logical {col,row}. Pixel positions +
+  // SVG routing are the renderer's job (it measures the rendered boxes), so this
+  // helper is pure + node-testable. Fully deterministic / stable-sorted.
+  function c4BackboneLayout(nodes, edges) {
+    const containers = (nodes || []).filter(function (n) { return n && n.type === "container"; });
+    const byId = {};
+    containers.forEach(function (n) { byId[n.id] = n; });
+
+    // 1. partition. connected = appears as either endpoint of an edge whose BOTH
+    //    ends are containers we know.
+    const sub = [];
+    const endpoints = {};
+    (edges || []).forEach(function (e) {
+      if (e && byId[e.source] && byId[e.target]) {
+        sub.push(e);
+        endpoints[e.source] = true;
+        endpoints[e.target] = true;
+      }
+    });
+    const connectedIds = containers.filter(function (n) { return endpoints[n.id]; }).map(function (n) { return n.id; });
+    const connSet = {};
+    connectedIds.forEach(function (id) { connSet[id] = true; });
+    const analyzedIds = containers.filter(function (n) {
+      return !connSet[n.id] && n.analysis_state !== "not_analyzed";
+    }).map(function (n) { return n.id; });
+    const infraIds = containers.filter(function (n) {
+      return !connSet[n.id] && n.analysis_state === "not_analyzed";
+    }).map(function (n) { return n.id; });
+
+    // 2. layered longest-path columns over the connected subgraph.
+    const indeg = {};
+    connectedIds.forEach(function (id) { indeg[id] = 0; });
+    sub.forEach(function (e) { if (connSet[e.source] && connSet[e.target]) indeg[e.target]++; });
+    const col = {};
+    connectedIds.forEach(function (id) { col[id] = 0; }); // col 0 = no incoming (and default)
+    // Relax to longest path. Iterate edges in a STABLE order; bounded by node
+    // count (longest simple path can't exceed N-1), so cycles terminate cleanly.
+    const orderedEdges = sub.filter(function (e) {
+      return connSet[e.source] && connSet[e.target];
+    }).slice().sort(function (a, b) {
+      const ka = a.source + "|" + a.target, kb = b.source + "|" + b.target;
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    const maxPasses = connectedIds.length + 1;
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let changed = false;
+      for (let i = 0; i < orderedEdges.length; i++) {
+        const e = orderedEdges[i];
+        const want = col[e.source] + 1;
+        // cap at N-1 so a cycle can't inflate columns past the bound
+        if (want <= connectedIds.length - 1 && col[e.target] < want) {
+          col[e.target] = want;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+
+    // 3. group by column; stable-sort within column: label asc, badge desc, id asc.
+    const cmpInCol = function (a, b) {
+      const na = byId[a], nb = byId[b];
+      const la = na.label || "", lb = nb.label || "";
+      if (la !== lb) return la < lb ? -1 : 1;
+      const ba = na.badge || 0, bb = nb.badge || 0;
+      if (ba !== bb) return bb - ba; // foreground hot nodes
+      return a < b ? -1 : a > b ? 1 : 0;
+    };
+    const cols = {};
+    connectedIds.forEach(function (id) {
+      const c = col[id];
+      (cols[c] = cols[c] || []).push(id);
+    });
+    const connected = [];
+    Object.keys(cols).map(Number).sort(function (a, b) { return a - b; }).forEach(function (c) {
+      cols[c].slice().sort(cmpInCol).forEach(function (id, row) {
+        connected.push({ id: id, col: c, row: row });
+      });
+    });
+
+    // 4. shelves: label asc, id asc tiebreak.
+    const shelfCmp = function (a, b) {
+      const la = byId[a].label || "", lb = byId[b].label || "";
+      if (la !== lb) return la < lb ? -1 : 1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    };
+    return {
+      connected: connected,
+      analyzed: analyzedIds.slice().sort(shelfCmp),
+      infra: infraIds.slice().sort(shelfCmp),
+    };
+  }
+  ```
+
+  Add `c4BackboneLayout` to the existing `Object.assign(window, { … })` export
+  block in `components.jsx` (the same block that exports `GraphView`/the other
+  helpers), e.g. `Object.assign(window, { …, c4BackboneLayout, … });`.
+
+- [ ] **Run the node harness green (Task-3 portion).**
+  ```bash
+  node report-template/__c4_helpers_check.js
+  # EXPECT: c4 helpers check OK (c4BackboneLayout).   ← c4ShortEdgeLabel lands in Task 4
+  ```
+
+- [ ] **Rebuild the bundle, then run the Python assertion green.**
+  ```bash
+  .venv/bin/python tools/build_report_template.py
+  .venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_backbone_layout_helper_present -q
+  # EXPECT: 1 passed
+  ```
+
+- [ ] **Commit** (helper + harness + test + regenerated bundle/.source-hash):
+  `feat(report): deterministic c4BackboneLayout helper (layered longest-path backbone + shelves)`.
+
+---
+
+### Task 4: `c4ShortEdgeLabel(rawLabel)` — deterministic short edge label (full string kept for hover)
+
+The raw `edge.label` is a long machine string (e.g.
+`"CROSS_HTTP_CALLS — Supervisor POSTs Core /auth/token + calls …"`). The prototype
+hand-curates a short `EDGE_SHORT` map per run; production must derive the short
+display label deterministically (README §259-263) and keep the full string for the
+hover tooltip (the renderer wires the tooltip in Task 5). This task adds the pure
+helper `c4ShortEdgeLabel` to `components.jsx`: strip a leading `CROSS_[A-Z_]+` token
+(plus any following dash/colon separators), then take the first ~3 meaningful words.
+
+**Files:**
+- Modify: `report-template/components.jsx` (add `c4ShortEdgeLabel` + window export)
+- Modify: `report-template/__c4_helpers_check.js` (already contains the Task-4 cases under the `if (c4ShortEdgeLabel)` guard from Task 3 — they now run live)
+- Modify: `tests/test_workflow_apd_gauntlet.py` (string-assert helper exists in source + bundle)
+
+**Steps:**
+
+- [ ] **Confirm the Task-4 cases are currently dormant (red-by-absence).** The node
+  harness from Task 3 already encodes every Task-4 assertion, guarded by
+  `if (c4ShortEdgeLabel)`. Because the helper does not yet exist, those assertions
+  are SKIPPED today (harness prints `c4 helpers check OK (c4BackboneLayout).`).
+  Flip the guard to a hard requirement so the harness FAILS until the helper lands:
+  in `__c4_helpers_check.js`, immediately before the final `if (fails.length)`
+  block, add:
+
+  ```js
+  ok(typeof c4ShortEdgeLabel === "function",
+     "c4ShortEdgeLabel must be defined in components.jsx (Task 4)");
+  ```
+
+  ```bash
+  node report-template/__c4_helpers_check.js
+  # EXPECT: C4 HELPERS CHECK FAILED — c4ShortEdgeLabel must be defined … exit 1
+  ```
+
+- [ ] **Add the Python string-assertion (red).** Append to
+  `tests/test_workflow_apd_gauntlet.py`:
+
+  ```python
+  def test_c4_short_edge_label_helper_present():
+      """The deterministic short-edge-label helper is defined + window-exported in
+      components.jsx (data-driven replacement for the prototype's hand-curated
+      EDGE_SHORT map). The full edge.label is kept for the hover tooltip."""
+      src = (REPORT_TEMPLATE_DIR / "components.jsx").read_text(encoding="utf-8")
+      assert "function c4ShortEdgeLabel(" in src
+      # strips the CROSS_* machine prefix deterministically
+      assert "CROSS_" in src.split("function c4ShortEdgeLabel(")[1].split("\n}")[0]
+      assert "c4ShortEdgeLabel" in src.split("Object.assign(window")[1]
+      bundle = (REPORT_TEMPLATE_DIR / "app.js").read_text(encoding="utf-8")
+      assert "c4ShortEdgeLabel" in bundle
+  ```
+
+  ```bash
+  .venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_short_edge_label_helper_present -q
+  # EXPECT: FAIL
+  ```
+
+- [ ] **Implement `c4ShortEdgeLabel` (minimal, pure, deterministic).** Add to
+  `report-template/components.jsx`, beside `c4BackboneLayout`:
+
+  ```jsx
+  // c4ShortEdgeLabel: deterministic short display label for a C4 edge. Strips a
+  // leading CROSS_<TYPE> machine token (+ following — / - / : separators) and
+  // returns the first 3 meaningful words. The FULL rawLabel is kept by the caller
+  // for the hover tooltip. Replaces the prototype's hand-curated EDGE_SHORT map.
+  // Pure / deterministic (no run-dependent state); empty/nullish → "".
+  function c4ShortEdgeLabel(rawLabel) {
+    let s = rawLabel == null ? "" : String(rawLabel);
+    // strip a leading CROSS_<UPPER/_> token and any run of separator chars after it
+    s = s.replace(/^\s*CROSS_[A-Z_]+\s*[—:-]*\s*/, "");
+    s = s.trim();
+    if (!s) return "";
+    const words = s.split(/\s+/).filter(Boolean);
+    return words.slice(0, 3).join(" ");
+  }
+  ```
+
+  Add `c4ShortEdgeLabel` to the same `Object.assign(window, { … })` export block.
+
+- [ ] **Run the node harness green** (Task-3 + Task-4 cases now both live, including
+  every real home-assistant label):
+  ```bash
+  node report-template/__c4_helpers_check.js
+  # EXPECT: c4 helpers check OK (c4BackboneLayout + c4ShortEdgeLabel).
+  ```
+
+- [ ] **Rebuild the bundle, then run the Python assertion green.**
+  ```bash
+  .venv/bin/python tools/build_report_template.py
+  .venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_short_edge_label_helper_present -q
+  # EXPECT: 1 passed
+  ```
+
+- [ ] **Determinism + full-suite gate.** Run the harness twice to confirm byte-stable
+  output, then the Python suite + linters (JS helpers are pure; Python gates only):
+  ```bash
+  node report-template/__c4_helpers_check.js && node report-template/__c4_helpers_check.js
+  .venv/bin/python -m pytest -q
+  .venv/bin/python -m ruff check . && .venv/bin/python -m mypy tools/apd_gauntlet
+  # EXPECT: identical harness output both runs; pytest green; ruff/mypy clean
+  ```
+
+- [ ] **Commit** (helper + harness guard + test + regenerated bundle/.source-hash):
+  `feat(report): deterministic c4ShortEdgeLabel helper (strip CROSS_* prefix, first ~3 words)`.
+
+### Task 5: Orthogonal connector router + `C4EdgeLayer` (pure helpers ported verbatim, SVG overlay that measures rendered boxes)
+
+**Files:**
+
+- Modify: `report-template/components.jsx` (add `c4ShortEdgeLabel`, `c4Anchors`, `c4RouteWaypoints`, `c4RoundedPath`, the `C4EdgeLayer` component; window-export them via the existing `Object.assign(window, {...})`)
+- Create: `report-template/.build/test/c4_router.test.mjs` (node-run unit test of the pure router math — no DOM, no Cytoscape)
+- Test (string-assertion): add `test_c4_router_helpers_present` to `tests/test_workflow_apd_gauntlet.py`
+
+> Why this task is first in the milestone: the router is the one piece of the tiered scene that is *pure math* and can be unit-tested directly with `node` (the rest of the scene needs a DOM). Porting it verbatim from the handoff (README §204-249 / prototype `anchors`/`routeWaypoints`/`roundedPath`) and pinning it with a node test means Task 6 can wire it into JSX with confidence. `c4ShortEdgeLabel` (gap-fix 3: the short-edge-label derivation, previously prose-only) is the deterministic replacement for the prototype's hand-curated `EDGE_SHORT` map and is tested here too.
+
+- [ ] **Step 1: Write the failing node unit test for the pure router math + short-label derivation**
+
+The report bundle is plain ES — `components.jsx` is loaded as a `<script>` and assigns globals, it is not an ES module. To unit-test the pure helpers under `node` without a DOM, the test file re-declares the four pure functions inline (copied verbatim from the spec below) and asserts their contracts. This keeps the node test self-contained (no bundler, no jsdom) while the JS-source string-assertion (Step 4) guards that the *same* code actually ships in `components.jsx`. Create `report-template/.build/test/c4_router.test.mjs`:
+
+```js
+// report-template/.build/test/c4_router.test.mjs
+// Pure unit tests for the C4 orthogonal connector router + short-label derivation.
+// Run: node report-template/.build/test/c4_router.test.mjs  (no deps, no DOM).
+// These four functions are ported VERBATIM from docs/superpowers/design_handoff_
+// c4_architecture_view (README §204-249 / the prototype) and live in components.jsx;
+// they are re-declared here so the math is testable under plain node.
+import assert from "node:assert/strict";
+
+// ── ported verbatim from components.jsx ──────────────────────────────────
+function c4RouteWaypoints(s, t) {
+  const dx = t.cx - s.cx, dy = t.cy - s.cy;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    const sx = dx >= 0 ? s.x + s.w : s.x;
+    const tx = dx >= 0 ? t.x : t.x + t.w;
+    const midX = (sx + tx) / 2;
+    return [{ x: sx, y: s.cy }, { x: midX, y: s.cy }, { x: midX, y: t.cy }, { x: tx, y: t.cy }];
+  } else {
+    const sy = dy >= 0 ? s.y + s.h : s.y;
+    const ty = dy >= 0 ? t.y : t.y + t.h;
+    const midY = (sy + ty) / 2;
+    return [{ x: s.cx, y: sy }, { x: s.cx, y: midY }, { x: t.cx, y: midY }, { x: t.cx, y: ty }];
+  }
+}
+function c4RoundedPath(pts, rad = 7) {
+  const p = [];
+  pts.forEach((q) => { const l = p[p.length - 1]; if (!l || Math.abs(l.x - q.x) > 0.5 || Math.abs(l.y - q.y) > 0.5) p.push(q); });
+  if (p.length < 2) return "";
+  let d = `M ${p[0].x} ${p[0].y}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const a = p[i - 1], b = p[i], c = p[i + 1];
+    const l1 = Math.hypot(b.x - a.x, b.y - a.y), l2 = Math.hypot(c.x - b.x, c.y - b.y);
+    const r = Math.min(rad, l1 / 2, l2 / 2);
+    const u1 = { x: (a.x - b.x) / (l1 || 1), y: (a.y - b.y) / (l1 || 1) };
+    const u2 = { x: (c.x - b.x) / (l2 || 1), y: (c.y - b.y) / (l2 || 1) };
+    d += ` L ${(b.x + u1.x * r).toFixed(1)} ${(b.y + u1.y * r).toFixed(1)}`
+       + ` Q ${b.x} ${b.y} ${(b.x + u2.x * r).toFixed(1)} ${(b.y + u2.y * r).toFixed(1)}`;
+  }
+  const last = p[p.length - 1];
+  return d + ` L ${last.x} ${last.y}`;
+}
+function c4ShortEdgeLabel(rawLabel) {
+  const raw = String(rawLabel == null ? "" : rawLabel).trim();
+  if (!raw) return "";
+  let s = raw.replace(/^CROSS_[A-Z0-9_]+\s*/, "");          // strip CROSS_* relation prefix
+  const VERB = {
+    HTTP_CALLS: "calls API", ASYNC_CALLS: "calls", CHANNEL: "messages",
+    DBUS_CALLS: "controls daemon", IMPORTS: "imports", PUBLISHES: "publishes",
+    SUBSCRIBES: "subscribes", READS: "reads", WRITES: "writes",
+  };
+  const m = raw.match(/^CROSS_([A-Z0-9_]+)/);
+  if (m && (!s || s === raw) && VERB[m[1]]) return VERB[m[1]];  // pure-prefix edge -> verb
+  const words = s.split(/\s+/).filter(Boolean).slice(0, 3);
+  return words.join(" ") || (m && VERB[m[1]]) || raw.split(/\s+/).slice(0, 3).join(" ");
+}
+// ── /ported ──────────────────────────────────────────────────────────────
+
+// horizontal-dominant pair: H-V-H, exits the right edge of s, enters the left edge of t
+{
+  const s = { x: 0, y: 0, w: 100, h: 40, cx: 50, cy: 20 };
+  const t = { x: 400, y: 0, w: 100, h: 40, cx: 450, cy: 20 };
+  const wp = c4RouteWaypoints(s, t);
+  assert.equal(wp.length, 4);
+  assert.deepEqual(wp[0], { x: 100, y: 20 });   // exits right edge of s at s.cy
+  assert.deepEqual(wp[3], { x: 400, y: 20 });   // enters left edge of t at t.cy
+  assert.equal(wp[1].x, wp[2].x);               // the vertical mid-run shares x (orthogonal)
+}
+// vertical-dominant pair: V-H-V, exits the bottom edge of s, enters the top edge of t
+{
+  const s = { x: 0, y: 0, w: 100, h: 40, cx: 50, cy: 20 };
+  const t = { x: 0, y: 300, w: 100, h: 40, cx: 50, cy: 320 };
+  const wp = c4RouteWaypoints(s, t);
+  assert.deepEqual(wp[0], { x: 50, y: 40 });    // exits bottom edge of s at s.cx
+  assert.deepEqual(wp[3], { x: 50, y: 300 });   // enters top edge of t at t.cx
+  assert.equal(wp[1].y, wp[2].y);               // the horizontal mid-run shares y
+}
+// target to the LEFT: exit left edge of s, enter right edge of t
+{
+  const s = { x: 400, y: 0, w: 100, h: 40, cx: 450, cy: 20 };
+  const t = { x: 0, y: 0, w: 100, h: 40, cx: 50, cy: 20 };
+  const wp = c4RouteWaypoints(s, t);
+  assert.deepEqual(wp[0], { x: 400, y: 20 });   // exits LEFT edge of s
+  assert.deepEqual(wp[3], { x: 100, y: 20 });   // enters RIGHT edge of t
+}
+// roundedPath: only H/V segments + quadratic elbows; starts with M, no diagonal L between elbows
+{
+  const d = c4RoundedPath([{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 50 }], 7);
+  assert.ok(d.startsWith("M 0 0"));
+  assert.ok(d.includes("Q "), "elbow must use a quadratic curve");
+  assert.ok(d.endsWith("L 100 50"));
+}
+// roundedPath: collinear / zero-length points are deduped so straight runs stay straight
+{
+  const d = c4RoundedPath([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 100, y: 0 }], 7);
+  assert.equal(d, "M 0 0 L 100 0", "consecutive duplicate points must collapse");
+}
+// roundedPath: fewer than 2 distinct points -> empty string (no edge)
+{
+  assert.equal(c4RoundedPath([{ x: 5, y: 5 }], 7), "");
+  assert.equal(c4RoundedPath([{ x: 5, y: 5 }, { x: 5, y: 5 }], 7), "");
+}
+// roundedPath is DETERMINISTIC (byte-stable) for the same input
+{
+  const pts = [{ x: 1, y: 2 }, { x: 30, y: 2 }, { x: 30, y: 80 }, { x: 60, y: 80 }];
+  assert.equal(c4RoundedPath(pts, 7), c4RoundedPath(pts, 7));
+}
+// short-edge-label: strips the CROSS_* prefix and keeps ~3 words
+{
+  assert.equal(c4ShortEdgeLabel("CROSS_HTTP_CALLS Supervisor POSTs Core /auth/token now"), "Supervisor POSTs Core");
+  assert.equal(c4ShortEdgeLabel("controls host daemon via socket"), "controls host daemon");
+}
+// short-edge-label: a bare CROSS_* relation with no trailing words maps to a verb
+{
+  assert.equal(c4ShortEdgeLabel("CROSS_DBUS_CALLS"), "controls daemon");
+  assert.equal(c4ShortEdgeLabel("CROSS_HTTP_CALLS"), "calls API");
+}
+// short-edge-label: empty / null input -> empty string
+{
+  assert.equal(c4ShortEdgeLabel(""), "");
+  assert.equal(c4ShortEdgeLabel(null), "");
+}
+// short-edge-label is deterministic
+{
+  assert.equal(c4ShortEdgeLabel("CROSS_CHANNEL a b c d"), c4ShortEdgeLabel("CROSS_CHANNEL a b c d"));
+}
+
+console.log("c4_router.test.mjs: all assertions passed");
+```
+
+- [ ] **Step 2: Run the node test to verify it fails**
+
+Run: `node report-template/.build/test/c4_router.test.mjs`
+
+Expected at this point: the test PASSES in isolation (the functions are declared inline in the test). This is intentional — the node test pins the *contract* of the math. The RED that drives the implementation is the JS-source string-assertion in Step 3, which proves the same functions are actually exported from `components.jsx` (not just living in the test). Run that now:
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k c4_router_helpers -v`
+
+Expected: FAIL — `test_c4_router_helpers_present` asserts `c4RouteWaypoints` / `c4RoundedPath` / `c4Anchors` / `c4ShortEdgeLabel` / `C4EdgeLayer` strings in `components.jsx`, which do not exist yet (`AssertionError`).
+
+Add the string-assertion test to `tests/test_workflow_apd_gauntlet.py` (place it in the C4 section, after `test_c4_screen_registered_in_bundle_entry`):
+
+```python
+def test_c4_router_helpers_present() -> None:
+    """Task 5: the orthogonal connector router + short-edge-label + SVG edge
+    layer ship in components.jsx (ported verbatim from the design handoff), and
+    are window-exported so the C4 scene can consume them. GraphView is untouched
+    (still Cytoscape) — these are additive, non-Cytoscape helpers."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # the four pure helpers + the edge-layer component
+    assert "function c4Anchors(" in comps
+    assert "function c4RouteWaypoints(" in comps
+    assert "function c4RoundedPath(" in comps
+    assert "function c4ShortEdgeLabel(" in comps
+    assert "function C4EdgeLayer(" in comps
+    # window-exported via the existing Object.assign(window, {...})
+    assert "c4Anchors" in comps and "c4RouteWaypoints" in comps and "c4RoundedPath" in comps
+    assert "C4EdgeLayer" in comps and "c4ShortEdgeLabel" in comps
+    # the router is the VERBATIM offsetParent-walk (zoom-invariant layout-box anchor)
+    assert "e.offsetParent" in comps and "el.offsetWidth" in comps
+    # orthogonal H-V-H / V-H-V branch (Math.abs(dx) >= Math.abs(dy))
+    assert "Math.abs(dx) >= Math.abs(dy)" in comps
+    # rounded elbow uses a quadratic curve at radius ~7
+    assert "Q ${b.x} ${b.y}" in comps
+    # the short label strips the CROSS_* machine prefix; full string kept for hover
+    assert "CROSS_" in comps
+    # GraphView (Cytoscape) is NOT removed — AttackPaths/ThreatModel still use it
+    assert "function GraphView(" in comps and "window.cytoscape" in comps
+```
+
+- [ ] **Step 3: Implement the pure router helpers + short-edge-label + `C4EdgeLayer` in `components.jsx`**
+
+Insert this block in `report-template/components.jsx` immediately *before* the final `Object.assign(window, {...})` (after `AttackPathStrip`). The four pure functions are the handoff algorithm verbatim; `C4EdgeLayer` is the SVG overlay that measures the rendered boxes and redraws on the lifecycle the handoff requires (mount, `fonts.ready`, `window` resize debounced, theme `MutationObserver`).
+
+```jsx
+// ── C4 orthogonal connector router (ported VERBATIM from the design handoff) ──
+// docs/superpowers/design_handoff_c4_architecture_view/README.md §204-249 and the
+// prototype's anchors()/routeWaypoints()/roundedPath(). Pure functions: no React,
+// no Cytoscape, no DOM globals beyond the element handed in. Anchors are measured
+// from the LAYOUT box model (offsetLeft/Top/Width/Height walked up to the stage)
+// so they are correct regardless of the CSS `transform: scale()` zoom on the stage.
+
+// 1. layout-space rect of an element relative to the (un-scaled) `stage` element.
+function c4Anchors(srcEl, tgtEl, stage) {
+  const r = (el) => {
+    let x = 0, y = 0, e = el;
+    while (e && e !== stage) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+    return { x, y, w: el.offsetWidth, h: el.offsetHeight,
+             cx: x + el.offsetWidth / 2, cy: y + el.offsetHeight / 2 };
+  };
+  return [r(srcEl), r(tgtEl)];
+}
+
+// 2. orthogonal waypoints: exit/enter on the side facing the target,
+//    H-V-H when horizontally dominant, V-H-V otherwise.
+function c4RouteWaypoints(s, t) {
+  const dx = t.cx - s.cx, dy = t.cy - s.cy;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    const sx = dx >= 0 ? s.x + s.w : s.x;
+    const tx = dx >= 0 ? t.x : t.x + t.w;
+    const midX = (sx + tx) / 2;
+    return [{ x: sx, y: s.cy }, { x: midX, y: s.cy }, { x: midX, y: t.cy }, { x: tx, y: t.cy }];
+  } else {
+    const sy = dy >= 0 ? s.y + s.h : s.y;
+    const ty = dy >= 0 ? t.y : t.y + t.h;
+    const midY = (sy + ty) / 2;
+    return [{ x: s.cx, y: sy }, { x: s.cx, y: midY }, { x: t.cx, y: midY }, { x: t.cx, y: ty }];
+  }
+}
+
+// 3. polyline with rounded corners (radius ~7px). Dedupes collinear/zero-length
+//    points so straight runs stay straight; returns "" for < 2 distinct points.
+function c4RoundedPath(pts, rad = 7) {
+  const p = [];
+  pts.forEach((q) => { const l = p[p.length - 1]; if (!l || Math.abs(l.x - q.x) > 0.5 || Math.abs(l.y - q.y) > 0.5) p.push(q); });
+  if (p.length < 2) return "";
+  let d = `M ${p[0].x} ${p[0].y}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const a = p[i - 1], b = p[i], c = p[i + 1];
+    const l1 = Math.hypot(b.x - a.x, b.y - a.y), l2 = Math.hypot(c.x - b.x, c.y - b.y);
+    const r = Math.min(rad, l1 / 2, l2 / 2);
+    const u1 = { x: (a.x - b.x) / (l1 || 1), y: (a.y - b.y) / (l1 || 1) };
+    const u2 = { x: (c.x - b.x) / (l2 || 1), y: (c.y - b.y) / (l2 || 1) };
+    d += ` L ${(b.x + u1.x * r).toFixed(1)} ${(b.y + u1.y * r).toFixed(1)}`
+       + ` Q ${b.x} ${b.y} ${(b.x + u2.x * r).toFixed(1)} ${(b.y + u2.y * r).toFixed(1)}`;
+  }
+  const last = p[p.length - 1];
+  return d + ` L ${last.x} ${last.y}`;
+}
+
+// Deterministic short edge label (gap-fix 3 — replaces the prototype's hand-curated
+// EDGE_SHORT map). The raw edge.label is a long machine string like
+// "CROSS_HTTP_CALLS Supervisor POSTs Core /auth/token ...". We strip the CROSS_*
+// relation prefix and keep the first ~3 descriptive words; a bare CROSS_* relation
+// with no trailing prose maps to a verb. The FULL raw string is kept for the hover
+// title (never hand-curated per run). Pure + stable.
+function c4ShortEdgeLabel(rawLabel) {
+  const raw = String(rawLabel == null ? "" : rawLabel).trim();
+  if (!raw) return "";
+  const s = raw.replace(/^CROSS_[A-Z0-9_]+\s*/, "");
+  const VERB = {
+    HTTP_CALLS: "calls API", ASYNC_CALLS: "calls", CHANNEL: "messages",
+    DBUS_CALLS: "controls daemon", IMPORTS: "imports", PUBLISHES: "publishes",
+    SUBSCRIBES: "subscribes", READS: "reads", WRITES: "writes",
+  };
+  const m = raw.match(/^CROSS_([A-Z0-9_]+)/);
+  if (m && (!s || s === raw) && VERB[m[1]]) return VERB[m[1]];
+  const words = s.split(/\s+/).filter(Boolean).slice(0, 3);
+  if (words.length) return words.join(" ");
+  if (m && VERB[m[1]]) return VERB[m[1]];
+  return raw.split(/\s+/).slice(0, 3).join(" ");
+}
+
+// ── C4 SVG edge overlay ──────────────────────────────────────────────────
+// Plain React + SVG (no Cytoscape). Covers the stage absolutely, sized to the
+// stage's scroll box, pointer-events:none, BEHIND the node boxes (z-index in
+// .edge-layer CSS). For each grounded edge it draws: a rounded orthogonal path
+// (marker-end arrow), a start port circle, and a short de-collided label with a
+// paper-filled background rect (full relation string on hover). Edges whose BOTH
+// endpoints are in `liveSet` render "live" (accent + thicker).
+//
+// Lifecycle (the handoff's redraw contract): measures rendered boxes via
+// c4Anchors and redraws on mount, document.fonts.ready, a debounced window
+// resize, and a theme MutationObserver (data-theme/data-sev on <body>). It reads
+// the box positions by querying `[data-c4id]` inside the passed stage ref, so it
+// is agnostic to how Task 6 positions the boxes (absolute backbone or flow).
+function C4EdgeLayer({ stageRef, edges, liveSet, redrawKey }) {
+  const [paths, setPaths] = React.useState([]);
+  const [dims, setDims] = React.useState({ w: 0, h: 0 });
+  const labelRefs = React.useRef({});
+  const [labelBoxes, setLabelBoxes] = React.useState({});
+
+  const live = liveSet || null;
+
+  const measure = React.useCallback(() => {
+    const stage = stageRef && stageRef.current;
+    if (!stage) return;
+    const out = [];
+    (edges || []).forEach((e) => {
+      const sEl = stage.querySelector(`[data-c4id="${e.source}"]`);
+      const tEl = stage.querySelector(`[data-c4id="${e.target}"]`);
+      if (!sEl || !tEl) return; // only draw edges whose BOTH endpoints are rendered
+      const [s, t] = c4Anchors(sEl, tEl, stage);
+      const wp = c4RouteWaypoints(s, t);
+      // label anchor: midpoint of the last segment longer than 18px (fan-out spokes
+      // separate by row instead of colliding); fall back to the final segment.
+      let seg = null;
+      for (let i = wp.length - 1; i >= 1; i--) {
+        const a = wp[i - 1], b = wp[i];
+        if (Math.hypot(b.x - a.x, b.y - a.y) > 18) { seg = [a, b]; break; }
+      }
+      if (!seg) seg = [wp[wp.length - 2], wp[wp.length - 1]];
+      const horiz = Math.abs(seg[1].x - seg[0].x) >= Math.abs(seg[1].y - seg[0].y);
+      const lx = (seg[0].x + seg[1].x) / 2;
+      const ly = horiz ? (seg[0].y + seg[1].y) / 2 - 8 : (seg[0].y + seg[1].y) / 2;
+      const isLive = !!(live && live.has(e.source) && live.has(e.target));
+      out.push({
+        id: e.id,
+        d: c4RoundedPath(wp, 7),
+        port: wp[0],
+        live: isLive,
+        label: c4ShortEdgeLabel(e.label),
+        title: e.label || "",
+        lx, ly, horiz,
+      });
+    });
+    setPaths(out);
+    setDims({ w: stage.scrollWidth, h: stage.scrollHeight });
+  }, [stageRef, edges, live]);
+
+  // Redraw on: mount + any data/zoom/drill change (redrawKey), fonts.ready,
+  // debounced window resize, and a theme MutationObserver.
+  React.useEffect(() => {
+    measure();
+    const raf = requestAnimationFrame(measure);     // after layout settles
+    const t = setTimeout(measure, 220);             // after fonts/late shifts
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure).catch(() => {});
+    let rT;
+    const onResize = () => { clearTimeout(rT); rT = setTimeout(measure, 120); };
+    window.addEventListener("resize", onResize);
+    const obs = new MutationObserver(measure);
+    obs.observe(document.body, { attributes: true, attributeFilter: ["data-theme", "data-sev"] });
+    return () => {
+      cancelAnimationFrame(raf); clearTimeout(t); clearTimeout(rT);
+      window.removeEventListener("resize", onResize); obs.disconnect();
+    };
+  }, [measure, redrawKey]);
+
+  // Size the label background rects from the rendered text bbox (after paint).
+  React.useEffect(() => {
+    const boxes = {};
+    paths.forEach((p) => {
+      const node = labelRefs.current[p.id];
+      if (!node) return;
+      try {
+        const b = node.getBBox();
+        boxes[p.id] = { x: b.x - 3, y: b.y - 1, width: b.width + 6, height: b.height + 2 };
+      } catch (_) { /* getBBox throws on detached/zero-size text — skip */ }
+    });
+    setLabelBoxes(boxes);
+  }, [paths]);
+
+  return (
+    <svg
+      className="edge-layer"
+      aria-hidden="true"
+      width={dims.w}
+      height={dims.h}
+      viewBox={`0 0 ${dims.w} ${dims.h}`}
+    >
+      <defs>
+        <marker id="c4-arw" viewBox="0 0 10 10" refX="8.5" refY="5"
+          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" />
+        </marker>
+      </defs>
+      {paths.map((p) => (
+        <g key={p.id} className="eg">
+          <title>{p.title}</title>
+          <path className={`edge${p.live ? " live" : ""}`} d={p.d} markerEnd="url(#c4-arw)" />
+          <circle
+            className="port"
+            cx={p.port.x}
+            cy={p.port.y}
+            r="3"
+            style={p.live ? undefined : { fill: "var(--rule-strong)" }}
+          />
+          {p.label && labelBoxes[p.id] && (
+            <rect className="elabel-bg" rx="2" {...labelBoxes[p.id]} />
+          )}
+          {p.label && (
+            <text
+              ref={(el) => { labelRefs.current[p.id] = el; }}
+              className="elabel"
+              x={p.lx}
+              y={p.ly}
+              textAnchor="middle"
+              dominantBaseline={p.horiz ? "auto" : "middle"}
+            >{p.label}</text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+```
+
+Then extend the existing window export at the bottom of `components.jsx` (do **not** remove `GraphView`):
+
+```jsx
+Object.assign(window, {
+  SeverityPill, DispositionMark, MaturityMark, CopyPill, TaxonomyTag, TagRow, ToastHost, DiagnosticsBanner,
+  GraphView, AttackPathStrip,
+  c4Anchors, c4RouteWaypoints, c4RoundedPath, c4ShortEdgeLabel, C4EdgeLayer,
+  GOAL_LABELS, GOAL_SHORT, TIER_LABELS, TIER_GOALS,
+});
+```
+
+- [ ] **Step 4: Run both tests to verify they pass**
+
+Run: `node report-template/.build/test/c4_router.test.mjs`
+Expected: `c4_router.test.mjs: all assertions passed`.
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k c4_router_helpers -v`
+Expected: `1 passed`.
+
+Confirm `GraphView` is untouched (the shared-renderer suite stays green):
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "graph_view or attack_paths or threat_model" -q`
+Expected: all pass (no Cytoscape behavior changed; the additions are purely new exports).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add report-template/components.jsx \
+        report-template/.build/test/c4_router.test.mjs \
+        tests/test_workflow_apd_gauntlet.py
+git commit -m "feat(report): C4 orthogonal connector router + short-edge-label + SVG edge layer
+
+Ports the design-handoff router VERBATIM into components.jsx as pure helpers
+(c4Anchors offsetParent-walk zoom-invariant anchors, c4RouteWaypoints H-V-H/V-H-V
+orthogonal waypoints, c4RoundedPath rounded elbows) plus a deterministic
+c4ShortEdgeLabel (strips CROSS_* prefix / verb map / first ~3 words; full string
+kept for hover) and a non-Cytoscape <C4EdgeLayer> SVG overlay that measures the
+rendered boxes and redraws on mount/fonts.ready/resize/theme. GraphView untouched
+(AttackPaths/ThreatModel keep it). Pure router math pinned by a node unit test.
+
+Bundle rebuild lands with the scene render in the next task.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+> Note: no bundle rebuild yet — these helpers are exported but not consumed until Task 6 wires `C4TierGraph` into `C4.jsx` and `entry.jsx`. The `app.js` rebuild + `.source-hash` commit happens once in the bundle-rebuild task at the end of Milestone 7 (after both the renderer and the `C4.jsx` rewrite land), to avoid a half-wired intermediate bundle. The freshness gate is therefore satisfied by that single later rebuild commit; do not rebuild here.
+
+---
+
+### Task 6: The `C4TierGraph` tiered renderer + `NodeBox` + `c4BackboneLayout` (the tiered "system-map" scene)
+
+**Files:**
+
+- Modify: `report-template/components.jsx` (add the pure `c4BackboneLayout` helper, the `NodeBox` subcomponent, and the `C4TierGraph` component; window-export `c4BackboneLayout` + `C4TierGraph`)
+- Modify: `report-template/screens.css` (add the `.archx-*` / `.tier` / `.tier-gutter` / `.nb` / `.nb__badges` / `.edge-layer` rule block, lifted from the prototype `<style>`, scoped under the C4 scene root; reuse existing `.c4-banner`/`.c4-crumbs`/`.c4-kind-chip`/`.chip`)
+- Create: `report-template/.build/test/c4_backbone_layout.test.mjs` (node unit test of the deterministic layered-BFS layout — pure, no DOM)
+- Test (string-assertion): add `test_c4_tier_graph_present` and `test_c4_backbone_layout_helper_present` to `tests/test_workflow_apd_gauntlet.py`
+
+> This task delivers the four tiers (L1 actors/system/externals; L2 backbone via `c4BackboneLayout` + analyzed-shelf + infra-shelf; L3 data-driven with honest empty states; L4 code grid), the `NodeBox` in-node badge rules consuming the REAL `window.APD_DATA.c4_model` names (gap-fix 2 — never the prototype `cap`/`state`/`ff`/`me` abbreviations), the `C4EdgeLayer` overlay from Task 5, and a zoom/fit toolbar. `c4BackboneLayout` is the deterministic backbone-layout sub-spec made concrete (gap-fix 3). The `C4.jsx` render rewrite that *consumes* `C4TierGraph` (replacing `<GraphView layout="fcose">`) and the rewritten C4 string-assertion tests (`test_c4_screen_exists_and_renders_blocks`, `test_bundle_contains_c4_scene`, `test_c4_attack_path_overlay`, `test_c4_graph_node_tap_drives_drill`) land in the *next* task (the C4.jsx rewrite); this task builds the renderer they consume and TDD-pins the layout math + the renderer's source contract.
+
+- [ ] **Step 1: Write the failing node unit test for the deterministic backbone layout**
+
+The handoff's "Layout strategy" §267-294 specifies: partition containers into `connected` / `analyzed` / `infra`; assign `connected` to layered left→right columns (column 0 = no incoming edge; each next column = targets of the previous; break cycles by first-seen; longest-path layering), stable-sort within a column by label; everything fully deterministic. Create `report-template/.build/test/c4_backbone_layout.test.mjs`:
+
+```js
+// report-template/.build/test/c4_backbone_layout.test.mjs
+// Pure unit test for the deterministic C4 backbone layout (layered BFS longest-path
+// columns + analyzed/infra partitions + stable sorts). Run: node <thisfile>.
+// c4BackboneLayout is re-declared inline (verbatim from components.jsx) so the
+// placement math is testable under plain node, with no DOM and no React.
+import assert from "node:assert/strict";
+
+// ── ported verbatim from components.jsx ──────────────────────────────────
+const COL_W = 360, ROW_H = 150;
+function c4BackboneLayout(nodes, edges) {
+  const containers = (nodes || []).filter((n) => n.type === "container");
+  const byId = {};
+  containers.forEach((n) => { byId[n.id] = n; });
+  const endpoint = new Set();
+  const adj = {}, indeg = {};
+  containers.forEach((n) => { adj[n.id] = []; indeg[n.id] = 0; });
+  (edges || []).forEach((e) => {
+    if (!byId[e.source] || !byId[e.target] || e.source === e.target) return;
+    endpoint.add(e.source); endpoint.add(e.target);
+    adj[e.source].push(e.target); indeg[e.target] += 1;
+  });
+  const connectedIds = containers.filter((n) => endpoint.has(n.id)).map((n) => n.id);
+  const connectedSet = new Set(connectedIds);
+  const analyzed = containers
+    .filter((n) => !connectedSet.has(n.id) && n.analysis_state !== "not_analyzed")
+    .map((n) => n.id)
+    .sort((a, b) => byId[a].label.localeCompare(byId[b].label));
+  const infra = containers
+    .filter((n) => !connectedSet.has(n.id) && n.analysis_state === "not_analyzed")
+    .map((n) => n.id)
+    .sort((a, b) => byId[a].label.localeCompare(byId[b].label));
+
+  // longest-path column assignment over the connected subgraph; cycles broken by
+  // first-seen (a back-edge never pushes a node further right).
+  const col = {};
+  connectedIds.forEach((id) => { col[id] = 0; });
+  const order = connectedIds.slice().sort((a, b) => byId[a].label.localeCompare(byId[b].label));
+  let changed = true, guard = 0;
+  while (changed && guard < connectedIds.length + 2) {
+    changed = false; guard += 1;
+    order.forEach((u) => {
+      adj[u].forEach((v) => {
+        if (!connectedSet.has(v)) return;
+        if (col[v] < col[u] + 1) { col[v] = col[u] + 1; changed = true; }
+      });
+    });
+  }
+  // group by column, stable-sort within a column by label, assign row index.
+  const cols = {};
+  connectedIds.forEach((id) => { (cols[col[id]] = cols[col[id]] || []).push(id); });
+  const connected = [];
+  Object.keys(cols).map(Number).sort((a, b) => a - b).forEach((c) => {
+    cols[c].sort((a, b) => byId[a].label.localeCompare(byId[b].label));
+    cols[c].forEach((id, row) => {
+      connected.push({ id, col: c, row, x: c * COL_W, y: row * ROW_H });
+    });
+  });
+  return { connected, analyzed, infra };
+}
+// ── /ported ──────────────────────────────────────────────────────────────
+
+const N = (id, label, st) => ({ id, label, type: "container", analysis_state: st || "analyzed" });
+
+// hub-and-spoke (the Home Assistant shape): cli -> supervisor -> core -> {os-agent, dockerd}
+{
+  const nodes = [
+    N("a", "ha CLI"), N("s", "Supervisor"), N("c", "Core"),
+    N("o", "os-agent"), N("d", "host-dockerd"),
+    N("x", "Frontend"),                 // analyzed, no edge -> shelf
+    N("z", ".storage", "not_analyzed"), // infra shelf
+  ];
+  const edges = [
+    { source: "a", target: "s" }, { source: "s", target: "c" },
+    { source: "c", target: "o" }, { source: "c", target: "d" },
+  ];
+  const { connected, analyzed, infra } = c4BackboneLayout(nodes, edges);
+  const colOf = {}; connected.forEach((p) => { colOf[p.id] = p.col; });
+  assert.equal(colOf.a, 0, "root of the chain is column 0");
+  assert.equal(colOf.s, 1);
+  assert.equal(colOf.c, 2);
+  assert.equal(colOf.o, 3); assert.equal(colOf.d, 3, "both leaves land in the last column");
+  // x/z are NOT in the backbone; they fall to the shelves
+  assert.deepEqual(analyzed, ["x"]);
+  assert.deepEqual(infra, ["z"]);
+  // pixel positions derive from col/row deterministically
+  const pa = connected.find((p) => p.id === "a");
+  assert.equal(pa.x, 0); assert.equal(pa.y, 0);
+}
+// same column nodes stable-sort by label and get distinct rows
+{
+  const nodes = [N("h", "Hub"), N("b", "Beta"), N("a", "Alpha")];
+  const edges = [{ source: "h", target: "b" }, { source: "h", target: "a" }];
+  const { connected } = c4BackboneLayout(nodes, edges);
+  const col1 = connected.filter((p) => p.col === 1).sort((p, q) => p.row - q.row);
+  assert.deepEqual(col1.map((p) => p.id), ["a", "b"], "column members ordered by label");
+  assert.deepEqual(col1.map((p) => p.row), [0, 1], "distinct rows within a column");
+}
+// a 2-cycle does not loop forever and does not push a node infinitely right
+{
+  const nodes = [N("p", "P"), N("q", "Q")];
+  const edges = [{ source: "p", target: "q" }, { source: "q", target: "p" }];
+  const { connected } = c4BackboneLayout(nodes, edges);
+  assert.equal(connected.length, 2);
+  connected.forEach((p) => assert.ok(p.col <= 1, "cycle broken by first-seen; bounded columns"));
+}
+// self-edges and edges to non-containers are ignored (never invented endpoints)
+{
+  const nodes = [N("a", "A"), N("b", "B")];
+  const edges = [{ source: "a", target: "a" }, { source: "a", target: "ghost" }];
+  const { connected, analyzed } = c4BackboneLayout(nodes, edges);
+  assert.equal(connected.length, 0, "no real edge -> empty backbone");
+  assert.deepEqual(analyzed, ["a", "b"]);
+}
+// DETERMINISM: identical input -> byte-identical output
+{
+  const nodes = [N("a", "A"), N("b", "B"), N("c", "C")];
+  const edges = [{ source: "a", target: "b" }, { source: "b", target: "c" }];
+  assert.equal(JSON.stringify(c4BackboneLayout(nodes, edges)),
+               JSON.stringify(c4BackboneLayout(nodes, edges)));
+}
+
+console.log("c4_backbone_layout.test.mjs: all assertions passed");
+```
+
+- [ ] **Step 2: Run the tests to verify the RED**
+
+Run: `node report-template/.build/test/c4_backbone_layout.test.mjs`
+Expected: PASSES in isolation (the function is inline in the test — it pins the layout contract).
+
+Add the source string-assertion tests to `tests/test_workflow_apd_gauntlet.py` (after `test_c4_router_helpers_present`):
+
+```python
+def test_c4_backbone_layout_helper_present() -> None:
+    """Task 6: the deterministic backbone layout ships in components.jsx — layered
+    BFS longest-path columns + analyzed/infra partitions + stable sorts. It is the
+    data-driven replacement for the prototype's hand-curated BACKBONE position map."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "function c4BackboneLayout(" in comps
+    assert "c4BackboneLayout" in comps  # window-exported
+    # partitions: connected / analyzed / infra
+    assert "connected" in comps and "analyzed" in comps and "infra" in comps
+    # deterministic: stable sort by label, no Math.random anywhere in the helper
+    assert "localeCompare" in comps
+    # consumes the REAL model name — analysis_state, NOT the prototype's `state`
+    assert "analysis_state" in comps
+    # column geometry constants
+    assert "COL_W" in comps and "ROW_H" in comps
+
+
+def test_c4_tier_graph_present() -> None:
+    """Task 6: the C4TierGraph tiered renderer (no Cytoscape) ships in
+    components.jsx with the four tiers, the NodeBox in-node badge rules consuming
+    the REAL c4_model names, the C4EdgeLayer overlay, and a zoom/fit toolbar."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "function C4TierGraph(" in comps
+    assert "function NodeBox(" in comps
+    assert "C4TierGraph" in comps  # window-exported
+    # the documented prop contract
+    for prop in ("model", "selectedContainer", "selectedComponent",
+                 "overlayC4NodeIds", "onDrill", "onOpenFinding"):
+        assert prop in comps, f"C4TierGraph must accept {prop}"
+    # four tiers rendered with left-gutter labels (System context / Containers / …)
+    assert "System context" in comps and "Containers" in comps
+    assert "Components" in comps and "Code" in comps
+    assert "tier-gutter" in comps
+    # consumes the REAL model field names (gap-fix 2), NOT prototype abbreviations
+    assert "capability_badge" in comps and "analysis_state" in comps
+    assert "provenance" in comps and "first_finding_id" in comps
+    # in-node badge rules: muted ⚑0 when badge==null, sev-high clickable when >0
+    assert "not analyzed" in comps
+    # the prototype abbreviations must NOT leak into production
+    assert "overlay_paths" not in comps
+    assert "n.ff" not in comps and "n.cap" not in comps
+    # uses the Task-5 router/edge-layer (SVG, no Cytoscape) — NOT fcose
+    assert "C4EdgeLayer" in comps and "c4BackboneLayout" in comps
+    assert 'layout="fcose"' not in comps
+    # clicking a ⚑ badge stops propagation so it deep-links without drilling
+    assert "stopPropagation" in comps
+    # zoom/fit toolbar
+    assert "fit" in comps and "scale(" in comps
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    # the lifted tier / node-box / edge-layer rules
+    for sel in (".archx-stage", ".tier", ".tier-gutter", ".nb", ".nb__badges",
+                ".edge-layer", ".l2-backbone", ".shelf", ".code-grid"):
+        assert sel in css, f"missing C4 tier CSS rule: {sel}"
+    # not_analyzed striped/dashed treatment must be DISTINCT (never reads as clean)
+    assert ".nb--na" in css
+    # all colors are tokens (theme-aware) — no raw hex in the new block
+    block = css[css.index(".archx-stage"):]
+    assert "var(--" in block
+```
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "c4_backbone_layout_helper or c4_tier_graph" -v`
+Expected: FAIL — both assert strings (`c4BackboneLayout`, `C4TierGraph`, `.archx-stage`, …) absent from `components.jsx`/`screens.css`.
+
+- [ ] **Step 3a: Implement `c4BackboneLayout`, `NodeBox`, and `C4TierGraph` in `components.jsx`**
+
+Insert this block in `report-template/components.jsx` *after* `C4EdgeLayer` (from Task 5) and *before* the final `Object.assign(window, {...})`.
+
+```jsx
+// ── C4 deterministic backbone layout (gap-fix 3 — data-driven, replaces the ──
+// prototype's hand-curated BACKBONE position map). Partitions containers into
+// connected (in any edge) / analyzed (no edge, analyzed) / infra (not_analyzed),
+// assigns the connected subgraph to layered left→right columns (longest-path
+// layering; cycles broken by first-seen), and stable-sorts within a column by
+// label. Fully deterministic (no randomness, stable sorts) per the framework's
+// determinism contract. Pure: consumes the REAL c4_model node/edge shape.
+const C4_COL_W = 360, C4_ROW_H = 150;
+function c4BackboneLayout(nodes, edges) {
+  const containers = (nodes || []).filter((n) => n.type === "container");
+  const byId = {};
+  containers.forEach((n) => { byId[n.id] = n; });
+  const endpoint = new Set();
+  const adj = {}, indeg = {};
+  containers.forEach((n) => { adj[n.id] = []; indeg[n.id] = 0; });
+  (edges || []).forEach((e) => {
+    if (!byId[e.source] || !byId[e.target] || e.source === e.target) return;
+    endpoint.add(e.source); endpoint.add(e.target);
+    adj[e.source].push(e.target); indeg[e.target] += 1;
+  });
+  const connectedIds = containers.filter((n) => endpoint.has(n.id)).map((n) => n.id);
+  const connectedSet = new Set(connectedIds);
+  const lbl = (id) => (byId[id].label || id);
+  const analyzed = containers
+    .filter((n) => !connectedSet.has(n.id) && n.analysis_state !== "not_analyzed")
+    .map((n) => n.id)
+    .sort((a, b) => lbl(a).localeCompare(lbl(b)));
+  const infra = containers
+    .filter((n) => !connectedSet.has(n.id) && n.analysis_state === "not_analyzed")
+    .map((n) => n.id)
+    .sort((a, b) => lbl(a).localeCompare(lbl(b)));
+
+  // longest-path column assignment (cycles broken by first-seen: a back-edge can
+  // never push a node further right because we stop once nothing moves).
+  const col = {};
+  connectedIds.forEach((id) => { col[id] = 0; });
+  const order = connectedIds.slice().sort((a, b) => lbl(a).localeCompare(lbl(b)));
+  let changed = true, guard = 0;
+  while (changed && guard < connectedIds.length + 2) {
+    changed = false; guard += 1;
+    order.forEach((u) => {
+      adj[u].forEach((v) => {
+        if (!connectedSet.has(v)) return;
+        if (col[v] < col[u] + 1) { col[v] = col[u] + 1; changed = true; }
+      });
+    });
+  }
+  const cols = {};
+  connectedIds.forEach((id) => { (cols[col[id]] = cols[col[id]] || []).push(id); });
+  const connected = [];
+  Object.keys(cols).map(Number).sort((a, b) => a - b).forEach((c) => {
+    cols[c].sort((a, b) => lbl(a).localeCompare(lbl(b)));
+    cols[c].forEach((id, row) => {
+      connected.push({ id, col: c, row, x: c * C4_COL_W, y: row * C4_ROW_H });
+    });
+  });
+  return { connected, analyzed, infra };
+}
+
+// ── C4 node box (in-node badge rules, REAL c4_model names — gap-fix 2) ────────
+// Renders one node as a .nb box with the headline in-node badge row. Consumes the
+// authentic window.APD_DATA.c4_model field names — NEVER the prototype-fixture
+// abbreviations (cap/state/ff/me). Badge rules (mirror the handoff §174-189):
+//   analysis_state === "not_analyzed" -> single dashed italic "not analyzed" pill, NO counts.
+//   else:
+//     badge > 0  -> "⚑ {badge}" sev-high, CLICKABLE -> onOpenFinding(provenance.first_finding_id)
+//                   (static, non-link when no first_finding_id — never hidden).
+//     badge == null (analyzed, 0) and container/component/code -> muted "⚑ 0".
+//     capability_badge > 0 -> "🛡 {capability_badge}" sev-low.
+// Drill: clicking a drillable box calls onDrill(n.id); clicking the ⚑ badge
+// stops propagation so it deep-links WITHOUT drilling.
+function NodeBox({ n, model, opts = {}, selected, onDrill, onOpenFinding }) {
+  const childrenOf = model.__childrenOf;
+  const byId = model.__byId;
+  const codeOf = (id) => (childrenOf[id] || []).map((c) => byId[c]).filter((x) => x && x.type === "code");
+  const compsOf = (id) => (childrenOf[id] || []).map((c) => byId[c]).filter((x) => x && x.type === "component");
+  const na = n.analysis_state === "not_analyzed";
+  const findingId = n.provenance && n.provenance.first_finding_id;
+  const isExt = n.type === "external_system" || n.kind === "external_system";
+  const drillable =
+    (n.type === "container" && (compsOf(n.id).length > 0 || codeOf(n.id).length > 0)) ||
+    (n.type === "component" && codeOf(n.id).length > 0);
+  const isSelected = n.id === selected.container || n.id === selected.component;
+
+  const cls = [
+    "nb",
+    n.kind ? `nb--${n.kind}` : "",
+    n.type === "system" ? "nb--system" : "",
+    isExt ? "nb--external" : "",
+    !na && n.badge ? "nb--hot" : "",
+    na ? "nb--na" : "",
+    opts.mini ? "nb--mini" : "",
+    opts.big ? "nb--big" : "",
+    drillable ? "nb--clickable" : "",
+    isSelected ? "nb--selected" : "",
+  ].filter(Boolean).join(" ");
+
+  const dim = opts.dim ? "1" : undefined;
+  const kindTxt = (n.kind || "").replace(/_/g, " ");
+  const showKind = n.kind && !opts.noKind;
+
+  // text-only tooltip (never inject HTML from adopter data)
+  const lvlName = ({ system: "L1 system", person: "L1 person", external_system: "L1 external",
+    container: "L2 container", component: "L3 component", code: "L4 code" })[n.type] || n.type;
+  let tip = `${n.label}\n${lvlName}${n.kind ? " · " + kindTxt : ""}`;
+  if (na) tip += "\n⚠ not analyzed (no code anchors)";
+  else {
+    if (n.badge) tip += `\n⚑ ${n.badge} finding${n.badge === 1 ? "" : "s"}`;
+    if (n.capability_badge) tip += `\n🛡 ${n.capability_badge} capabilit${n.capability_badge === 1 ? "y" : "ies"}`;
+  }
+  if (drillable) {
+    const c = compsOf(n.id).length, k = codeOf(n.id).length;
+    tip += c ? `\n↳ click to drill (${c} component${c === 1 ? "" : "s"})`
+             : `\n↳ click to drill (${k} code)`;
+  }
+
+  const onClick = drillable ? (e) => { if (e.target.closest(".bdg--find")) return; onDrill(n.id); } : undefined;
+
+  // badges
+  const badges = [];
+  if (na) {
+    badges.push(
+      <span key="na" className="bdg bdg--na"
+        title="No code anchors — analysis_state: not_analyzed (not '0 = clean')">not analyzed</span>
+    );
+  } else {
+    if (n.badge != null && n.badge > 0) {
+      const canLink = findingId && typeof onOpenFinding === "function";
+      badges.push(
+        <span
+          key="find"
+          className="bdg bdg--find"
+          role={canLink ? "button" : undefined}
+          title={`${n.badge} finding${n.badge === 1 ? "" : "s"} on this element${canLink ? " — open in Findings" : ""}`}
+          style={{ cursor: canLink ? "pointer" : "default" }}
+          onClick={canLink ? (e) => { e.stopPropagation(); onOpenFinding(findingId); } : undefined}
+        >⚑ {n.badge}</span>
+      );
+    } else if (n.type === "container" || n.type === "component" || n.type === "code") {
+      badges.push(
+        <span key="clean" className="bdg bdg--clean" title="Analyzed · zero findings">⚑ 0</span>
+      );
+    }
+    if (n.capability_badge != null && n.capability_badge > 0) {
+      badges.push(
+        <span key="cap" className="bdg bdg--cap"
+          title={`${n.capability_badge} confirmed capabilit${n.capability_badge === 1 ? "y" : "ies"}`}>🛡 {n.capability_badge}</span>
+      );
+    }
+  }
+
+  return (
+    <div
+      className={cls}
+      data-c4id={n.id}
+      data-dim={dim}
+      title={tip}
+      style={opts.style}
+      onClick={onClick}
+    >
+      <div className="nb__head">
+        {showKind && <span className="nb__kind">{kindTxt}</span>}
+      </div>
+      <div className="nb__name">{n.label}</div>
+      {n.type === "system" && <div className="nb__sub">software system</div>}
+      {!opts.noBadges && badges.length > 0 && <div className="nb__badges">{badges}</div>}
+    </div>
+  );
+}
+
+// ── C4 tiered "system-map" scene (the fcose force-graph replacement) ─────────
+// Four stacked tiers with left-gutter labels:
+//   L1 System context — Actors (person) | system (center) | External systems
+//   L2 Containers      — backbone (c4BackboneLayout, absolute-positioned + the
+//                        C4EdgeLayer SVG overlay) + "analyzed · no traced relation"
+//                        shelf + "infrastructure · not analyzed" shelf
+//   L3 Components      — data-driven; honest empty/blocked states
+//   L4 Code            — the active parent's code grid
+// Plus a zoom/fit toolbar (transform: scale on the stage inner). No Cytoscape.
+// overlayC4NodeIds dims non-members and renders the induced backbone edges "live".
+function C4TierGraph({ model, selectedContainer, selectedComponent, overlayC4NodeIds, onDrill, onOpenFinding }) {
+  const nodes = (model && model.nodes) || [];
+  const edges = (model && model.edges) || [];
+
+  const byId = React.useMemo(() => {
+    const m = {}; nodes.forEach((n) => { m[n.id] = n; }); return m;
+  }, [model]);
+  const childrenOf = React.useMemo(() => {
+    const m = {};
+    nodes.forEach((n) => { if (n.parent) (m[n.parent] = m[n.parent] || []).push(n.id); });
+    return m;
+  }, [model]);
+  // hand byId/childrenOf to NodeBox without prop-drilling each lookup
+  const mdl = React.useMemo(() => Object.assign({}, model, { __byId: byId, __childrenOf: childrenOf }), [model, byId, childrenOf]);
+
+  const codeOf = (id) => (childrenOf[id] || []).map((c) => byId[c]).filter((x) => x && x.type === "code");
+  const compsOf = (id) => (childrenOf[id] || []).map((c) => byId[c]).filter((x) => x && x.type === "component");
+
+  const layout = React.useMemo(() => c4BackboneLayout(nodes, edges), [model]);
+
+  const stageRef = React.useRef(null);
+  const [zoom, setZoom] = React.useState(1);
+  const selected = { container: selectedContainer, component: selectedComponent };
+  const ovSet = (overlayC4NodeIds && overlayC4NodeIds.length) ? new Set(overlayC4NodeIds) : null;
+  // redrawKey forces C4EdgeLayer to re-measure when the visible layout changes.
+  const redrawKey = `${selectedContainer || ""}|${selectedComponent || ""}|${zoom}|${(overlayC4NodeIds || []).join(",")}`;
+
+  const persons = nodes.filter((n) => n.type === "person");
+  const exts = nodes.filter((n) => n.type === "external_system");
+  const sys = nodes.find((n) => n.type === "system");
+  const containers = nodes.filter((n) => n.type === "container");
+
+  const box = (n, opts) => (
+    <NodeBox key={n.id} n={n} model={mdl} opts={Object.assign({ dim: ovSet ? !ovSet.has(n.id) : false }, opts)}
+      selected={selected} onDrill={onDrill} onOpenFinding={onOpenFinding} />
+  );
+
+  // backbone edges visible = grounded edges whose endpoints are both backbone nodes
+  const backboneIds = new Set(layout.connected.map((p) => p.id));
+  const backboneEdges = edges.filter((e) => backboneIds.has(e.source) && backboneIds.has(e.target));
+
+  // ── L3 / L4 active-parent resolution ──
+  const compsOfSel = selectedContainer ? compsOf(selectedContainer) : [];
+  const activeParentId = selectedComponent
+    ? selectedComponent
+    : (selectedContainer && compsOfSel.length === 0 ? selectedContainer : null);
+
+  // zoom/fit
+  const zIn = () => setZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)));
+  const zOut = () => setZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)));
+  const fit = () => {
+    const stage = stageRef.current; if (!stage) return;
+    const wrap = stage.parentElement; if (!wrap) return;
+    const avail = wrap.clientWidth - 4;
+    setZoom(Math.min(1, +(avail / stage.scrollWidth).toFixed(3)));
+  };
+
+  return (
+    <div className="archx-stage-wrap">
+      <div className="archx-toolbar">
+        <button type="button" onClick={zOut} title="Zoom out">−</button>
+        <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+        <button type="button" onClick={zIn} title="Zoom in">+</button>
+        <button type="button" onClick={fit} title="Fit">fit</button>
+      </div>
+
+      <div className="archx-stage" ref={stageRef} style={{ transform: `scale(${zoom})`, transformOrigin: "0 0" }}>
+        <C4EdgeLayer stageRef={stageRef} edges={backboneEdges} liveSet={ovSet} redrawKey={redrawKey} />
+
+        {/* L1 — System context */}
+        <section className="tier" data-level="system">
+          <div className="tier-gutter">
+            <div className="t-l1">L1</div>
+            <div className="t-l2">System context</div>
+            <div className="t-l3">person · system · external</div>
+          </div>
+          <div className="tier-body">
+            <div className="l1-body">
+              <div className="l1-group">
+                <div className="l1-group__h">Actors · {persons.length}</div>
+                <div className="l1-grid">
+                  {persons.map((p) => box(p, { mini: true, noKind: true }))}
+                </div>
+              </div>
+              <div className="l1-center">{sys && box(sys, { big: true })}</div>
+              <div className="l1-group">
+                <div className="l1-group__h" style={{ textAlign: "right" }}>External systems · {exts.length}</div>
+                <div className="l1-grid l1-grid--ext">
+                  {exts.map((x) => box(x, { mini: true, noKind: true }))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* L2 — Containers */}
+        <section className="tier" data-level="container">
+          <div className="tier-gutter">
+            <div className="t-l1">L2</div>
+            <div className="t-l2">Containers</div>
+            <div className="t-l3">{containers.length} containers</div>
+          </div>
+          <div className="tier-body">
+            <div className="l2-cap">Traced relationships</div>
+            <div className="l2-backbone" style={{ minHeight: (Math.max(1, ...layout.connected.map((p) => p.row + 1)) * C4_ROW_H) + "px" }}>
+              {layout.connected.map((p) => (
+                <div key={p.id} className="nb-pos" style={{ position: "absolute", left: p.x + "px", top: p.y + "px" }}>
+                  {byId[p.id] && box(byId[p.id])}
+                </div>
+              ))}
+            </div>
+            <div className="l2-cap">Analyzed · no traced relation</div>
+            <div className="shelf">
+              {layout.analyzed.map((id) => byId[id] && box(byId[id]))}
+            </div>
+            {layout.infra.length > 0 && <>
+              <div className="l2-cap">Infrastructure · not analyzed</div>
+              <div className="shelf shelf--infra">
+                {layout.infra.map((id) => byId[id] && box(byId[id], { noKind: true }))}
+              </div>
+            </>}
+          </div>
+        </section>
+
+        {/* L3 — Components (data-driven; honest empty states) */}
+        <section className="tier" data-level="component">
+          <div className="tier-gutter">
+            <div className="t-l1">L3</div>
+            <div className="t-l2">Components</div>
+            <div className="t-l3">{!selectedContainer ? "—" : `${byId[selectedContainer].label} · ${compsOfSel.length || "none"}`}</div>
+          </div>
+          <div className="tier-body">
+            {!selectedContainer ? (
+              <div className="code-hint">L3 components appear here when a run grounds them via <code>c4-recon.components[]</code>. They are <b>blocked by default</b>, so most runs drill <b>L2 → L4</b>. Select a container above.</div>
+            ) : compsOfSel.length === 0 ? (
+              <div className="code-hint">No grounded L3 components under <b>{byId[selectedContainer].label}</b> — L3 is blocked unless an artifact groups symbols. This container renders <b>L2 → L4</b> (code parents directly to the container).</div>
+            ) : (
+              <div className="code-wrap">
+                <div className="code-parent">{box(byId[selectedContainer])}</div>
+                <div className="code-grid">{compsOfSel.map((c) => box(c))}</div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* L4 — Code */}
+        <section className="tier" data-level="code">
+          <div className="tier-gutter">
+            <div className="t-l1">L4</div>
+            <div className="t-l2">Code</div>
+            <div className="t-l3">{activeParentId ? `${byId[activeParentId].label} · ${codeOf(activeParentId).length}` : "select a container"}</div>
+          </div>
+          <div className="tier-body">
+            {!selectedContainer ? (
+              <div className="code-hint">Select a container (or an L3 component, when present) to expand its grounded L4 code elements — each with its own ⚑ finding and 🛡 capability counts.</div>
+            ) : compsOfSel.length > 0 && !selectedComponent ? (
+              <div className="code-hint">Select an L3 component above to expand its code elements.</div>
+            ) : (
+              <div className="code-wrap">
+                <div className="code-parent">{box(byId[activeParentId])}</div>
+                <div className="code-grid">{codeOf(activeParentId).map((c) => box(c))}</div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+```
+
+Extend the window export (final `Object.assign` in `components.jsx`) to add the two new symbols:
+
+```jsx
+Object.assign(window, {
+  SeverityPill, DispositionMark, MaturityMark, CopyPill, TaxonomyTag, TagRow, ToastHost, DiagnosticsBanner,
+  GraphView, AttackPathStrip,
+  c4Anchors, c4RouteWaypoints, c4RoundedPath, c4ShortEdgeLabel, C4EdgeLayer,
+  c4BackboneLayout, NodeBox, C4TierGraph,
+  GOAL_LABELS, GOAL_SHORT, TIER_LABELS, TIER_GOALS,
+});
+```
+
+- [ ] **Step 3b: Add the `.archx-*` / tier / node-box / edge-layer CSS to `screens.css`**
+
+Append this block to `report-template/screens.css` immediately after the existing C4 overlay rules (after `.c4-overlay-strip__arrow`, ~line 1431). It is lifted from the prototype `<style>` block (the `.archx` / `.tier` / `.nb` / `.edge-layer` rules), scoped under `.c4-scene` so it cannot leak into other screens, and uses only design tokens (theme-aware). The header chrome rules (`.archx-eyebrow`/`.archx-title`/`.archx-lede`/`.archx-banner`/`.archx-controls`/`.archx-crumbs`/`.chip`/`.archx-overlay`/`.archx-legend`/`.archx-tip`/`.archx-notes`/`.archx-list*`) are intentionally **omitted** — the C4 scene reuses the existing `.c4-banner`/`.c4-crumbs`/`.c4-kind-chip`/`.chip` and the kept `.c4-node-list` instead.
+
+```css
+/* ── C4 tiered scene (system-map) — lifted from the design-handoff prototype ──
+   <style> block (.archx/.tier/.nb/.edge-layer), scoped under .c4-scene. Reuses
+   the existing .c4-banner/.c4-crumbs/.c4-kind-chip/.chip rules above. All colors
+   are tokens so light/dark/paper themes recolor live. */
+
+.c4-scene .archx-stage-wrap {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ink-3) 18%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
+  background-color: var(--paper);
+  overflow: auto;
+  box-shadow: var(--shadow-md);
+}
+.c4-scene .archx-toolbar {
+  position: absolute; top: var(--space-2); right: var(--space-2);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 6px; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 6px;
+  box-shadow: var(--shadow-sm); z-index: 5;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+}
+.c4-scene .archx-toolbar button {
+  appearance: none; background: transparent; border: none; color: var(--ink);
+  cursor: pointer; padding: 2px 9px; border-radius: 3px; font: inherit; line-height: 1;
+}
+.c4-scene .archx-toolbar button:hover { background: var(--paper-2); }
+.c4-scene .archx-toolbar .zoom-level { min-width: 42px; text-align: center; color: var(--ink-3); }
+
+.c4-scene .archx-stage {
+  position: relative;
+  transform-origin: 0 0;
+  width: 1120px;
+  padding: var(--space-5) var(--space-5) var(--space-5) 0;
+}
+
+/* tiers */
+.c4-scene .tier { position: relative; display: grid; grid-template-columns: 132px 1fr; }
+.c4-scene .tier + .tier { margin-top: var(--space-3); }
+.c4-scene .tier-gutter {
+  position: relative;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  display: flex; flex-direction: column; gap: 2px; justify-content: center;
+  border-right: 1px dashed var(--rule-strong);
+}
+.c4-scene .tier-gutter .t-l1 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--accent); font-weight: 600; }
+.c4-scene .tier-gutter .t-l2 { font-family: var(--font-display); font-size: 15px; color: var(--ink); line-height: 1.15; }
+.c4-scene .tier-gutter .t-l3 { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-3); }
+.c4-scene .tier-body { padding: var(--space-3) 0 var(--space-3) var(--space-4); position: relative; }
+
+/* node boxes */
+.c4-scene .nb {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-md);
+  padding: 8px 10px 7px;
+  display: flex; flex-direction: column; gap: 5px;
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+  transition: border-color .14s, box-shadow .14s, transform .14s;
+}
+.c4-scene .nb__head { display: flex; align-items: center; gap: 6px; }
+.c4-scene .nb__head:empty { display: none; }
+.c4-scene .nb__kind {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 3px;
+  background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.c4-scene .nb__name {
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: var(--ink);
+  line-height: 1.25; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.c4-scene .nb__sub { color: var(--ink-3); font-size: 10.5px; font-family: var(--font-mono); }
+.c4-scene .nb__badges { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.c4-scene .bdg {
+  font-family: var(--font-mono); font-size: 10px; line-height: 1.4;
+  padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  border: 1px solid var(--rule); background: var(--paper-2); color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.c4-scene .bdg--find {
+  background: color-mix(in srgb, var(--sev-high) 14%, var(--paper));
+  color: var(--sev-high); border-color: color-mix(in srgb, var(--sev-high) 55%, var(--rule));
+}
+.c4-scene .bdg--find[role="button"] { cursor: pointer; }
+.c4-scene .bdg--find[role="button"]:hover { text-decoration: underline; }
+.c4-scene .bdg--cap {
+  background: color-mix(in srgb, var(--sev-low) 16%, var(--paper));
+  color: var(--sev-low); border-color: color-mix(in srgb, var(--sev-low) 55%, var(--rule));
+}
+.c4-scene .bdg--clean { color: var(--ink-3); }
+.c4-scene .bdg--na { color: var(--ink-3); border-style: dashed; border-color: var(--ink-3); font-style: italic; }
+
+/* kind cues */
+.c4-scene .nb--data_store { border-radius: var(--radius-md) var(--radius-md) 14px 14px; }
+.c4-scene .nb--data_store .nb__kind { color: var(--accent); border-color: var(--accent); }
+.c4-scene .nb--external,
+.c4-scene .nb--external_dependency,
+.c4-scene .nb--external_system { border-style: dashed; background: color-mix(in srgb, var(--paper-2) 60%, var(--paper)); }
+.c4-scene .nb--external_party { border-style: dashed; }
+
+.c4-scene .nb--hot { border-left: 3px solid color-mix(in srgb, var(--sev-high) 60%, var(--rule-strong)); }
+.c4-scene .nb--clickable { cursor: pointer; }
+.c4-scene .nb--clickable:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.c4-scene .nb--selected { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow-md); }
+
+/* not analyzed = striped + muted (never reads as clean) */
+.c4-scene .nb--na {
+  background: repeating-linear-gradient(135deg, var(--paper-2), var(--paper-2) 6px, var(--paper) 6px, var(--paper) 12px);
+  border-style: dashed; border-color: var(--ink-3); opacity: 0.8; box-shadow: none;
+}
+
+/* system node (L1 centre) */
+.c4-scene .nb--system { background: var(--accent); border-color: var(--accent); box-shadow: var(--shadow-md); }
+.c4-scene .nb--system .nb__name { color: var(--bg); font-size: 14px; }
+.c4-scene .nb--system .nb__kind { background: color-mix(in srgb, var(--bg) 20%, transparent); color: var(--bg); border-color: transparent; }
+.c4-scene .nb--system .nb__sub { color: color-mix(in srgb, var(--bg) 85%, var(--accent)); }
+
+/* L1 layout */
+.c4-scene .l1-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-4); align-items: center; }
+.c4-scene .l1-group { display: flex; flex-direction: column; gap: 5px; }
+.c4-scene .l1-group__h { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+.c4-scene .l1-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.c4-scene .l1-grid--ext { grid-template-columns: 1fr; }
+.c4-scene .nb--mini { padding: 5px 8px; gap: 2px; }
+.c4-scene .nb--mini .nb__name { font-size: 11px; font-weight: 500; -webkit-line-clamp: 2; }
+.c4-scene .l1-center { display: flex; justify-content: center; }
+.c4-scene .nb--system.nb--big { min-width: 188px; padding: 12px 16px; text-align: left; }
+
+/* L2 backbone canvas */
+.c4-scene .l2-backbone { position: relative; }
+.c4-scene .l2-backbone .nb-pos { position: absolute; }
+.c4-scene .l2-backbone .nb { width: 162px; }
+.c4-scene .l2-cap {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); margin: var(--space-3) 0 var(--space-2);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.c4-scene .l2-cap::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+/* shelves */
+.c4-scene .shelf { display: flex; flex-wrap: wrap; gap: 6px; }
+.c4-scene .shelf .nb { width: auto; max-width: 220px; min-width: 132px; flex: 0 1 auto; }
+.c4-scene .shelf--infra .nb { min-width: 0; }
+.c4-scene .shelf .nb__name { -webkit-line-clamp: 1; }
+
+/* L4 code tier */
+.c4-scene .code-hint {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ink-3);
+  padding: var(--space-4) var(--space-4); border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-md); background: color-mix(in srgb, var(--paper-2) 50%, transparent);
+}
+.c4-scene .code-wrap { position: relative; }
+.c4-scene .code-parent { margin-bottom: var(--space-3); }
+.c4-scene .code-parent .nb { width: 220px; }
+.c4-scene .code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 7px; }
+.c4-scene .code-grid .nb__name { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; -webkit-line-clamp: 2; }
+
+/* edges (SVG overlay) */
+.c4-scene .edge-layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.c4-scene .edge-layer path.edge { fill: none; stroke: var(--rule-strong); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.c4-scene .edge-layer path.edge.live { stroke: var(--accent); stroke-width: 2; }
+.c4-scene .edge-layer .port { fill: var(--accent); }
+.c4-scene .edge-layer marker path { fill: var(--accent); }
+.c4-scene .edge-layer .elabel {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; fill: var(--accent);
+}
+.c4-scene .edge-layer .elabel-bg { fill: var(--paper); opacity: 0.92; }
+.c4-scene .nb[data-dim="1"] { opacity: 0.32; }
+```
+
+- [ ] **Step 4: Run both tests to verify they pass**
+
+Run: `node report-template/.build/test/c4_backbone_layout.test.mjs`
+Expected: `c4_backbone_layout.test.mjs: all assertions passed`.
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "c4_backbone_layout_helper or c4_tier_graph or c4_router_helpers" -v`
+Expected: `3 passed`.
+
+Confirm `GraphView` / shared-renderer screens are unaffected, and the prototype demo affordance was NOT ported:
+
+Run: `.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "graph_view or attack_paths or threat_model" -q`
+Expected: all pass.
+
+Run: `git grep -n "L3 demo\|synthetic\|buildDemoComponents\|demoOn\|toggleDemo" report-template/components.jsx`
+Expected: NO matches (the prototype's "L3 demo (synthetic)" toggle is intentionally not shipped, per the acceptance checklist).
+
+> Note: the `C4.jsx` render is still wired to `<GraphView layout="fcose">` at this point — `C4TierGraph` is built and exported but not yet consumed, so the four to-be-rewritten C4 string-assertion tests (`test_c4_screen_exists_and_renders_blocks`, `test_bundle_contains_c4_scene`, `test_c4_attack_path_overlay`, `test_c4_graph_node_tap_drives_drill`) still assert the OLD Cytoscape strings and stay green. They are rewritten in the next task (the `C4.jsx` rewrite), which also wires `C4TierGraph` in, imports it via `entry.jsx`, and triggers the single bundle rebuild + `.source-hash` commit that satisfies the freshness gate. Do not rebuild the bundle here — `components.jsx` additions are inert until consumed, and a half-wired bundle (renderer present, scene still on Cytoscape) is avoided by deferring the rebuild to the consume step.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add report-template/components.jsx \
+        report-template/screens.css \
+        report-template/.build/test/c4_backbone_layout.test.mjs \
+        tests/test_workflow_apd_gauntlet.py
+git commit -m "feat(report): C4TierGraph tiered system-map renderer + NodeBox + c4BackboneLayout
+
+Adds the non-Cytoscape tiered C4 scene to components.jsx: a deterministic
+layered-BFS backbone layout (c4BackboneLayout — connected columns + analyzed/infra
+shelves, stable-sorted, replaces the prototype's hand-curated position map), a
+NodeBox with the in-node badge rules consuming the REAL c4_model field names
+(badge null->muted ⚑0, badge>0->sev-high deep-link via provenance.first_finding_id,
+capability_badge->🛡, analysis_state not_analyzed->dashed pill; ⚑ click
+stopPropagation so it deep-links without drilling), four tiers (L1 actors/system/
+externals · L2 backbone+shelves · L3 data-driven honest empty states · L4 code
+grid), the Task-5 C4EdgeLayer SVG overlay (live edges for the attack-path overlay),
+and a zoom/fit toolbar. Lifts the .archx/.tier/.nb/.edge-layer CSS into screens.css
+scoped under .c4-scene (token-driven, theme-aware). The 'L3 demo (synthetic)'
+prototype toggle is intentionally NOT shipped. Layout math pinned by a node test.
+
+C4.jsx still consumes GraphView until the next (C4.jsx-rewrite) task wires
+C4TierGraph in and rebuilds the bundle. GraphView untouched.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+These two tasks append to a new `## Milestone 7` section of `docs/superpowers/plans/2026-06-13-c4-architecture-view.md`. Notes for whoever stitches them in: Milestone 7 (the tiered-redesign) opens with the four gap-fixes (test-rewrite-first; real-name data fidelity; concrete sub-specs; bundle/freshness/audit + acceptance checklist), and its remaining tasks are Task 1 (rewrite the four hard C4 tests to assert the tiered scene before coding — the TDD-first gap-fix), Tasks 2-4 (fixture regeneration + any data-fidelity helpers), then **Task 5 + Task 6 above** (router/edge-layer, then the renderer), followed by the `C4.jsx` render-rewrite task (consumes `C4TierGraph`, removes the `GraphView` subgraph/`overlayHighlight` useMemos and the `<GraphView layout="fcose">` render, adds `import "../components.jsx"` symbols, keeps the NodeRow code-elements list) and the single bundle-rebuild task (`.venv/bin/python tools/build_report_template.py` → commit `report-template/app.js` + `.source-hash` + the packaged `tools/apd_gauntlet/data/report-template/`, satisfying the triple freshness enforcement). The bundle rebuild is deliberately deferred out of Tasks 5/6 because the added `components.jsx` symbols are inert until `C4.jsx` consumes them; rebuilding once after the consume step avoids shipping a half-wired bundle and is what flips the four rewritten tests (`test_c4_screen_exists_and_renders_blocks`, `test_bundle_contains_c4_scene`, `test_c4_attack_path_overlay`, `test_c4_graph_node_tap_drives_drill`) green.
+
+### Task 7: Wire `C4.jsx` to the tiered renderer (`<C4TierGraph/>`), drop GraphView
+
+**Files:**
+
+- Modify: `report-template/screens/C4.jsx` (rewrite the render; keep the drill machine, overlay RESOLUTION useMemo, NodeRow, banner, breadcrumb, kind-chip)
+- Test: `tests/test_workflow_apd_gauntlet.py` (REWRITE `test_c4_screen_exists_and_renders_blocks`, `test_bundle_contains_c4_scene`, `test_c4_graph_node_tap_drives_drill`)
+
+- [ ] **Step 1: Rewrite the failing source-assertion tests (TDD — define the tiered scene first)**
+
+These three tests currently assert the **Cytoscape strings being removed** (`GraphView`, `layout="fcose"`, `compound`, `onNodeTap`-to-GraphView). Rewrite them in `tests/test_workflow_apd_gauntlet.py` to assert the **tiered** scene. (Leave `test_c4_screen_surfaces_node_kind_chip`, `test_c4_overlay_join_uses_from_id_to_id`, `test_c4_tab_is_conditional_and_routed`, `test_c4_screen_registered_in_bundle_entry`, `test_c4_scene_styles_present`, and the shared-`GraphView` tests at 644–720 **as-is** — they stay green.)
+
+Replace `test_c4_screen_exists_and_renders_blocks` (≈ line 727):
+
+```python
+def test_c4_screen_exists_and_renders_blocks() -> None:
+    """The C4 scene renders the grounded model as a TIERED system-map
+    (System → Container → Component → Code) via <C4TierGraph/>, NOT the
+    Cytoscape fcose force-graph. The honest banner + drill machine stay."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # present-gate + honest banner (kept)
+    assert "c4.present" in src or "c4 || !c4.present" in src
+    assert "c4-banner" in src
+    assert "not_analyzed" in src and "unlocalized" in src
+    # NEW: the tiered renderer replaces GraphView. C4 no longer imports/uses
+    # GraphView or any Cytoscape layout — those moved out of the C4 path.
+    assert "C4TierGraph" in src
+    assert "GraphView" not in src, "C4 must not reference the Cytoscape GraphView"
+    assert 'layout="fcose"' not in src and 'layout="dagre"' not in src
+    assert "compound={true}" not in src
+    # the drill machine is preserved (now passed to C4TierGraph as onDrill)
+    assert "selectedContainer" in src and "selectedComponent" in src
+    assert "onDrill" in src
+    # the model + resolved overlay membership are fed to the tiered renderer
+    assert "model={" in src
+    assert "overlayC4NodeIds" in src
+    # the code-elements list (NodeRow) is kept beneath the scene
+    assert "NodeRow" in src and "onOpenFinding" in src
+```
+
+Replace `test_bundle_contains_c4_scene` (≈ line 958):
+
+```python
+def test_bundle_contains_c4_scene() -> None:
+    """The compiled bundle ships the tiered C4 scene + its deterministic
+    backbone layout helper, and NOT a C4-bound fcose force-graph."""
+    app_js = (REPO / "report-template" / "app.js").read_text(encoding="utf-8")
+    # the tiered renderer + the deterministic backbone layout helper are bundled
+    assert "C4TierGraph" in app_js
+    assert "c4BackboneLayout" in app_js
+    assert "c4ShortEdgeLabel" in app_js
+    # an SVG edge-layer is emitted by the C4 scene (orthogonal connectors)
+    assert "edge-layer" in app_js
+    # GraphView still ships (AttackPaths/ThreatModel use it) but fcose is no
+    # longer wired from the C4 scene — assert the C4 source has neither.
+    c4 = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    assert 'layout="fcose"' not in c4
+    assert "GraphView" not in c4
+```
+
+Replace `test_c4_graph_node_tap_drives_drill` (≈ line 1066):
+
+```python
+def test_c4_graph_node_tap_drives_drill() -> None:
+    """A click on a tiered node box drills exactly like the NodeRow buttons,
+    via the onDrill reducer passed into C4TierGraph (no GraphView onNodeTap)."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # the reducer is defined and passed to C4TierGraph as onDrill
+    assert "onDrill" in src
+    assert "C4TierGraph" in src
+    assert "setSelectedContainer" in src and "setSelectedComponent" in src
+    # container -> select container; component -> select component (parent kept)
+    assert 'n.type === "container"' in src
+    assert 'n.type === "component"' in src
+    # the drill is wired through C4TierGraph's onDrill prop, NOT GraphView
+    assert "onDrill={" in src
+    assert "onNodeTap=" not in src, "C4 must not pass GraphView's onNodeTap"
+```
+
+- [ ] **Step 2: Run the tests to verify they fail (red)**
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_screen_exists_and_renders_blocks tests/test_workflow_apd_gauntlet.py::test_bundle_contains_c4_scene tests/test_workflow_apd_gauntlet.py::test_c4_graph_node_tap_drives_drill -v
+```
+
+Expected: all three FAIL. `test_c4_screen_exists_and_renders_blocks` fails on `assert "C4TierGraph" in src` (still references `GraphView`); `test_bundle_contains_c4_scene` fails on `assert "C4TierGraph" in app_js` (bundle not yet rebuilt for the swap); `test_c4_graph_node_tap_drives_drill` fails on `assert "onNodeTap=" not in src` (the current render passes `onNodeTap={onNodeTap}` to `<GraphView>`).
+
+- [ ] **Step 3: Rewrite the `C4.jsx` render (minimal impl — keep the machine, swap the renderer)**
+
+**3a. Remove the two GraphView-only `useMemo`s.** Delete the `overlayHighlight` block (`C4.jsx:122-132`) and the `graph` subgraph block (`C4.jsx:134-187`) verbatim. Both existed solely to feed `GraphView`:
+
+```jsx
+  // ── DELETE: GraphView synthetic-path highlight (C4.jsx:122-132) ──
+  const overlayHighlight = React.useMemo(() => {
+    if (!overlay.c4NodeIds.length) return null;
+    const idset = new Set(overlay.c4NodeIds);
+    const edgeIds = allEdges
+      .filter((e) => idset.has(e.source) && idset.has(e.target))
+      .map((e) => e.id);
+    return [{ id: "__overlay__", edgeIds, nodeIds: overlay.c4NodeIds }];
+  }, [overlay, c4]);
+
+  // ── DELETE: the GraphView visible-subgraph builder (C4.jsx:134-187) ──
+  const graph = React.useMemo(() => {
+    const isTop = (lvl) => lvl === "system" || lvl === "person" || lvl === "external_system";
+    let keep = new Set();
+    // … (the full keep-set + nodes/edges mapping block) …
+    return { nodes, edges };
+  }, [c4, selectedContainer, selectedComponent]);
+```
+
+> The induced-edge expansion that `overlayHighlight` did (filter `allEdges` to both-endpoints-in-`overlay.c4NodeIds`) is **not lost** — Task 8 moves it inside `C4EdgeLayer`, which already iterates `model.edges` to draw connectors and can mark the induced subset "live" directly from `overlayC4NodeIds`. The visible-subgraph `keep`-set logic is **superseded** by `c4BackboneLayout` + the tier partition inside `C4TierGraph` (M7 Tasks 1–6), which render every container/code node by tier and reveal drill children by `selectedContainer`/`selectedComponent` — no pre-filtered subgraph prop needed.
+
+**3b. Rename the reducer `onNodeTap` → `onDrill`** (the contract's prop name; identical body). At `C4.jsx:194-201`:
+
+```jsx
+  // Drill reducer — a tiered node-box click drills exactly like the NodeRow
+  // buttons. The c4 node id is the DOM box's data-id. Null-safe: a tap on a
+  // node with no drill target (code/system/person/external_system) is a NO-OP
+  // and never resets the view to nowhere. Passed to C4TierGraph as onDrill and
+  // reused by NodeRow.onClick below.
+  const onDrill = React.useCallback((nodeId) => {
+    if (!nodeId) return;
+    const n = nodeById[nodeId];
+    if (!n) return;
+    if (n.type === "container") { setSelectedContainer(nodeId); setSelectedComponent(null); }
+    else if (n.type === "component") { setSelectedContainer(n.parent || selectedContainer); setSelectedComponent(nodeId); }
+    // code/system/person/external_system taps do not change the drill level (no-op).
+  }, [nodeById, selectedContainer]);
+```
+
+Then update the one in-component caller in `NodeRow` (`C4.jsx:222`) from `onClick={() => onNodeTap(n.id)}` to `onClick={() => onDrill(n.id)}`.
+
+**3c. Replace the `<section className="c4-scene__graph">` render block** (`C4.jsx:383-394`) — the `<GraphView .../>` — with the tiered renderer. Pass the model + drill state + resolved overlay membership + the `onDrill` reducer + `onOpenFinding`:
+
+```jsx
+      <section className="c4-scene__graph">
+        <h3 className="c4-scene__section-h">Architecture graph</h3>
+        <C4TierGraph
+          model={c4}
+          selectedContainer={selectedContainer}
+          selectedComponent={selectedComponent}
+          overlayC4NodeIds={overlay.c4NodeIds}
+          onDrill={onDrill}
+          onOpenFinding={onOpenFinding}
+        />
+      </section>
+```
+
+> `model={c4}` passes the whole `c4_model` window slice (its `nodes`/`edges`/`asset_to_c4`/… are the REAL names; `C4TierGraph` reads `model.nodes`/`model.edges` and runs `c4BackboneLayout(model.nodes, model.edges)` itself). `overlayC4NodeIds={overlay.c4NodeIds}` is the **resolved membership array** from the kept overlay-resolution `useMemo` (`C4.jsx:91-120`) — Task 8 consumes it for the dim/live-edge highlight.
+
+**3d. Confirm the GraphView import is gone.** `C4.jsx` references `GraphView` only via the now-replaced JSX (the bundler resolves it off `window`, there is no `import` line). After 3c there must be **zero** `GraphView` occurrences in `C4.jsx`. Grep to confirm:
+
+```
+grep -n "GraphView\|onNodeTap\|overlayHighlight\|layout=\|compound=" report-template/screens/C4.jsx
+```
+
+Expected: **no matches** (every Cytoscape-coupling string is gone). The `EN2 _c4KindLabel` helper at the top of the file (which only decorated GraphView labels) is now dead — delete it and its block comment (`C4.jsx:19-30`); `C4TierGraph` renders the `data_store`/`external_system` cues itself from `node.kind` (M7 Task 1–6) and the drill-list keeps its own `c4-kind-chip`.
+
+- [ ] **Step 4: Run the tests to verify they pass (green)**
+
+Rebuild the bundle first (the bundle assertion needs the regenerated `app.js`):
+
+```
+.venv/bin/python tools/build_report_template.py
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_screen_exists_and_renders_blocks tests/test_workflow_apd_gauntlet.py::test_bundle_contains_c4_scene tests/test_workflow_apd_gauntlet.py::test_c4_graph_node_tap_drives_drill tests/test_workflow_apd_gauntlet.py::test_c4_screen_surfaces_node_kind_chip tests/test_workflow_apd_gauntlet.py::test_c4_overlay_join_uses_from_id_to_id -v
+```
+
+Expected: all five PASS (the three rewritten + the two kept-green neighbors). Then run the C4-adjacent suite to confirm the shared `GraphView` tests (644–720) and the tab/registration/style tests stay green:
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "c4 or graph_view or GraphView" -v
+```
+
+Expected: all pass — AttackPaths/ThreatModel are unaffected because `GraphView` in `components.jsx` is untouched.
+
+- [ ] **Step 5: Commit**
+
+```
+git add report-template/screens/C4.jsx report-template/app.js report-template/.source-hash \
+        tools/apd_gauntlet/data/report-template tests/test_workflow_apd_gauntlet.py
+git commit -m "feat(report): wire C4 scene to the tiered C4TierGraph, drop the fcose GraphView
+
+C4.jsx render swap (data model unchanged): replaces <GraphView layout=fcose
+compound> with <C4TierGraph model selectedContainer selectedComponent
+overlayC4NodeIds onDrill onOpenFinding>. Drops the GraphView-only 'graph'
+subgraph useMemo and the 'overlayHighlight' synthetic-path useMemo; renames the
+onNodeTap reducer to onDrill (now wired to tiered node-box clicks + NodeRow).
+Keeps the present-gate, honest banner, overlay RESOLUTION useMemo, NodeRow
+deep-link, breadcrumb, and c4-kind-chip. GraphView (AttackPaths/ThreatModel)
+untouched. Rewrites the 3 Cytoscape-asserting C4 tests to assert the tiered
+scene. Bundle + .source-hash regenerated.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 8: Overlay-highlight rebuild for SVG (dim non-members + induced "live" edges + unmapped-hops strip)
+
+**Files:**
+
+- Modify: `report-template/components.jsx` (`C4TierGraph` non-member dimming + `C4EdgeLayer` induced-edge "live" styling, keyed off `overlayC4NodeIds`)
+- Modify: `report-template/screens/C4.jsx` (the overlay `<select>` control + the kept "parallel asset hops — no C4 mapping" strip — both already present from M6; this step only re-confirms they survive the Task 7 render swap)
+- Modify: `report-template/screens.css` (append `.nb--dim` + `.edge-layer__path--live` / `.edge-layer__port--live`; the `.c4-overlay*` / `.c4-overlay-strip*` rules already exist)
+- Test: `tests/test_workflow_apd_gauntlet.py` (REWRITE `test_c4_attack_path_overlay` to assert the SVG highlight + strip; line ≈ 1047)
+
+Because `GraphView`'s synthetic-`paths` cross-highlight is gone (Task 7), `C4TierGraph` must render the highlight itself. The highlight is **set membership**: when `overlayC4NodeIds` is non-empty, dim non-member node boxes (opacity), and draw the **induced** edges between members as "live" (accent + thicker) in `C4EdgeLayer`. The "parallel asset hops — no C4 mapping" honesty strip (already in `C4.jsx` from M6, wired to the REAL `data.attack_paths → asset_to_c4/finding_to_c4` resolution) is kept beneath the scene — never invent an unmapped hop onto the tiered graph.
+
+- [ ] **Step 1: Rewrite the failing source-assertion test (TDD)**
+
+Replace `test_c4_attack_path_overlay` (≈ line 1047). The old version asserts "reuses GraphView cross-highlight"; the new one asserts the SVG-native highlight (member dimming + induced live edges) and the kept strip:
+
+```python
+def test_c4_attack_path_overlay() -> None:
+    """The attack-path overlay is an SVG-native highlight on the tiered scene
+    (no GraphView): selecting a path resolves grounded c4 node ids via the
+    deterministic asset_to_c4 + finding_to_c4 join, dims non-member node boxes,
+    draws the induced member edges 'live', and keeps the 'no C4 mapping' strip
+    for unmapped hops. Honest partial overlay only."""
+    src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    # consumes the existing enumerated paths + the DETERMINISTIC join (no client-side mapping)
+    assert "data.attack_paths" in src
+    assert "selectedOverlayPath" in src and "setSelectedOverlayPath" in src
+    assert "asset_to_c4" in src and "finding_to_c4" in src
+    # the resolved MEMBERSHIP (not a GraphView synthetic path) is handed to the renderer
+    assert "overlayC4NodeIds" in src
+    assert "overlayHighlight" not in src, "GraphView synthetic-path highlight is gone"
+    # honest partial overlay: unmapped hops on a PARALLEL asset strip, never a C4 hop
+    assert "c4-overlay-strip" in src and "no C4 mapping" in src
+    assert "unmappedHops" in src
+
+    comp = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # C4TierGraph dims non-members + marks induced member edges live, off overlayC4NodeIds
+    assert "overlayC4NodeIds" in comp
+    assert "nb--dim" in comp           # non-member node boxes are dimmed
+    assert "edge-layer__path--live" in comp  # induced member edges drawn live
+    # induced-edge rule: both endpoints in the membership set
+    assert "C4EdgeLayer" in comp
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    assert ".c4-overlay-strip" in css and ".c4-overlay-strip__hop--unmapped" in css
+    assert ".nb--dim" in css and ".edge-layer__path--live" in css
+```
+
+- [ ] **Step 2: Run the test to verify it fails (red)**
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_attack_path_overlay -v
+```
+
+Expected: FAIL on `assert "nb--dim" in comp` — `C4TierGraph`/`C4EdgeLayer` (from M7 Tasks 1–6) accept `overlayC4NodeIds` but do not yet draw the highlight, so the dimming/live-edge strings are absent.
+
+- [ ] **Step 3: Implement the highlight inside `C4TierGraph` / `C4EdgeLayer` (minimal impl)**
+
+**3a. Dim non-member node boxes in `C4TierGraph`.** Compute a membership set once and add the `nb--dim` class to any rendered `.nb` node box whose id is not in the set (only when the overlay is active). In `components.jsx`, inside `C4TierGraph({ model, selectedContainer, selectedComponent, overlayC4NodeIds, onDrill, onOpenFinding })`, derive the set and a per-box class helper:
+
+```jsx
+  // Attack-path overlay membership (Task 8). When an overlay path is selected,
+  // overlayC4NodeIds is the resolved set of grounded c4 node ids it traverses
+  // (asset_to_c4 + finding_to_c4 join, computed in C4.jsx — never here). Active
+  // overlay => dim every node box NOT in the set, and draw the induced member
+  // edges 'live'. Empty set => no dimming (normal scene).
+  const overlaySet = React.useMemo(
+    () => new Set(overlayC4NodeIds || []),
+    [overlayC4NodeIds]
+  );
+  const overlayActive = overlaySet.size > 0;
+  const dimClass = React.useCallback(
+    (id) => (overlayActive && !overlaySet.has(id) ? " nb--dim" : ""),
+    [overlayActive, overlaySet]
+  );
+```
+
+Then, in the single `NodeBox` renderer that every tier uses (the backbone, both L2 shelves, the L3 component grid, and the L4 code grid — built in M7 Tasks 1–6), append `dimClass(node.id)` to its `className`. The box already carries `data-id={node.id}` for the router's DOM measurement and the `onClick={() => onDrill(node.id)}` drill (with the `⚑` badge `onClick` calling `stopPropagation()` + `onOpenFinding` per the contract):
+
+```jsx
+  function NodeBox({ node }) {
+    return (
+      <div
+        className={`nb nb--${node.type}${node.id === selectedContainer || node.id === selectedComponent ? " nb--selected" : ""}${dimClass(node.id)}`}
+        data-id={node.id}
+        role="button"
+        tabIndex={0}
+        title={c4BoxTitle(node)}
+        onClick={() => onDrill(node.id)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDrill(node.id); } }}
+      >
+        <div className="nb__name">{node.label}</div>
+        <NbBadges node={node} onOpenFinding={onOpenFinding} />
+      </div>
+    );
+  }
+```
+
+> `dimClass` is the only Task-8 change to `NodeBox`; everything else (the in-box `⚑`/`🛡` badges via `NbBadges`, the `not_analyzed` striped treatment, the selected ring) is the M7 Task 1–6 box. Keeping the dimming in `className` (not inline `opacity`) lets the CSS var-driven theme recolor live.
+
+**3b. Draw the induced member edges "live" in `C4EdgeLayer`.** `C4EdgeLayer` already iterates `model.edges`, measures source/target boxes with `c4Anchors`, routes with `c4RouteWaypoints`, and emits a `c4RoundedPath` `<path>` + start port + short label per edge (M7 Tasks 1–6). Add the induced-edge test (both endpoints in `overlaySet`) and branch the path/port class. This **replaces** the induced-edge expansion that `C4.jsx`'s deleted `overlayHighlight` used to do — it now lives where the edges are drawn:
+
+```jsx
+function C4EdgeLayer({ model, stageRef, overlayC4NodeIds, redrawKey }) {
+  const [paths, setPaths] = React.useState([]);
+  const overlaySet = React.useMemo(
+    () => new Set(overlayC4NodeIds || []),
+    [overlayC4NodeIds]
+  );
+  const overlayActive = overlaySet.size > 0;
+
+  // Measure the rendered boxes and route each grounded edge. An edge is "live"
+  // (induced member edge) iff the overlay is active AND BOTH endpoints are in
+  // the membership set — that is the same both-endpoints-in-set rule the old
+  // GraphView overlayHighlight used, applied here at draw time. Only edges in
+  // model.edges are ever drawn (never invent an edge for an unmapped hop).
+  const redraw = React.useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const next = [];
+    (model.edges || []).forEach((e) => {
+      const srcEl = stage.querySelector(`[data-id="${e.source}"]`);
+      const tgtEl = stage.querySelector(`[data-id="${e.target}"]`);
+      if (!srcEl || !tgtEl) return; // endpoint not on this drill level — skip
+      const [s, t] = c4Anchors(srcEl, tgtEl, stage);
+      const pts = c4RouteWaypoints(s, t);
+      const d = c4RoundedPath(pts, 7);
+      const live = overlayActive && overlaySet.has(e.source) && overlaySet.has(e.target);
+      // label at the midpoint of the last segment > 18px (de-collide hub fan-out)
+      const label = c4ShortEdgeLabel(e.label);
+      const lp = c4EdgeLabelPoint(pts);
+      next.push({ id: e.id, d, port: pts[0], live, label, full: e.label, lp });
+    });
+    setPaths(next);
+  }, [model, stageRef, overlayActive, overlaySet]);
+
+  React.useEffect(redraw, [redraw, redrawKey]);
+  React.useEffect(() => {
+    const onResize = () => redraw();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("load", onResize);
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(redraw); }
+    const mo = new MutationObserver(redraw);
+    mo.observe(document.body, { attributes: true, attributeFilter: ["data-theme", "data-sev"] });
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("load", onResize);
+      mo.disconnect();
+    };
+  }, [redraw]);
+
+  return (
+    <svg className="edge-layer" aria-hidden="true">
+      <defs>
+        <marker id="c4-arrow" className="edge-layer__arrow" viewBox="0 0 10 10"
+                refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+        <marker id="c4-arrow-live" className="edge-layer__arrow edge-layer__arrow--live" viewBox="0 0 10 10"
+                refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
+      {paths.map((p) => (
+        <g key={p.id}>
+          <path
+            className={`edge-layer__path${p.live ? " edge-layer__path--live" : ""}`}
+            d={p.d}
+            markerEnd={p.live ? "url(#c4-arrow-live)" : "url(#c4-arrow)"}
+          >
+            <title>{p.full}</title>
+          </path>
+          <circle
+            className={`edge-layer__port${p.live ? " edge-layer__port--live" : ""}`}
+            cx={p.port.x} cy={p.port.y} r="3"
+          />
+          {p.label && p.lp && (
+            <text className="edge-layer__label" x={p.lp.x} y={p.lp.y}>{p.label}</text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+```
+
+> `C4TierGraph` renders `<C4EdgeLayer model={model} stageRef={stageRef} overlayC4NodeIds={overlayC4NodeIds} redrawKey={`${selectedContainer}|${selectedComponent}`} />` inside its stage so the layer re-measures on every drill change. `c4EdgeLabelPoint` (midpoint of the last segment > 18px) and `c4BoxTitle`/`NbBadges` are the M7 Task 1–6 helpers; this task only adds the `live` branch + the `nb--dim` class. The `<title>` carries the **full** machine `e.label` for hover (short label shown inline) per the contract.
+
+**3c. The overlay `<select>` control + unmapped-hops strip in `C4.jsx` are kept as-is** (they came in with M6 and survive the Task 7 render swap unchanged). Re-confirm both blocks are still present in `C4.jsx`:
+
+- the `c4-overlay` `<select>` (`C4.jsx:330-354`) driving `selectedOverlayPath` from `overlayPaths`;
+- the `c4-overlay-strip` block (`C4.jsx:356-381`) rendering `overlay.unmappedHops` with the literal `"no C4 mapping"` head, the `from_name → to_name` mono row, and the `⚑ {finding_id}` deep-link.
+
+No change to either block; they already consume the REAL `data.attack_paths → asset_to_c4/finding_to_c4` resolution from the kept overlay-resolution `useMemo`. The select feeds `selectedOverlayPath → overlay.c4NodeIds → overlayC4NodeIds` into `C4TierGraph` (Task 7 3c), which is what Steps 3a/3b consume.
+
+- [ ] **Step 4: Add the CSS (append to `screens.css`)**
+
+The `.c4-overlay*` and `.c4-overlay-strip*` rules already exist (`screens.css:1382-1430`). Append only the two new highlight rules (the base `.edge-layer`, `.nb`, `.tier*`, `.archx*` rules come from M7 Task 3's CSS lift):
+
+```css
+/* Attack-path overlay highlight (Task 8) — set-membership dim + induced live edges. */
+.nb--dim {
+  opacity: 0.32;
+  filter: saturate(0.6);
+  transition: opacity 0.15s ease;
+}
+.edge-layer__path--live {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.edge-layer__port--live { fill: var(--accent); }
+.edge-layer__arrow--live path { fill: var(--accent); }
+```
+
+> Colors read from CSS vars (`--accent`) so the theme `MutationObserver` redraw (3b) recolors live — matching `_graphStylesheet`'s `getComputedStyle` approach. `.nb--dim` is class-based (not inline opacity) so it composes with the tier styles.
+
+- [ ] **Step 5: Rebuild the bundle + run the test to verify it passes (green)**
+
+```
+.venv/bin/python tools/build_report_template.py
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py::test_c4_attack_path_overlay tests/test_workflow_apd_gauntlet.py::test_c4_scene_styles_present -v
+```
+
+Expected: both PASS. Then run the full C4 + shared-graph slice to confirm no regression:
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k "c4 or graph_view or GraphView or bundle" -v
+```
+
+Expected: all pass — the overlay highlight is now SVG-native, `GraphView` is untouched for AttackPaths/ThreatModel, and the freshness gate sees a fresh `.source-hash`.
+
+- [ ] **Step 6: Commit**
+
+```
+git add report-template/components.jsx report-template/screens.css \
+        report-template/screens/C4.jsx report-template/app.js report-template/.source-hash \
+        tools/apd_gauntlet/data/report-template tests/test_workflow_apd_gauntlet.py
+git commit -m "feat(report): SVG-native attack-path overlay highlight for the tiered C4 scene
+
+Rebuilds the overlay-highlight that GraphView's synthetic-path cross-highlight
+used to provide. C4TierGraph dims non-member node boxes (.nb--dim) when
+overlayC4NodeIds is non-empty; C4EdgeLayer draws the INDUCED member edges
+(both endpoints in the membership set) 'live' (accent + thicker, live arrow
+marker) at draw time — the same both-endpoints-in-set rule the deleted
+overlayHighlight useMemo applied, moved to where edges are drawn. Keeps the
+'parallel asset hops — no C4 mapping' honesty strip + the overlay <select>,
+both wired to the REAL data.attack_paths -> asset_to_c4/finding_to_c4
+resolution. Honest partial highlight only; never invents an unmapped hop onto
+the graph. Rewrites test_c4_attack_path_overlay to assert the SVG highlight +
+strip. Bundle + .source-hash regenerated.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+**Milestone 7 exit check (after Tasks 7–8):**
+
+```
+.venv/bin/python -m pytest -q && \
+.venv/bin/python tools/check_report_template_freshness.py && \
+grep -c "GraphView\|fcose\|overlayHighlight" report-template/screens/C4.jsx
+```
+
+Expected: full suite green; freshness gate green (rebuilt `.source-hash` matches); the `grep -c` returns `0` (every Cytoscape-coupling string removed from `C4.jsx`). `ruff check .` / `mypy tools/apd_gauntlet` are unaffected (JSX-only change; no Python touched).
+
+---
+
+**Source-path notes for the implementer (relevant absolute paths):**
+- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/screens/C4.jsx` — rewrite target (current: GraphView render at lines 383-394; `graph` useMemo 134-187; `overlayHighlight` 122-132; `onNodeTap` reducer 194-201; overlay-resolution useMemo to KEEP at 91-120; overlay `<select>` + strip to KEEP at 330-381; `_c4KindLabel` dead-code at 19-30).
+- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/components.jsx` — `GraphView` at line 294 (UNTOUCHED); add `C4TierGraph`/`C4EdgeLayer` highlight here (Task 8 3a/3b); window export via the existing `Object.assign(window,{...})` near line 504.
+- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/screens.css` — existing `.c4-overlay*`/`.c4-overlay-strip*` at 1382-1430 (REUSED); append `.nb--dim`/`.edge-layer__path--live` (Task 8 4).
+- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/docs/superpowers/design_handoff_c4_architecture_view/README.md` — overlay highlight spec at lines 310-314 (dim non-members + induced live edges + kept strip); router VERBATIM at 202-263.
+
+### Task 9: Bundle rebuild + freshness/audit gates green + the Milestone-7 ACCEPTANCE CHECKLIST
+
+This is the final Milestone-7 task. The triple-enforced freshness gate (`build.py` `BundleFreshnessError`, `tools/check_report_template_freshness.py`, and the report audit's `source_hash_drift` check) makes the rebuild + `.source-hash` commit MANDATORY after the M7 JSX/CSS edits. It also runs the full acceptance checklist that proves the tiered redesign meets the design handoff and that nothing else regressed.
+
+**Files:**
+
+- Modify: `tools/apd_gauntlet/data/report-template/app.js` (regenerated)
+- Modify: `tools/apd_gauntlet/data/report-template/screens.css` (regenerated)
+- Modify: `tools/apd_gauntlet/data/report-template/.source-hash` (regenerated)
+- Modify: `report-template/data.js` (regenerated tracked example, if this repo tracks one — confirm via `git status`)
+- Modify: `tools/apd_gauntlet/data/report-template/components.jsx` and `tools/apd_gauntlet/data/report-template/screens/C4.jsx` (the packaged source copies are regenerated by the build — `git status` will show them)
+
+- [ ] **Step 1: Confirm the freshness gate is RED after the M7 source edits** (the prior impl tasks changed `components.jsx` + `screens/C4.jsx` + `screens.css` in `report-template/`).
+
+```
+.venv/bin/python tools/check_report_template_freshness.py; echo "exit=$?"
+```
+
+Expected (RED, `exit=1`): `report-template/ has changed since the precompiled bundle was generated` with `expected=<M6-hash> actual=<M7-hash>`. The hash covers `report-template/**` minus `.build`/`node_modules`/dot-prefixed paths (see `compute_source_hash`), so the `C4TierGraph` + helpers in `components.jsx`, the C4.jsx render rewrite, and the new `.archx-*`/`.tier`/`.nb`/`.edge-layer` rules in `screens.css` all perturb it.
+
+- [ ] **Step 2: Run the gate to verify it fails** — same command as Step 1; confirm `exit=1`. (Also confirm the 4 Task-1 tests are STILL red here — the impl tasks made the source-level asserts pass, but `test_bundle_contains_c4_scene` reads the packaged `app.js`, which is stale until Step 3.)
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py -k test_bundle_contains_c4_scene -q; echo "exit=$?"
+```
+
+Expected (RED, `exit=1`): `app.js` lacks `C4TierGraph`/`c4BackboneLayout` until rebuilt.
+
+- [ ] **Step 3: Rebuild the bundle** (regenerates `report-template/app.js` + `.source-hash` AND the packaged `tools/apd_gauntlet/data/report-template/`). Node v26 + the vendored esbuild are used; no `&` / background.
+
+```
+.venv/bin/python tools/build_report_template.py
+```
+
+Expected: `build-report-template: bundle written.` If it prints `node + npm are required`, install Node 20+ first — the runtime never needs Node, but the contributor rebuild does.
+
+- [ ] **Step 4: Regenerate the tracked example report** so the committed example shows the tiered C4 scene (the example feeds the freshness hash via the non-dot `report-template/data.js`). Assemble `c4-model.yaml` for the committed fixture run first, build into a scratch (dot-prefixed, hash-excluded) dir, then copy out `data.js`.
+
+```
+.venv/bin/apd-gauntlet assemble-c4 tests/fixtures/runs/c4-home-assistant \
+  && .venv/bin/apd-gauntlet build-report tests/fixtures/runs/c4-home-assistant \
+       --out-dir report-template/.example-c4 --quiet \
+  && cp "report-template/.example-c4/data.js" report-template/data.js
+```
+
+> Confirm the tracked-example path with `git status` before committing — if this repo tracks `report-template/APD Gauntlet Report.html` instead of / in addition to `report-template/data.js`, regenerate that too. The scratch `.example-c4/` dir is dot-prefixed so `compute_source_hash` skips it; only `report-template/data.js` (non-dot) feeds the hash, which is why the FINAL rebuild (Step 5) must follow this regeneration.
+
+- [ ] **Step 5: Rebuild last** so `.source-hash` reflects the final `report-template/data.js`, then run the gate — expect GREEN.
+
+```
+.venv/bin/python tools/build_report_template.py \
+  && .venv/bin/python tools/check_report_template_freshness.py; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`):
+
+```
+build-report-template: bundle written.
+check_report_template_freshness: OK (<hex>)
+exit=0
+```
+
+- [ ] **Step 6: Turn the 4 Task-1 tests GREEN + confirm the 5 keepers + shared-GraphView suite stay green.** This is the red→green completion of the milestone's TDD bar.
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "c4 or C4 or graph_view or attack_paths or threat_model or kind_passthrough or bundle or mermaid" -v; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`): the 4 rewritten tests now pass (C4.jsx has `C4TierGraph`/`onDrill`/`overlayC4NodeIds`/`stopPropagation` and NOT `GraphView`/`fcose`/`overlayHighlight`; `app.js` carries `C4TierGraph`+`c4BackboneLayout`), the 5 keepers pass, and AttackPaths/ThreatModel/shared-GraphView/mermaid tests pass (untouched).
+
+- [ ] **Step 7: Full Python gates — pytest + ruff + mypy** (JSX is eslint-disabled; the gates are Python-only, and they cover the transform/assembler/loader that the example regeneration exercised).
+
+```
+.venv/bin/python -m pytest \
+  && .venv/bin/python -m ruff check . \
+  && .venv/bin/python -m mypy tools/apd_gauntlet; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`): the whole suite passes, ruff clean, mypy clean. (No Python source changed in M7's render-only redesign, so a regression here means the example regeneration or a stray edit broke something — investigate before committing.)
+
+- [ ] **Step 8: Determinism spot-check — the layout/label helpers are byte-stable.** Build the example report twice from a clean tree and diff `data.js` + the bundle; `c4BackboneLayout` (layered BFS longest-path columns, stable sorts) and `c4ShortEdgeLabel` (pure prefix-strip / verb-map) must produce identical bytes.
+
+```
+.venv/bin/apd-gauntlet assemble-c4 tests/fixtures/runs/c4-home-assistant >/dev/null \
+  && .venv/bin/apd-gauntlet build-report tests/fixtures/runs/c4-home-assistant \
+       --out-dir /tmp/c4-det-a --quiet \
+  && .venv/bin/apd-gauntlet build-report tests/fixtures/runs/c4-home-assistant \
+       --out-dir /tmp/c4-det-b --quiet \
+  && diff -q /tmp/c4-det-a/data.js /tmp/c4-det-b/data.js \
+  && echo "DETERMINISTIC: data.js byte-identical across two builds"
+```
+
+Expected: `DETERMINISTIC: data.js byte-identical across two builds` (no output from `diff`). The layout helper lives in `components.jsx` and runs at render in-browser, but the `data.c4_model` it consumes (nodes/edges, stable-sorted by the assembler) is what the build emits; a non-deterministic emit would diff here. (The helpers themselves are pure JS exercised by the Task-1 source asserts; their byte-stability is structural — stable sorts, no `Date`/`Math.random`.)
+
+- [ ] **Step 9: Report-audit `source_hash_drift` green on the regenerated example run** (the third leg of the triple freshness enforcement — the audit refuses a report whose embedded source-hash doesn't match the bundle).
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "source_hash or completeness or report_audit or freshness" -q; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`): the audit's `source_hash_drift` check and the completeness gate pass against the freshly rebuilt bundle.
+
+- [ ] **Step 10: Commit the regenerated bundle + example.**
+
+```
+git add tools/apd_gauntlet/data/report-template/app.js \
+        tools/apd_gauntlet/data/report-template/screens.css \
+        tools/apd_gauntlet/data/report-template/components.jsx \
+        tools/apd_gauntlet/data/report-template/screens/C4.jsx \
+        tools/apd_gauntlet/data/report-template/.source-hash \
+        report-template/data.js
+git commit -m "build(report): rebuild bundle + regenerate example for the tiered C4 scene
+
+Regenerate app.js/.source-hash + the packaged report-template copy for the
+M7 tiered C4 redesign (C4TierGraph + c4BackboneLayout/c4ShortEdgeLabel + the
+SVG edge-layer router). Regenerate the tracked example (report-template/data.js)
+from the c4-home-assistant fixture so the committed example carries the tiered
+Architecture scene. Triple freshness gate (BundleFreshnessError /
+check_report_template_freshness / report-audit source_hash_drift) green.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+- [ ] **Step 11: Run the FULL Milestone-7 ACCEPTANCE CHECKLIST.** Each item maps to the design-handoff acceptance list + the SHARED CONTRACT's four gap-fixes. Verify by inspection of the rendered example report (`open "report-template/.example-c4/index.html"` or the tracked example, with `<body data-theme="dark">`/`paper` toggled) and the cited test/source anchors. Check every box before declaring the milestone done.
+
+  **Tiered scene & connectors**
+  - [ ] C4 screen renders as stacked tiers **L1 System context → L2 Container → (L3 Component) → L4 Code** with left-gutter labels (`.tier`/`.tier-gutter` from the lifted prototype CSS; the L1 3-column actors/system/externals layout; L2 backbone + two shelves).
+  - [ ] Connectors are **orthogonal (H/V only)** with **~7px rounded elbows**, accent-colored, with arrowheads + start ports, drawn in the SVG `.edge-layer` only for the **grounded `edges[]`** — **no invented edges** (no person→container / system→container connectors; containment is `parent`, not an edge). The router ports `c4Anchors`/`c4RouteWaypoints`/`c4RoundedPath` VERBATIM (offsetParent-walk, zoom-invariant; redraw on render/resize/`fonts.ready`/theme `MutationObserver`).
+  - [ ] **Edge labels are short** (`c4ShortEdgeLabel`: strip `CROSS_*` prefix / relation→verb / first ~3 words), de-collided (placed on the last segment >18px), with the **full raw `edge.label` on hover**. No hand-curated per-run labels.
+
+  **In-node badges & honesty**
+  - [ ] Every node box renders a `.nb__badges` row: `badge > 0` → clickable `⚑ {badge}` (sev-high) deep-linking via `onOpenFinding(provenance.first_finding_id)`; static `⚑ {badge}` when no `first_finding_id` (never hidden); `badge == null` analyzed-zero → **muted `⚑ 0`** (never "clean"); `capability_badge > 0` → `🛡 {capability_badge}` (sev-low). Applies in the **backbone, both shelves, L3 grid, and L4 grid** — every tier.
+  - [ ] **`not_analyzed` is striped/dashed** with a `not analyzed` marker and **no counts** (`.c4-node-row--not-analyzed` / `.c4-badge--not-analyzed` reused; the infra shelf uses the muted striped chip). Distinct from analyzed-zero.
+
+  **Drill / deep-link / breadcrumb**
+  - [ ] Clicking a container drills (**L3 if components exist, else L4**); clicking a component drills to its code; a **`⚑` badge `stopPropagation`s** so it deep-links to Findings WITHOUT drilling; breadcrumb (`⌂ System / Container: X [/ Component: Y]`) + "↑ up one level" work; `⌂ System` resets. The NodeRow "code elements list" beneath the diagram is kept.
+
+  **L3 data-driven honesty**
+  - [ ] L3 tier renders `type==="component"` boxes **when present** and an **honest "blocked / none"** state otherwise — the **c4-home-assistant fixture shows L2→L4** (no grounded components), with the "L3 components appear here when a run grounds them via `c4-recon.components[]`…" hint.
+
+  **Toolbar / overlay / themes**
+  - [ ] **Zoom/fit toolbar** (`−` / `100%` / `+` / `fit`; `transform: scale()` on the stage inner; `fit` solves to wrapper width; reuses the `.report-graph__toolbar` look) works.
+  - [ ] **Attack-path overlay** works: selecting a path resolves grounded C4 node ids via `asset_to_c4` + `finding_to_c4` into `overlayC4NodeIds`, dims non-members (`opacity`), redraws induced edges as **live (accent, thicker)**, and keeps the **unmapped-hops parallel strip** (`.c4-overlay-strip__hop--unmapped`, "no C4 mapping"). Honest partial highlight only.
+  - [ ] **Hover tooltip** is text-only (no HTML injection from adopter data): label, level, kind, counts, "↳ click to drill" hint.
+  - [ ] **Light / dark / paper themes recolor live** — all colors are CSS vars read at draw time; the `data-theme`/`data-sev` `MutationObserver` re-measures + redraws edges. `test_c4_scene_styles_present` confirms the C4 CSS block is fully `var(--…)` (no hex literals).
+
+  **Determinism & the gap-fixes**
+  - [ ] **Node placement is deterministic from the data** — `c4BackboneLayout` partitions `connected`/`analyzed`/`infra`, lays out layered BFS longest-path columns with stable label/badge-desc sorts; **no curated per-run position map** (the prototype's `BACKBONE` map is NOT ported), **no randomness** (Step 8 byte-identical builds confirm).
+  - [ ] **Data-fidelity (gap-fix 2):** the React scene consumes the **REAL `window.APD_DATA.c4_model` names** (`badge`/`analysis_state`/`provenance`/`capability_badge`/`asset_to_c4`/`finding_to_c4`/full `edge.label`), NOT the prototype-fixture abbreviations (`cap`/`state`/`ff`/`me`/`overlay_paths`); the dev fixture `archx-data.js` was regenerated honestly from the real slice.
+  - [ ] **`GraphView` is UNTOUCHED** and **AttackPaths / ThreatModel are unaffected** — they still render the Cytoscape `GraphView` (the shared-GraphView + EN2 kind-passthrough tests stay green; `AttackPaths.jsx`/`ThreatModel.jsx` are byte-unchanged).
+  - [ ] **The "L3 demo (synthetic)" affordance is NOT shipped** — `git grep -i "demo (synthetic)\|syntheticL3\|L3 demo" report-template/` returns nothing in `C4.jsx`/`components.jsx`.
+
+  **Bundle / gates (gap-fix 4)**
+  - [ ] **Bundle + `.source-hash` committed** and the **triple freshness gate is green** (`check_report_template_freshness: OK`, `build.py` `BundleFreshnessError` not raised on a fresh build, report-audit `source_hash_drift` green); the tracked example (`report-template/data.js`) reflects the tiered scene.
+  - [ ] **Test-rewrite-first (gap-fix 1)** honored: the 4 Task-1 tests went RED → GREEN across this milestone; the 5 keepers + shared-GraphView suite stayed green throughout; full `pytest` + `ruff` + `mypy` green.
+
+- [ ] **Step 12: Milestone-7 exit check** (one command — the front-end regression slice + freshness + Python gates).
+
+```
+.venv/bin/python -m pytest tests/test_workflow_apd_gauntlet.py \
+  -k "c4 or C4 or graph_view or attack_paths or threat_model or bundle or mermaid or kind_passthrough" -v \
+  && .venv/bin/python tools/check_report_template_freshness.py \
+  && git grep -L "layout=\"fcose\"" -- report-template/screens/C4.jsx >/dev/null \
+  && .venv/bin/python -m ruff check . \
+  && .venv/bin/python -m mypy tools/apd_gauntlet; echo "exit=$?"
+```
+
+Expected (GREEN, `exit=0`): all C4/graph/bundle/mermaid tests pass, freshness `OK`, `C4.jsx` carries **no** `layout="fcose"` (the `git grep -L` succeeds = the pattern is absent in that file), ruff + mypy clean.
+
+> The plan is appended under a new `## Milestone 7` section of `docs/superpowers/plans/2026-06-13-c4-architecture-view.md` (after the Milestone-6 Task-7 section ending at line ~5903). Task 1 is the FIRST task of the milestone (TDD red bar) and Task 9 is the LAST (rebuild + acceptance); the intervening impl Tasks 2–8 (the `c4BackboneLayout`/`c4ShortEdgeLabel`/router helpers + `C4TierGraph` in `components.jsx`, the C4.jsx render rewrite, the CSS lift, and the honest `archx-data.js` regeneration) are what flip Task 1's 4 tests from red to green before Task 9 rebuilds and runs acceptance.

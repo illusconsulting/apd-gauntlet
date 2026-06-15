@@ -1,0 +1,930 @@
+finding:
+- schema_version: 1
+  id: resil-5e5a02f0
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: high
+  confidence: medium
+  title: No timeout or circuit breaker on Core integration outbound calls to external devices/clouds
+  summary: Outbound calls from 2000+ in-process integrations to external devices/clouds run on Core's shared event loop with no documented per-call timeout or circuit breaker, so a slow or hostile endpoint blocks the loop and cascades to a platform-wide stall.
+  detail: 'The Core integration -> external device/cloud boundary (trust-boundary
+
+    item 6) is a cross-service boundary that every one of the 2000+ in-process
+
+    integrations crosses outbound. The threat model records for that boundary,
+
+    verbatim, "None documented: outbound integration calls share Core''s event
+
+    loop with no stated timeout/circuit-breaker" (tm-17b14550), and that "A
+
+    slow/hostile external endpoint blocks the integration on Core''s shared
+
+    event loop." Integrations are not isolated and run at Core''s full privilege
+
+    (00-SYSTEM-OVERVIEW.md lines 20-22), so the failure mode is concrete: a
+
+    single device or cloud endpoint that responds slowly (or never) holds an
+
+    await on the one asyncio loop that serves the REST API, the WS handshake,
+
+    and every automation including the alarm/lock path.
+
+
+    This is the Resilient lens precisely: the design choice is an unbounded
+
+    outbound call at a cross-service boundary; the failure mode it does not
+
+    address is "dependency degraded but responding" / "dependency unavailable";
+
+    the user-visible consequence is a hung automation platform rather than a
+
+    single failed integration. Timeout discipline (a timeout at every network
+
+    boundary) and a per-dependency circuit breaker (open on repeated
+
+    slow/failed calls, half-open recovery, fail-fast-or-degrade while open) are
+
+    the two missing controls. The artifacts and code-evidence index name no
+
+    timeout, no breaker, no per-integration budget on this path.
+
+
+    Severity is high under the *api-security* rubric, Resilient common-pattern
+
+    "No circuit breaker on outbound calls to third-party APIs ... vendor
+
+    degradation cascades to user-facing latency and request-handler
+
+    exhaustion; OWASP API10 amplification." Here the request handler is the
+
+    single shared event loop, so the cascade is total rather than bounded to
+
+    one thread pool. Confidence is medium: the absence of a breaker/timeout is
+
+    asserted by the threat model and is consistent with the documented
+
+    single-loop in-process model, but per-integration client libraries may set
+
+    ad-hoc timeouts the code-evidence index does not capture (hence not
+
+    critical, and not a clean code citation for the timeout''s absence).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: tpl = _cached_template(data["template"], ...); tpl.async_render(...)
+  prerequisite_evidence:
+  - Per-integration outbound timeout, circuit-breaker thresholds (open/half-open), and per-dependency retry budget on the Core integration -> external device/cloud path
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - SC-5
+    - CP-13
+    cwe:
+    - CWE-400
+    owasp_api_top10:
+    - API10:2023
+  recommendation:
+    posture: required
+    summary: Add a bounded outbound timeout and a per-dependency circuit breaker around integration calls so a slow/hostile endpoint cannot block the shared event loop.
+    detail: 'Wrap the outbound integration -> external device/cloud calls (trust
+
+      boundary item 6) with an enforced per-call timeout and a per-dependency
+
+      circuit breaker rather than leaving them as unbounded awaits on the
+
+      shared loop. The breaker should open after a documented count of
+
+      slow/failed calls to one endpoint, expose a half-open probe for
+
+      recovery, and while open either fail-fast or return a last-known-good
+
+      cached state so the integration degrades instead of hanging the loop.
+
+      Because Core is a single asyncio process, the timeout is the load-bearing
+
+      control: pick a ceiling well below any upstream caller''s budget so a
+
+      stuck integration call cannot starve the alarm/lock automations sharing
+
+      the loop. Cross-reference the Availability lens''s per-integration
+
+      resource-quota finding (avail-235dacf0) — the quota bounds aggregate
+
+      consumption; this finding bounds per-call latency and adds the breaker.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-17b14550 (outbound call shares event loop, no timeout/circuit-breaker)'
+  related_concerns:
+  - availability
+  - distributed
+  cross_references:
+  - avail-235dacf0
+  - avail-4be2dd70
+- schema_version: 1
+  id: resil-cb12ebae
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: high
+  confidence: medium
+  title: No bulkhead or per-integration execution timeout isolating one integration from the shared Core event loop
+  summary: 2000+ integrations and the recorder write path share one asyncio loop with no bulkhead, per-integration execution-time budget, or watchdog, so one blocking integration starves the consequential alarm/lock and recorder paths.
+  detail: 'Resource isolation is absent on the in-process integration model. The
+
+    threat model records "a misbehaving integration blocks Core''s single event
+
+    loop or exhausts the recorder DB ... integrations share Core''s single event
+
+    loop with no per-integration resource quota" (tm-35a0b188), and the
+
+    recorder session path (cev-a1000018) that backs the alarm/lock/presence
+
+    history runs on that same loop. There is no bulkhead separating the
+
+    consequential, latency-sensitive path (service calls that actuate locks and
+
+    alarms) from non-critical paths (a reporting integration''s history query, a
+
+    chatty cloud poll), and no per-integration execution-time budget or
+
+    watchdog that would cap how long one integration''s coroutine may hold the
+
+    loop.
+
+
+    The Resilient concern is bulkheading and resource isolation: critical
+
+    paths should not be starvable by non-critical ones, and a single dependency
+
+    class should not be able to exhaust the shared scheduling resource. The
+
+    *isolation topology* — moving integrations out of the single process into
+
+    separate execution domains (sandboxing) — is a Distributed concern and is
+
+    routed there; the *behavioral* control of a per-integration execution
+
+    budget / cooperative-yield watchdog and a separate scheduling lane for the
+
+    consequential path is the Resilient half. The *capacity ceiling* (a quota
+
+    on aggregate resource use) is Availability''s avail-235dacf0; this finding is
+
+    the missing failure-domain partition, not the quota.
+
+
+    Severity is high under the *api-security* rubric Resilient common-pattern
+
+    "No bulkhead between consumer-facing API paths and administrative or batch
+
+    paths ... an admin bulk-export or analytics query can starve the
+
+    customer-facing thread pool." Here the starved path is alarm/lock
+
+    automation and the starving path is any of 2000+ unisolated integrations on
+
+    a single loop, which is strictly worse than a thread-pool bulkhead gap.
+
+    Confidence is medium: the absence of isolation is documented, but whether
+
+    integrations are dispatched to executor threads for blocking work (a
+
+    partial bulkhead) is not fully resolved in the code-evidence index.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: lines 20-22 (trust posture)
+    excerpt: integrations are not sandboxed from each other and run with Core's full privilege
+  prerequisite_evidence:
+  - Whether integration blocking work is dispatched to a bounded executor pool (partial bulkhead) and any per-integration execution-time watchdog on the event loop
+  control_mappings:
+    nist_800_53r5:
+    - SC-6
+    - SI-13
+    - SC-5
+    cwe:
+    - CWE-400
+  recommendation:
+    posture: required
+    summary: Add a per-integration execution-time budget/watchdog and a separate scheduling lane for the consequential alarm/lock path so one integration cannot starve the shared loop.
+    detail: 'Introduce a per-integration execution-time budget enforced on the shared
+
+      event loop (a cooperative watchdog that flags or sheds an integration
+
+      coroutine that holds the loop beyond a documented threshold), and reserve
+
+      a separate scheduling lane / executor for the consequential service-call
+
+      path (the actions that actuate locks and alarms) so a reporting or cloud
+
+      integration cannot starve it. This is the behavioral bulkhead; pair it
+
+      with the Distributed lens''s integration-isolation (out-of-process
+
+      sandbox) recommendation, which is the structural form of the same
+
+      partition, and the Availability lens''s aggregate resource quota
+
+      (avail-235dacf0). Do not duplicate those; this finding''s specific ask is
+
+      the failure-domain partition between critical and non-critical work on
+
+      the loop.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-35a0b188 (no per-integration resource quota on shared loop)'
+  related_concerns:
+  - distributed
+  - availability
+  cross_references:
+  - avail-235dacf0
+- schema_version: 1
+  id: resil-872de693
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: mobile_app webhook dispatches blocking service calls with no backpressure or bounded queue
+  summary: handle_webhook accepts webhook_id-keyed requests that synchronously dispatch blocking=True service calls onto the single event loop with no backpressure signal or bounded in-flight queue, so a burst converts to unbounded loop-blocking work.
+  detail: 'The mobile_app webhook entrypoint handle_webhook (cev-a1000016) maps a
+
+    webhook_id to a config entry and webhook_call_service (cev-a1000015) then
+
+    calls services with blocking=True on Core''s single event loop. The code
+
+    recon notes "No bearer, no rate-limit observed here." Beyond the missing
+
+    rate limit (which Availability owns, avail-a292763c), the Resilient gap is
+
+    the absence of any backpressure mechanism: the webhook does not signal a
+
+    producer to slow down, does not bound the number of in-flight blocking
+
+    service calls it will accept, and does not shed or queue-with-a-ceiling
+
+    when the loop is saturated. A burst of webhook posts — from a registered
+
+    device on a flaky network retrying, or the internet-reachable cloudhook URL
+
+    — converts directly into unbounded blocking work on the one loop, with no
+
+    graceful "busy, retry later" degradation.
+
+
+    This is the Resilient backpressure facet, distinct from the Availability
+
+    rate-limit: a rate limit caps request admission by policy; backpressure is
+
+    the runtime behavior when the consumer cannot keep up (bounded queue, load
+
+    shed, Retry-After). The webhook has neither. The authentication-by-
+
+    possession and authorization facets are owned by Authenticity/Integrity and
+
+    are routed there; the resource-consumption admission cap is owned by
+
+    Availability; this finding is strictly the missing backpressure/bounded-
+
+    queue behavior on a blocking dispatch path.
+
+
+    Severity is medium under the *api-security* rubric. It maps to the Resilient
+
+    common-pattern family on retry/queue behavior and the medium "rate-limiting
+
+    absent on an abused surface" band rather than the high single-handler-
+
+    exhaustion band, because Availability already carries the high
+
+    handler-exhaustion finding (avail-a292763c) for the same surface; emitting
+
+    this at high would double-count. The distinct Resilient ask — a bounded
+
+    queue and explicit shed behavior — is a medium hardening of the same path.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: No bearer, no rate-limit observed here.
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_call(..., blocking=True, context=registration_context(...))
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-6
+    - SI-13
+    cwe:
+    - CWE-770
+  recommendation:
+    posture: recommended
+    summary: Bound the in-flight blocking work the webhook accepts and shed with Retry-After when the loop is saturated, rather than dispatching unbounded blocking=True calls.
+    detail: 'At handle_webhook (cev-a1000016), bound the number of concurrent blocking
+
+      service calls a single webhook_id (and the path overall) may have
+
+      in-flight, and when that bound is reached, shed with an explicit "busy,
+
+      retry later" response (429 + Retry-After) instead of enqueuing unbounded
+
+      work onto the event loop via webhook_call_service (cev-a1000015). This is
+
+      the backpressure complement to the Availability rate-limit finding
+
+      (avail-a292763c): the rate limit caps admission, this caps in-flight work
+
+      and makes the saturation behavior explicit and recoverable rather than a
+
+      silent loop stall. Prefer dispatching the actual service call off the
+
+      loop (executor) so the webhook handler returns promptly.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-1203ba47 (no rate-limit on the webhook entrypoint)'
+  related_concerns:
+  - availability
+  cross_references:
+  - avail-a292763c
+- schema_version: 1
+  id: resil-43c0c35b
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Mobile WebView-native bridge has no fail-safe degradation mode for a hostile or unavailable backend response
+  summary: The iOS/Android Companion WebView renders the remote Core frontend and acts on its bridge messages with no origin/integrity check and no documented fail-safe, so a hostile or substituted backend response degrades the native app open rather than refusing the action.
+  detail: 'The Companion apps render the REMOTE server frontend in a WebView and
+
+    dispatch its messages into native capability with no origin/integrity
+
+    check: on iOS, WebViewExternalMessageHandler.handleExternalMessage
+
+    (cev-e5000001) switches on message type from the remotely-served frontend
+
+    with no source verification; on Android the WebView external bus consumes
+
+    the same remote content, over a TLS stack (TLSHelper, cev-f6000002) that
+
+    trusts user-installed CAs with no pinning. The threat model confirms the
+
+    bridge "dispatches remote-frontend messages with no origin verification —
+
+    the design trusts the rendered remote frontend" (tm-... iOS bridge),
+
+    reachable from the compromised_backend_or_response position.
+
+
+    Resilient owns the graceful-degradation / fail-open-vs-fail-closed decision
+
+    for this mobile control. The design choice is "trust whatever the backend
+
+    sends and act on it"; the failure mode it does not address is "backend
+
+    unavailable, degraded, or hostile (MitM-substituted) response"; the
+
+    user-visible consequence is that a substituted or malformed response drives
+
+    in-app native actions (the bridge dispatch) rather than the app entering a
+
+    safe, reduced-functionality mode. There is no documented degraded mode
+
+    (show last-known-good state with a freshness/"can''t reach server" banner,
+
+    refuse bridge-driven consequential actions) and no fail-closed default when
+
+    the response cannot be trusted. Per the mobile doctrine, client-side
+
+    enforcement of a server-side control is not itself a control, so the
+
+    finding of record is also the missing server-side invariant — but the
+
+    Resilient-specific gap is the absent fail-safe degradation mode on the
+
+    client when the channel is unavailable or compromised.
+
+
+    Severity is high under the *mobile-applications* rubric, Resilient
+
+    common-pattern "App degrades unsafely ... silently falls back to a weaker
+
+    mode instead of refusing the sensitive operation," combined with the High
+
+    rubric clause "A WebView JavaScript bridge exposes native capability or
+
+    data to loaded web content without origin allowlisting." The device-trust
+
+    assumption is low (stock device, on-path or compromised backend), the
+
+    blast-radius modifier loads (the bridge reaches native capability/tokens),
+
+    so it sits at high. MAS mapping per the pack pairs the bridge gap with
+
+    MASVS-PLATFORM-2.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: switch externalBusMessage { case .configGet ... case .tagRead ... }
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: trustManagerFactory.init(androidCaStore) ... trusts USER-installed CAs
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SI-17
+    - CP-12
+    - SI-13
+    cwe:
+    - CWE-636
+    - CWE-345
+    masvs:
+    - MASVS-PLATFORM-2
+  recommendation:
+    posture: required
+    summary: Define a fail-closed degraded mode on the client for unavailable/untrusted backend responses, and origin-allowlist the bridge, rather than acting on any rendered message.
+    detail: 'Give the Companion WebView bridge an explicit fail-safe degradation mode:
+
+      when the backend is unreachable, show last-known-good entity state with a
+
+      "cannot reach server" freshness banner rather than a blank or
+
+      action-driving state; and when a bridge message cannot be origin-verified
+
+      (handleExternalMessage, cev-e5000001), refuse to dispatch it rather than
+
+      acting (fail-closed), surfacing a degraded-functionality indicator. Pair
+
+      the origin allowlist on the bridge with the server-side invariant — the
+
+      backend, not the client, must re-verify any consequential action the
+
+      bridge would drive — because a control evaluated only on the
+
+      attacker-controllable client (over a TLS stack that trusts user CAs,
+
+      cev-f6000002) is bypassable. Route the bridge origin-verification and the
+
+      token-on-the-bridge facets to Authenticity/Confidentiality; this finding''s
+
+      ask is the missing fail-closed client degradation behavior.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-243e5056 (hostile remote frontend delivers tampered bridge messages the app acts on)'
+  related_concerns:
+  - authenticity
+  - integrity
+  - confidentiality
+  cross_references: []
+- schema_version: 1
+  id: resil-895658c9
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: Mobile client reconnect/retry backoff and push-woken sync de-synchronization against single Core unspecified
+  summary: The Companion apps reconnect to and retry against a single Core instance, but the backoff/jitter curve, per-dependency retry budget, and push/cron-woken sync de-synchronization are not in the artifacts, so a fleet retry storm on Core recovery cannot be ruled out.
+  detail: 'The Companion apps depend on a single Core instance and a single push relay
+
+    (tm-0ea69aaa iOS, tm-4fccdc51 Android: "The app depends on the single Core
+
+    instance and the push relay; denial of service applies to app function when
+
+    those are down"). The mobile_app sensor/webhook send path and the WS
+
+    reconnect path retry against that one backend. The artifacts do not specify
+
+    the client''s reconnect/retry behavior: whether retries use exponential
+
+    backoff with full jitter or a fixed interval, whether there is a
+
+    per-dependency retry budget, and whether push- or cron-woken syncs are
+
+    spread over a window or fire at one instant.
+
+
+    The Resilient concern is the mobile-fleet retry-storm (thundering herd)
+
+    failure mode: against a single Core process, a fixed-interval reconnect or
+
+    a push that wakes the whole installed fleet at once synchronizes clients
+
+    into a self-sustained load spike that can prevent the single instance from
+
+    recovering after a blip. Because the code-evidence index contains no
+
+    reconnect/backoff entry for the iOS or Android network client, and the docs
+
+    do not specify it, I do not infer the behavior is bad from silence. Per the
+
+    block-on-ambiguity discipline this is recorded as blocked with the
+
+    prerequisite evidence named.
+
+
+    Severity medium reflects the *mobile-applications* rubric Resilient
+
+    common-pattern "No backoff/jitter on retries against the backend ... a
+
+    synchronized mobile-fleet retry storm" (which the rubric pegs high when
+
+    confirmed) dropped one band for the blocked/low-confidence disposition: the
+
+    scale-vector modifier would load if confirmed, but the install-base size
+
+    for a self-hosted single-instance product is far smaller than a hosted-app
+
+    fleet, so the herd ceiling is correspondingly lower.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...database.server.ServerSessionInfo.ServerSessionInfo:L1-L1@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: persisted access + refresh bearer tokens (in_degree 21)
+  prerequisite_evidence:
+  - iOS/Android Companion network-client reconnect and retry policy (backoff curve, jitter strategy, per-dependency retry budget)
+  - Whether push/cron-woken syncs are de-synchronized over a window vs firing at one instant against the single Core
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - SC-5
+    - CP-10
+    cwe:
+    - CWE-770
+  recommendation:
+    posture: consider
+    summary: Specify and verify exponential backoff with full jitter plus de-synchronized push-woken sync on the Companion clients against the single Core.
+    detail: 'Document and verify the Companion reconnect/retry policy: exponential
+
+      backoff with full jitter and a per-dependency retry budget on the WS
+
+      reconnect and the sensor/webhook send path, and spread push- or
+
+      cron-woken syncs over a window rather than firing them at one instant, so
+
+      that a single-instance Core recovering from a blip is not hit by a
+
+      synchronized fleet reconnect. This resolves the blocked assessment and,
+
+      paired with the backend admission control the Availability lens
+
+      recommends (avail-a292763c / avail-4be2dd70), keeps a fleet that
+
+      misbehaves from preventing the single instance''s recovery.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-4fccdc51 (app depends on Core + FCM; DoS to app function when down)'
+  related_concerns:
+  - availability
+  cross_references:
+  - avail-4be2dd70
+- schema_version: 1
+  id: resil-a4c9535c
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: low
+  confidence: medium
+  title: No queue-and-replay or fallback notification path when the single Firebase push relay is unavailable
+  summary: Security-relevant push notifications route through a single Firebase Cloud Functions relay with no documented retry, queue-and-replay, or local fallback path when the relay is unreachable, so an alarm alert is silently dropped during a relay outage.
+  detail: 'Every push notification (including alarm-triggered and lock/presence
+
+    alerts) is forwarded by a single Firebase Cloud Functions relay
+
+    (cev-08000001, cev-08000002 — "Public relay route forwarding notifications
+
+    to APNS/FCM"). The relay applies a per-token rate limit, but the threat
+
+    model and inventory record no behavior for the case where the relay (or its
+
+    single configured region, us-central1) is unavailable: the design has no
+
+    documented retry with backoff, no queue-and-replay of the notification when
+
+    the relay recovers, and no local/persistent-notification fallback so the
+
+    event still surfaces in the app on next reachable connection.
+
+
+    The Resilient concern is graceful degradation of the notification path: a
+
+    queue-and-replay or a degraded local-notification fallback would convert a
+
+    relay outage into delayed-but-delivered, whereas the current (undocumented)
+
+    behavior is a silently dropped alert. The relay''s *availability SLA / single
+
+    region* is the dependency-reliability facet and is owned by Availability
+
+    (avail-a2cfd41c); the *single-relay topology / lack of a redundant relay* is
+
+    a Distributed concern; this finding is strictly the missing
+
+    behavior-when-down (retry/queue/fallback).
+
+
+    Severity is low under the *api-security* rubric: this is a defense-in-depth
+
+    / graceful-degradation gap on a notification path, not the primary control
+
+    plane — LAN-local device control and in-app state still function without
+
+    the relay, and an alarm event remains recorded in Core; only the push
+
+    delivery is at risk. Confidence is medium because the relay''s outage
+
+    behavior is simply not in the artifacts.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:__route__POST__/api/sendPushNotification:L40-L43@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: Public relay route forwarding notifications to APNS/FCM
+  - artifact: mobile/mobile-apps-fcm-push-README.md
+    locator: lines 42-47
+    excerpt: forwards notifications without exposing device push tokens to the instance
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CP-12
+    - CP-13
+    - SI-17
+    cwe:
+    - CWE-636
+  recommendation:
+    posture: consider
+    summary: Define a queue-and-replay or local-notification fallback so a relay outage delays rather than drops security-relevant alerts.
+    detail: 'Define the notification-delivery behavior when the Firebase relay
+
+      (cev-08000002) is unreachable: queue the notification on the instance
+
+      side with bounded backoff retry and replay it when the relay recovers,
+
+      and/or surface the event as a local/persistent in-app notification so an
+
+      alarm or lock alert is still seen on the app''s next reachable connection
+
+      rather than silently dropped. Coordinate the relay-SLA / single-region
+
+      half with the Availability lens (avail-a2cfd41c) and the redundant-relay
+
+      topology with the Distributed lens; this finding''s ask is only the
+
+      degraded-delivery behavior.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml tm-66c3bf93 (relay is the single push path; DoS degrades notification delivery)'
+  related_concerns:
+  - availability
+  - distributed
+  cross_references:
+  - avail-a2cfd41c
+- schema_version: 1
+  id: resil-b1d0c558
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: Supervisor watchdog auto-recovery and add-on restart policy on Core/add-on failure undocumented
+  summary: Whether the Supervisor watchdog auto-restarts a hung-but-alive Core, with what backoff and restart cap, and the add-on restart policy on crash, are not in the artifacts, so the single-host instance's automatic-recovery behavior cannot be assessed.
+  detail: 'The single-host instance''s only automatic-recovery mechanism is the
+
+    Supervisor, which "manages your Home Assistant Core installation"
+
+    (supervisor-README.md) and runs alongside a plugin-observer health/observer
+
+    container (.apd-run.yaml). The Resilient question — does the system recover
+
+    automatically from a component failure — turns on the watchdog and restart
+
+    policy, and none of the supplied artifacts document it: whether the
+
+    watchdog restarts Core on a failed deep health check or only on process
+
+    death; the restart backoff and any restart-cap / crash-loop protection
+
+    (unbounded restarts of a crash-looping Core or add-on is itself a failure
+
+    mode); and the add-on restart policy on add-on crash. The supervisor and
+
+    plugin-observer repos are dependency-role and were not deep-read, and the
+
+    code-evidence index has no watchdog/restart-policy entry.
+
+
+    Per the block-on-ambiguity discipline I do not infer that auto-recovery is
+
+    present-and-good or absent from silence; this is recorded as blocked with
+
+    prerequisite evidence named. This is the Resilient (auto-recovery behavior)
+
+    complement to the Availability lens''s blocked health-check finding
+
+    (avail-77752ee2), which covers the health-check depth that a watchdog would
+
+    consume; the two should be resolved together.
+
+
+    Severity medium reflects the Resilient predictable-failure / fail-safe band
+
+    that would apply if the watchdog turns out to restart only on hard process
+
+    death (leaving a hung-but-alive Core unrecovered) or to restart without
+
+    crash-loop protection; confidence is low because the actual policy is
+
+    unknown.
+
+    '
+  evidence:
+  - artifact: repos/supervisor-README.md
+    locator: lines 5-9
+    excerpt: container-based system for managing your Home Assistant Core installation
+  prerequisite_evidence:
+  - 'Supervisor watchdog restart policy: what condition restarts Core (hard death vs failed deep check), restart backoff, and crash-loop / restart-cap protection'
+  - Add-on restart policy on add-on crash (restart, restart-on-failure, none) and any restart-rate limit
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - SI-17
+    - CP-10
+    cwe:
+    - CWE-636
+  recommendation:
+    posture: consider
+    summary: Document the Supervisor watchdog restart conditions, crash-loop protection, and add-on restart policy so the single-host instance's auto-recovery is assessable.
+    detail: 'Document the Supervisor watchdog and restart model: the condition that
+
+      triggers a Core restart (a failed deep readiness check that exercises the
+
+      recorder DB and auth path, not only process death), the restart backoff,
+
+      and a crash-loop / restart-cap protection so a Core or add-on that crash-
+
+      loops does not thrash the single host. State the add-on restart policy on
+
+      crash. This resolves the blocked assessment and, with the Availability
+
+      lens''s health-check-depth resolution (avail-77752ee2), lets the single
+
+      instance self-recover from a hung-but-alive Core rather than needing
+
+      manual intervention.
+
+      '
+    references:
+    - 'internal: .apd-run.yaml (plugin-observer: health/observer plugin container; supervisor manages Core lifecycle)'
+  related_concerns:
+  - availability
+  cross_references:
+  - avail-77752ee2
+- schema_version: 1
+  id: resil-93866115
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  disposition: gap
+  severity: medium
+  confidence: medium
+  title: No enumerated failure-mode catalog or declared graceful-degradation modes for the Core automation platform
+  summary: The design enumerates no failure modes (integration unavailable, recorder DB full, push relay down, host loss) with their user-visible effect, and declares no degradation modes (read-only, last-known-good, safe-mode), so failure behavior is implicit and largely fail-by-stall.
+  detail: 'Across the artifacts there is no failure-mode catalog: the design does not
+
+    enumerate the failure modes the platform handles (single integration
+
+    unavailable, dependency degraded-but-responding, recorder DB full/locked,
+
+    push relay down, certificate expiry on a reverse proxy, host loss) nor
+
+    state, per mode, the intended user-visible effect (hard error, retry-then-
+
+    succeed, degraded response, queued-for-later). The threat model''s
+
+    availability cells repeatedly record the *absence* of the controls that a
+
+    catalog would drive — "no documented rate-limit / SLO / capacity model,"
+
+    "no stated timeout/circuit-breaker" (tm-17b14550), "no per-integration
+
+    resource quota" (tm-35a0b188) — which together imply the de-facto failure
+
+    mode is "stall the shared event loop," but no mode is named or designed.
+
+
+    Equally, no graceful-degradation modes are declared: there is no documented
+
+    read-only or safe-mode for when the recorder DB or a dependency is
+
+    unavailable, no last-known-good fallback policy, and no user-disclosed
+
+    degraded-state signaling. The permission engine does fail closed (deny-all
+
+    on empty/None policy, cev-a1000006) — recorded as a capability — but that is
+
+    one fail-safe point, not a platform degradation strategy.
+
+
+    The Resilient concern is that without an enumerated failure-mode catalog and
+
+    declared degradation modes, every Resilient control (timeouts, breakers,
+
+    bulkheads, backpressure) is added ad hoc rather than driven by a stated
+
+    behavior contract, and the system''s behavior under partial failure is
+
+    unpredictable. Severity is medium under the *api-security* rubric: this is a
+
+    design-completeness / predictable-failure gap rather than a single
+
+    exploitable control absence (those are filed separately above), and it
+
+    overlaps the Availability SLO finding (avail-754cfc01) which the synthesizer
+
+    may merge. Confidence is medium: the absence of a catalog is evident from
+
+    the artifact set, but a hardening doc out-of-band (org/SECURITY.md is a
+
+    6-line pointer) could carry some of it.
+
+    '
+  evidence:
+  - artifact: org/SECURITY.md
+    locator: full file (6 lines)
+    excerpt: Security-policy pointer; no embedded hardening or failure-mode content
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False'
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - CP-12
+    - SI-17
+    - SC-24
+    cwe:
+    - CWE-636
+  recommendation:
+    posture: recommended
+    summary: Author a failure-mode catalog with per-mode user-visible effect and declare the platform's graceful-degradation modes (read-only/safe-mode/last-known-good).
+    detail: 'Produce a failure-mode catalog enumerating the failure modes the platform
+
+      handles — integration unavailable, dependency degraded-but-responding,
+
+      recorder DB full/locked, push relay down, host loss — and, for each, the
+
+      intended user-visible effect (hard error, retry-then-succeed, degraded
+
+      response, queued-for-later). Declare the platform''s graceful-degradation
+
+      modes: a read-only / safe-mode when the recorder DB or a dependency is
+
+      unavailable, a last-known-good entity-state fallback, and user-disclosed
+
+      degraded-state signaling so operators of safety automations know when the
+
+      platform is degraded. Capture this in the hardening baseline
+
+      (org/SECURITY.md is currently a 6-line pointer with no such content). This
+
+      contract is what the per-control findings above (timeouts, breakers,
+
+      bulkheads, backpressure) should be designed against. Coordinate with the
+
+      Availability SLO finding (avail-754cfc01).
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 Evidence Gaps (DR/RTO/RPO + availability targets)'
+  related_concerns:
+  - availability
+  cross_references:
+  - avail-754cfc01

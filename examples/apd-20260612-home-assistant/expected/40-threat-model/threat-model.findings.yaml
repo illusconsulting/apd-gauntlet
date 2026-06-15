@@ -1,0 +1,111 @@
+# tmeval findings for run apd-20260612-home-assistant
+# Canonical tier-4 threat-model evaluator finding file (read by rollup, audit,
+# report transform, and the synthesis loader).
+#
+# Carve-out applied: the canonical threat model is generated_by: threat_model_author
+# (an always-on authored baseline), so the anti-tautology carve-out governs:
+#   - coverage-gap (Rule 5) and silence (Rule 7) flavors are SKIPPED (grading the
+#     gauntlet's own authored skeleton against findings derived from the same evidence
+#     would be tautological);
+#   - contradiction (Rule 6) + specialist corroboration are KEPT.
+# No supplied sibling TM exists (threat-model-supplied-normalized.yaml absent), so the
+# supplied-vs-authored comparator (Step 2c) is skipped.
+finding:
+- schema_version: 1
+  id: tmeval-5c02d052
+  tmeval_key:
+    flavor: contradiction
+    tm_entry_id: tm-f8db6c3a
+    contradicting_finding_id: auth-1787eae1
+  agent: threat_model_evaluator
+  apd_tier: trustworthiness
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: Threat model asserts standard X509 validation mitigates Android server spoofing
+    that conf-2029ce78 and auth-1787eae1 contradict
+  summary: 'Authored baseline entry tm-f8db6c3a (Android Companion, Spoofing) claims
+    mitigation: "TLSHelper uses standard X509 validation (cev-f6000002); the mTLS client
+    key is in the hardware-backed Keystore." Two independent specialist findings on
+    the same surface show that standard X509 validation over the AndroidCAStore trusts
+    user-installed CAs with no pinning, so a MitM with an installed CA impersonates
+    the self-hosted backend and harvests the bearer token in transit.'
+  detail: "The authored threat-model cell tm-f8db6c3a (asset \"Android Companion app\
+    \ (Kotlin,\nWebView, Keystore, FCM)\", STRIDE letter S, extraction_confidence high)\
+    \ offers as its\nmitigation: \"TLSHelper uses standard X509 validation (cev-f6000002);\
+    \ the mTLS client\nkey is in the hardware-backed Keystore (cev-f6000001).\" That\
+    \ framing presents standard\nX509 validation as the answer to server-spoofing on\
+    \ the mobile->Core channel.\n\nTwo independent specialist findings on the SAME surface\
+    \ (the Android Companion TLS\nfactory, cev-f6000002) show the asserted control does\
+    \ not hold against the threat the\nsame cell raises:\n\n- conf-2029ce78 (confidentiality,\
+    \ high/high) shows `TLSHelper.setupOkHttpClient\n  SSLSocketFactory` initializes\
+    \ the OkHttp trust manager from `KeyStore.getInstance(\n  \"AndroidCAStore\")`,\
+    \ which includes USER-installed CAs, and applies NO certificate\n  or public-key\
+    \ pinning — so a user-installed/malicious CA lets a network MitM\n  decrypt the\
+    \ token- and PII-bearing channel.\n- auth-1787eae1 (authenticity, high/high) shows\
+    \ the same factory verifies the server\n  with default CA trust plus user-installed\
+    \ CAs and no pinning, so the backend identity\n  is forgeable to a MitM who can\
+    \ place a CA in the store.\n\n\"Standard X509 validation\" is therefore not a mitigation\
+    \ for the spoofing threat the\ncell names: validation succeeds for ANY leaf chaining\
+    \ to ANY trusted-but-attacker-\ninfluenceable CA, and because the instance is a\
+    \ user-entered self-hosted URL there is no\nfixed certificate to pin. The hardware-backed\
+    \ mTLS key (cev-f6000001) is a genuine,\nseparately-credited CLIENT-identity control\
+    \ (capability auth-cap-42c6a13f / conf-cap-\n01c47d42) but it does not authenticate\
+    \ the SERVER — it is opt-in and does not bound\nthe user-CA trust on the default\
+    \ channel.\n\nThis is the one place in the authored baseline where a mitigation\
+    \ asserts a control as\nadequate that the grounded specialist findings show is bypassable;\
+    \ elsewhere the baseline\nis candid (its mitigations either name the residual gap\
+    \ or state \"None\"). Confidence is\nhigh because the contradicting cell is extraction_confidence:\
+    \ high and both corroborating\nfindings are high/high. Severity is inherited high\
+    \ from the corroborating specialist\nfindings (MASVS-NETWORK-2 high-value-channel\
+    \ pinning gap)."
+  evidence:
+  - artifact: 00-context/threat-model-normalized.yaml
+    locator: entries[entry_id=tm-f8db6c3a]
+    excerpt: 'mitigation: TLSHelper uses standard X509 validation (cev-f6000002); the
+      mTLS client key is in the hardware-backed Keystore (cev-f6000001).'
+  - artifact: 00-context/threat-model-normalized.yaml
+    locator: entries[entry_id=tm-f8db6c3a].threat
+    excerpt: "Android's TLSHelper (cev-f6000002) loads AndroidCAStore and thus TRUSTS\
+      \ USER-installed CAs with no fixed-server pinning ... network_mitm via a malicious\
+      \ user-CA can impersonate the server"
+  - artifact: 40-synthesis/deduped-findings.yaml
+    locator: finding[id=conf-2029ce78]
+    excerpt: 'KeyStore.getInstance("AndroidCAStore")... builder.sslSocketFactory(...,
+      trustManagers[0] as X509TrustManager) -- user-installed CAs trusted, no pinning,
+      MitM decrypts the token/PII channel'
+  - artifact: 40-synthesis/deduped-findings.yaml
+    locator: finding[id=auth-1787eae1]
+    excerpt: standard X509 validation with no certificate or public-key pinning; a
+      MitM with an installed CA presents an accepted certificate impersonating the
+      backend
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-23
+    - SC-17
+    - IA-9
+    cwe:
+    - CWE-295
+    masvs:
+    - MASVS-NETWORK-2
+  cross_references:
+  - conf-2029ce78
+  - auth-1787eae1
+  recommendation:
+    posture: required
+    summary: Reconcile the threat model and implementation reality on the Android server-identity
+      channel.
+    detail: 'Either update the implementation to match the threat model''s intended
+      state (add trust-on-first-use public-key pinning captured at instance onboarding
+      and exclude user-installed CAs for the configured instance channel, surfacing
+      a pin mismatch as a security event, per conf-2029ce78 / auth-1787eae1), or update
+      the threat-model cell tm-f8db6c3a to drop "standard X509 validation" as a mitigation
+      and record the residual user-CA / no-pinning MitM exposure the specialists confirmed,
+      so reviewers do not read the spoofing threat as mitigated. Keep the hardware-backed
+      mTLS key credited as the client-identity control it is, separate from the unmet
+      server-identity control.'
+    references:
+    - 'external: OWASP MASVS-NETWORK-2 (server-identity verification / pinning)'

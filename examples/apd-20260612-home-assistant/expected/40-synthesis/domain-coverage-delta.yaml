@@ -1,0 +1,596 @@
+schema_version: 1
+generated_by: coverage-delta
+examined_domains:
+- api-security
+- mobile-applications
+declared_union:
+  crown_jewels:
+  - app_signing_identity
+  - attestation_tokens_and_jwts
+  - audit_log_store
+  - authorization_decision_engine
+  - backup_artifact_store
+  - biometric_gated_secrets
+  - cached_pii_phi_on_device
+  - deep_link_and_ipc_entry_points
+  - embedded_api_keys_and_secrets
+  - js_app_bundle_and_ota_channel
+  - js_bridge_native_surface
+  - keystore_secure_enclave_keys
+  - mobile_backend_api_surface
+  - payment_methods_store
+  - pii_profile_store
+  - sdk_collected_data_and_consent_records
+  - session_token_signing_keys
+  - stored_session_and_refresh_tokens
+  - third_party_integration_secrets
+  - user_credentials_store
+  attacker_positions:
+  - authenticated_low_priv_user_with_bola_target
+  - authenticated_user_seeking_authz_bypass
+  - co_resident_malicious_app
+  - compromised_admin_session
+  - compromised_backend_or_response
+  - compromised_oauth_client_credentials
+  - compromised_third_party_integration
+  - compromised_user_session_token
+  - internal_lateral_attacker
+  - malicious_in_process_sdk
+  - malicious_ota_update
+  - network_mitm
+  - phishing_deep_link_or_ipc_caller
+  - physical_thief_with_stolen_device
+  - reverse_engineer_with_ipa_apk
+  - rooted_device_attacker_with_frida
+  - supply_chain_attacker
+  - unauthenticated_internet
+  trust_boundaries:
+  - app_sandbox_to_other_apps
+  - app_to_ota_update_channel
+  - app_to_platform_keystore_tee
+  - app_to_third_party_sdk
+  - app_to_webview_js_bridge
+  - application_to_data_tier
+  - application_to_third_party
+  - client_to_backend_api
+  - deep_link_ipc_entry_boundary
+  - device_to_attestation_authority
+  - device_to_os_platform
+  - edge_to_application_tier
+  - payment_card_data_environment
+  - personal_data_subject_zone
+  - public_internet_to_edge
+candidates:
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Home Assistant Core (Python asyncio app)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-7f3c1a92
+  data_classifications:
+  - confidential
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Core REST API (/api/, port 8123)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-b2d4e017
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Core WebSocket API (/api/websocket)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-3a8c6f51
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Core auth subsystem (providers, users, groups, tokens)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-9e1b4d28
+  data_classifications:
+  - secret
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Core user permission policy engine
+  evidence:
+  - kind: asset_inventory
+    ref: asset-5c7a2e83
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: mobile_app integration backend (registrations + webhook in Core)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-1d6f9b40
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Core integration runtime (2000+ in-process integrations)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-8b3e5c17
+  data_classifications:
+  - confidential
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-4f9d2a68
+  data_classifications:
+  - secret
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Privileged Supervisor API (http://supervisor/)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-6a1c8e35
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: os-agent (Go D-Bus host daemon)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-2e7b9f14
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Supervisor ingress proxy (X-Remote-User-* header injection)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-c3d8a572
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Lit/TS web frontend SPA
+  evidence:
+  - kind: asset_inventory
+    ref: asset-d1f4b609
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-a5e2c738
+  data_classifications:
+  - confidential
+  - pii
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: .storage/auth + auth_provider.homeassistant (user credentials store)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-8d3f1a96
+  data_classifications:
+  - secret
+  - pii
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-3c9b5e27
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: .storage config_entries + OAuth2 token storage (integration secret vault)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-7b2e4d81
+  data_classifications:
+  - secret
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Supervisor backup archive store (full/partial snapshots)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-1f6a8c40
+  data_classifications:
+  - secret
+  - confidential
+  - pii
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: configuration.yaml + .storage config directory
+  evidence:
+  - kind: asset_inventory
+    ref: asset-9a4d2f63
+  data_classifications:
+  - secret
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Docker socket / host-root control plane (/run/docker.sock)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-e7c1b958
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: HAOS appliance image (Buildroot operating-system)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-2b8f4c61
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-5d1a7e29
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Container base images (alpine/debian) + wheels/npm supply chain
+  evidence:
+  - kind: asset_inventory
+    ref: asset-8e3c6a14
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-4a9d1b72
+  data_classifications:
+  - secret
+  - pii
+  - confidential
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-6c2f8a35
+  data_classifications:
+  - secret
+  - pii
+  - confidential
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-1b7e5d93
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Android hardware-backed Keystore (mTLS client-cert private key)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-3e9c4f08
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: On-device location/entity cache (Android Room location_history / iOS
+    AppEntityRegistry)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-7d2a6b51
+  data_classifications:
+  - pii
+  - confidential
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-9f4c1e87
+  data_classifications:
+  - secret
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-2d8b5a64
+  data_classifications:
+  - secret
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-5a3f9c20
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-8c1d7e46
+  data_classifications:
+  - secret
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: APNS / FCM push providers
+  evidence:
+  - kind: asset_inventory
+    ref: asset-3b6a2f95
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-6e4c8d13
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: External devices / cloud services reached by integrations (outbound)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-1a9f3c58
+  data_classifications:
+  - confidential
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-4d7b1e82
+  data_classifications:
+  - internal
+- improvement_type: missing_crown_jewel
+  source: deterministic
+  default_target_pack: api-security
+  priority: high
+  asset_name: Reverse-proxy / internet edge to Core (port 8123)
+  evidence:
+  - kind: asset_inventory
+    ref: asset-9c2e6a47
+  data_classifications:
+  - internal
+- improvement_type: missing_attacker_position
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Registered mobile device (webhook_id / cloudhook holder)
+  evidence:
+  - kind: asset_inventory
+    ref: idn-1f5c8b23
+- improvement_type: missing_attacker_position
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  evidence:
+  - kind: asset_inventory
+    ref: idn-8c3e6d51
+- improvement_type: missing_attacker_position
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Third-party integration / device principal (untrusted device/cloud)
+  evidence:
+  - kind: asset_inventory
+    ref: idn-7d1b4c83
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Internet/LAN edge -> Core REST+WS API (bearer-token; reverse-proxy/Nabu
+    Casa)
+  crosses:
+  - asset-9c2e6a47
+  - asset-b2d4e017
+  - asset-3a8c6f51
+  evidence:
+  - kind: asset_inventory
+    ref: tb-9a3c7f21
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Mobile app (untrusted, possibly rooted) -> Core API
+  crosses:
+  - asset-4a9d1b72
+  - asset-6c2f8a35
+  - asset-1d6f9b40
+  evidence:
+  - kind: asset_inventory
+    ref: tb-2b6e8d43
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Browser/WebView frontend -> Core WS/REST + JS external-auth bridge to
+    native
+  crosses:
+  - asset-d1f4b609
+  - asset-5a3f9c20
+  - asset-1b7e5d93
+  evidence:
+  - kind: asset_inventory
+    ref: tb-5c1a9b67
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Add-on container -> Supervisor API & Core proxy (scoped token + role
+    + protection mode)
+  crosses:
+  - asset-5d1a7e29
+  - asset-6a1c8e35
+  - asset-c3d8a572
+  evidence:
+  - kind: asset_inventory
+    ref: tb-8d4f2c95
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Supervisor -> Docker socket (host root) & os-agent (D-Bus host ops)
+  crosses:
+  - asset-4f9d2a68
+  - asset-e7c1b958
+  - asset-2e7b9f14
+  evidence:
+  - kind: asset_inventory
+    ref: tb-3e7b1a58
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Core integration -> external device/cloud (outbound LAN+internet; SSRF)
+  crosses:
+  - asset-8b3e5c17
+  - asset-1a9f3c58
+  evidence:
+  - kind: asset_inventory
+    ref: tb-6a2d8c14
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: HA instance <-> mobile-apps-fcm-push relay <-> APNS/FCM
+  crosses:
+  - asset-1d6f9b40
+  - asset-8c1d7e46
+  - asset-3b6a2f95
+  evidence:
+  - kind: asset_inventory
+    ref: tb-1f5c9a83
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Backup artifact <-> storage/restore (full snapshots contain secrets+tokens+DB)
+  crosses:
+  - asset-1f6a8c40
+  - asset-a5e2c738
+  - asset-7b2e4d81
+  evidence:
+  - kind: asset_inventory
+    ref: tb-7d3b5e29
+- improvement_type: missing_trust_boundary
+  source: deterministic
+  default_target_pack: api-security
+  priority: medium
+  asset_name: Supply-chain ingestion -> Core/Supervisor/mobile builds (base images,
+    wheels, add-on images, SDKs)
+  crosses:
+  - asset-8e3c6a14
+  - asset-7f3c1a92
+  - asset-4f9d2a68
+  evidence:
+  - kind: asset_inventory
+    ref: tb-4c8a2f61

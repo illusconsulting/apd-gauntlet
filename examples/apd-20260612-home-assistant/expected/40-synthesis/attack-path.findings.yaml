@@ -1,0 +1,686 @@
+schema_version: 1
+finding:
+- schema_version: 1
+  id: apath-069b3352
+  agent: attack_path_analyzer
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: leaked_device_webhook_id
+    -> mobile_app_webhook_api in 1 hop(s)'
+  summary: Path from leaked_device_webhook_id to mobile_app_webhook_api in 1 hop(s);
+    feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: leaked_device_webhook_id --[compromisable_via_finding/high]--> mobile_app_webhook_api.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-3216132a)
+    excerpt: leaked_device_webhook_id --[compromisable_via_finding/high]--> mobile_app_webhook_api
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-3216132a
+    excerpt: Path from leaked_device_webhook_id to mobile_app_webhook_api in 1 hop(s);
+      feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - AC-2(3)
+    - IA-5
+    - IA-5(1)
+  cross_references:
+  - ephem-053957f3
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-1c6e6d93
+  agent: attack_path_analyzer
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: compromised_user_session_token
+    -> user_credentials_store in 1 hop(s)'
+  summary: Path from compromised_user_session_token to user_credentials_store in 1
+    hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: compromised_user_session_token --[compromisable_via_finding/high]-->
+    user_credentials_store. Feasibility floor = high. Severity sum = 3. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-bed97f5a)
+    excerpt: compromised_user_session_token --[compromisable_via_finding/high]-->
+      user_credentials_store
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-bed97f5a
+    excerpt: Path from compromised_user_session_token to user_credentials_store in
+      1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-2(3)
+    - IA-5
+    - IA-5(1)
+    - IA-5(7)
+  cross_references:
+  - ephem-9915ab91
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-2f99eb69
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: risk
+  severity: high
+  confidence: medium
+  title: 'High-feasibility attack path with no capability coverage: compromised_third_party_integration
+    -> integration_secret_storage in 1 hop(s)'
+  summary: Path from compromised_third_party_integration to integration_secret_storage
+    in 1 hop(s); feasibility=medium; severity_sum=3; mitigations on path=0.
+  detail: 'Path: compromised_third_party_integration --[compromisable_via_finding/medium]-->
+    integration_secret_storage. Feasibility floor = medium. Severity sum = 3. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-2d7bed5b)
+    excerpt: compromised_third_party_integration --[compromisable_via_finding/medium]-->
+      integration_secret_storage
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-2d7bed5b
+    excerpt: Path from compromised_third_party_integration to integration_secret_storage
+      in 1 hop(s); feasibility=medium; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-4
+    - SC-7
+    - SI-10
+    - SI-15
+  cross_references:
+  - intg-8b158cfe
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor medium. Adding a capability on
+      any high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-37351bc1
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: supply_chain_attacker
+    -> supervisor_docker_control_plane in 1 hop(s)'
+  summary: Path from supply_chain_attacker to supervisor_docker_control_plane in 1
+    hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: supply_chain_attacker --[compromisable_via_finding/high]--> supervisor_docker_control_plane.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-60f34ebc)
+    excerpt: supply_chain_attacker --[compromisable_via_finding/high]--> supervisor_docker_control_plane
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-60f34ebc
+    excerpt: Path from supply_chain_attacker to supervisor_docker_control_plane in
+      1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - CM-5
+    - SI-7
+    - SR-11
+    - SR-4
+    - SR-4(3)
+  cross_references:
+  - auth-8f0d8172
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-5390f103
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: critical
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: physical_thief_with_stolen_device
+    -> user_credentials_store in 1 hop(s)'
+  summary: Path from physical_thief_with_stolen_device to user_credentials_store in
+    1 hop(s); feasibility=high; severity_sum=4; mitigations on path=0.
+  detail: 'Path: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+    user_credentials_store. Feasibility floor = high. Severity sum = 4. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-6afde20d)
+    excerpt: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+      user_credentials_store
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-6afde20d
+    excerpt: Path from physical_thief_with_stolen_device to user_credentials_store
+      in 1 hop(s); feasibility=high; severity_sum=4; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - IA-5(1)
+    - SC-12
+    - SC-13
+    - SC-28
+    - SC-28(1)
+  cross_references:
+  - conf-fdf0fb06
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-58d38c18
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: high
+  confidence: medium
+  title: 'High-feasibility attack path with no capability coverage: physical_thief_with_stolen_device
+    -> mobile_stored_session_and_refresh_tokens in 1 hop(s)'
+  summary: Path from physical_thief_with_stolen_device to mobile_stored_session_and_refresh_tokens
+    in 1 hop(s); feasibility=medium; severity_sum=3; mitigations on path=0.
+  detail: 'Path: physical_thief_with_stolen_device --[compromisable_via_finding/medium]-->
+    mobile_stored_session_and_refresh_tokens. Feasibility floor = medium. Severity
+    sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-42380661)
+    excerpt: physical_thief_with_stolen_device --[compromisable_via_finding/medium]-->
+      mobile_stored_session_and_refresh_tokens
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-42380661
+    excerpt: Path from physical_thief_with_stolen_device to mobile_stored_session_and_refresh_tokens
+      in 1 hop(s); feasibility=medium; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - MP-5
+    - SC-28
+    - SC-28(1)
+  cross_references:
+  - conf-a30cca33
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor medium. Adding a capability on
+      any high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-5943bd97
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: compromised_backend_or_response
+    -> mobile_stored_session_and_refresh_tokens in 1 hop(s)'
+  summary: Path from compromised_backend_or_response to mobile_stored_session_and_refresh_tokens
+    in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: compromised_backend_or_response --[compromisable_via_finding/high]-->
+    mobile_stored_session_and_refresh_tokens. Feasibility floor = high. Severity sum
+    = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-562121fc)
+    excerpt: compromised_backend_or_response --[compromisable_via_finding/high]-->
+      mobile_stored_session_and_refresh_tokens
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-562121fc
+    excerpt: Path from compromised_backend_or_response to mobile_stored_session_and_refresh_tokens
+      in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-4
+    - IA-9
+    - SC-23
+    - SI-10
+  cross_references:
+  - auth-ea69d3a2
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-6f901446
+  agent: attack_path_analyzer
+  apd_tier: scalability
+  apd_goal: ephemeral
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: compromised_user_session_token
+    -> refresh_token_jwt_signing_keys in 1 hop(s)'
+  summary: Path from compromised_user_session_token to refresh_token_jwt_signing_keys
+    in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: compromised_user_session_token --[compromisable_via_finding/high]-->
+    refresh_token_jwt_signing_keys. Feasibility floor = high. Severity sum = 3. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-1fa1f3ab)
+    excerpt: compromised_user_session_token --[compromisable_via_finding/high]-->
+      refresh_token_jwt_signing_keys
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-1fa1f3ab
+    excerpt: Path from compromised_user_session_token to refresh_token_jwt_signing_keys
+      in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - IA-5(1)
+    - IA-5(13)
+  cross_references:
+  - ephem-f19f24f9
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-81ea3f91
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: physical_thief_with_stolen_device
+    -> mobile_on_device_location_and_entity_cache in 1 hop(s)'
+  summary: Path from physical_thief_with_stolen_device to mobile_on_device_location_and_entity_cache
+    in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+    mobile_on_device_location_and_entity_cache. Feasibility floor = high. Severity
+    sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-fc460fc4)
+    excerpt: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+      mobile_on_device_location_and_entity_cache
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-fc460fc4
+    excerpt: Path from physical_thief_with_stolen_device to mobile_on_device_location_and_entity_cache
+      in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - SC-13
+    - SC-28
+    - SC-28(1)
+  cross_references:
+  - conf-205c53a5
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-89ebba8a
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: critical
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: internal_lateral_attacker
+    -> supervisor_docker_control_plane in 1 hop(s)'
+  summary: Path from internal_lateral_attacker to supervisor_docker_control_plane
+    in 1 hop(s); feasibility=high; severity_sum=4; mitigations on path=0.
+  detail: 'Path: internal_lateral_attacker --[compromisable_via_finding/high]--> supervisor_docker_control_plane.
+    Feasibility floor = high. Severity sum = 4. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-e87b8ab2)
+    excerpt: internal_lateral_attacker --[compromisable_via_finding/high]--> supervisor_docker_control_plane
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-e87b8ab2
+    excerpt: Path from internal_lateral_attacker to supervisor_docker_control_plane
+      in 1 hop(s); feasibility=high; severity_sum=4; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-6
+    - IA-2
+    - IA-3
+    - IA-9
+    - SC-23
+  cross_references:
+  - auth-6924f467
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-95a6ebd6
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: compromised_admin_session
+    -> user_permission_policy_engine in 1 hop(s)'
+  summary: Path from compromised_admin_session to user_permission_policy_engine in
+    1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: compromised_admin_session --[compromisable_via_finding/high]--> user_permission_policy_engine.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-fd8c49b9)
+    excerpt: compromised_admin_session --[compromisable_via_finding/high]--> user_permission_policy_engine
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-fd8c49b9
+    excerpt: Path from compromised_admin_session to user_permission_policy_engine
+      in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AU-10
+    - AU-12
+    - AU-12(1)
+    - AU-2
+    - AU-3
+  cross_references:
+  - nonrep-12328d11
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-98522141
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: authenticity
+  disposition: uncertainty
+  severity: low
+  confidence: low
+  title: Suppressed risk attack paths collapsed into one aggregate
+  summary: 1528 additional risk-eligible attack path(s) of 1545 enumerated were suppressed
+    from the findings file (per-pair cap = 1 risk finding(s) per attacker x crown-jewel
+    pair). Only the worst path per pair is surfaced as a discrete risk finding.
+  detail: "To keep the advisory signal focused, the analyzer bounds risk findings\
+    \ to the worst 1 path(s) per (attacker_position, crown_jewel) pair. 1528 lower-ranked\
+    \ risk-eligible path(s) (of 1545 total enumerated paths) are collapsed into this\
+    \ single aggregate. Every enumerated path \u2014 suppressed or not \u2014 is retained\
+    \ verbatim in 40-synthesis/attack-paths.yaml, the artifact of record; consult\
+    \ it to inspect the full set."
+  evidence:
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: paths
+    excerpt: 1528 of 1545 enumerated paths suppressed from findings (per-pair cap=1)
+  control_mappings:
+    nist_800_53r5:
+    - CA-3
+    - SA-8
+  cross_references: []
+  recommendation:
+    posture: consider
+    summary: Review 40-synthesis/attack-paths.yaml for the full path set; raise max_risk_findings_per_pair
+      if more per-pair detail is wanted.
+- schema_version: 1
+  id: apath-9cb7577b
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: malicious_or_compromised_addon
+    -> refresh_token_jwt_signing_keys in 1 hop(s)'
+  summary: Path from malicious_or_compromised_addon to refresh_token_jwt_signing_keys
+    in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: malicious_or_compromised_addon --[compromisable_via_finding/high]-->
+    refresh_token_jwt_signing_keys. Feasibility floor = high. Severity sum = 3. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-eaffca21)
+    excerpt: malicious_or_compromised_addon --[compromisable_via_finding/high]-->
+      refresh_token_jwt_signing_keys
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-eaffca21
+    excerpt: Path from malicious_or_compromised_addon to refresh_token_jwt_signing_keys
+      in 1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - CM-5
+    - SC-28
+    - SI-7
+    - SI-7(1)
+  cross_references:
+  - intg-4768c0f0
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-a5e48149
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: network_mitm ->
+    mobile_stored_session_and_refresh_tokens in 1 hop(s)'
+  summary: Path from network_mitm to mobile_stored_session_and_refresh_tokens in 1
+    hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: network_mitm --[compromisable_via_finding/high]--> mobile_stored_session_and_refresh_tokens.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-4b258def)
+    excerpt: network_mitm --[compromisable_via_finding/high]--> mobile_stored_session_and_refresh_tokens
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-4b258def
+    excerpt: Path from network_mitm to mobile_stored_session_and_refresh_tokens in
+      1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - SC-17
+    - SC-23
+    - SC-8
+    - SC-8(1)
+  cross_references:
+  - auth-1787eae1
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-b3a517fc
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: physical_thief_with_stolen_device
+    -> recorder_history_db in 1 hop(s)'
+  summary: Path from physical_thief_with_stolen_device to recorder_history_db in 1
+    hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+    recorder_history_db. Feasibility floor = high. Severity sum = 3. Mitigations along
+    path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-31b2026a)
+    excerpt: physical_thief_with_stolen_device --[compromisable_via_finding/high]-->
+      recorder_history_db
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-31b2026a
+    excerpt: Path from physical_thief_with_stolen_device to recorder_history_db in
+      1 hop(s); feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - CP-9
+    - CP-9(8)
+    - SC-12
+    - SC-28
+    - SC-28(1)
+  cross_references:
+  - conf-d814d818
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-d37b5700
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: unauthenticated_internet
+    -> user_credentials_store in 1 hop(s)'
+  summary: Path from unauthenticated_internet to user_credentials_store in 1 hop(s);
+    feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: unauthenticated_internet --[compromisable_via_finding/high]--> user_credentials_store.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-f3cc151e)
+    excerpt: unauthenticated_internet --[compromisable_via_finding/high]--> user_credentials_store
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-f3cc151e
+    excerpt: Path from unauthenticated_internet to user_credentials_store in 1 hop(s);
+      feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - AC-6
+    - AC-6(2)
+    - IA-2(1)
+    - IA-2(2)
+    - IA-2(8)
+  cross_references:
+  - auth-7162fd48
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-df6be909
+  agent: attack_path_analyzer
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: risk
+  severity: high
+  confidence: medium
+  title: 'High-feasibility attack path with no capability coverage: unauthenticated_internet
+    -> recorder_history_db in 1 hop(s)'
+  summary: Path from unauthenticated_internet to recorder_history_db in 1 hop(s);
+    feasibility=medium; severity_sum=3; mitigations on path=0.
+  detail: 'Path: unauthenticated_internet --[compromisable_via_finding/medium]-->
+    recorder_history_db. Feasibility floor = medium. Severity sum = 3. Mitigations
+    along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-e27e2e67)
+    excerpt: unauthenticated_internet --[compromisable_via_finding/medium]--> recorder_history_db
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-e27e2e67
+    excerpt: Path from unauthenticated_internet to recorder_history_db in 1 hop(s);
+      feasibility=medium; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+  cross_references:
+  - avail-4be2dd70
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor medium. Adding a capability on
+      any high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.
+- schema_version: 1
+  id: apath-ff51339a
+  agent: attack_path_analyzer
+  apd_tier: auditability
+  apd_goal: authenticity
+  disposition: risk
+  severity: high
+  confidence: high
+  title: 'High-feasibility attack path with no capability coverage: internal_lateral_attacker
+    -> user_credentials_store in 1 hop(s)'
+  summary: Path from internal_lateral_attacker to user_credentials_store in 1 hop(s);
+    feasibility=high; severity_sum=3; mitigations on path=0.
+  detail: 'Path: internal_lateral_attacker --[compromisable_via_finding/high]--> user_credentials_store.
+    Feasibility floor = high. Severity sum = 3. Mitigations along path = 0.'
+  evidence:
+  - artifact: 40-synthesis/asset-graph.yaml
+    locator: edges (path path-6480772d)
+    excerpt: internal_lateral_attacker --[compromisable_via_finding/high]--> user_credentials_store
+  - artifact: 40-synthesis/attack-paths.yaml
+    locator: path-6480772d
+    excerpt: Path from internal_lateral_attacker to user_credentials_store in 1 hop(s);
+      feasibility=high; severity_sum=3; mitigations on path=0.
+  control_mappings:
+    nist_800_53r5:
+    - IA-3
+    - IA-9
+    - SC-23
+    - SC-23(3)
+    - SC-8(1)
+  cross_references:
+  - auth-23048c0c
+  recommendation:
+    posture: required
+    summary: Reduce path feasibility by adding capability coverage on the highest-confidence
+      edge or removing a low-confidence reachability assumption
+    detail: Path has 1 hops with feasibility floor high. Adding a capability on any
+      high-confidence compromisable edge or strengthening identity controls along
+      this path closes the kill-chain.

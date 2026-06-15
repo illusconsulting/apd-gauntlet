@@ -1,0 +1,554 @@
+schema_version: 1
+generated_by: apd-cluster-adjudicator
+
+# ---------------------------------------------------------------------------
+# Cluster adjudication for runs/apd-20260612-home-assistant
+# 12 candidate groups. Merges only operate WITHIN a group; the classic
+# multi-lens convergences the candidate command split across groups
+# (os-agent host-root no-authz; .storage plaintext; bearer-less webhook) are
+# stitched with reciprocal `link` edges, biasing to link on ambiguity.
+# ---------------------------------------------------------------------------
+
+decisions:
+
+  # === cluster-cand-0001 — title_similarity only =========================
+  # Nine records grouped by a shallow title-shape signal but spanning five
+  # distinct root causes (CA-trust MitM, no payload signing, no device
+  # attestation, webhook_id-only auth, os-agent host-root no-authz) plus three
+  # unrelated availability gaps. The mechanical signal is spurious for a merge.
+  # Keep distinct; link the genuinely coupled pairs (os-agent authz<->no
+  # payload-signing trust plane; webhook_id-only-auth <-> its avail/integrity
+  # siblings live in other groups, linked there).
+  - group_id: cluster-cand-0001
+    decision: separate
+    links:
+      - from: auth-6924f467
+        to: auth-23048c0c
+      - from: auth-3f2314a4
+        to: auth-1787eae1
+
+  # === cluster-cand-0002 — evidence_locator_overlap ======================
+  # Mixed bag joined because several records cite the same webhook /
+  # TLSHelper / Room / push-relay locators. The TLS-MitM pair is one root
+  # cause through two lenses (Authenticity: forgeable backend identity;
+  # Confidentiality: token/PII decryptable). MERGE that pair's intent by
+  # linking — but they are in DIFFERENT records here (auth-1787eae1 is in
+  # 0001, conf-2029ce78 is here), so this group itself is heterogeneous:
+  # webhook-rate-limit (avail), TLS-MitM (conf), Room-plaintext (conf),
+  # WebView token bridge (conf), iOS keychain (conf), Firebase config (conf).
+  # No single root cause spans the whole group → separate, with targeted links.
+  - group_id: cluster-cand-0002
+    decision: separate
+    links:
+      - from: conf-2029ce78
+        to: auth-1787eae1
+      - from: avail-a292763c
+        to: auth-3f2314a4
+      - from: conf-3060c50e
+        to: conf-205c53a5
+
+  # === cluster-cand-0003 — related_concerns ==============================
+  # The Recorder-DB-at-rest pair is one root cause through two lenses:
+  # conf-fec577ec (no encryption at rest over home-occupancy/geo) and
+  # immut-1e09d798 (no append-only/WORM/hash over the same store). They cite
+  # the identical recorder session_scope locator and the same data estate.
+  # MERGE those two. The remaining members (backup-unencrypted, .storage
+  # plaintext, jwt_key-no-rotation, supervisor-token-lifecycle, on-device
+  # token-no-wipe, single-instance load, stateful-tier) are distinct root
+  # causes; link the at-rest cluster (.storage / backup / recorder) and the
+  # token-lifetime cluster.
+  - group_id: cluster-cand-0003
+    decision: merge
+    merged_title: "Recorder history DB persists home-occupancy/geolocation state with neither encryption nor tamper-evidence at rest"
+    merged_summary: "The Recorder history store holds raw presence, geolocation, and lock/alarm state with no encryption-at-rest and no append-only/WORM/content-hash protection, so any filesystem or DB read both discloses the home-occupancy fact base and can silently rewrite or delete it undetected."
+    merged_detail: |
+      Two lenses converge on the single Recorder store (session_scope, an
+      ordinary mutable SQLite/MariaDB/Postgres database). The Confidentiality
+      lens establishes the store has no encryption-at-rest layer over a
+      high-privacy fact base (presence, geolocation/zones, lock and alarm
+      history), so a host or DB read discloses where occupants are and were.
+      The Immutability lens establishes the same store has no append-only tier,
+      no WORM, and no content-hash, so the same actor with DB or host access
+      can rewrite or delete that history with no detection. The two are the
+      same architectural decision — Recorder is a plain mutable, plaintext DB —
+      assessed for the two distinct properties it lacks (secrecy at rest, and
+      preservation against alteration). Treating them as one record keeps the
+      remediation coherent: an at-rest protection program for Recorder must
+      address both encryption and tamper-evidence together, because partial
+      work (encrypt-only, or hash-only) leaves the other exposure standing.
+    merged_recommendation:
+      posture: required
+      summary: "Apply both encryption-at-rest and tamper-evidence to the Recorder history store as one program."
+      detail: |
+        The two lenses reinforce rather than conflict, so integrate the
+        remediation: place the Recorder DB on an encrypted-at-rest backing
+        (full-disk or DB-native TDE plus, where feasible, field-level
+        protection of the highest-privacy presence/geo columns) AND add
+        tamper-evidence over the history records (append-only/WORM tier or a
+        periodic content-hash/Merkle anchor with an external chain head). Both
+        are required because each closes a different exposure on the same
+        store; shipping only one leaves either the disclosure or the silent-
+        alteration risk fully open. Sequence the at-rest encryption first
+        (it gates the Immutability-over-PHI cross-tier dependency) then layer
+        the integrity anchoring.
+    lens_perspectives:
+      confidentiality:
+        summary: "The Recorder history database (SQLite/MariaDB/Postgres) stores raw entity-state history — presence, geolocation/zones, lock and alarm state — with no encryption-at-rest mechanism observed, exposing the high-privacy home-occupancy fact base on any filesystem or DB read."
+        detail: "conf-fec577ec: the Recorder store at code:homeassistant.helpers.recorder.session_scope persists the full entity-state history with no encryption-at-rest mechanism observed; on any filesystem or DB read the home-occupancy fact base (presence, geolocation/zones, lock and alarm state) is disclosed. Mapped SC-28/SC-28(1)/SC-13/AC-4; ATT&CK T1005."
+      immutability:
+        summary: "The Recorder DB (session_scope) is an ordinary mutable SQLite/MariaDB/Postgres store; presence, geolocation, and lock/alarm state history can be altered or deleted by anyone with DB or host access, and there is no integrity tag to detect it."
+        detail: "immut-1e09d798: the Recorder DB at the same session_scope locator is an ordinary mutable store with no append-only, WORM, or content-hash protection; a compromised actor with DB or host access can silently rewrite or delete physical-device event history (presence, geolocation, lock/alarm), and no integrity tag exists to detect the alteration. Mapped AU-9/AU-9(2)/AU-9(3)/SI-7/SI-7(8)/AU-11; ATT&CK T1565, T1070."
+    links:
+      - from: conf-fdf0fb06
+        to: conf-d814d818
+      - from: ephem-b9625c61
+        to: ephem-e6671d41
+      - from: conf-d814d818
+        to: ephem-cf71612d
+
+  # === cluster-cand-0004 — evidence_locator_overlap + related_concerns ===
+  # Two genuine same-root-cause merges live here, but they are DIFFERENT root
+  # causes, so the group as a whole is not one merge. The dominant signal is
+  # the .storage plaintext locator (Store._write_prepared_data) shared by
+  # intg-4768c0f0 (no MAC/content-hash → tamper forges keys) and
+  # immut-8eb14ea4 (no version history/drift detection over the same
+  # plaintext .storage). Those two + the Confidentiality .storage record
+  # (conf-fdf0fb06, in group 0003) are the canonical Conf+Integrity+Immutability
+  # convergence. Within THIS group merge the Integrity+Immutability .storage
+  # pair; link the os-agent host-root trio and the WebView-bridge pair out to
+  # their cross-group siblings.
+  - group_id: cluster-cand-0004
+    decision: merge
+    merged_title: "Core .storage is plaintext JSON with no content MAC, version history, or drift detection, so a file-write tampers keys/policy and config changes leave no immutable record"
+    merged_summary: "All Home Assistant .storage (refresh-token jwt_keys, user/group policy, integration secrets, plus configuration.yaml) is mutable plaintext gated only by 0600 file permissions, with no content MAC, no required version history or signed-commit path, and no declared-vs-actual drift detection, so a single file-write both forges signing keys/escalates privilege undetected and leaves config changes with no immutable change record."
+    merged_detail: |
+      The Integrity and Immutability lenses converge on the same artifact —
+      .storage written in place by Store._write_prepared_data as plaintext
+      UTF-8 JSON, protected only by 0600 filesystem permissions — for two
+      properties it lacks. The Integrity lens: there is no MAC or content hash
+      over the records, so a file-write primitive forges refresh-token jwt_keys
+      (minting valid access tokens) or rewrites the user/group permission
+      policy (escalating a principal) with no detection at read time. The
+      Immutability lens: the same plaintext store, plus configuration.yaml, has
+      no required version history, no signed-commit/GitOps-only change path, and
+      no drift detection between declared and running state, so the change that
+      tampers it also leaves no immutable record that it occurred. These are one
+      root cause — .storage has no cryptographic protection and no change
+      provenance — viewed as a write-time forgery risk and as a preservation/
+      change-record gap. The Confidentiality lens on the same .storage
+      (conf-fdf0fb06, no encryption at rest, critical) is the third face of the
+      convergence and is linked rather than merged because it lives in another
+      candidate group; together the three are the Conf+Integrity+Immutability
+      .storage triad.
+    merged_recommendation:
+      posture: required
+      summary: "Add a content MAC plus a versioned, drift-detected change path over .storage so tampering both fails verification and leaves an immutable record."
+      detail: |
+        The two lenses reinforce: a single protection program closes both. (1)
+        Integrity — add a keyed MAC or signed-content envelope over each
+        .storage record (key held outside the .storage tree), verified on read,
+        so a directed file-write that forges a jwt_key or flips a policy fails
+        verification rather than silently taking effect. (2) Immutability —
+        route config-affecting .storage and configuration.yaml changes through a
+        versioned, signed-commit/GitOps path as the only sanctioned mutation
+        route, and run declared-vs-actual drift detection so an out-of-band edit
+        is both rejected and recorded. Pair this with the Confidentiality
+        at-rest encryption tracked in the linked .storage record — the MAC
+        protects against tamper, the encryption against disclosure, and the
+        version history against silent change; all three are required because
+        each leaves a distinct exposure standing if omitted.
+    lens_perspectives:
+      integrity:
+        summary: "All .storage is plaintext JSON gated only by 0600 file perms; there is no integrity protection on refresh-token jwt_keys, user/group policy, or integration secrets, so a file-write primitive forges signing keys or escalates a user with no detection."
+        detail: "intg-4768c0f0: Store._write_prepared_data writes .storage as plaintext UTF-8 JSON with 0600 perms and no MAC/content hash; a file-write primitive forges refresh-token jwt_keys or escalates a user via the permission policy with no read-time detection. Mapped SI-7/SI-7(1)/CM-5/SC-28; ATT&CK T1606."
+      immutability:
+        summary: "Config is YAML plus mutable plaintext .storage written in place by Store._write_prepared_data; there is no version-history requirement, no signed-commit/GitOps path as the only route to change, and no drift detection between a declared state and the running state."
+        detail: "immut-8eb14ea4: configuration.yaml plus .storage (same Store._write_prepared_data locator) carry no required version history, no signed-commit/GitOps-only change path, and no declared-vs-actual drift detection, so config changes leave no immutable change record. Mapped CM-2/CM-2(2)/CM-2(3)/CM-3/CM-3(1)/CM-6."
+    links:
+      - from: intg-4768c0f0
+        to: conf-fdf0fb06
+      - from: intg-d5c5bca5
+        to: auth-6924f467
+      - from: intg-d5c5bca5
+        to: nonrep-177fa3cc
+      - from: intg-3b33966f
+        to: resil-43c0c35b
+      - from: intg-5df46115
+        to: auth-3f2314a4
+
+  # === cluster-cand-0005 — evidence_locator_overlap ======================
+  # Joined by the shared POST /api/states + webhook locators, but the records
+  # are a mix of write-path-authz (intg-d6c5e666), webhook-idempotency
+  # (intg-ebff194f), and four distinct audit-gap findings (device actuation,
+  # os-agent host-root, audit-read SoD, supervisor privileged-API, auth
+  # subsystem). The four nonrep-* records share a real common root cause:
+  # Core/Supervisor emit no attributable security-audit record over the
+  # consequential-action surface. MERGE the audit-absence cluster
+  # (nonrep-12328d11 + nonrep-3b6ebb6c + nonrep-5dd8b9f0); nonrep-177fa3cc is
+  # the os-agent face and links to its integrity/authenticity siblings;
+  # nonrep-30404306 (audit-read SoD) is a consequence of the same absence and
+  # links. Keep the two integrity write-path records distinct (linked to
+  # webhook/state siblings).
+  - group_id: cluster-cand-0005
+    decision: merge
+    merged_title: "Core and Supervisor emit no attributable security-audit record over the consequential-action surface (device actuation, auth lifecycle, privileged Supervisor API)"
+    merged_summary: "There is no security-purposed audit stream in Core or Supervisor: admin-gated state writes and service calls that actuate locks/alarms, the entire auth/token/credential lifecycle, and the host-root-equivalent Supervisor operations (add-on install, backup, container-exec) all complete with no attributable record naming who did what, leaving the highest-impact action paths fully deniable and credential-compromise reconstruction impossible."
+    merged_detail: |
+      Three Non-Repudiation findings cite distinct entrypoints (POST /api/states
+      and service dispatch; the Core auth subsystem's token/credential events;
+      the Supervisor privileged-API middleware) but share one root cause: the
+      system has no security-audit stream over its consequential-action surface.
+      The device-actuation path emits no record naming who actuated which lock
+      or alarm (nonrep-12328d11). The auth subsystem produces no auditable event
+      for login success/failure, token issuance/refresh/revocation, or
+      password/MFA change (nonrep-5dd8b9f0). The Supervisor middleware logs only
+      role-DENY misses as a diagnostic warning; the host-root-equivalent
+      operations it ALLOWS (add-on lifecycle, backup, Docker exec) produce no
+      record of the allowed action or its caller (nonrep-3b6ebb6c). Each is the
+      same gap — no attributable audit over consequential actions — observed at
+      a different surface. Merging them yields one coherent finding: the
+      audit-stream absence, scoped across the three action surfaces, so the
+      remediation is designed once rather than three times. The os-agent
+      host-root audit gap (nonrep-177fa3cc) and the audit-read/SoD gap
+      (nonrep-30404306) are downstream of the same absence and are linked.
+    merged_recommendation:
+      posture: required
+      summary: "Introduce one security-audit stream covering device actuation, auth lifecycle, and privileged Supervisor operations, with actor attribution on every entry."
+      detail: |
+        The three lenses reinforce a single program. Define the consequential-
+        action surface (device actuation via /api/states and service calls; the
+        full auth/token/credential/MFA lifecycle; every ALLOWED Supervisor
+        privileged operation — add-on install/remove, backup, container exec),
+        then emit a security-purposed audit record on each, distinct from the
+        user-facing logbook and the diagnostic logger, carrying actor (subject,
+        on-behalf-of, source), action, target, and time. Critically, log
+        ALLOWED privileged operations, not only DENIED ones — the current
+        Supervisor middleware inverts this. Pair the stream with tamper-evidence
+        and an audit-read/segregation-of-duties role (tracked in the linked
+        os-agent and audit-read records) so the new evidence is itself durable
+        and access-controlled. This is required: without it the highest-impact
+        actions in the system are unattributable and disputes are unwinnable.
+    lens_perspectives:
+      non_repudiation:
+        summary: "The admin-gated state write and the arbitrary service-call dispatch that actuate physical devices (locks, alarms, switches) emit no security audit record naming who actuated what, defeating dispute response on the highest-impact action path."
+        detail: "Three merged Non-Repudiation findings. nonrep-12328d11 (device actuation, POST /api/states + service calls): no attributable record of who actuated what; mapped AU-2/AU-3/AU-10/AU-12/AU-12(1). nonrep-5dd8b9f0 (auth subsystem): login, token issuance/refresh/revocation, and password/MFA changes produce no auditable event, so credential-compromise reconstruction is impossible; mapped AU-2/AU-3/AU-10/AU-12/IA-5. nonrep-3b6ebb6c (Supervisor privileged API): SecurityMiddleware logs only role-DENY warnings, so ALLOWED add-on install, backup, and container-exec calls leave no audit record of the action or its caller; mapped AU-2/AU-3/AU-6(3)/AU-12/AC-6(9)."
+    links:
+      - from: nonrep-12328d11
+        to: nonrep-177fa3cc
+      - from: nonrep-12328d11
+        to: nonrep-30404306
+      - from: intg-d6c5e666
+        to: intg-5df46115
+      - from: intg-ebff194f
+        to: resil-872de693
+
+  # === cluster-cand-0006 — evidence_locator_overlap ======================
+  # Joined by the recorder session_scope + webhook + push-relay locators.
+  # The two non_repudiation records here (nonrep-9b5f6283 no-audit-log;
+  # nonrep-ad088fc0 no device-attributed server-side audit) are the same
+  # audit-absence root cause as the 0005 merge — but they sit in a different
+  # group, so they link to that merged audit finding rather than re-merging.
+  # The resilient records (WebView fail-safe, no timeout/circuit-breaker,
+  # webhook backpressure, mobile reconnect backoff, push queue-replay,
+  # bulkhead) are distinct resilience gaps; the event-loop-isolation pair
+  # (resil-5e5a02f0 + resil-cb12ebae) is one root cause — the shared single
+  # asyncio loop with no per-integration isolation. Merge that pair; link the
+  # audit records out and the webhook/push records to their siblings.
+  - group_id: cluster-cand-0006
+    decision: merge
+    merged_title: "2000+ in-process integrations and the recorder write path share one asyncio event loop with no per-integration timeout, bulkhead, or circuit breaker"
+    merged_summary: "Every one of 2000+ integrations and the recorder write path run on Core's single shared asyncio loop with no per-call timeout, circuit breaker, bulkhead, or execution-time budget, so one slow or hostile integration or outbound call blocks the loop and cascades to a platform-wide stall that starves the consequential alarm/lock and recorder paths."
+    merged_detail: |
+      Two Resilient findings describe the same structural decision from the
+      inbound and outbound sides of the shared loop. resil-5e5a02f0: outbound
+      calls from 2000+ in-process integrations to external devices/clouds run on
+      the shared loop with no per-call timeout or circuit breaker, so a slow or
+      hostile endpoint blocks the loop. resil-cb12ebae: the same 2000+
+      integrations plus the recorder write path share one asyncio loop with no
+      bulkhead, per-integration execution-time budget, or watchdog, so one
+      blocking integration starves the consequential alarm/lock and recorder
+      paths. Both name the identical root cause — a single shared event loop
+      with no isolation primitive — one emphasizing the missing outbound
+      timeout/breaker and the other the missing bulkhead/budget. Merging keeps
+      the isolation remediation as one design problem (loop isolation) rather
+      than two partial patches. The webhook-backpressure (resil-872de693),
+      mobile-reconnect (resil-895658c9), and push-queue-replay (resil-a4c9535c)
+      records are distinct resilience gaps on other surfaces and are linked, as
+      are the WebView fail-safe (resil-43c0c35b) and the two audit records that
+      belong to the cross-group audit-absence finding.
+    merged_recommendation:
+      posture: required
+      summary: "Isolate integrations and the recorder path from the shared loop with per-call timeouts, circuit breakers, and bulkheads."
+      detail: |
+        The two lenses reinforce one isolation design. Add a per-call timeout
+        and circuit breaker on every outbound integration call so a slow or
+        hostile external endpoint cannot pin the loop (resil-5e5a02f0), AND add
+        a bulkhead / per-integration execution-time budget plus a watchdog so a
+        single misbehaving integration cannot starve the consequential
+        alarm/lock and recorder paths (resil-cb12ebae). Run the recorder write
+        path and the consequential-actuation path in protected lanes (separate
+        executor or priority budget) so they survive a noisy integration. This
+        is required: the alarm/lock control path is the highest-consequence
+        surface and it currently shares an unbounded loop with 2000+ third-party
+        integrations.
+    lens_perspectives:
+      resilient:
+        summary: "2000+ integrations and the recorder write path share one asyncio loop with no bulkhead, per-integration execution-time budget, or watchdog, so one blocking integration starves the consequential alarm/lock and recorder paths."
+        detail: "Two merged Resilient findings on the shared loop. resil-5e5a02f0 (outbound side): no per-call timeout or circuit breaker on integration calls to external devices/clouds, so a slow/hostile endpoint blocks the loop and cascades platform-wide; mapped SI-13/SC-5/CP-13. resil-cb12ebae (isolation side): no bulkhead, per-integration execution-time budget, or watchdog isolating one integration from the shared loop, so one blocking integration starves the alarm/lock and recorder paths; mapped SC-6/SI-13/SC-5."
+    links:
+      - from: nonrep-9b5f6283
+        to: nonrep-12328d11
+      - from: nonrep-ad088fc0
+        to: nonrep-12328d11
+      - from: resil-43c0c35b
+        to: intg-3b33966f
+      - from: resil-872de693
+        to: avail-a292763c
+      - from: resil-a4c9535c
+        to: avail-a2cfd41c
+
+  # === cluster-cand-0007 — related_concerns ==============================
+  # Three credential-lifetime records (IndieAuth no PKCE; 10-year LLATs;
+  # unspecified portal session lifetime). They share the auth-flow artifact
+  # but are distinct root causes: an authorization-code interception risk, a
+  # decade-long static bearer, and an under-specified session policy. Not one
+  # root cause → separate; link the two that compose into "long-lived static
+  # bearer credentials" (LLAT + session-lifetime).
+  - group_id: cluster-cand-0007
+    decision: separate
+    links:
+      - from: ephem-9915ab91
+        to: ephem-db8641be
+
+  # === cluster-cand-0008 — evidence_locator_overlap + related_concerns ===
+  # Two records, same supervisor-README locator, same root cause: the
+  # Supervisor watchdog/health-check/auto-recovery behavior is undocumented.
+  # avail-77752ee2 (health-check depth/watchdog semantics undocumented) and
+  # resil-b1d0c558 (watchdog auto-recovery + restart policy undocumented) are
+  # the same uncertainty through the Availability (detection) and Resilient
+  # (recovery) lenses on the identical artifact. Clean MERGE.
+  - group_id: cluster-cand-0008
+    decision: merge
+    merged_title: "Supervisor health-check depth and watchdog auto-recovery / restart policy for Core and add-ons are undocumented, so failure detection and recovery cannot be assessed"
+    merged_summary: "The artifacts do not document the Supervisor's liveness/readiness/dependency health-check depth or its watchdog/observer auto-recovery and add-on restart policy, so on this single-host instance neither whether a hung-but-alive Core is detected nor whether it is automatically restarted (with what backoff and cap) can be assessed."
+    merged_detail: |
+      The Availability and Resilient lenses raise the same uncertainty about the
+      same artifact (the Supervisor README) from two sides of one mechanism.
+      Availability (avail-77752ee2): the depth of health checks — liveness vs
+      readiness vs dependency health — and the watchdog/observer semantics are
+      undocumented, so whether failures are DETECTED cannot be assessed.
+      Resilient (resil-b1d0c558): whether the watchdog auto-restarts a
+      hung-but-alive Core, with what backoff and restart cap, and the add-on
+      restart policy on crash, are undocumented, so whether failures are
+      RECOVERED cannot be assessed. Detection and recovery are the two halves of
+      the Supervisor watchdog/observer's role; both are open against the same
+      README evidence, and the resolving evidence (the watchdog/observer source
+      and its restart config) is identical for both. This is one uncertainty —
+      the Supervisor self-healing behavior is unspecified in the artifacts —
+      kept as a single record so the evidence request is made once.
+    merged_recommendation:
+      posture: recommended
+      summary: "Document and verify the Supervisor watchdog/observer health-check depth, auto-recovery, and add-on restart policy."
+      detail: |
+        Obtain and record the Supervisor watchdog/observer behavior: the
+        liveness/readiness/dependency health-check definitions Core and add-ons
+        expose, the conditions under which the watchdog restarts a hung-but-alive
+        Core, the backoff curve and restart cap, and the per-add-on restart
+        policy on crash. Both lenses are satisfied by the same evidence, so
+        request it once. Posture is recommended rather than required because the
+        finding is an uncertainty (the behavior may well be adequate but is
+        unverified in the artifacts) — code recon of the supervisor watchdog
+        module would likely resolve it.
+    lens_perspectives:
+      availability:
+        summary: "The artifacts do not document liveness vs readiness vs dependency health checks, nor the Supervisor watchdog/observer behavior, so whether failures are detected and acted on cannot be assessed."
+        detail: "avail-77752ee2: health-check depth and watchdog semantics for Core/Supervisor are undocumented in repos/supervisor-README.md, so whether failures are detected cannot be assessed. Mapped SI-13/CP-10/SC-5."
+      resilient:
+        summary: "Whether the Supervisor watchdog auto-restarts a hung-but-alive Core, with what backoff and restart cap, and the add-on restart policy on crash, are not in the artifacts, so the single-host instance's automatic-recovery behavior cannot be assessed."
+        detail: "resil-b1d0c558: Supervisor watchdog auto-recovery and add-on restart policy on Core/add-on failure are undocumented in the same supervisor-README.md, so the single-host instance's automatic-recovery behavior cannot be assessed. Mapped SI-13/SI-17/CP-10."
+
+  # === cluster-cand-0009 — capabilities (title_similarity + overlap) =====
+  # Eight informational capabilities joined mechanically. They are genuinely
+  # DISTINCT, independently-evidenced positive controls (Android mTLS
+  # hardware key, bcrypt login, Supervisor token+role ACL, ingress header
+  # strip, token-validation chokepoint, iOS/Android key custody, NaCl webhook
+  # encryption). Capabilities are not merged into one another — each is a
+  # separately attestable control with its own maturity and scope. Separate;
+  # the two duplicate-pair candidates (the AndroidKeyStore mTLS pair across
+  # auth/conf lenses) link rather than merge so both lens attestations survive.
+  - group_id: cluster-cand-0009
+    decision: separate
+    links:
+      - from: auth-cap-42c6a13f
+        to: conf-cap-01c47d42
+      - from: auth-cap-e9f55df8
+        to: auth-cap-eba3a527
+
+  # === cluster-cand-000a — capabilities (overlap + related_concerns) =====
+  # Capabilities again — distinct controls (NaCl SecretBox conf+integrity
+  # views of the webhook secret; token-validation chokepoint integrity view;
+  # Supervisor ACL integrity view; per-entity READ scoping conf+integrity
+  # views; recorder context_user_id trace; Supervisor deny-warning). These are
+  # the integrity-lens mirrors of capabilities also attested by other agents.
+  # Do not collapse positive attestations; separate and link the
+  # cross-lens duplicate pairs so each lens's attestation is preserved.
+  - group_id: cluster-cand-000a
+    decision: separate
+    links:
+      - from: conf-cap-277b2364
+        to: intg-cap-70ef26f7
+      - from: conf-cap-88473a97
+        to: intg-cap-ecebb879
+      - from: intg-cap-e88c8857
+        to: nonrep-cap-e865e0d3
+
+  # === cluster-cand-000b — capabilities (overlap + related_concerns + title) ==
+  # Push-relay rate-limit attested by both availability and resilient lenses,
+  # and the fail-closed policy compilation attested by integrity and resilient
+  # lenses. These are the same control seen twice each. Capabilities are not
+  # merged; link the cross-lens duplicate pairs so both the availability and
+  # resilient (and integrity/resilient) attestations remain on record.
+  - group_id: cluster-cand-000b
+    decision: separate
+    links:
+      - from: avail-cap-f97d3d6b
+        to: resil-cap-c76c9240
+      - from: intg-cap-e18bb24c
+        to: resil-cap-fa365a2d
+
+  # === cluster-cand-000c — capabilities (evidence_locator_overlap) =======
+  # Two capabilities on the SAME WS revoke-callback mechanism: dist-cap-827afb47
+  # (distributed: strongly-consistent in-process revocation propagation) and
+  # resil-cap-6a038f48 (resilient: socket self-corrects to closed on
+  # revocation). Same control, two lenses. Per capability discipline, keep both
+  # positive attestations rather than collapsing; link them.
+  - group_id: cluster-cand-000c
+    decision: separate
+    links:
+      - from: dist-cap-827afb47
+        to: resil-cap-6a038f48
+
+# ---------------------------------------------------------------------------
+# Contradictions: finding-vs-capability conflicts to classify.
+# The per-entity READ authorization capabilities (conf-cap-88473a97 /
+# intg-cap-ecebb879) explicitly state the code-recon pass RESOLVES the intake
+# brief's "not enforced yet" doc note to ENFORCED for reads. This is a
+# capability that supersedes a stale documentation premise — but the matching
+# write-path findings (intg-d6c5e666 admin-or-deny state WRITE; intg-5df46115
+# webhook call_service no per-entity authz) are COMPATIBLE, not contradicted:
+# the capability covers READ scoping only and the findings explicitly cover the
+# WRITE path, which the capability does NOT claim. The intg-cap-e18bb24c /
+# resil-cap-fa365a2d fail-closed capability self-documents the same boundary:
+# it protects against accidental corruption, NOT a directed tamper-to-True,
+# which is exactly the standing intg-4768c0f0 finding.
+# ---------------------------------------------------------------------------
+contradictions:
+  - finding_id: intg-d6c5e666
+    capability_id: conf-cap-88473a97
+    classification: compatible
+    finding_assertion: "POST /api/states write enforces only is_admin with no per-entity write policy, so any admin token mutates arbitrary entity state."
+    capability_assertion: "APIEntityStateView.get enforces per-entity check_entity(POLICY_READ) and filter_entity_ids_by_permission scopes the readable set per the compiled policy, resolving the brief's open question to ENFORCED for reads."
+    evidence_comparison: "The capability cites the GET path (L242-L255, check_entity POLICY_READ) and is explicit that it scopes READS; the finding cites the POST path (L257-L275, is_admin-or-deny) and is explicit that it concerns WRITES. The same permission engine is per-entity on read but coarse admin-or-deny on write — an asymmetry both records independently observe — so they describe adjacent, non-overlapping surfaces rather than the same claim."
+    recommended_resolution: "Keep both: the capability stands as a confirmed READ-path control and the finding stands as an open WRITE-path gap. Neither downgrades the other; the asymmetry itself is the actionable signal (extend per-entity policy to the write path)."
+  - finding_id: intg-5df46115
+    capability_id: intg-cap-ecebb879
+    classification: compatible
+    finding_assertion: "mobile_app webhook_call_service actuates arbitrary services (locks/alarms) with no per-entity write-path authorization, mutating state outside the permission engine."
+    capability_assertion: "Per-entity READ permission is enforced at the state view with deny-all-by-default policy compilation; the code-recon pass resolves the brief's load-bearing authz gap to ENFORCED for reads."
+    evidence_comparison: "The capability's scope is explicitly the READ path (APIEntityStateView.get, check_entity POLICY_READ, compile_policy fail-closed) and even names the doc note it resolves; the finding's scope is the webhook write path (webhook_call_service, registration_context, no per-entity check) which routes AROUND the permission engine entirely. The capability never claims write-path or webhook-path coverage, so its ENFORCED-for-reads attestation does not touch the finding's claim."
+    recommended_resolution: "Keep both. The capability resolves the READ-side documentation staleness; the finding's WRITE-side and webhook-bypass gaps are untouched by it and remain open. No maturity change."
+  - finding_id: intg-4768c0f0
+    capability_id: intg-cap-e18bb24c
+    classification: compatible
+    finding_assertion: "Core .storage records have no MAC or content hash, so a directed file-write silently forges refresh-token jwt_keys or escalates a user via the permission policy."
+    capability_assertion: "Permission policy compilation fails closed to deny-all on an empty or corrupt policy, so a missing/truncated/unparseable policy denies rather than defaulting open."
+    evidence_comparison: "The capability (compile_policy, apply_policy_deny_all) protects against ACCIDENTAL corruption and truncation — a malformed policy degrades to deny — and its own prose explicitly carves out that it does NOT protect against a DIRECTED tamper-to-True/allow-all. The finding is precisely that directed tamper: a file-write that sets policy to True or forges a jwt_key, which fail-closed compilation does not detect or prevent. The two address disjoint threat models (random corruption vs. adversarial write) on the same policy artifact."
+    recommended_resolution: "Keep both. The fail-closed capability is a genuine resilience/safe-default property; it neither covers nor weakens the directed-tamper finding. The MAC/content-hash remediation in the finding is the control that would close the directed-tamper gap the capability self-admits it does not."
+
+_members:
+  cluster-cand-0001:
+    - auth-1787eae1
+    - auth-23048c0c
+    - auth-3794d338
+    - auth-3f2314a4
+    - auth-6924f467
+    - avail-235dacf0
+    - avail-4be2dd70
+    - avail-5af6fee5
+  cluster-cand-0002:
+    - avail-754cfc01
+    - avail-a292763c
+    - avail-a2cfd41c
+    - conf-2029ce78
+    - conf-205c53a5
+    - conf-3060c50e
+    - conf-7a74a4a0
+    - conf-a30cca33
+  cluster-cand-0003:
+    - conf-d814d818
+    - conf-fdf0fb06
+    - conf-fec577ec
+    - dist-658bd883
+    - dist-b4e9697a
+    - ephem-b9625c61
+    - ephem-cf71612d
+    - ephem-e6671d41
+  cluster-cand-0004:
+    - immut-165d9547
+    - immut-1e09d798
+    - immut-8eb14ea4
+    - immut-95c2660e
+    - intg-3b33966f
+    - intg-4768c0f0
+    - intg-5df46115
+    - intg-d5c5bca5
+  cluster-cand-0005:
+    - intg-d6c5e666
+    - intg-ebff194f
+    - nonrep-12328d11
+    - nonrep-177fa3cc
+    - nonrep-30404306
+    - nonrep-3b6ebb6c
+    - nonrep-48224ecc
+    - nonrep-5dd8b9f0
+  cluster-cand-0006:
+    - nonrep-9b5f6283
+    - nonrep-ad088fc0
+    - resil-43c0c35b
+    - resil-5e5a02f0
+    - resil-872de693
+    - resil-895658c9
+    - resil-a4c9535c
+    - resil-cb12ebae
+  cluster-cand-0007:
+    - auth-3dbf15e7
+    - ephem-9915ab91
+    - ephem-db8641be
+  cluster-cand-0008:
+    - avail-77752ee2
+    - resil-b1d0c558
+  cluster-cand-0009:
+    - auth-cap-42c6a13f
+    - auth-cap-8144e2be
+    - auth-cap-e9f55df8
+    - auth-cap-eba3a527
+    - auth-cap-f01e6108
+    - conf-cap-01c47d42
+    - conf-cap-1044dbb3
+    - conf-cap-277b2364
+  cluster-cand-000a:
+    - conf-cap-88473a97
+    - intg-cap-70ef26f7
+    - intg-cap-7a54b1a7
+    - intg-cap-e88c8857
+    - intg-cap-ecebb879
+    - nonrep-cap-510a35c7
+    - nonrep-cap-e865e0d3
+  cluster-cand-000b:
+    - avail-cap-f97d3d6b
+    - intg-cap-e18bb24c
+    - resil-cap-c76c9240
+    - resil-cap-fa365a2d
+  cluster-cand-000c:
+    - dist-cap-827afb47
+    - resil-cap-6a038f48

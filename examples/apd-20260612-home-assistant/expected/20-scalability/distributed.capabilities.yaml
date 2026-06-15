@@ -1,0 +1,119 @@
+capability:
+- schema_version: 1
+  id: dist-cap-827afb47
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  title: Token-revocation state is consistently propagated to the live WebSocket connection within the single Core process
+  description: 'The WebSocket auth phase registers a per-connection revoke callback when a
+
+    socket authenticates (cev-a1000010), so when a refresh token is revoked the
+
+    bound live socket is dropped rather than continuing to serve a
+
+    now-invalid session. Because Core is a single process owning all its
+
+    sockets, this gives strongly-consistent revocation propagation across the
+
+    one failure domain: there is no cross-instance staleness window in which one
+
+    node would keep serving a connection another node revoked, precisely because
+
+    there is only one node. Within the Distributed lens this is the one place the
+
+    single-process topology yields a consistency benefit — token revocation is a
+
+    local, immediate, in-process event with no eventual-consistency lag.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code for the WebSocket auth handshake path (cev-a1000010):
+
+    revocation drops the live socket within the single Core process. NOT a
+
+    distributed capability — it works precisely because there is exactly one
+
+    process and one failure domain; it does not extend to any multi-instance,
+
+    replicated, or cross-host topology (none exists). The REST request path is
+
+    re-validated per request (cev-a1000002) rather than via a held callback.
+
+    Does not address availability of the single instance (see findings) or
+
+    cross-node consistency (not applicable — no second node).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: registers revoke callback to drop the socket on token revocation
+  control_mappings:
+    nist_800_53r5:
+    - SC-23
+    - SC-10
+    - AC-12
+  caveats:
+  - The consistency property holds only because the topology is single-process/single-host; it provides no benefit toward (and is not a substitute for) replication, failover, or horizontal scale.
+  - Per-request REST validation (cev-a1000002) is a separate mechanism; this capability is scoped to the WS held-connection path.
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: dist-cap-43ec806f
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  title: Single-host single-instance topology is an explicit, documented architectural choice across all four supported deployment methods
+  description: 'The deployment topology is a deliberate, documented decision rather than an
+
+    accidental gap. The system overview enumerates four supported install
+
+    methods (Home Assistant OS, Supervised, Container, Core) and frames Core as
+
+    "a single, highly-privileged trust domain," and the ADR set (0012-0016)
+
+    defines the supported installation/topology surface while ADR-0018 scopes the
+
+    recorder database engines. The topology is intentionally single-instance and
+
+    local-first; this capability records that the absence of clustering is a
+
+    declared design boundary (which lets the Distributed findings frame the SPOF
+
+    as a known constraint operators can plan around, not an oversight).
+
+    '
+  maturity: designed
+  scope: 'Confirmed: the four single-instance deployment topologies are documented and
+
+    intentional (overview lines 108-116; ADRs 0012-0016, 0018). NOT confirmed and
+
+    explicitly NOT provided by this capability: any redundancy, replication,
+
+    multi-AZ/multi-region placement, clustering, or automated failover — none
+
+    exists in any topology. This is a documentation/intent capability about the
+
+    boundary being declared, not a resilience capability. Data-residency /
+
+    region-binding policy is unaddressed (no multi-region surface exists).
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#deployment-topologies, lines 108-116'
+    excerpt: Home Assistant OS ... Supervised ... Container ... Core (bare Python venv)
+  - artifact: architecture/adr/0018-supported-databases.md
+    locator: '#decision, lines 36-42'
+    excerpt: Limit DB support to ... MariaDB ... MySQL ... PostgreSQL ... SQLite
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - SC-36
+  caveats:
+  - This is an intent/documentation capability only; it confers no redundancy, replication, or failover (see all Distributed findings, which it contextualizes rather than mitigates).
+  - The hardening baseline (org/SECURITY.md) does not currently restate the single-failure-domain constraint for operators; recommended in dist-0a1b2c3d.
+  related_concerns:
+  - availability
+  - resilient

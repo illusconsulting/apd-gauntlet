@@ -45,16 +45,9 @@
         "common-patterns/immutability.md"
       ]
     },
-    "apd_goal": {
-      "type": "string",
-      "enum": [
-        "confidentiality", "integrity", "availability",
-        "distributed", "resilient", "ephemeral",
-        "authenticity", "non_repudiation", "immutability"
-      ]
-    },
+    "apd_goal": { "$ref": "_defs.schema.json#/$defs/apd_goal" },
     "source": { "type": "string", "enum": ["deterministic", "judgment"] },
-    "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+    "priority": { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
     "evidence": {
       "type": "array",
       "minItems": 1,

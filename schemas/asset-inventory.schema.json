@@ -37,7 +37,7 @@
               "locator": { "type": "string" }
             }
           },
-          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+          "confidence": { "$ref": "_defs.schema.json#/$defs/ordinal_level" }
         }
       }
     },
@@ -52,7 +52,7 @@
           "name": { "type": "string", "minLength": 1 },
           "identity_type": { "type": "string", "enum": ["human_role", "service_account", "workload_identity", "external_party"] },
           "provenance": { "$ref": "#/properties/assets/items/properties/provenance" },
-          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+          "confidence": { "$ref": "_defs.schema.json#/$defs/ordinal_level" }
         }
       }
     },

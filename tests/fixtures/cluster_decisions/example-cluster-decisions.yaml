@@ -2,7 +2,7 @@ schema_version: 1
 generated_by: apd-cluster-adjudicator
 decisions:
   - group_id: cluster-cand-0001
-    disposition: merge
+    decision: merge
     merged_title: "Audit log is unsigned and stored in a mutable table with no WORM enforcement"
     merged_summary: "The audit_log table lacks both cryptographic signing and storage-layer immutability, meaning records can be altered or deleted by privileged users without detection."
     merged_detail: "Non-Repudiation and Immutability agents both identified this risk from complementary angles. The Non-Repudiation lens focuses on the inability to prove audit entries were not tampered with after the fact. The Immutability lens focuses on the absence of storage-layer WORM protection that would physically prevent modification. Together, these gaps mean the audit log cannot serve as reliable evidence in a HIPAA breach investigation or regulatory audit."

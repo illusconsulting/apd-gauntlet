@@ -1,17 +1,31 @@
-"""cluster-decisions schema: merge/link/separate dispositions + contradictions."""
+"""cluster-decisions schema: merge/link/separate decisions + contradictions."""
 from __future__ import annotations
 
 import json
 import pathlib
 
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 REPO = pathlib.Path(__file__).parent.parent
-SCHEMA = REPO / "schemas" / "cluster-decisions.schema.json"
+SCHEMA_DIR = REPO / "schemas"
+SCHEMA = SCHEMA_DIR / "cluster-decisions.schema.json"
+
+
+def _build_registry():
+    # cluster-decisions now $refs _defs.schema.json (chosen_severity); the
+    # registry must carry every schema by $id so the cross-file ref resolves.
+    resources = []
+    for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
+        schema = json.loads(schema_path.read_text())
+        sid = schema.get("$id")
+        if sid:
+            resources.append((sid, Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
 
 
 def _validator():
-    return Draft202012Validator(json.loads(SCHEMA.read_text()))
+    return Draft202012Validator(json.loads(SCHEMA.read_text()), registry=_build_registry())
 
 
 def test_minimal_merge_decision():
@@ -20,7 +34,7 @@ def test_minimal_merge_decision():
         "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
             "group_id": "cluster-cand-0001",
-            "disposition": "merge",
+            "decision": "merge",
             "merged_title": "x" * 12,
             "merged_summary": "y" * 12,
             "merged_detail": "z" * 21,
@@ -40,13 +54,13 @@ def test_minimal_merge_decision():
 
 def test_separate_decision_is_minimal():
     doc = {"schema_version": 1, "generated_by": "apd-cluster-adjudicator",
-           "decisions": [{"group_id": "cluster-cand-0002", "disposition": "separate"}]}
+           "decisions": [{"group_id": "cluster-cand-0002", "decision": "separate"}]}
     assert list(_validator().iter_errors(doc)) == []
 
 
-def test_rejects_bad_disposition():
+def test_rejects_bad_decision():
     doc = {"schema_version": 1, "generated_by": "apd-cluster-adjudicator",
-           "decisions": [{"group_id": "g", "disposition": "combine"}]}
+           "decisions": [{"group_id": "g", "decision": "combine"}]}
     assert list(_validator().iter_errors(doc))
 
 
@@ -100,7 +114,7 @@ def test_top_level_members_map_validates_clean():
     doc = {
         "schema_version": 1,
         "generated_by": "apd-cluster-adjudicator",
-        "decisions": [{"group_id": "cluster-cand-0001", "disposition": "merge",
+        "decisions": [{"group_id": "cluster-cand-0001", "decision": "merge",
                        "merged_title": "x" * 12, "merged_summary": "y" * 12,
                        "merged_detail": "z" * 21}],
         "_members": {"cluster-cand-0001": ["nonrep-62124087", "immut-e09e4945"]},

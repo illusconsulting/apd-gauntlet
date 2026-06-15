@@ -725,25 +725,28 @@ def test_threat_model_screen_exists_and_renders_blocks() -> None:
 
 # ── C4 architecture scene (Cytoscape compound) ───────────────────────────────
 def test_c4_screen_exists_and_renders_blocks() -> None:
+    """The C4 scene renders the grounded model as a TIERED system-map
+    (System → Container → Component → Code) via <C4TierGraph/>, NOT the
+    Cytoscape fcose force-graph. The honest banner + drill machine stay."""
     src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
-    # component declared + exported on window (bundle registration contract)
-    assert "function C4(" in src and "window.C4 = C4" in src
-    # consumes the contracted window key shape
-    assert "data.c4_model" in src
-    # reuses the shared compound-capable Cytoscape renderer with fcose layout
-    assert "GraphView" in src and "MermaidGraph" not in src
-    assert "compound={true}" in src or "compound" in src
-    assert 'layout="fcose"' in src
-    # drill-down level state: default L1+L2, click container -> components/code
+    # present-gate + honest banner (kept)
+    assert "c4.present" in src or "c4 || !c4.present" in src
+    assert "c4-banner" in src
+    assert "not_analyzed" in src and "unlocalized" in src
+    # NEW: the tiered renderer replaces GraphView. C4 no longer imports/uses
+    # GraphView or any Cytoscape layout — those moved out of the C4 path.
+    assert "C4TierGraph" in src
+    assert "GraphView" not in src, "C4 must not reference the Cytoscape GraphView"
+    assert 'layout="fcose"' not in src and 'layout="dagre"' not in src
+    assert "compound={true}" not in src
+    # the drill machine is preserved (now passed to C4TierGraph as onDrill)
     assert "selectedContainer" in src and "selectedComponent" in src
-    # honest banner: unlocalized findings + not-analyzed containers
-    assert "unlocalized_findings" in src and "not_analyzed_count" in src
-    # not_analyzed styling hook on nodes
-    assert "analysis_state" in src and "not_analyzed" in src
-    # finding-badge deep-link into the Findings tab
-    assert "onOpenFinding" in src
-    # reuses the report design language, not bespoke styling
-    assert "section-eyebrow" in src and "section-title" in src
+    assert "onDrill" in src
+    # the model + resolved overlay membership are fed to the tiered renderer
+    assert "model={" in src
+    assert "overlayC4NodeIds" in src
+    # the code-elements list (NodeRow) is kept beneath the scene
+    assert "NodeRow" in src and "onOpenFinding" in src
 
 
 def test_c4_screen_surfaces_node_kind_chip() -> None:
@@ -779,6 +782,154 @@ def test_c4_screen_registered_in_bundle_entry() -> None:
     entry = (REPO / "report-template" / ".build" / "entry.jsx").read_text(encoding="utf-8")
     # The screen MUST be a side-effect import or window.C4 is never set in the bundle.
     assert 'import "../screens/C4.jsx";' in entry
+
+
+def test_c4_router_helpers_present() -> None:
+    """Task 5: the orthogonal connector router + short-edge-label + SVG edge
+    layer ship in components.jsx (ported verbatim from the design handoff), and
+    are window-exported so the C4 scene can consume them. GraphView is untouched
+    (still Cytoscape) — these are additive, non-Cytoscape helpers."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # the four pure helpers + the edge-layer component
+    assert "function c4Anchors(" in comps
+    assert "function c4RouteWaypoints(" in comps
+    assert "function c4RoundedPath(" in comps
+    assert "function c4ShortEdgeLabel(" in comps
+    assert "function C4EdgeLayer(" in comps
+    # window-exported via the existing Object.assign(window, {...})
+    assert "c4Anchors" in comps and "c4RouteWaypoints" in comps and "c4RoundedPath" in comps
+    assert "C4EdgeLayer" in comps and "c4ShortEdgeLabel" in comps
+    # the router is the VERBATIM offsetParent-walk (zoom-invariant layout-box anchor)
+    assert "e.offsetParent" in comps and "el.offsetWidth" in comps
+    # orthogonal H-V-H / V-H-V branch (Math.abs(dx) >= Math.abs(dy))
+    assert "Math.abs(dx) >= Math.abs(dy)" in comps
+    # rounded elbow uses a quadratic curve at radius ~7
+    assert "Q ${b.x} ${b.y}" in comps
+    # the short label strips the CROSS_* machine prefix; full string kept for hover
+    assert "CROSS_" in comps
+    # GraphView (Cytoscape) is NOT removed — AttackPaths/ThreatModel still use it
+    assert "function GraphView(" in comps and "window.cytoscape" in comps
+
+
+def test_c4_global_connector_router_present() -> None:
+    """The GLOBAL connector router (distinct ports per side + gutter/lane routing
+    so connectors attach at distinct points, route in the clear gutters/bands, and
+    never cross a non-endpoint box) ships in components.jsx and is what C4EdgeLayer
+    uses. c4RouteWaypoints is RETAINED as the legality-guard fallback. The geometry
+    is pinned by report-template/.build/test/c4_solve_routes.test.mjs."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # the new pure helpers ship + are window-exported (for the node oracle)
+    for fn in ("function c4Grid(", "function c4SolveRoutes(", "function c4SegHitsRect("):
+        assert fn in comps, f"missing global-router helper: {fn}"
+    assert "c4Grid, c4SolveRoutes, c4SegHitsRect," in comps, \
+        "global-router helpers not window-exported"
+    # the edge layer measures the BACKBONE box set once and routes them GLOBALLY
+    # (not the old per-edge c4RouteWaypoints loop)
+    assert ".l2-backbone [data-c4id]" in comps, "router must measure the backbone box set"
+    assert "c4SolveRoutes(rects, edges" in comps, "C4EdgeLayer.measure must call the global solver"
+    # c4RouteWaypoints kept only as the guarded fallback
+    assert "c4RouteWaypoints(m.S, m.T)" in comps, "legacy router must remain the legality fallback"
+
+
+def test_c4_solve_routes_node_oracle() -> None:
+    """Run the committed node oracle that asserts the four routing defects
+    (edge-crosses-box, shared-ports, label-over-box, label-label) are ZERO on the
+    Home Assistant backbone fixture + the generality cases — the reproducible,
+    pure-math form of the headless verification. Skipped only where node is absent
+    (GitHub-hosted runners ship node, so this is an enforced gate there)."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        import pytest
+
+        pytest.skip("node not available")
+    harness = REPO / "report-template" / ".build" / "test" / "c4_solve_routes.test.mjs"
+    proc = subprocess.run([node, str(harness)], capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, (
+        f"c4_solve_routes node oracle failed:\n{proc.stdout}\n{proc.stderr}"
+    )
+
+
+def test_c4_tier_graph_present() -> None:
+    """Task 6: the C4TierGraph tiered renderer (no Cytoscape) ships in
+    components.jsx with the four tiers, the NodeBox in-node badge rules consuming
+    the REAL c4_model names, the C4EdgeLayer overlay, and a zoom/fit toolbar."""
+    comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "function C4TierGraph(" in comps
+    assert "function NodeBox(" in comps
+    assert "C4TierGraph" in comps  # window-exported
+    # the documented prop contract
+    for prop in ("model", "selectedContainer", "selectedComponent",
+                 "overlayC4NodeIds", "onDrill", "onOpenFinding"):
+        assert prop in comps, f"C4TierGraph must accept {prop}"
+    # four tiers rendered with left-gutter labels (System context / Containers / …)
+    assert "System context" in comps and "Containers" in comps
+    assert "Components" in comps and "Code" in comps
+    assert "tier-gutter" in comps
+    # consumes the REAL model field names (gap-fix 2), NOT prototype abbreviations
+    assert "capability_badge" in comps and "analysis_state" in comps
+    assert "provenance" in comps and "first_finding_id" in comps
+    # in-node badge rules: muted ⚑0 when badge==null, sev-high clickable when >0
+    assert "not analyzed" in comps
+    # the prototype abbreviations must NOT leak into production. Match the bare
+    # `n.cap` / `n.ff` accessors with a word boundary so they do NOT collide with
+    # the REAL field names we DO consume (`n.capability_badge`, etc.).
+    assert "overlay_paths" not in comps
+    assert not re.search(r"\bn\.ff\b", comps) and not re.search(r"\bn\.cap\b", comps)
+    # uses the Task-5 router/edge-layer (SVG, no Cytoscape) — NOT fcose
+    assert "C4EdgeLayer" in comps and "c4BackboneLayout" in comps
+    assert 'layout="fcose"' not in comps
+    # clicking a ⚑ badge stops propagation so it deep-links without drilling
+    assert "stopPropagation" in comps
+    # zoom/fit toolbar
+    assert "fit" in comps and "scale(" in comps
+
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    # the lifted tier / node-box / edge-layer rules
+    for sel in (".archx-stage", ".tier", ".tier-gutter", ".nb", ".nb__badges",
+                ".edge-layer", ".l2-backbone", ".shelf", ".code-grid"):
+        assert sel in css, f"missing C4 tier CSS rule: {sel}"
+    # not_analyzed striped/dashed treatment must be DISTINCT (never reads as clean)
+    assert ".nb--na" in css
+    # all colors are tokens (theme-aware) — no raw hex in the new block
+    block = css[css.index(".archx-stage"):]
+    assert "var(--" in block
+
+
+def test_c4_edge_layer_svg_is_sized_one_to_one() -> None:
+    """Regression: the C4 edge-layer SVG must map its viewBox to pixels 1:1.
+
+    components.jsx emits the overlay as
+        <svg class="edge-layer" width={scrollW} height={scrollH}
+             viewBox="0 0 scrollW scrollH">
+    The node boxes are absolutely positioned by the data-driven c4BackboneLayout,
+    which can be WIDER than the fixed-width .archx-stage; .archx-stage-wrap then
+    scrolls (overflow:auto) and stage.scrollWidth exceeds the stage's rendered
+    width. If CSS forces the SVG to width:100%/height:100% (or inset:0, which
+    stretches right:0/bottom:0 to the same effect), the rendered size no longer
+    equals the viewBox, so the default preserveAspectRatio ("xMidYMid meet")
+    UNIFORMLY SCALES + CENTERS the edge coordinate system relative to the
+    (un-scaled) DOM node boxes — every connector detaches from its endpoints.
+    The fix: position the SVG at the stage origin (top/left) and let its
+    width/height ATTRIBUTES size it 1:1 with the viewBox. Never width:100%.
+    """
+    css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
+    m = re.search(r"\.c4-scene \.edge-layer\s*\{([^}]*)\}", css)
+    assert m, "missing .c4-scene .edge-layer rule"
+    rule = m.group(1)
+    assert "width: 100%" not in rule and "width:100%" not in rule, (
+        ".edge-layer must not force width:100% — it scales the viewBox against "
+        "the un-scaled boxes when the backbone overflows the fixed-width stage"
+    )
+    assert "height: 100%" not in rule and "height:100%" not in rule, (
+        ".edge-layer must not force height:100% (same scaling defect as width)"
+    )
+    assert "inset:" not in rule and "inset " not in rule, (
+        ".edge-layer must position at the top/left origin, not inset:0 — right:0/"
+        "bottom:0 stretches the SVG to 100% and re-introduces the viewBox scaling"
+    )
 
 
 def test_threat_model_tab_is_conditional_and_routed() -> None:
@@ -956,15 +1107,26 @@ def test_c4_scene_styles_present() -> None:
 
 
 def test_bundle_contains_c4_scene() -> None:
-    # The precompiled bundle must carry the C4 component + its compound graph use.
+    """The compiled bundle ships the tiered C4 scene + its deterministic
+    backbone layout helper, and NOT a C4-bound fcose force-graph."""
+    # ADAPTATION: the plan's `report-template/app.js` is the build tool's logical
+    # name; the real esbuild OUT_DIR (report-template/.build/build.mjs) is the
+    # bundled tools/apd_gauntlet/data/report-template — there is no top-level
+    # report-template/app.js in this repo. Read the canonical built bundle.
     app_js = (
         REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
     ).read_text(encoding="utf-8")
-    assert "window.C4" in app_js            # screen exported into the bundle
-    assert "c4_model" in app_js             # consumes the contracted window key
-    assert "GraphView" in app_js            # reuses the shared Cytoscape renderer
-    assert "fcose" in app_js                # compound layout requested
-    assert "Architecture" in app_js         # the tab label is bundled
+    # the tiered renderer + the deterministic backbone layout helper are bundled
+    assert "C4TierGraph" in app_js
+    assert "c4BackboneLayout" in app_js
+    assert "c4ShortEdgeLabel" in app_js
+    # an SVG edge-layer is emitted by the C4 scene (orthogonal connectors)
+    assert "edge-layer" in app_js
+    # GraphView still ships (AttackPaths/ThreatModel use it) but fcose is no
+    # longer wired from the C4 scene — assert the C4 source has neither.
+    c4 = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
+    assert 'layout="fcose"' not in c4
+    assert "GraphView" not in c4
 
 
 def _seed_load_run_required(synthesis: pathlib.Path) -> None:
@@ -1045,44 +1207,80 @@ def test_built_report_renders_c4_tab_from_home_assistant_run(tmp_path: pathlib.P
 
 
 def test_c4_attack_path_overlay() -> None:
+    """The attack-path overlay is an SVG-native highlight on the tiered scene
+    (no GraphView): selecting a path resolves grounded c4 node ids via the
+    deterministic asset_to_c4 + finding_to_c4 join, dims non-member node boxes,
+    draws the induced member edges 'live', and keeps the 'no C4 mapping' strip
+    for unmapped hops. Honest partial overlay only."""
     src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
-    # consumes the existing enumerated paths (no new data source)
+    # consumes the existing enumerated paths + the DETERMINISTIC join (no client-side mapping)
     assert "data.attack_paths" in src
-    # a selectable overlay control + its selection state
     assert "selectedOverlayPath" in src and "setSelectedOverlayPath" in src
-    # consumes the DETERMINISTIC join, never computes a mapping client-side
     assert "asset_to_c4" in src and "finding_to_c4" in src
-    # reuses GraphView's cross-highlight contract (overlay path -> highlighted c4 nodes)
-    assert "overlayHighlight" in src or "overlayPaths" in src
-    # honest partial overlay: hops with no C4 mapping go on a PARALLEL asset strip
+    # the resolved MEMBERSHIP (not a GraphView synthetic path) is handed to the renderer
+    assert "overlayC4NodeIds" in src
+    assert "overlayHighlight" not in src, "GraphView synthetic-path highlight is gone"
+    # honest partial overlay: unmapped hops on a PARALLEL asset strip, never a C4 hop
     assert "c4-overlay-strip" in src and "no C4 mapping" in src
-    # never invent: an unmapped hop is labelled, not rendered as a C4 hop
     assert "unmappedHops" in src
+
+    comp = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    # C4TierGraph dims non-members + marks induced member edges live, off overlayC4NodeIds
+    assert "overlayC4NodeIds" in comp
+    assert "nb--dim" in comp           # non-member node boxes are dimmed
+    assert "edge-layer__path--live" in comp  # induced member edges drawn live
+    # induced-edge rule: both endpoints in the membership set
+    assert "C4EdgeLayer" in comp
 
     css = (REPO / "report-template" / "screens.css").read_text(encoding="utf-8")
     assert ".c4-overlay-strip" in css and ".c4-overlay-strip__hop--unmapped" in css
+    assert ".nb--dim" in css and ".edge-layer__path--live" in css
 
 
 def test_c4_graph_node_tap_drives_drill() -> None:
-    """A graph node click must drive C4 drill-down (container -> components/code,
-
-    component -> code), mirroring the NodeRow button. The OLD wiring abused
-    GraphView's path-resolution contract with synthetic tapTargets carrying
-    empty edgeIds — which ALWAYS resolved to null and confusingly reset the
-    view. That misuse must be gone; the scene must pass a dedicated onNodeTap
-    callback to GraphView instead.
-    """
+    """A click on a tiered node box drills exactly like the NodeRow buttons,
+    via the onDrill reducer passed into C4TierGraph (no GraphView onNodeTap)."""
     src = (REPO / "report-template" / "screens" / "C4.jsx").read_text(encoding="utf-8")
-    # The C4 scene wires GraphView with a dedicated node-tap callback.
-    assert "onNodeTap={onNodeTap}" in src
-    # The broken empty-edgeIds tapTargets-for-drill pattern is gone.
-    assert "edgeIds: []" not in src
-    assert "tapTargets" not in src
-    # onNodeTap is no longer (mis)used to drive onSelectPath for drilling.
-    assert "onSelectPath={onNodeTap}" not in src
-    assert "onSelectPath={overlayHighlight ? () => {} : onNodeTap}" not in src
-    # GraphView itself accepts and honors the onNodeTap prop.
+    # the reducer is defined and passed to C4TierGraph as onDrill
+    assert "onDrill" in src
+    assert "C4TierGraph" in src
+    assert "setSelectedContainer" in src and "setSelectedComponent" in src
+    # container -> select container; component -> select component (parent kept)
+    assert 'n.type === "container"' in src
+    assert 'n.type === "component"' in src
+    # the drill is wired through C4TierGraph's onDrill prop, NOT GraphView
+    assert "onDrill={" in src
+    assert "onNodeTap=" not in src, "C4 must not pass GraphView's onNodeTap"
+
+
+def test_c4_backbone_layout_helper_present() -> None:
+    """Task 6: the deterministic backbone layout ships in components.jsx — layered
+    BFS longest-path columns + analyzed/infra partitions + stable sorts. It is the
+    data-driven replacement for the prototype's hand-curated BACKBONE position map."""
     comps = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
-    assert "onNodeTap" in comps
-    # The cytoscape node-tap handler reports the tapped node id when wired.
-    assert "onNodeTap(ev.target.id())" in comps or "onNodeTap(node.id())" in comps
+    assert "function c4BackboneLayout(" in comps
+    # window-exported alongside the other helpers
+    assert "c4BackboneLayout" in comps.split("Object.assign(window")[1]
+    # partitions: connected / analyzed / infra
+    assert "connected" in comps and "analyzed" in comps and "infra" in comps
+    # deterministic: stable sort by label, no Math.random anywhere in the helper
+    assert "localeCompare" in comps
+    # consumes the REAL model name — analysis_state, NOT the prototype's `state`
+    assert "analysis_state" in comps
+    # column geometry constants
+    assert "COL_W" in comps and "ROW_H" in comps
+
+
+def test_c4_short_edge_label_helper_present():
+    """The deterministic short-edge-label helper is defined + window-exported in
+    components.jsx (data-driven replacement for the prototype's hand-curated
+    EDGE_SHORT map). The full edge.label is kept for the hover tooltip."""
+    src = (REPO / "report-template" / "components.jsx").read_text(encoding="utf-8")
+    assert "function c4ShortEdgeLabel(" in src
+    # strips the CROSS_* machine prefix deterministically
+    assert "CROSS_" in src.split("function c4ShortEdgeLabel(")[1].split("\n}")[0]
+    assert "c4ShortEdgeLabel" in src.split("Object.assign(window")[1]
+    bundle = (
+        REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
+    ).read_text(encoding="utf-8")
+    assert "c4ShortEdgeLabel" in bundle

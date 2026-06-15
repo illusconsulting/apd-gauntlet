@@ -34,7 +34,7 @@
             "items": { "type": "string", "pattern": "^edge-[0-9a-f]{8}$" }
           },
           "hop_count":        { "type": "integer", "minimum": 1, "maximum": 12 },
-          "feasibility":      { "type": "string", "enum": ["high", "medium", "low"] },
+          "feasibility":      { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
           "severity_sum":     { "type": "integer", "minimum": 0 },
           "mitigation_count": { "type": "integer", "minimum": 0 },
           "bottleneck_edges": {

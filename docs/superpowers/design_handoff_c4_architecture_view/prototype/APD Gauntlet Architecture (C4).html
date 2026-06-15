@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APD Gauntlet · Architecture (C4)</title>
+
+<!-- Fonts (same stack as the report) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- apd-gauntlet design tokens + base (themes, colors, type, spacing) -->
+<link rel="stylesheet" href="styles.css" />
+
+<style>
+/* ───────────────────────────────────────────────────────────────────────
+ * Architecture (C4) view — tiered scene + orthogonal connectors.
+ * Reuses the apd report tokens from styles.css; everything below is scoped
+ * to .archx so it can be lifted into the report's C4.jsx / screens.css.
+ * ─────────────────────────────────────────────────────────────────────── */
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font-family: var(--font-body); line-height: var(--line-body); }
+
+.archx {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── header bits (mirror the real screen) ─────────────────────────────── */
+.archx-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.archx-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin: 0;
+}
+.archx-title em { font-style: italic; color: var(--accent); }
+.archx-lede { color: var(--ink-2); max-width: 64ch; font-size: var(--text-md); margin: 0; }
+
+.archx-banner {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  color: var(--ink-2);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.archx-banner b { color: var(--ink); }
+.archx-banner .warn { color: var(--sev-high); font-weight: 600; }
+
+.archx-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+.archx-crumbs { display: flex; align-items: center; gap: var(--space-2); }
+.archx-crumbs .sep { color: var(--rule-strong); }
+.archx-crumbs .here { color: var(--ink); font-weight: 600; }
+.chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  padding: 3px var(--space-2);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
+.chip:disabled { opacity: 0.45; cursor: default; }
+.chip--active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.archx-overlay { display: flex; align-items: center; gap: var(--space-2); }
+.archx-overlay select {
+  font: inherit; font-family: var(--font-mono); font-size: var(--text-xs);
+  padding: 2px 6px; border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink); max-width: 30rem;
+}
+.archx-spacer { flex: 1; }
+.archx-legend { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.archx-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.lg-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* ── stage ────────────────────────────────────────────────────────────── */
+.archx-stage-wrap {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ink-3) 18%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
+  background-color: var(--paper);
+  overflow: auto;
+  box-shadow: var(--shadow-md);
+}
+.archx-toolbar {
+  position: absolute; top: var(--space-2); right: var(--space-2);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 6px; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 6px;
+  box-shadow: var(--shadow-sm); z-index: 5;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+}
+.archx-toolbar button {
+  appearance: none; background: transparent; border: none; color: var(--ink);
+  cursor: pointer; padding: 2px 9px; border-radius: 3px; font: inherit; line-height: 1;
+}
+.archx-toolbar button:hover { background: var(--paper-2); }
+.archx-toolbar .zoom-level { min-width: 42px; text-align: center; color: var(--ink-3); }
+
+.archx-stage {
+  position: relative;
+  transform-origin: 0 0;
+  width: 1120px;
+  padding: var(--space-5) var(--space-5) var(--space-5) 0;
+}
+
+/* tiers */
+.tier { position: relative; display: grid; grid-template-columns: 132px 1fr; }
+.tier + .tier { margin-top: var(--space-3); }
+.tier-gutter {
+  position: relative;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  display: flex; flex-direction: column; gap: 2px; justify-content: center;
+  border-right: 1px dashed var(--rule-strong);
+}
+.tier-gutter .t-l1 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--accent); font-weight: 600; }
+.tier-gutter .t-l2 { font-family: var(--font-display); font-size: 15px; color: var(--ink); line-height: 1.15; }
+.tier-gutter .t-l3 { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-3); }
+.tier-body { padding: var(--space-3) 0 var(--space-3) var(--space-4); position: relative; }
+
+/* ── node boxes ───────────────────────────────────────────────────────── */
+.nb {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-md);
+  padding: 8px 10px 7px;
+  display: flex; flex-direction: column; gap: 5px;
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+  transition: border-color .14s, box-shadow .14s, transform .14s;
+}
+.nb__head { display: flex; align-items: center; gap: 6px; }
+.nb__kind {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 3px;
+  background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.nb__name {
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: var(--ink);
+  line-height: 1.25; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.nb__badges { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.bdg {
+  font-family: var(--font-mono); font-size: 10px; line-height: 1.4;
+  padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  border: 1px solid var(--rule); background: var(--paper-2); color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.bdg--find {
+  background: color-mix(in srgb, var(--sev-high) 14%, var(--paper));
+  color: var(--sev-high); border-color: color-mix(in srgb, var(--sev-high) 55%, var(--rule));
+  cursor: pointer;
+}
+.bdg--find:hover { text-decoration: underline; }
+.bdg--cap {
+  background: color-mix(in srgb, var(--sev-low) 16%, var(--paper));
+  color: var(--sev-low); border-color: color-mix(in srgb, var(--sev-low) 55%, var(--rule));
+}
+.bdg--clean { color: var(--ink-3); }
+.bdg--na { color: var(--ink-3); border-style: dashed; border-color: var(--ink-3); font-style: italic; }
+
+/* kind cues */
+.nb--data_store { border-radius: var(--radius-md) var(--radius-md) 14px 14px; }
+.nb--data_store .nb__kind { color: var(--accent); border-color: var(--accent); }
+.nb--external,
+.nb--external_dependency,
+.nb--external_system { border-style: dashed; background: color-mix(in srgb, var(--paper-2) 60%, var(--paper)); }
+.nb--external_party { border-style: dashed; }
+
+/* analyzed-with-findings get a warm hairline accent on the left */
+.nb--hot { border-left: 3px solid color-mix(in srgb, var(--sev-high) 60%, var(--rule-strong)); }
+.nb--clickable { cursor: pointer; }
+.nb--clickable:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.nb--selected { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow-md); }
+
+/* not analyzed = striped + muted (never reads as clean) */
+.nb--na {
+  background: repeating-linear-gradient(135deg, var(--paper-2), var(--paper-2) 6px, var(--paper) 6px, var(--paper) 12px);
+  border-style: dashed; border-color: var(--ink-3); opacity: 0.8; box-shadow: none;
+}
+
+/* system node (L1 centre) */
+.nb--system {
+  background: var(--accent); border-color: var(--accent); box-shadow: var(--shadow-md);
+}
+.nb--system .nb__name { color: var(--bg); font-size: 14px; }
+.nb--system .nb__kind { background: color-mix(in srgb, var(--bg) 20%, transparent); color: var(--bg); border-color: transparent; }
+.nb--system .nb__sub { color: color-mix(in srgb, var(--bg) 85%, var(--accent)); font-size: 10.5px; font-family: var(--font-mono); }
+
+/* ── L1 layout ────────────────────────────────────────────────────────── */
+.l1-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-4); align-items: center; }
+.l1-group { display: flex; flex-direction: column; gap: 5px; }
+.l1-group__h { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+.l1-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.l1-grid--ext { grid-template-columns: 1fr; }
+.nb--mini { padding: 5px 8px; gap: 2px; }
+.nb--mini .nb__name { font-size: 11px; font-weight: 500; -webkit-line-clamp: 2; }
+.l1-center { display: flex; justify-content: center; }
+.nb--system.nb--big { min-width: 188px; padding: 12px 16px; text-align: left; }
+
+/* ── L2 backbone canvas ───────────────────────────────────────────────── */
+.l2-backbone { position: relative; height: 290px; }
+.l2-backbone .nb { position: absolute; width: 162px; }
+.l2-cap {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); margin: var(--space-3) 0 var(--space-2);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.l2-cap::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+/* shelves */
+.shelf { display: flex; flex-wrap: wrap; gap: 6px; }
+.shelf .nb { width: auto; max-width: 220px; min-width: 132px; flex: 0 1 auto; }
+.shelf--infra .nb { min-width: 0; }
+.shelf .nb__name { -webkit-line-clamp: 1; }
+
+/* ── L4 code tier ─────────────────────────────────────────────────────── */
+.code-hint {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ink-3);
+  padding: var(--space-4) var(--space-4); border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-md); background: color-mix(in srgb, var(--paper-2) 50%, transparent);
+}
+.code-wrap { position: relative; }
+.code-parent { margin-bottom: var(--space-3); }
+.code-parent .nb { width: 220px; }
+.code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 7px; }
+.code-grid .nb__name { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; -webkit-line-clamp: 2; }
+
+/* ── edges (SVG overlay) ──────────────────────────────────────────────── */
+.edge-layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.edge-layer path.edge { fill: none; stroke: var(--rule-strong); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.edge-layer path.edge.live { stroke: var(--accent); stroke-width: 2; }
+.edge-layer .port { fill: var(--accent); }
+.edge-layer marker path { fill: var(--accent); }
+.edge-layer .elabel {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; fill: var(--accent);
+}
+.edge-layer .elabel-bg { fill: var(--paper); opacity: 0.92; }
+.nb[data-dim="1"] { opacity: 0.32; }
+
+/* ── code elements list (kept below the diagram) ──────────────────────── */
+.archx-list-h {
+  font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3); margin: var(--space-4) 0 var(--space-1);
+}
+.archx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.archx-list li {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-1) var(--space-2); border: 1px solid var(--rule);
+  border-radius: var(--radius-sm); background: var(--paper); font-size: var(--text-sm);
+}
+.archx-list .li-kind {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .03em; text-transform: uppercase;
+  padding: 1px 5px; border-radius: 3px; background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--rule);
+}
+.archx-list .li-name { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* tooltip */
+.archx-tip {
+  position: fixed; z-index: 50; pointer-events: none; display: none;
+  max-width: 320px; padding: 6px 9px; border-radius: var(--radius-sm);
+  background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 11px; line-height: 1.4;
+  box-shadow: var(--shadow-md);
+}
+
+.archx-notes {
+  margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--rule);
+  color: var(--ink-3); font-size: var(--text-sm); display: flex; flex-direction: column; gap: var(--space-2);
+}
+.archx-notes b { color: var(--ink-2); }
+.archx-notes code { font-family: var(--font-mono); font-size: 11px; background: var(--paper-2); padding: 0 4px; border-radius: 3px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="archx" id="archx">
+  <div class="archx-eyebrow">§ Architecture — grounded C4 model</div>
+  <h1 class="archx-title">System <em>→</em> Container <em>→</em> Component <em>→</em> Code</h1>
+  <p class="archx-lede">The assessed system laid out in tiers aligned to the C4 abstractions. Relationships are drawn only where the assembler grounded them — nothing is invented onto the graph. Each element carries its finding and capability counts in-place.</p>
+
+  <div class="archx-banner" id="banner"></div>
+
+  <div class="archx-controls">
+    <div class="archx-crumbs" id="crumbs"></div>
+    <span class="archx-spacer"></span>
+    <div class="archx-legend">
+      <span><i class="lg-dot" style="background:color-mix(in srgb,var(--sev-high) 60%,var(--rule))"></i>⚑ findings</span>
+      <span><i class="lg-dot" style="background:var(--sev-low)"></i>🛡 capabilities</span>
+      <span><i class="lg-dot" style="background:var(--ink-3)"></i>not analyzed</span>
+    </div>
+  </div>
+
+  <div class="archx-stage-wrap" id="stageWrap">
+    <div class="archx-toolbar">
+      <button id="zOut" title="Zoom out">−</button>
+      <span class="zoom-level" id="zLvl">100%</span>
+      <button id="zIn" title="Zoom in">+</button>
+      <button id="zFit" title="Fit">fit</button>
+    </div>
+    <div class="archx-stage" id="stage">
+      <svg class="edge-layer" id="edges" aria-hidden="true">
+        <defs>
+          <marker id="arw" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z"></path>
+          </marker>
+        </defs>
+      </svg>
+
+      <!-- L1 -->
+      <section class="tier" data-level="system">
+        <div class="tier-gutter">
+          <div class="t-l1">L1</div>
+          <div class="t-l2">System context</div>
+          <div class="t-l3">person · system · external</div>
+        </div>
+        <div class="tier-body">
+          <div class="l1-body" id="l1body"></div>
+        </div>
+      </section>
+
+      <!-- L2 -->
+      <section class="tier" data-level="container">
+        <div class="tier-gutter">
+          <div class="t-l1">L2</div>
+          <div class="t-l2">Containers</div>
+          <div class="t-l3" id="l2count"></div>
+        </div>
+        <div class="tier-body">
+          <div class="l2-cap">Traced relationships</div>
+          <div class="l2-backbone" id="backbone"></div>
+          <div class="l2-cap">Analyzed · no traced relation</div>
+          <div class="shelf" id="shelfAnalyzed"></div>
+          <div class="l2-cap">Infrastructure · not analyzed</div>
+          <div class="shelf shelf--infra" id="shelfInfra"></div>
+        </div>
+      </section>
+
+      <!-- L3 -->
+      <section class="tier" data-level="component">
+        <div class="tier-gutter">
+          <div class="t-l1">L3</div>
+          <div class="t-l2">Components</div>
+          <div class="t-l3" id="l3count">—</div>
+        </div>
+        <div class="tier-body">
+          <div id="compTier"></div>
+        </div>
+      </section>
+
+      <!-- L4 -->
+      <section class="tier" data-level="code">
+        <div class="tier-gutter">
+          <div class="t-l1">L4</div>
+          <div class="t-l2">Code</div>
+          <div class="t-l3" id="l4count">select a container</div>
+        </div>
+        <div class="tier-body">
+          <div id="codeTier"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="listWrap"></div>
+
+  <div class="archx-notes">
+    <div><b>Tiered C4 layout.</b> One band per C4 abstraction — <code>system context</code>, <code>container</code>, <code>component</code>, <code>code</code>. The <b>L3 Component</b> tier is wired and data-driven: it renders Container → Component → Code whenever a run grounds components, and an honest "blocked / none" state otherwise. For this Home Assistant run no components were grounded (<code>c4-recon.components: []</code>), so it drills <b>L2 → L4</b>.</div>
+    <div><b>Honest by construction.</b> Only the 6 assembler-grounded edges are drawn. Disconnected and <code>not_analyzed</code> containers are kept in their tier (never dropped, never shown as "0 = clean") rather than scattered. Click any container with code to drill into its L4 elements.</div>
+  </div>
+</div>
+<div class="archx-tip" id="tip"></div>
+
+<script src="archx-data.js"></script>
+<script>
+/* eslint-disable */
+const C4 = window.C4_DATA || {};
+
+/* ── curated layout (positions + short edge labels) keyed by node id ──────
+ * The backbone places the 7 grounded-edge containers in a 3-column flow so the
+ * Supervisor/Core hub reads left→right; everything else falls into shelves.   */
+const BACKBONE = {
+  "c4-aa5a3a58": { x: 8,   y: 26  },  // ha CLI
+  "c4-9e5151b7": { x: 8,   y: 170 },  // iOS Companion
+  "c4-78444877": { x: 372, y: 26  },  // Supervisor (hub)
+  "c4-2b33e14f": { x: 372, y: 170 },  // Home Assistant Core (hub)
+  "c4-d304503a": { x: 742, y: 2   },  // os-agent
+  "c4-66dae27f": { x: 742, y: 100 },  // host-dockerd
+  "c4-fcee7bf9": { x: 742, y: 198 },  // FCM push relay
+};
+const EDGE_SHORT = {
+  "c4e-b1f89879": "invokes API",
+  "c4e-384bedb4": "POSTs /auth/token",
+  "c4e-381ea08b": "controls daemon",
+  "c4e-60bdd445": "host primitives",
+  "c4e-9e7befef": "pushes",
+  "c4e-256f048b": "loads · calls",
+};
+/* containers that belong on the "analyzed · no traced relation" shelf, in order */
+const ANALYZED_SHELF = [
+  "c4-f7d01fcf", // Android Companion
+  "c4-a811b55d", // Frontend (Lit/TS)
+  "c4-c4507c07", // Add-ons
+  "c4-13cad86b", // Recorder history DB
+  "c4-fb9078ee", // Android Room AppDatabase
+  "c4-274b56cd", // Supervisor backup archive store
+  "c4-d1ea3a05", // .storage
+];
+
+/* ── indexes ──────────────────────────────────────────────────────────── */
+let byId = {}, childrenOf = {};
+function buildIndexes() {
+  byId = {}; childrenOf = {};
+  C4.nodes.forEach(n => byId[n.id] = n);
+  C4.nodes.forEach(n => { if (n.parent) (childrenOf[n.parent] = childrenOf[n.parent] || []).push(n.id); });
+}
+buildIndexes();
+const codeOf = id => (childrenOf[id] || []).map(c => byId[c]).filter(n => n && n.type === "code");
+const compsOf = id => (childrenOf[id] || []).map(c => byId[c]).filter(n => n && n.type === "component");
+const drillableContainer = id => compsOf(id).length > 0 || codeOf(id).length > 0;
+/* the node whose L4 code is shown: a selected component, else a code-bearing container */
+function activeCodeParent() {
+  if (!selected) return null;
+  return compsOf(selected).length ? selectedComp : selected;
+}
+
+let selected = null;       // selected container id (drill)
+let selectedComp = null;   // selected component id (L3 drill)
+let zoom = 1;
+
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), edges = $("#edges"), tip = $("#tip");
+
+/* ── node box factory ─────────────────────────────────────────────────── */
+function badgeHTML(n) {
+  const out = [];
+  const ff = (n.provenance && n.provenance.first_finding_id) || "";
+  if (n.analysis_state === "not_analyzed") {
+    out.push(`<span class="bdg bdg--na" title="No code anchors — analysis_state: not_analyzed (not '0 = clean')">not analyzed</span>`);
+  } else {
+    if (n.badge != null && n.badge > 0)
+      out.push(`<span class="bdg bdg--find" data-ff="${ff}" title="${n.badge} finding${n.badge===1?"":"s"} on this element — open in Findings">⚑ ${n.badge}</span>`);
+    else if (n.type !== "person" && n.type !== "external_system" && n.type !== "system")
+      out.push(`<span class="bdg bdg--clean" title="Analyzed · zero findings">⚑ 0</span>`);
+    if (n.capability_badge != null && n.capability_badge > 0)
+      out.push(`<span class="bdg bdg--cap" title="${n.capability_badge} confirmed capabilit${n.capability_badge===1?"y":"ies"}">🛡 ${n.capability_badge}</span>`);
+  }
+  return out.length ? `<div class="nb__badges">${out.join("")}</div>` : "";
+}
+
+function nodeBox(n, opts = {}) {
+  const el = document.createElement("div");
+  const kindClass = n.kind ? ` nb--${n.kind}` : "";
+  const isExt = n.type === "external_system" || n.kind === "external_system";
+  el.className = "nb"
+    + kindClass
+    + (n.type === "system" ? " nb--system" : "")
+    + (isExt ? " nb--external" : "")
+    + (n.analysis_state !== "not_analyzed" && n.badge ? " nb--hot" : "")
+    + (n.analysis_state === "not_analyzed" ? " nb--na" : "")
+    + (opts.mini ? " nb--mini" : "")
+    + (opts.big ? " nb--big" : "");
+  el.dataset.id = n.id;
+  const showKind = n.kind && !opts.noKind;
+  const kindTxt = (n.kind || "").replace(/_/g, " ");
+  let inner = "";
+  inner += `<div class="nb__head">`;
+  if (showKind) inner += `<span class="nb__kind">${kindTxt}</span>`;
+  inner += `</div>`;
+  inner += `<div class="nb__name" title="${esc(n.label)}">${esc(n.label)}</div>`;
+  if (n.type === "system") inner += `<div class="nb__sub">software system</div>`;
+  if (!opts.noBadges) inner += badgeHTML(n);
+  el.innerHTML = inner;
+
+  const isDrillable = (n.type === "container" && drillableContainer(n.id))
+                   || (n.type === "component" && codeOf(n.id).length > 0);
+  if (isDrillable) {
+    el.classList.add("nb--clickable");
+    if (n.id === selected || n.id === selectedComp) el.classList.add("nb--selected");
+    el.addEventListener("click", e => { if (e.target.closest(".bdg--find")) return; drill(n.id); });
+  }
+  el.addEventListener("mouseenter", e => showTip(e, n));
+  el.addEventListener("mousemove", moveTip);
+  el.addEventListener("mouseleave", hideTip);
+  return el;
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c])); }
+
+/* ── tooltip ──────────────────────────────────────────────────────────── */
+function showTip(e, n) {
+  const lvl = ({ system:"L1 system", person:"L1 person", external_system:"L1 external", container:"L2 container", component:"L3 component", code:"L4 code" })[n.type] || n.type;
+  let t = `${n.label}\n${lvl}${n.kind ? " · " + n.kind.replace(/_/g," ") : ""}`;
+  if (n.analysis_state === "not_analyzed") t += `\n⚠ not analyzed (no code anchors)`;
+  else {
+    if (n.badge) t += `\n⚑ ${n.badge} finding${n.badge===1?"":"s"}`;
+    if (n.capability_badge) t += `\n🛡 ${n.capability_badge} capabilit${n.capability_badge===1?"y":"ies"}`;
+  }
+  if (n.type === "container" && drillableContainer(n.id)) {
+    const c = compsOf(n.id).length, k = codeOf(n.id).length;
+    t += c ? `\n↳ click to drill (${c} component${c===1?"":"s"})` : `\n↳ click to drill (${k} code)`;
+  } else if (n.type === "component" && codeOf(n.id).length) {
+    t += `\n↳ click to drill (${codeOf(n.id).length} code)`;
+  }
+  tip.textContent = t; tip.style.whiteSpace = "pre-line"; tip.style.display = "block"; moveTip(e);
+}
+function moveTip(e) {
+  const pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const r = tip.getBoundingClientRect();
+  if (x + r.width > innerWidth) x = e.clientX - r.width - pad;
+  if (y + r.height > innerHeight) y = e.clientY - r.height - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+/* ── render: banner / crumbs ──────────────────────────────────────────── */
+function renderChrome() {
+  const containers = C4.nodes.filter(n => n.type === "container");
+  $("#banner").innerHTML =
+    `<b>Grounded view.</b> ${containers.length} containers`
+    + (C4.not_analyzed_count > 0 ? ` · <span class="warn">${C4.not_analyzed_count} not analyzed</span> (no code anchors — shown as <em>not_analyzed</em>, never "0 findings = clean")` : "")
+    + (C4.unlocalized_findings > 0 ? ` · <span class="warn">${C4.unlocalized_findings} unlocalized findings</span> (doc-anchored, no <code>code:</code> locator — surfaced, not dropped)` : "");
+  $("#l2count").textContent = containers.length + " containers";
+
+  let here;
+  if (!selected) here = "L1 System context + L2 Containers";
+  else if (selectedComp) here = `Component: ${byId[selectedComp].label}`;
+  else here = `Container: ${byId[selected].label}`;
+  let ch = `<button class="chip ${selected?"":"chip--active"}" id="cbHome">⌂ System</button>`
+    + `<span class="sep">/</span><span class="here">${esc(here)}</span>`;
+  if (selectedComp) ch += `<button class="chip" id="cbUp" style="margin-left:8px">↑ up to ${esc(byId[selected].label)}</button>`;
+  $("#crumbs").innerHTML = ch;
+  $("#cbHome").addEventListener("click", () => drill(null));
+  if (selectedComp) $("#cbUp").addEventListener("click", () => { selectedComp = null; renderAll(); });
+}
+
+/* ── render: tiers ────────────────────────────────────────────────────── */
+function renderL1() {
+  const body = $("#l1body"); body.innerHTML = "";
+  const persons = C4.nodes.filter(n => n.type === "person");
+  const exts = C4.nodes.filter(n => n.type === "external_system");
+  const sys = C4.nodes.find(n => n.type === "system");
+
+  const gP = document.createElement("div"); gP.className = "l1-group";
+  gP.innerHTML = `<div class="l1-group__h">Actors · ${persons.length}</div>`;
+  const grid = document.createElement("div"); grid.className = "l1-grid";
+  persons.forEach(p => grid.appendChild(nodeBox(p, { mini:true, noKind:true })));
+  gP.appendChild(grid); body.appendChild(gP);
+
+  const gC = document.createElement("div"); gC.className = "l1-center";
+  gC.appendChild(nodeBox(sys, { big:true })); body.appendChild(gC);
+
+  const gE = document.createElement("div"); gE.className = "l1-group";
+  gE.innerHTML = `<div class="l1-group__h" style="text-align:right">External systems · ${exts.length}</div>`;
+  const gridE = document.createElement("div"); gridE.className = "l1-grid l1-grid--ext";
+  exts.forEach(x => gridE.appendChild(nodeBox(x, { mini:true, noKind:true })));
+  gE.appendChild(gridE); body.appendChild(gE);
+}
+
+function renderL2() {
+  const bb = $("#backbone"); bb.innerHTML = "";
+  Object.keys(BACKBONE).forEach(id => {
+    const n = byId[id]; if (!n) return;
+    const el = nodeBox(n);
+    el.style.left = BACKBONE[id].x + "px";
+    el.style.top = BACKBONE[id].y + "px";
+    bb.appendChild(el);
+  });
+
+  const shA = $("#shelfAnalyzed"); shA.innerHTML = "";
+  ANALYZED_SHELF.forEach(id => { if (byId[id]) shA.appendChild(nodeBox(byId[id])); });
+
+  const shI = $("#shelfInfra"); shI.innerHTML = "";
+  const placed = new Set([...Object.keys(BACKBONE), ...ANALYZED_SHELF]);
+  C4.nodes.filter(n => n.type === "container" && !placed.has(n.id))
+    .sort((a,b) => a.label.localeCompare(b.label))
+    .forEach(n => shI.appendChild(nodeBox(n, { noKind:true })));
+}
+
+function renderL3() {
+  const tierEl = $("#compTier"), cnt = $("#l3count");
+  tierEl.innerHTML = "";
+  if (!selected) {
+    cnt.textContent = "—";
+    tierEl.innerHTML = `<div class="code-hint">L3 components appear here when a run grounds them via <code>c4-recon.components[]</code> (+ <code>c4_component</code> code tags). They are <b>blocked by default</b>, so most runs drill <b>L2 → L4</b>. Select a container above.</div>`;
+    return;
+  }
+  const comps = compsOf(selected);
+  if (!comps.length) {
+    cnt.textContent = `${byId[selected].label} · none`;
+    tierEl.innerHTML = `<div class="code-hint">No grounded L3 components under <b>${esc(byId[selected].label)}</b> — L3 is blocked unless an artifact groups symbols. This container renders <b>L2 → L4</b> (code parents directly to the container).</div>`;
+    return;
+  }
+  cnt.textContent = `${byId[selected].label} · ${comps.length}`;
+  const wrap = document.createElement("div"); wrap.className = "code-wrap";
+  const ph = document.createElement("div"); ph.className = "code-parent";
+  ph.appendChild(nodeBox(byId[selected]));
+  wrap.appendChild(ph);
+  const grid = document.createElement("div"); grid.className = "code-grid";
+  comps.forEach(n => grid.appendChild(nodeBox(n)));
+  wrap.appendChild(grid);
+  tierEl.appendChild(wrap);
+}
+
+function renderL4() {
+  const tierEl = $("#codeTier"), cnt = $("#l4count");
+  tierEl.innerHTML = "";
+  if (!selected) {
+    cnt.textContent = "select a container";
+    tierEl.innerHTML = `<div class="code-hint">Select a container (or an L3 component, when present) to expand its grounded L4 code elements — each with its own ⚑ finding and 🛡 capability counts.</div>`;
+    return;
+  }
+  const hasComps = compsOf(selected).length > 0;
+  if (hasComps && !selectedComp) {
+    cnt.textContent = `${byId[selected].label} · select a component`;
+    tierEl.innerHTML = `<div class="code-hint">Select an L3 component above to expand its code elements.</div>`;
+    return;
+  }
+  const parentId = activeCodeParent();
+  const kids = codeOf(parentId);
+  cnt.textContent = `${byId[parentId].label} · ${kids.length}`;
+  const wrap = document.createElement("div"); wrap.className = "code-wrap";
+  const ph = document.createElement("div"); ph.className = "code-parent";
+  ph.appendChild(nodeBox(byId[parentId]));
+  wrap.appendChild(ph);
+  const grid = document.createElement("div"); grid.className = "code-grid";
+  kids.forEach(n => grid.appendChild(nodeBox(n)));
+  wrap.appendChild(grid);
+  tierEl.appendChild(wrap);
+}
+
+/* ── code-elements list (kept beneath the diagram) ────────────────────── */
+function renderList() {
+  const w = $("#listWrap");
+  const pid = activeCodeParent();
+  if (!pid) { w.innerHTML = ""; return; }
+  const kids = codeOf(pid);
+  const lbl = byId[selectedComp] ? `${byId[selected].label} › ${byId[pid].label}` : byId[pid].label;
+  let h = `<div class="archx-list-h">Code elements — ${esc(lbl)}</div><ul class="archx-list">`;
+  kids.forEach(n => {
+    h += `<li><span class="li-kind">code</span><span class="li-name" title="${esc(n.label)}">${esc(n.label)}</span>`
+      + `<span class="bdg" style="background:var(--paper-2)">${n.kind||""}</span>`
+      + (n.badge ? `<span class="bdg bdg--find">⚑ ${n.badge}</span>` : `<span class="bdg bdg--clean">⚑ 0</span>`)
+      + (n.capability_badge ? `<span class="bdg bdg--cap">🛡 ${n.capability_badge}</span>` : "")
+      + `</li>`;
+  });
+  h += `</ul>`;
+  w.innerHTML = h;
+}
+
+/* ── orthogonal rounded connector router ──────────────────────────────── */
+function anchors(srcEl, tgtEl) {
+  // layout coords relative to #stage (pre-zoom): use offset chain
+  const r = el => {
+    let x = 0, y = 0, e = el;
+    while (e && e !== stage) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+    return { x, y, w: el.offsetWidth, h: el.offsetHeight, cx: x + el.offsetWidth/2, cy: y + el.offsetHeight/2 };
+  };
+  return [r(srcEl), r(tgtEl)];
+}
+function roundedPath(pts, rad) {
+  // dedupe consecutive
+  const p = [];
+  pts.forEach(q => { const last = p[p.length-1]; if (!last || Math.abs(last.x-q.x)>0.5 || Math.abs(last.y-q.y)>0.5) p.push(q); });
+  if (p.length < 2) return "";
+  let d = `M ${p[0].x} ${p[0].y}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const a = p[i-1], b = p[i], c = p[i+1];
+    const l1 = Math.hypot(b.x-a.x, b.y-a.y), l2 = Math.hypot(c.x-b.x, c.y-b.y);
+    const r = Math.min(rad, l1/2, l2/2);
+    const u1 = { x: (a.x-b.x)/(l1||1), y: (a.y-b.y)/(l1||1) };
+    const u2 = { x: (c.x-b.x)/(l2||1), y: (c.y-b.y)/(l2||1) };
+    const s = { x: b.x + u1.x*r, y: b.y + u1.y*r };
+    const e = { x: b.x + u2.x*r, y: b.y + u2.y*r };
+    d += ` L ${s.x.toFixed(1)} ${s.y.toFixed(1)} Q ${b.x} ${b.y} ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
+  }
+  const last = p[p.length-1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+function routeWaypoints(s, t) {
+  const dx = t.cx - s.cx, dy = t.cy - s.cy;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    // horizontal-first
+    const sx = dx >= 0 ? s.x + s.w : s.x;
+    const tx = dx >= 0 ? t.x : t.x + t.w;
+    const midX = (sx + tx) / 2;
+    return [{x:sx,y:s.cy},{x:midX,y:s.cy},{x:midX,y:t.cy},{x:tx,y:t.cy}];
+  } else {
+    const sy = dy >= 0 ? s.y + s.h : s.y;
+    const ty = dy >= 0 ? t.y : t.y + t.h;
+    const midY = (sy + ty) / 2;
+    return [{x:s.cx,y:sy},{x:s.cx,y:midY},{x:t.cx,y:midY},{x:t.cx,y:ty}];
+  }
+}
+
+function visibleEdges() {
+  // L2 grounded edges whose endpoints are both rendered as backbone nodes
+  return C4.edges.filter(e => BACKBONE[e.source] && BACKBONE[e.target]);
+}
+
+function drawEdges() {
+  // clear (keep defs)
+  [...edges.querySelectorAll("path.edge, .port, .elabel, .elabel-bg, g.eg")].forEach(n => n.remove());
+  // size svg to stage content
+  edges.setAttribute("width", stage.scrollWidth);
+  edges.setAttribute("height", stage.scrollHeight);
+  edges.setAttribute("viewBox", `0 0 ${stage.scrollWidth} ${stage.scrollHeight}`);
+
+  visibleEdges().forEach(e => {
+    const sEl = stage.querySelector(`#backbone .nb[data-id="${e.source}"]`);
+    const tEl = stage.querySelector(`#backbone .nb[data-id="${e.target}"]`);
+    if (!sEl || !tEl) return;
+    const [s, t] = anchors(sEl, tEl);
+    const wp = routeWaypoints(s, t);
+    // attack-path overlays are rebuilt from data.attack_paths in the React scene,
+    // never shipped on the c4 slice — the prototype draws all grounded edges plain.
+    const live = false;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.classList.add("eg");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", roundedPath(wp, 7));
+    path.setAttribute("class", "edge" + (live ? " live" : ""));
+    path.setAttribute("marker-end", "url(#arw)");
+    g.appendChild(path);
+
+    // start port
+    const port = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    port.setAttribute("cx", wp[0].x); port.setAttribute("cy", wp[0].y);
+    port.setAttribute("r", "3"); port.setAttribute("class", "port");
+    if (!live) port.style.fill = "var(--rule-strong)";
+    g.appendChild(port);
+
+    // label on the target-side approach segment (separates fan-out spokes by row)
+    const lbl = EDGE_SHORT[e.id];
+    if (lbl) {
+      // pick the last segment with real length
+      let seg = null;
+      for (let i = wp.length - 1; i >= 1; i--) {
+        const a = wp[i-1], b = wp[i];
+        if (Math.hypot(b.x-a.x, b.y-a.y) > 18) { seg = [a, b]; break; }
+      }
+      if (!seg) seg = [wp[wp.length-2], wp[wp.length-1]];
+      const horiz = Math.abs(seg[1].x - seg[0].x) >= Math.abs(seg[1].y - seg[0].y);
+      const mx = (seg[0].x + seg[1].x) / 2;
+      const my = (seg[0].y + seg[1].y) / 2;
+      const lx = mx;
+      const ly = horiz ? my - 8 : my;
+      const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      txt.setAttribute("x", lx); txt.setAttribute("y", ly);
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("dominant-baseline", horiz ? "auto" : "middle");
+      txt.setAttribute("class", "elabel");
+      txt.textContent = lbl;
+      g.appendChild(bg); g.appendChild(txt);
+      requestAnimationFrame(() => {
+        try {
+          const b = txt.getBBox();
+          bg.setAttribute("x", b.x - 3); bg.setAttribute("y", b.y - 1);
+          bg.setAttribute("width", b.width + 6); bg.setAttribute("height", b.height + 2);
+          bg.setAttribute("rx", 2); bg.setAttribute("class", "elabel-bg");
+        } catch (_) {}
+      });
+    }
+    edges.appendChild(g);
+  });
+}
+
+/* ── drill + zoom ─────────────────────────────────────────────────────── */
+function drill(id) {
+  if (id == null) { selected = null; selectedComp = null; renderAll(); return; }
+  const n = byId[id];
+  if (!n) return;
+  if (n.type === "container") {
+    selected = (selected === id) ? null : id;
+    selectedComp = null;
+  } else if (n.type === "component") {
+    selected = n.parent;
+    selectedComp = (selectedComp === id) ? null : id;
+  }
+  renderAll();
+}
+
+function applyZoom() {
+  stage.style.transform = `scale(${zoom})`;
+  // expand wrapper scroll area to scaled size
+  stage.style.transformOrigin = "0 0";
+  $("#zLvl").textContent = Math.round(zoom * 100) + "%";
+}
+function fit() {
+  const wrap = $("#stageWrap");
+  const avail = wrap.clientWidth - 4;
+  zoom = Math.min(1, avail / stage.scrollWidth);
+  applyZoom();
+}
+
+function scheduleDraw() {
+  drawEdges();
+  requestAnimationFrame(() => { drawEdges(); });
+  setTimeout(() => { drawEdges(); }, 220);
+}
+function renderAll() {
+  renderChrome(); renderL1(); renderL2(); renderL3(); renderL4(); renderList();
+  // edges after layout settles (run several times to survive font/layout shifts)
+  scheduleDraw();
+}
+
+/* badge deep-link (no-op visual in the mockup) */
+document.addEventListener("click", e => {
+  const b = e.target.closest(".bdg--find");
+  if (b && b.dataset.ff) {
+    e.stopPropagation();
+    flash(`→ would open finding ${b.dataset.ff} in the Findings tab`);
+  }
+});
+function flash(msg) {
+  tip.textContent = msg; tip.style.whiteSpace = "normal"; tip.style.display = "block";
+  tip.style.left = (innerWidth/2 - 120) + "px"; tip.style.top = "20px";
+  clearTimeout(flash._t); flash._t = setTimeout(hideTip, 1400);
+}
+
+$("#zIn").addEventListener("click", () => { zoom = Math.min(2, zoom + 0.15); applyZoom(); });
+$("#zOut").addEventListener("click", () => { zoom = Math.max(0.4, zoom - 0.15); applyZoom(); });
+$("#zFit").addEventListener("click", fit);
+let rT; addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(() => drawEdges(), 120); });
+// recolor edges on theme change
+new MutationObserver(() => drawEdges()).observe(document.body, { attributes:true, attributeFilter:["data-theme","data-sev"] });
+
+renderAll();
+fit();
+window.addEventListener("load", () => { fit(); scheduleDraw(); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleDraw);
+</script>
+</body>
+</html>

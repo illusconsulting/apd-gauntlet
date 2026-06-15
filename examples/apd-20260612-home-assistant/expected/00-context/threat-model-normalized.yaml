@@ -1,0 +1,2666 @@
+schema_version: 1
+generated_by: threat_model_author
+source_artifact: 00-context/asset-inventory.yaml
+methodology: stride
+extraction_summary:
+  entry_count: 212
+  high_confidence_count: 70
+  medium_confidence_count: 53
+  low_confidence_count: 89
+  parser_used: apd-threat-model-author (in-LLM ground-or-block over deterministic skeleton; no cap applied — all 212 skeleton cells authored)
+entries:
+- entry_id: tm-901336d8
+  asset: Owner user (onboarding user, all permissions)
+  threat: 'The owner identity is the unconditional all-access principal: auth/permissions/__init__.py::_OwnerPermissions (cev-a1000008) returns access_all_entities=True and an allow-all check fn, so spoofing or account-takeover of the owner (or an owner-equivalent long-lived token) bypasses the entire permission model. Spoofing applies because the owner principal authenticates over the same bcrypt credential path (Data.hash_password, cev-a1000004) and JWT bearer path (cev-a1000001) as any user, with no owner-specific step-up.'
+  mitigation: Login is bcrypt rounds=12 with a constant-time dummy-checkpw miss path (cev-a1000005) that defends user-enumeration; access tokens are HS256 JWTs validated centrally (cev-a1000002). MFA/TOTP is available as an auth module but is not asserted mandatory for the owner.
+  methodology: stride
+  source_locator: '#owner, lines 27-29 (always all permissions)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-a8308c32
+  asset: Owner user (onboarding user, all permissions)
+  threat: 'Owner-initiated consequential actions (state writes, service calls, add-on install, backup, user management) are not bound to a tamper-evident security audit log: the run scope confirms no audit_log_store exists (only logbook/logger), and the logbook sample shows context_user_id: null, so an owner can repudiate privileged actions. Repudiation applies to this principal because its actions have the highest blast radius and the weakest attribution.'
+  mitigation: null
+  methodology: stride
+  source_locator: '#owner, lines 27-29 (always all permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - 'security audit-event log binding owner identity to privileged actions (confirmed absent: only logbook/logger; no audit_log_store)'
+- entry_id: tm-7262344c
+  asset: Non-admin / low-priv user (group-scoped permission policy)
+  threat: 'The low-priv user authenticates over the same credential/JWT path as any user; spoofing applies. Authorization is genuinely enforced for this principal on reads: APIEntityStateView.get (cev-a1000011) calls user.permissions.check_entity(entity_id, POLICY_READ) and filter_entity_ids_by_permission (cev-a1000007) scopes entities per-policy — contradicting the doc''s ''not enforced yet''. But that same filter SHORT-CIRCUITS to allow-all for any admin, and state WRITE (cev-a1000012) is admin-or-deny with NO per-entity write policy, so a spoofed/escalated session crosses straight to full control.'
+  mitigation: Per-entity READ policy is compiled by compile_policy (cev-a1000006; empty/None policy => deny-all) and enforced at the view. Credential path is bcrypt+constant-time (cev-a1000004/5).
+  methodology: stride
+  source_locator: '#permissions, lines 9-12 (group membership grants permissions)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-d166c7bb
+  asset: Non-admin / low-priv user (group-scoped permission policy)
+  threat: 'Low-priv user actions are not attributable to a tamper-evident audit log (no audit_log_store; logbook context_user_id observed null). Repudiation applies: a low-priv user can deny having driven a state mutation or service call.'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 9-12 (group membership grants permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - security audit-event log attributing low-priv user actions (confirmed absent)
+- entry_id: tm-534bc7ae
+  asset: Long-Lived Access Token holder
+  threat: 'A Long-Lived Access Token is a user-minted, long-horizon bearer issued from /profile; it authenticates as its owning user with that user''s full permission set. Spoofing applies: anyone who replays a leaked LLAT is indistinguishable from the user, and an owner-issued LLAT inherits owner all-access (cev-a1000008). LLATs are validated by the same async_validate_access_token chokepoint (cev-a1000002) and revoked only by deleting the backing refresh token.'
+  mitigation: Validation is centralized (cev-a1000002, rejects if refresh token revoked or user inactive); revocation is by refresh-token delete. No automatic expiry — the token remains valid until explicitly deleted.
+  methodology: stride
+  source_locator: '#rest-api, line 15 (Long-Lived Access Token from /profile)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-331532ab
+  asset: Long-Lived Access Token holder
+  threat: 'LLAT-driven actions lack tamper-evident attribution (no audit_log_store). Repudiation applies: the holder can deny actions, and a leaked LLAT lets a third party act under the user''s identity with no distinguishing log.'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, line 15 (Long-Lived Access Token from /profile)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log distinguishing LLAT-driven from interactive actions (confirmed absent)
+- entry_id: tm-a5fd5328
+  asset: System user (HAOS / Supervisor system tokens, never exposed)
+  threat: System tokens authenticate HAOS/Supervisor to Core. The cross-repo edge cev-0a000002 shows Supervisor mints/holds a Core access token (POSTs /auth/token) and calls Core as a privileged client; spoofing the system principal (or stealing SUPERVISOR_TOKEN) lets a host-root-plane actor forge Core admin. Spoofing applies because the system principal is a service account whose token, if leaked from the add-on env or backup, is a full Core credential.
+  mitigation: System tokens are documented as never user-exposed; SUPERVISOR_TOKEN is scoped to a declared add-on role enforced by SecurityMiddleware (cev-b2000001).
+  methodology: stride
+  source_locator: '#refresh-token-types, line 51 (System tokens for HA OS and Supervisor)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-04c15c93
+  asset: System user (HAOS / Supervisor system tokens, never exposed)
+  threat: System-principal actions against Core are not separately audited (no audit_log_store), so a host-root actor acting as the system user is indistinguishable and can repudiate. Repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#refresh-token-types, line 51 (System tokens for HA OS and Supervisor)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log attributing system-principal Core calls (confirmed absent)
+- entry_id: tm-5663cdc9
+  asset: Add-on / app principal (SUPERVISOR_TOKEN + declared API role)
+  threat: 'The add-on principal authenticates to the Supervisor API by SUPERVISOR_TOKEN; SecurityMiddleware.token_validation (cev-b2000001) maps the token to an app and applies the role_access regex ACL. Spoofing applies: any party that obtains a SUPERVISOR_TOKEN (env leak, container compromise) presents as that add-on, and an admin-role add-on matches ROLE_ADMIN=re.compile(''.*'') (cev-b2000002) reaching the full Supervisor API.'
+  mitigation: SUPERVISOR_TOKEN is validated and bound to the add-on's declared role; default-deny on no role match (cev-b2000001). Protection mode + AppArmor are documented controls.
+  methodology: stride
+  source_locator: '#api-role, lines 7-19 (default<homeassistant<backup<manager<admin)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-61482e8c
+  asset: Add-on / app principal (SUPERVISOR_TOKEN + declared API role)
+  threat: 'Add-on principal actions against the Supervisor API are logged only as a warning on role miss (cev-b2000001), not to a tamper-evident audit trail. Repudiation applies: a compromised add-on can deny privileged Supervisor calls it made within its role.'
+  mitigation: null
+  methodology: stride
+  source_locator: '#api-role, lines 7-19 (default<homeassistant<backup<manager<admin)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of add-on-principal Supervisor API calls (only a _LOGGER.warning on miss observed)
+- entry_id: tm-43df4808
+  asset: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  threat: 'Ingress identity is conveyed to add-ons via X-Remote-User-Id/Name/Display-Name headers. ingress._init_header (cev-b2000005) injects these from the session AND strips any inbound client copies in a filter loop, so a client cannot spoof the header INTO an add-on through ingress. Spoofing risk is residual: an add-on that is reachable by a path OTHER than ingress, or that trusts the header without confirming it traversed ingress, can be fed a forged identity.'
+  mitigation: ingress._init_header strips inbound X-Remote-User-* before re-injecting the session-derived values (cev-b2000005) — prevents client header spoofing through the ingress path.
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-46f50930
+  asset: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  threat: The add-on consumes an injected identity header but there is no signed assertion binding the action to that user in a tamper-evident log; repudiation applies at the add-on tier (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - signed/audited binding of ingress identity to add-on-side actions (only trusted headers; no audit log)
+- entry_id: tm-381aed73
+  asset: Registered mobile device (webhook_id / cloudhook holder)
+  threat: 'A registered device authenticates its webhook calls by POSSESSION OF THE webhook_id alone: handle_webhook (cev-a1000016) maps webhook_id -> config_entry with no bearer, and webhook_call_service (cev-a1000015) then calls arbitrary services with a synthesized context and NO per-entity permission check. Spoofing applies directly: a leaked webhook_id (the leaked_device_webhook_id position) lets any party impersonate the device and actuate locks/alarms. The webhook_id is a 32-hex token (cev-a1000014) with an optional NaCl body secret.'
+  mitigation: Registration is bearer-gated (RegistrationsView.post, cev-a1000014) and mints an opaque token_hex webhook_id plus an optional NaCl SecretBox secret for body encryption.
+  methodology: stride
+  source_locator: registration response, lines 74-79 (webhook_id, secret)
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-8a0b033a
+  asset: Registered mobile device (webhook_id / cloudhook holder)
+  threat: Webhook-driven service calls run under a synthesized registration_context (cev-a1000015), not an attributable user, and there is no audit log; a device (or webhook_id holder) can repudiate the actions. Repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (webhook_id, secret)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit trail attributing webhook_call_service invocations to a device beyond the synthesized context (no audit log)
+- entry_id: tm-1dfd4541
+  asset: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  threat: 'HA''s IndieAuth model uses the client_id AS the redirect URL with no confidential client secret (run scope confirms compromised_oauth_client_credentials is N/A — there is no secret to steal). Spoofing applies in the form of redirect/authorization-flow abuse: a malicious page that controls a matching redirect URL can attempt to capture the authorization code, since client authenticity reduces to redirect-URL matching rather than a secret.'
+  mitigation: The claimed control is redirect-URL matching (client_id IS the redirect URL); there is no confidential client secret, so client authenticity reduces to redirect-URL/PKCE validation in the authorize flow.
+  methodology: stride
+  source_locator: '#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-e49b3dbb
+  asset: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  threat: Token issuance/refresh via the IndieAuth flow is not bound to a tamper-evident audit log; repudiation of token grants applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of IndieAuth token grants/refreshes (confirmed absent)
+- entry_id: tm-773d9d0f
+  asset: Trusted-networks / command-line / legacy auth provider principal
+  threat: 'Trusted-networks / command-line / legacy auth providers authenticate a principal by network position or a configured command rather than a per-user secret. Spoofing applies: trusted-networks trusts source IP (defeatable by LAN position / proxy header confusion), and command-line auth trusts a local command''s exit — both are weaker than the bcrypt credential path and can be impersonated by an attacker who satisfies the network/host precondition.'
+  mitigation: The claimed control is network-position (trusted_networks IP allow-list) or a configured command's exit — both weaker than the bcrypt credential path and defeatable by satisfying the network/host precondition.
+  methodology: stride
+  source_locator: '#authentication-authorization-model, lines 67-69'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-da8b9f9b
+  asset: Trusted-networks / command-line / legacy auth provider principal
+  threat: Logins via these providers are not attributable to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication-authorization-model, lines 67-69'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of trusted-network/command-line provider logins (confirmed absent)
+- entry_id: tm-593427c6
+  asset: Push-relay service account (Firebase Cloud Functions identity)
+  threat: 'The push relay (Firebase Cloud Functions) consumes push_token from the request body and applies a per-token rate limit, but handlers.handleRequest (cev-08000001) performs NO caller authentication — any party with a valid-format FCM token can drive the relay. Spoofing applies: the relay''s own service identity is asserted only by deployment, and inbound callers are unauthenticated, so notification spoofing is possible.'
+  mitigation: Per-token rate limiting (429) on the relay (cev-08000001) bounds abuse volume; the relay shields the underlying provider registration from third parties.
+  methodology: stride
+  source_locator: '#deploy-your-own, lines 27-47 (firebase deploy, functions:config)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-48524d2c
+  asset: Push-relay service account (Firebase Cloud Functions identity)
+  threat: The relay forwards notifications without authenticating the caller (cev-08000001) and keeps no attributable audit of who requested a push; repudiation applies (notification spoofing is deniable).
+  mitigation: null
+  methodology: stride
+  source_locator: '#deploy-your-own, lines 27-47 (firebase deploy, functions:config)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - caller-authenticated, audited push-request log on the relay (only per-token rate-limit observed; no caller auth)
+- entry_id: tm-5581f604
+  asset: Third-party integration / device principal (untrusted device/cloud)
+  threat: 'Core integrations consume responses from untrusted devices/clouds and forged inbound webhooks (the compromised_third_party_integration position; API10 unsafe consumption). Spoofing applies: a hostile device/cloud can impersonate the legitimate endpoint an integration trusts, because Core trusts the integration which in turn trusts the remote response, and integrations run unsandboxed at Core''s full privilege (overview lines 20-22).'
+  mitigation: 'None central: response/endpoint authenticity is per-integration (not centrally enforced); integrations run unsandboxed at Core''s full privilege (overview lines 20-22).'
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (untrusted device/cloud responses)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-fc2d13cb
+  asset: Third-party integration / device principal (untrusted device/cloud)
+  threat: Actions Core takes on behalf of a third-party integration's response are not attributable to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (untrusted device/cloud responses)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log binding Core state changes to the originating integration/device response (confirmed absent)
+- entry_id: tm-8b2483ae
+  asset: Home Assistant Core (Python asyncio app)
+  threat: 'Core is a single, highly-privileged trust domain (overview lines 20-22) whose inbound auth is centralized: auth_middleware (cev-a1000009) accepts bearer, signed-query, or the supervisor unix socket and sets KEY_AUTHENTICATED. Spoofing applies because owner takeover (cev-a1000008) or a forged HS256 JWT (signed with a compromised per-refresh-token jwt_key, cev-a1000001/3) authenticates as any principal across this single privileged domain.'
+  mitigation: Central REST auth middleware (cev-a1000009) and the WS handshake (cev-a1000010) validate tokens; access tokens are HS256 JWTs validated at one chokepoint (cev-a1000002).
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-d98660ae
+  asset: Home Assistant Core (Python asyncio app)
+  threat: 'Integrations are NOT sandboxed from each other and run with Core''s full privilege (overview lines 20-22), so any tampering primitive inside one integration (or a malicious integration) tampers with all Core state, the permission engine, and .storage. Tampering applies: there is no in-process integrity boundary protecting Core''s state machine from a single misbehaving integration.'
+  mitigation: 'None: integrations run unsandboxed at Core''s full privilege by design (overview lines 20-22) — there is no in-process integrity boundary protecting Core state from a single integration.'
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-034d8894
+  asset: Home Assistant Core (Python asyncio app)
+  threat: Core actions are recorded only in logbook/logger, not a tamper-evident security audit log (no audit_log_store; logbook context_user_id observed null). Repudiation applies across the whole Core action surface.
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - 'tamper-evident security audit log for Core actions (confirmed absent: only logbook/logger)'
+- entry_id: tm-3ebbf8c2
+  asset: Home Assistant Core (Python asyncio app)
+  threat: 'Core holds and serves the dense secret/PII estate: .storage is written as PLAINTEXT JSON (cev-a1000017) and /api/config returns instance latitude/longitude + config_dir in cleartext to any bearer holder. Information disclosure applies because Core''s single privileged domain means any auth bypass or over-broad token reads the full estate.'
+  mitigation: Per-entity READ policy is enforced at the state view (cev-a1000011); .storage files are 0600 (self._private) though plaintext.
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-296e2800
+  asset: Home Assistant Core (Python asyncio app)
+  threat: Core is a single asyncio process on a single host by design (no clustering claim); denial of service applies as a single point of failure — exhausting the event loop, the recorder DB, or the host crashes the whole automation platform including locks/alarms.
+  mitigation: 'None claimed beyond OS limits: Core is a single asyncio process on a single host (no clustering claim); there is no documented rate-limit or HA/cluster mode.'
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-6f42b4af
+  asset: Home Assistant Core (Python asyncio app)
+  threat: 'Elevation of privilege is the dominant Core risk: state WRITE is admin-or-deny with no per-entity policy (cev-a1000012), the admin path short-circuits per-entity filtering to allow-all (cev-a1000007), owner is unconditional all-access (cev-a1000008), and @require_admin server-side template render (cev-a1000013) is an SSTI/SSRF primitive reachable post-admin. Elevation applies: crossing to admin/owner yields total control of the single privileged domain.'
+  mitigation: Admin gating on writes/templates (cev-a1000012/13) and compile_policy deny-all default (cev-a1000006) bound non-admin escalation; the gap is the coarse admin granularity, not absence of a gate.
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-fb8b1371
+  asset: Core REST API (/api/, port 8123)
+  threat: 'The REST API authenticates every request via auth_middleware (cev-a1000009: bearer / signed-query / supervisor socket). Spoofing applies through token replay or forgery: a leaked LLAT or a JWT forged with a compromised jwt_key (cev-a1000001/3) is accepted, and owner tokens grant all-access (cev-a1000008).'
+  mitigation: auth_middleware centralizes authn (cev-a1000009); tokens validated at the cev-a1000002 chokepoint.
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-dde53c5a
+  asset: Core REST API (/api/, port 8123)
+  threat: 'POST /api/states/{entity_id} (cev-a1000012) writes entity state and POST /api/services/<domain>/<service> actuates devices; the write path is admin-or-deny with NO per-entity write policy. Tampering applies: any admin token tampers with arbitrary entity state (locks/alarms) with no per-entity scoping.'
+  mitigation: State writes require is_admin (cev-a1000012); reads are per-entity scoped (cev-a1000011).
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-841cca2b
+  asset: Core REST API (/api/, port 8123)
+  threat: REST-driven mutations are not bound to a tamper-evident audit log (no audit_log_store; /api/logbook shows context_user_id null). Repudiation applies on the consequential-action path.
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log attributing /api/states and /api/services calls to an identity (confirmed absent)
+- entry_id: tm-884e404c
+  asset: Core REST API (/api/, port 8123)
+  threat: '/api/config returns instance latitude/longitude, config_dir and whitelist_external_dirs in cleartext to any bearer holder; /api/history and /api/states expose recorder/state PII subject only to per-entity READ policy. Information disclosure applies: a low-scoped-but-valid token already reads instance location and any non-restricted entity.'
+  mitigation: Per-entity READ permission is enforced on state reads (cev-a1000011); admin short-circuits it (cev-a1000007).
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-04eb6424
+  asset: Core REST API (/api/, port 8123)
+  threat: 'The REST API is served by the single Core process; no rate-limiting is documented at this boundary. Denial of service applies: unauthenticated pre-auth endpoints and expensive routes (/api/template, /api/history) can exhaust the single event loop.'
+  mitigation: 'None documented at the boundary: TLS terminates at a reverse proxy and HA serves HTTP on 8123 with no documented throttle on expensive routes.'
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-2779d4b1
+  asset: Core REST API (/api/, port 8123)
+  threat: Function-level authz is at admin granularity only on the write/template routes (cev-a1000012/13, API5), so crossing to admin via the REST surface yields full device control and SSTI/SSRF. Elevation applies through the admin gate's coarseness rather than its absence.
+  mitigation: Consequential routes are @require_admin / is_admin gated (cev-a1000012/13).
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-28df35dc
+  asset: Core WebSocket API (/api/websocket)
+  threat: 'The WS API runs an auth_required->auth->auth_ok handshake: AuthPhase.async_handle (cev-a1000010) validates the access token, checks user_not_allowed, and registers a revoke callback to drop the socket on token revocation. Spoofing applies via a stolen/forged access token presented in the handshake (same JWT trust as REST, cev-a1000002).'
+  mitigation: WS handshake validates the access token and registers async_register_revoke_token_callback so revocation drops the live socket (cev-a1000010).
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-0fca74f6
+  asset: Core WebSocket API (/api/websocket)
+  threat: Authenticated WS command-phase messages carry a user_id context and can drive state/service commands; tampering applies to command messages over a hijacked or MitM'd socket (no fixed-server pinning is possible for self-hosted instances, cev-f6000002).
+  mitigation: Commands run in the authenticated user's context; per-entity READ policy still applies on reads (cev-a1000011).
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-115e4d83
+  asset: Core WebSocket API (/api/websocket)
+  threat: WS-driven actions share Core's lack of a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of WS command-phase consequential actions (confirmed absent)
+- entry_id: tm-39544c8f
+  asset: Core WebSocket API (/api/websocket)
+  threat: The WS subscribe API streams live entity state to the client; information disclosure applies subject to the same per-entity READ policy as REST (cev-a1000011), with admin short-circuiting it (cev-a1000007).
+  mitigation: Per-entity READ policy applies to subscribed state (cev-a1000011).
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-621d5347
+  asset: Core WebSocket API (/api/websocket)
+  threat: The WS server holds long-lived sockets on the single Core event loop; denial of service applies via socket/subscription exhaustion. No connection quota is documented.
+  mitigation: 'None documented: the WS server holds long-lived sockets on the single event loop with no stated connection/subscription quota.'
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-fdef926a
+  asset: Core WebSocket API (/api/websocket)
+  threat: WS command privilege follows the same admin/owner model as REST; elevation applies where a session crosses to admin (allow-all filter short-circuit, cev-a1000007) or owner (cev-a1000008).
+  mitigation: WS commands inherit the user permission model (cev-a1000010 -> cev-a1000007).
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-12599787
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: 'The auth subsystem is the spoofing chokepoint: it issues HS256 JWT access tokens signed per-refresh-token (cev-a1000001/3), validates them centrally (cev-a1000002), and hashes credentials with bcrypt rounds=12 + constant-time miss (cev-a1000004/5). Spoofing applies if a jwt_key is disclosed (token forgery) or an owner credential/token is taken (all-access, cev-a1000008).'
+  mitigation: Constant-time login defends enumeration (cev-a1000005); central validation rejects revoked/inactive (cev-a1000002); 256-bit opaque refresh + per-token jwt_key (cev-a1000003).
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-d49a5c2c
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: 'Refresh tokens, jwt_keys, and user/group records live in plaintext .storage/auth (cev-a1000017); tampering with that file (or its backup copy) forges signing keys or elevates a user to admin/owner. Tampering applies: there is no integrity protection (MAC/signing) on the at-rest auth store beyond 0600 perms.'
+  mitigation: The only at-rest control is 0600 file permissions (cev-a1000017); auth records (refresh tokens, jwt_keys, user/group) are plaintext JSON with no MAC.
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-20cda232
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: Token issuance, refresh, and revocation events are not written to a tamper-evident audit log; repudiation of credential/token lifecycle events applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of token issuance/refresh/revocation (confirmed absent)
+- entry_id: tm-007126ca
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: The subsystem persists password hashes, MFA/TOTP seeds, refresh tokens and per-token jwt_keys to plaintext .storage (cev-a1000017); information disclosure of this store yields offline credential cracking AND live token forgery. Disclosure applies directly from any file/backup read.
+  mitigation: bcrypt rounds=12 raises offline-crack cost (cev-a1000004); files are 0600 (cev-a1000017).
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-6fab88e3
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: The auth subsystem is in-process with Core; denial of service applies if the auth store or validation path is overwhelmed, locking all users out of the single instance.
+  mitigation: 'None documented: the auth path is in-process with Core on a single instance with no isolation/quota.'
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-60a45180
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: A jwt_key disclosure or .storage/auth tamper lets an attacker mint an owner-scoped JWT (cev-a1000001 + cev-a1000008), the maximal elevation. Elevation applies because the auth subsystem itself is the privilege oracle and its keys are at rest in plaintext (cev-a1000017).
+  mitigation: Per-refresh-token jwt_keys limit blast radius to one token's scope unless the owner token's key is taken; validation rejects inactive users (cev-a1000002).
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-2bcdae8a
+  asset: Core user permission policy engine
+  threat: 'The policy engine identifies a principal''s rights, not the principal itself, so spoofing here means feeding it a forged identity: _OwnerPermissions (cev-a1000008) grants unconditional all-access and filter_entity_ids_by_permission short-circuits to allow-all for any admin (cev-a1000007), so a spoofed admin/owner session inherits the maximal policy.'
+  mitigation: compile_policy yields deny-all for empty/None policy (cev-a1000006); non-admin reads are genuinely scoped (cev-a1000011).
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-a6e02b81
+  asset: Core user permission policy engine
+  threat: Policy objects are compiled from per-user records in plaintext .storage (cev-a1000017); tampering those records (compile_policy input) silently escalates privilege — the engine's own note (cev-a1000006) is that corruption => silent escalation. Tampering applies and is high-impact because there is no integrity check on the policy source.
+  mitigation: The only at-rest control is 0600 file permissions on the policy source (cev-a1000017); compile_policy (cev-a1000006) consumes plaintext records with no integrity check (corruption => silent escalation).
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-14a13137
+  asset: Core user permission policy engine
+  threat: Permission decisions (allow/deny) are not logged to a tamper-evident audit trail; repudiation applies — there is no attributable record of which policy admitted a consequential action.
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of permission decisions (confirmed absent)
+- entry_id: tm-ea14166e
+  asset: Core user permission policy engine
+  threat: The engine reads group/policy records that themselves reveal the entity/topology map; disclosure of the policy store (plaintext .storage, cev-a1000017) leaks the authorization structure. Information disclosure applies at the policy-store read.
+  mitigation: Policy store is 0600 (cev-a1000017).
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-26b09566
+  asset: Core user permission policy engine
+  threat: A corrupted or unparseable policy yields deny-all (cev-a1000006), which is fail-closed for security but a denial-of-service for legitimate users; availability impact applies on policy corruption.
+  mitigation: Fail-closed deny-all on empty/None policy (cev-a1000006) is a safe-by-default posture.
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-0e5f56b3
+  asset: Core user permission policy engine
+  threat: 'Elevation is the engine''s core risk: the admin allow-all short-circuit (cev-a1000007) plus owner all-access (cev-a1000008) mean any path that flips is_admin/owner (or tampers the policy source, cev-a1000006) escalates to total control. Elevation applies.'
+  mitigation: compile_policy + check_entity enforce per-entity reads for non-admins (cev-a1000006/11), limiting horizontal escalation below admin.
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a813ab7d
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: 'Two authn models coexist: registration (POST /api/mobile_app/registrations, cev-a1000014) is bearer-gated, but the resulting webhook is BEARER-LESS — handle_webhook (cev-a1000016) authenticates by possession of the webhook_id alone. Spoofing applies on the webhook path: a leaked webhook_id (leaked_device_webhook_id position) impersonates the device with no token.'
+  mitigation: Registration is bearer-gated and mints a token_hex webhook_id + optional NaCl body secret (cev-a1000014).
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-f964734c
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: webhook_call_service (cev-a1000015) lets a webhook_id holder call ARBITRARY services with a synthesized context and NO per-entity permission check; tampering applies directly — the holder mutates device/entity state (locks, alarms) outside the permission engine.
+  mitigation: The only claimed control is the optional NaCl SecretBox body secret (cev-a1000014); webhook_call_service (cev-a1000015) applies NO per-entity permission check — the design relies on webhook_id secrecy alone, which the leaked_device_webhook_id position defeats.
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-7427c10e
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: Webhook actions run under registration_context (cev-a1000015), not an attributable user, and there is no audit log; repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit trail attributing webhook actions to a device/user (synthesized context only; no audit log)
+- entry_id: tm-64a028f3
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: The webhook accepts data and (optionally) NaCl-encrypted bodies; without encryption, payloads (location, sensor PII) cross in cleartext, and handle_webhook (cev-a1000016) leaks webhook validity by behavior. Information disclosure applies, mitigated only when supports_encryption is used.
+  mitigation: Optional NaCl SecretBox body encryption (CONF_SECRET, cev-a1000014) protects payload confidentiality when enabled.
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-1203ba47
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: handle_webhook (cev-a1000016) shows NO rate-limit on the webhook entrypoint; denial of service applies — a webhook_id holder (or guesser) can flood the single Core process with service calls.
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - rate-limiting on the webhook entrypoint — cev-a1000016 observes no rate-limit
+- entry_id: tm-9f54bb91
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: Because webhook_call_service bypasses per-entity permission checks (cev-a1000015), a low-privilege webhook_id effectively elevates to call any service Core exposes; elevation applies — the bearer-less path is privileged beyond the registering user's scope.
+  mitigation: 'None claimed for scoping: the design grants webhook_id holders unscoped service-call power (cev-a1000015), relying solely on webhook_id possession as the control.'
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations, webhook_id)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-662c2c87
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: 'Integrations run unsandboxed at Core''s full privilege (overview lines 20-22) and consume untrusted device/cloud responses + forged inbound webhooks (compromised_third_party_integration). Spoofing applies: a hostile remote can impersonate the endpoint an integration trusts, and the integration speaks for Core.'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence:
+  - per-integration endpoint-identity/response validation (runtime modeled at the aggregate level; per-vendor authn not in code-evidence-index)
+- entry_id: tm-e185c6a7
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: A single malicious or compromised integration tampers with all Core state and other integrations' data because there is no inter-integration isolation (overview lines 20-22). Tampering applies at the highest scope.
+  mitigation: 'None: by design integrations share one process with no isolation boundary (overview lines 20-22).'
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-9868b14b
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: Integration-initiated actions are not attributable to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of integration-initiated state changes (confirmed absent)
+- entry_id: tm-501228cd
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: Integrations hold OAuth tokens/API keys/device creds in plaintext .storage config_entries (cev-a1000017) and reach external devices/clouds (SSRF surface, /api/template render cev-a1000013). Information disclosure applies via the secret vault read and via SSRF-driven exfiltration.
+  mitigation: config_entries files are 0600 (cev-a1000017); admin gate on template render (cev-a1000013).
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-35a0b188
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: A misbehaving integration blocks Core's single event loop or exhausts the recorder DB; denial of service applies because integrations share the one process (overview lines 20-22).
+  mitigation: 'None documented: integrations share Core''s single event loop with no per-integration resource quota.'
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-9595acc2
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: Any integration already runs at Core's full privilege (overview lines 20-22), so a compromised integration IS at maximum in-process privilege; elevation applies as the absence of a privilege boundary rather than a crossable gate.
+  mitigation: 'None: integrations already run at Core''s full privilege by design (overview lines 20-22) — there is no privilege boundary to escalate across.'
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e0a1020f
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: 'Supervisor authenticates add-on callers by SUPERVISOR_TOKEN via SecurityMiddleware.token_validation (cev-b2000001) and itself acts as a privileged Core client minting a Core token (cev-0a000002). Spoofing applies: a stolen SUPERVISOR_TOKEN presents as the add-on, and compromise of Supervisor''s own identity forges Core admin.'
+  mitigation: Token->app->role-ACL validation with default-deny (cev-b2000001); ingress strips client-spoofed identity headers (cev-b2000005).
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-83f43c8e
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: Supervisor controls the Docker socket (cev-b2000003) and can container_run_inside (cev-b2000004), so tampering at the Supervisor tier rewrites any container including Core. Tampering applies at host-root scope.
+  mitigation: The contradictable control is the add-on role gate (SecurityMiddleware, cev-b2000001) bounding which callers reach the Docker-socket control plane; the host-root scope of Supervisor itself is by design (cev-b2000003/4).
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-5e0436b2
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: Supervisor logs role misses as warnings (cev-b2000001) but keeps no tamper-evident audit of privileged lifecycle/backup/exec actions; repudiation applies at the host-root tier.
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of Supervisor privileged actions (add-on install, backup, container exec) — only _LOGGER.warning observed
+- entry_id: tm-246a2088
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: Supervisor mediates backups that bundle secrets+tokens+DB (cev-b2000006) and holds a Core token (cev-0a000002); information disclosure applies because a Supervisor compromise reads the entire estate including default-unencrypted backups.
+  mitigation: Add-on access to Supervisor data is role-scoped (cev-b2000001/2).
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-a0f83d51
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: Supervisor is the single control plane for add-on/Core lifecycle; denial of service applies — losing or hanging Supervisor halts add-on and Core management on the single host.
+  mitigation: 'None documented: Supervisor is the single control plane on the single host (no clustering).'
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-4bba1be4
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: 'Elevation is structural: an add-on with admin role (ROLE_ADMIN=.* , cev-b2000002) or with protection mode off reaches the full Supervisor API, and Supervisor owns the Docker socket (cev-b2000003) -> container_run_inside (cev-b2000004) -> host root. Elevation applies as the add-on->supervisor->docker->host chain.'
+  mitigation: Per-role URL allow-lists with default-deny (cev-b2000001/2) and protection mode bound a default add-on; the gate weakens to nothing for an admin-role/protection-off add-on.
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-7d06bd2e
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: The Supervisor API authenticates by SUPERVISOR_TOKEN bearer; token_validation (cev-b2000001) resolves token->app and applies role_access. Spoofing applies via a leaked token or an add-on whose declared role over-reaches (ROLE_ADMIN matches everything, cev-b2000002).
+  mitigation: Default-deny token->role ACL (cev-b2000001).
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-30e1a69b
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: API routes drive add-on install, backups, and (via the control plane) container exec; tampering applies for any caller whose role regex admits the privileged path (cev-b2000002), reaching Docker (cev-b2000003/4).
+  mitigation: Role regex ACL gates each path; default add-on role cannot match admin-only routes (cev-b2000001/2).
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-405c57e7
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: Privileged API calls are not written to a tamper-evident audit log (only warnings on role miss, cev-b2000001); repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of privileged Supervisor API calls (only _LOGGER.warning observed)
+- entry_id: tm-5b0b8e8a
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: Endpoints such as /host/logs and add-on/config reads expose host/add-on state and secrets to a sufficiently-roled caller; information disclosure applies subject to the role ACL (cev-b2000002).
+  mitigation: Role-scoped path ACL limits disclosure to the caller's role (cev-b2000002).
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-c46f2f91
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: The Supervisor API is the single management entrypoint; denial of service applies — flooding or hanging it stalls add-on/Core lifecycle on the one host.
+  mitigation: 'None documented: the Supervisor API is the single management entrypoint with no stated rate-limit.'
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-dccad466
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: An admin-role token (or protection-mode-off add-on) matches ROLE_ADMIN=re.compile('.*') (cev-b2000002) and reaches the full API including the routes that lead to the Docker socket (cev-b2000003) and container exec (cev-b2000004); elevation to host root applies.
+  mitigation: Default-deny + per-role regex (cev-b2000001/2) blocks under-privileged tokens; the elevation requires the admin role or protection off.
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-84f5b977
+  asset: os-agent (Go D-Bus host daemon)
+  threat: 'os-agent exposes host operations over the system D-Bus (io.hass.os); AddSSHAuthKey (cev-c3000001) writes an arbitrary SSH key into root''s authorized_keys with NO in-method caller authorization. Spoofing applies: any D-Bus client that reaches the bus (a container with bus access) is treated as authorized, with no per-method principal check.'
+  mitigation: The design relies entirely on D-Bus access control to gate callers; AddSSHAuthKey (cev-c3000001) adds no in-method caller-authorization, so the only claimed control is who can reach the system D-Bus.
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-7ae600ba
+  asset: os-agent (Go D-Bus host daemon)
+  threat: 'AddSSHAuthKey (cev-c3000001) and ScheduleWipeDevice (cev-c3000002) are direct host-tampering primitives: write root SSH key, schedule datadisk/factory wipe. Tampering applies at host-root scope via an unauthenticated-at-method D-Bus call.'
+  mitigation: The only claimed control is D-Bus access restriction; the destructive host methods (cev-c3000001/2) perform no in-method authorization themselves.
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-88de85e3
+  asset: os-agent (Go D-Bus host daemon)
+  threat: os-agent host operations (SSH key add, device wipe) are not bound to a tamper-evident audit log; repudiation applies for the most destructive host actions.
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of os-agent D-Bus host operations (none observed in cev-c3000001/2)
+- entry_id: tm-8eb3e214
+  asset: os-agent (Go D-Bus host daemon)
+  threat: os-agent mediates datadisk/system operations; a caller that reaches its D-Bus interface can read host system state. Information disclosure applies, bounded only by D-Bus access control (no in-method authz, cev-c3000001).
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - confidentiality controls / authz on os-agent system read methods (only D-Bus access control gates the interface)
+- entry_id: tm-c0430282
+  asset: os-agent (Go D-Bus host daemon)
+  threat: ScheduleWipeDevice (cev-c3000002) is a destructive availability primitive — a datadisk/factory wipe over D-Bus destroys the instance. Denial of service applies and is catastrophic (full data loss).
+  mitigation: The only claimed control gating ScheduleWipeDevice (cev-c3000002) is D-Bus access; the method itself performs no caller authorization.
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-cbe50d76
+  asset: os-agent (Go D-Bus host daemon)
+  threat: 'The container->host-root bridge is os-agent itself: cev-0a000004 shows Supervisor calling AddSSHAuthKey over D-Bus (cev-c3000001), giving root SSH on the host. Elevation applies — reaching the os-agent bus from a container yields host root with no method-level gate.'
+  mitigation: The only claimed control on the container->host-root bridge (cev-c3000001 + cev-0a000004) is D-Bus access restriction; no method-level authorization gates the bridge.
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-b765be05
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: ingress._init_header (cev-b2000005) injects X-Remote-User-Id/Name/Display-Name from the authenticated session AND strips any inbound client copies in a filter loop, so a client cannot spoof identity headers through ingress. Spoofing is mitigated on the ingress path; residual risk is an add-on reachable off-ingress that still trusts the headers.
+  mitigation: ingress._init_header strips inbound X-Remote-User-* before re-injecting session-derived values (cev-b2000005).
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-878b0188
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: The proxy rewrites request headers; tampering with the header set is prevented for X-Remote-User-* by the strip-then-inject loop (cev-b2000005), but other forwarded headers/body are passed through. Tampering applies to non-identity headers the proxy does not normalize.
+  mitigation: Identity headers are normalized (strip+inject) by cev-b2000005.
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a7ebe899
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: Ingress requests are not bound to a tamper-evident audit log beyond the injected (trusted) header; repudiation applies at the add-on tier (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audited binding of ingress session to add-on-side actions (only trusted headers; no audit log)
+- entry_id: tm-1b0f8b9b
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: The proxy forwards the user's identity to the add-on in cleartext headers; information disclosure applies if the add-on or its logs leak the injected user identity, though the proxy itself derives it from a valid session.
+  mitigation: Identity is session-derived, not client-supplied (cev-b2000005).
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-cf80c56b
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: Ingress is the single reverse-proxy path to add-on UIs; denial of service applies — overwhelming the proxy blocks add-on access.
+  mitigation: 'None documented: ingress is the single reverse-proxy path to add-on UIs with no stated rate-limit.'
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-bd9502a0
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: If an add-on trusted the X-Remote-User-* headers from a non-ingress path it would elevate to any user; the proxy's strip loop (cev-b2000005) prevents client injection through ingress, so elevation is residual (off-ingress trust), not a confirmed ingress bypass.
+  mitigation: The strip-then-inject loop (cev-b2000005) blocks header-spoofing elevation through ingress.
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-937208ec
+  asset: Lit/TS web frontend SPA
+  threat: 'The SPA holds the access token in client storage and passes it native<->WebView over the external bus (cev-07000001/2). Spoofing applies via XSS->token-theft or a forged external-bus callback: fireMessage registers window[CALLBACK_EXTERNAL_BUS] (cev-07000002) and the docs warn callback names must be verified against forgery.'
+  mitigation: 'None code-grounded: the external-bus callback registration (cev-07000002) relies on documentation guidance to verify callback names; no enforcement is in the indexed code.'
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-ccaa9eea
+  asset: Lit/TS web frontend SPA
+  threat: The frontend is served remotely into the mobile WebView; a compromised_backend_or_response can deliver tampered JS/markup that the WebView executes and bridges to native (cev-e5000001). Tampering applies because the WebView trusts the remote frontend with no integrity check on the message source.
+  mitigation: 'None code-grounded: there is no origin/integrity check on the remotely-served frontend content reaching the JS bridge (cev-e5000001).'
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-0bdb57ea
+  asset: Lit/TS web frontend SPA
+  threat: Client-side frontend actions are attributable only via the Core audit surface, which is absent; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of frontend-originated consequential actions (confirmed absent)
+- entry_id: tm-5199affd
+  asset: Lit/TS web frontend SPA
+  threat: The token lives in browser/WebView client storage and crosses the JS bridge in cleartext within the WebView (boundary item 3); information disclosure applies via XSS, an over-permissive bridge, or a hostile remote frontend reading the token (cev-07000001).
+  mitigation: 'None additional: the access token lives in client storage and crosses the bridge in cleartext within the WebView (boundary item 3).'
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-7b77729d
+  asset: Lit/TS web frontend SPA
+  threat: The SPA is static content served by Core; denial of service applies indirectly when Core (its single host) is unavailable. The SPA itself is not a separate availability tier.
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - frontend availability is bounded to Core's single-host availability (no separate SPA SLO)
+- entry_id: tm-5913deca
+  asset: Lit/TS web frontend SPA
+  threat: XSS or a forged external-bus message (cev-07000002) that captures the token elevates the attacker to the token-holder's privilege, including owner if the victim is owner (cev-a1000008). Elevation applies via token theft from the client tier.
+  mitigation: 'None code-grounded: external-bus message-forgery prevention depends on the doc-recommended callback verification (cev-07000002), not enforced in the indexed code.'
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-aa630f88
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: The Recorder DB persists entity-state history via session_scope (cev-a1000018); tampering applies to anyone with DB or host access — there is no documented integrity protection (MAC/append-only) on the history rows, so presence/lock/alarm history can be rewritten.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence:
+  - integrity/append-only protection on recorder rows (cev-a1000018 shows a plain session scope; no at-rest MAC)
+- entry_id: tm-1ea8de08
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: The recorder is history, not a security audit log; logbook entries show context_user_id null and there is no audit_log_store. Repudiation applies — recorded state changes are not reliably attributable to an actor.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - attributable security audit log distinct from recorder history (confirmed absent; logbook context_user_id null)
+- entry_id: tm-25b57db5
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: session_scope (cev-a1000018) is the home-occupancy/geolocation/lock/alarm privacy fact base, stored at rest in SQLite/MariaDB/Postgres; the brief notes no at-rest transformation. Information disclosure applies via DB/host/backup read — this is the PHI-equivalent privacy store.
+  mitigation: No at-rest encryption is claimed; the recorder persists raw state via a plain session scope (cev-a1000018). The only boundary is host/DB file access control.
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-60f1d9cf
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: The recorder shares the single host; denial of service applies via DB exhaustion/corruption, which also degrades /api/history and automations that read history.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/retention controls on the recorder DB (single host; no documented purge/quota policy beyond defaults)
+- entry_id: tm-1664593a
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: 'This store holds bcrypt password hashes + MFA/TOTP seeds, written as PLAINTEXT JSON by Store._write_prepared_data (cev-a1000017) with only 0600 perms. Tampering applies: editing the file swaps a hash or elevates a user to admin/owner with no at-rest integrity check.'
+  mitigation: The only at-rest control is 0600 file permissions (self._private, cev-a1000017); there is no MAC/sealing on the plaintext JSON.
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-fb976d98
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: Credential changes (password set, MFA enroll) are not bound to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of credential-store changes (confirmed absent)
+- entry_id: tm-d4d9131b
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: Password hashes (bcrypt rounds=12, cev-a1000004) and MFA/TOTP seeds sit in plaintext .storage (cev-a1000017); information disclosure of the file/backup yields offline cracking AND TOTP-seed theft. Disclosure applies directly from any file read.
+  mitigation: Passwords are bcrypt rounds=12 (cev-a1000004) raising offline-crack cost; file is 0600 (cev-a1000017).
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-c055843b
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: The credential store is required for all logins; denial of service applies if it is corrupted/locked — every user is locked out of the single instance.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/backup-restore controls for the credential store (single-host; backup is default-unencrypted, cev-b2000006)
+- entry_id: tm-b6c184d3
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: Refresh tokens and per-token jwt_keys (token_hex 64, cev-a1000003) live in plaintext .storage (cev-a1000017); tampering with a jwt_key lets an attacker control the signing material for forged HS256 access tokens (cev-a1000001). Tampering applies — there is no at-rest integrity protection on the signing-key store.
+  mitigation: The only at-rest control is 0600 file permissions (cev-a1000017); per-token jwt_keys (cev-a1000003) have no integrity protection at rest.
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-3e2f6dac
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: Token/key lifecycle (mint, rotate, revoke) is not bound to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of refresh-token/jwt_key lifecycle (confirmed absent)
+- entry_id: tm-5be27fb3
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: 'Disclosure of a jwt_key (plaintext .storage, cev-a1000017) is catastrophic: it permits offline forgery of valid HS256 access tokens (cev-a1000001), including owner-scoped (cev-a1000008). Information disclosure applies and is the highest-leverage secret read.'
+  mitigation: Keys are 256-bit token_hex per refresh token (cev-a1000003) so blast radius is one token's scope; files are 0600 (cev-a1000017).
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-616ce590
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: Loss/corruption of the key store invalidates all access tokens (validation fails, cev-a1000002), denying service to every authenticated client. Availability applies.
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/backup controls for the signing-key store (single-host; default-unencrypted backup, cev-b2000006)
+- entry_id: tm-0658b916
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: Integration OAuth tokens/API keys/device creds for 2000+ integrations are in plaintext .storage config_entries (cev-a1000017); tampering applies — editing config_entries redirects an integration's credentials/endpoints with no at-rest integrity check.
+  mitigation: The only at-rest control is 0600 file permissions (cev-a1000017); config_entries are plaintext JSON with no MAC.
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device creds for 2000+ integrations)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-ffb69ecc
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: Credential/config changes to the integration vault are not bound to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of integration secret-vault changes (confirmed absent)
+- entry_id: tm-d1119d6f
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: The vault is the dense integration-secret estate (OAuth tokens, API keys, device creds) in plaintext .storage (cev-a1000017); information disclosure of the file/backup yields lateral compromise of every connected cloud/device. Disclosure applies directly from any read.
+  mitigation: config_entries files are 0600 (cev-a1000017).
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device creds for 2000+ integrations)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-bdbbb94b
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: Corruption of config_entries disables the affected integrations; availability applies to device control that depends on them, on the single host.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/backup controls for the integration vault (single-host; default-unencrypted backup, cev-b2000006)
+- entry_id: tm-1cb7c806
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: Backups bundle config + recorder DB + secrets/tokens; Backup.set_password defaults to None (cev-b2000006) so archives are UNENCRYPTED by default with no integrity protection. Tampering applies — a default backup can be modified and restored to inject creds/state with no at-rest MAC.
+  mitigation: The only claimed control is the OPTIONAL backup password (cev-b2000006), which defaults to None — default backups have neither encryption nor an integrity MAC.
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e84e01cf
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: Backup create/restore events are not bound to a tamper-evident audit log; repudiation applies for the 'weakest-protected copy of everything'.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of backup create/restore operations (confirmed absent)
+- entry_id: tm-f8a986ad
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: 'A default backup is the ''weakest-protected copy of everything'': UNENCRYPTED (cev-b2000006) it contains password hashes, jwt_keys, integration secrets and the recorder PII DB. Information disclosure applies catastrophically from any read of a default backup.'
+  mitigation: The only claimed control is the OPTIONAL backup password (cev-b2000006), which defaults to None — default backups are unencrypted.
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-28d50718
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: Backups are the recovery path for the single-host instance; denial of service / data-loss applies if backups are absent, corrupted, or destroyed (os-agent ScheduleWipeDevice, cev-c3000002). No immutability/retention is stated.
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - backup immutability/retention (object-lock/WORM) — none stated; default backups are mutable and unencrypted (cev-b2000006)
+- entry_id: tm-a507af64
+  asset: configuration.yaml + .storage config directory
+  threat: The config directory holds configuration.yaml + all .storage files (written plaintext, cev-a1000017); tampering applies — host/file access to this directory rewrites Core's entire configuration and secret estate with no at-rest integrity check.
+  mitigation: The only at-rest control is 0600 file permissions on .storage (cev-a1000017); configuration.yaml/.storage have no integrity protection.
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude, whitelist_external_dirs)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-67e353ef
+  asset: configuration.yaml + .storage config directory
+  threat: Configuration changes are not bound to a tamper-evident audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude, whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of configuration-directory changes (confirmed absent)
+- entry_id: tm-11fd082b
+  asset: configuration.yaml + .storage config directory
+  threat: /api/config (cev-a1000011 analog) returns config_dir, instance latitude/longitude and whitelist_external_dirs in cleartext to any bearer holder, and the directory itself holds all .storage secrets (cev-a1000017). Information disclosure applies via the API leak AND direct file read.
+  mitigation: Files are 0600 (cev-a1000017); /api/config requires a valid bearer.
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude, whitelist_external_dirs)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-8dc1a7c4
+  asset: configuration.yaml + .storage config directory
+  threat: A corrupted configuration.yaml or .storage prevents Core from starting; denial of service applies to the single instance.
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude, whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/validation controls on the config directory (single-host; no documented config-validation gate)
+- entry_id: tm-0ca13dd2
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: 'The Docker socket has no application-layer principal: anything with unix-socket access to /run/docker.sock (which Supervisor binds, cev-b2000003) speaks to dockerd as root. Spoofing applies because socket-access IS the credential — there is no per-caller identity on the control plane (cev-0a000003).'
+  mitigation: No application-layer control exists at the socket; the only claimed control is OS-level restriction of which processes can open /run/docker.sock (Supervisor binds it, cev-b2000003).
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-42938636
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: container_run_inside (cev-b2000004) executes arbitrary commands inside any container, including Core; tampering applies at host-root scope to every workload on the host via the socket.
+  mitigation: 'The only claimed control is upstream: the add-on role ACL (cev-b2000001/2) determines who can reach the socket; once reached, container_run_inside (cev-b2000004) is ungated.'
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-bd2dcd63
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: Container exec / lifecycle actions over the socket are not bound to a tamper-evident audit log at the HA tier; repudiation applies for the most privileged operations.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of Docker control-plane operations (none at the HA tier; only dockerd's own logs)
+- entry_id: tm-b886e929
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: Socket access reads every container's filesystem, env (SUPERVISOR_TOKEN, secrets) and the host; information disclosure applies at total scope once the socket is reached (cev-b2000003).
+  mitigation: The only claimed control is OS-level socket-access restriction; once the socket is reached (cev-b2000003) disclosure is total.
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-6b0bab0c
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: The socket can stop/kill/wipe any container including Core and Supervisor; denial of service applies and is total (host-level destruction).
+  mitigation: The only claimed control is OS-level socket-access restriction; once reached, full container lifecycle control (cev-b2000003) is unmitigated.
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-660eac1c
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: 'The Docker socket IS the host-root control plane (the top HA crown jewel): add-on->Supervisor (cev-b2000001/2) -> socket (cev-b2000003) -> container_run_inside (cev-b2000004) = host root. Elevation applies as the terminal step of the privilege chain.'
+  mitigation: Reaching the socket is gated upstream by the add-on role ACL (cev-b2000001/2); the socket itself has no gate, so the only control is keeping add-ons off admin/protection-off.
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host root)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-066f1b11
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: HAOS is the appliance image hosting the whole stack; spoofing applies to its update/boot identity — an unsigned or substituted image impersonates a genuine HAOS. The artifacts (ADR-0015) describe the appliance but not image-signing enforcement.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence:
+  - code/IaC-grounded HAOS image signing + secure-boot verification (only ADR-0015 design intent; no signing evidence in the index)
+- entry_id: tm-1a891a66
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: Tampering with the HAOS image (build or update channel) compromises the host root that runs Supervisor + the Docker socket (cev-b2000003); tampering applies at the foundation of the trust stack.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence:
+  - update-channel integrity verification for HAOS (no IaC/code evidence of signed/verified updates in the index)
+- entry_id: tm-18f9de76
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: HAOS-level host actions are not bound to an HA-tier tamper-evident audit log; repudiation applies for host changes.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of HAOS host-level changes (confirmed absent at HA tier)
+- entry_id: tm-b4ffca28
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: The appliance image holds the running host's secrets, .storage and backups at rest; information disclosure applies via physical/host access to the image. The artifacts do not specify full-disk encryption of HAOS.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - at-rest/full-disk encryption posture of the HAOS appliance (not specified in artifacts or index)
+- entry_id: tm-9862b495
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: HAOS is the single host; denial of service applies via image corruption or the os-agent ScheduleWipeDevice path (cev-c3000002) destroying the appliance.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - availability/recovery controls for the single HAOS appliance (single-host SPOF; ScheduleWipeDevice is a destruct primitive, cev-c3000002)
+- entry_id: tm-901c537d
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: Owning the HAOS image is host root by definition (it runs the Docker socket plane, cev-b2000003); elevation applies as the substrate of every higher-tier escalation.
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence:
+  - secure-boot / image-integrity chain preventing image substitution to host root (no evidence in index; ADR-0015 design only)
+- entry_id: tm-69555745
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: 'An add-on container authenticates to Supervisor by SUPERVISOR_TOKEN and declares its role/auth_api in config.yaml (cev-09000001: auth_api:true, map:[ssl,share], startup:system). Spoofing applies: a hostile add-on (the malicious_or_compromised_addon position) presents a declared role; if that role is admin or protection mode is off it reaches the full Supervisor API (cev-b2000002).'
+  mitigation: SecurityMiddleware enforces the declared role's URL ACL with default-deny (cev-b2000001); AppArmor + protection mode are documented per-add-on controls.
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-bfc533ab
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: An add-on with ssl/share host mounts (cev-09000001) tampers with mapped host paths, and an admin-role/protection-off add-on tampers via Supervisor->Docker (cev-b2000003/4). Tampering applies up to host-root scope depending on declared role and mounts.
+  mitigation: AppArmor profile + role ACL bound a default add-on; the mounts and role are operator-declared in config.yaml (cev-09000001).
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-892e4bee
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: Add-on actions against Supervisor are logged only as role-miss warnings (cev-b2000001); repudiation applies — privileged add-on operations are not in a tamper-evident audit trail.
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of add-on operations against Supervisor (only _LOGGER.warning observed)
+- entry_id: tm-cb1ddd65
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: auth_api:true (cev-09000001) lets the add-on use the Core auth proxy, and ssl/share mounts expose host certs/shares; information disclosure applies to mapped secrets and any data the granted role can read (cev-b2000002).
+  mitigation: Role-scoped API access + AppArmor limit reads to the declared role/mounts (cev-b2000001/2).
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-f74f8baa
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: startup:system add-ons (cev-09000001) run at boot in the shared host; a hostile/buggy add-on consumes host resources, denial of service applies to co-resident workloads including Core.
+  mitigation: 'None documented: startup:system add-ons (cev-09000001) share host resources with no stated cgroup/quota.'
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-e8b7b03d
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: 'The headline escalation: an add-on with admin role or protection mode off matches ROLE_ADMIN=.* (cev-b2000002), reaches the Supervisor API, then the Docker socket (cev-b2000003) and container_run_inside (cev-b2000004) = host root. Elevation applies as the add-on->supervisor->docker->host chain.'
+  mitigation: Default-deny role ACL + protection mode (cev-b2000001/2) block a default add-on; elevation requires an over-broad declared role or protection off.
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-84bf55a6
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: Builds pull base images (BUILD_FROM ghcr.io base-python) and Python wheels/npm packages; spoofing applies via a substituted upstream image/package masquerading as genuine (the supply_chain_attacker position). The artifacts recommend Cosign for add-on images but do not show uniform signing of base images/wheels.
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence:
+  - signature verification on base images + wheels at build/pull (Cosign noted for add-ons only; no IaC evidence of base-image/wheel verification)
+- entry_id: tm-f3d38c9b
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: Tampering with a base image, wheel, npm package, or GH Action injects code into Core/Supervisor/mobile builds (build-time tampering). Tampering applies at the build root of the whole ecosystem.
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence:
+  - build-time integrity controls (pinned digests, SLSA provenance, lockfile verification) — not evidenced in the index beyond add-on Cosign recommendation
+- entry_id: tm-da2ebede
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: Build provenance is not bound to a tamper-evident, verifiable record at install time; repudiation of what went into a build applies.
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - verifiable build provenance/attestation (no SLSA/attestation evidence in index)
+- entry_id: tm-f8b6c907
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: A malicious in-process SDK (e.g. Sentry/Firebase facet of supply_chain_attacker) or a poisoned dependency can exfiltrate secrets at runtime; information disclosure applies via the supply chain reaching the secret estate.
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - dependency provenance + runtime egress controls for bundled SDKs (no evidence in index)
+- entry_id: tm-ac973d02
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: A broken/yanked upstream dependency or poisoned image can fail builds or crash runtime; availability applies to the build/release pipeline and runtime.
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - dependency-availability controls (vendoring/mirroring) — not evidenced in index
+- entry_id: tm-c25ef551
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: 'A tampered base image or wheel executes with the privilege of the container it lands in — Core (full privilege) or Supervisor (host root via the Docker socket, cev-b2000003). Elevation applies: supply-chain code inherits the target tier''s privilege.'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines 36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence:
+  - build-to-runtime trust boundary (signing/verification) preventing supply-chain code from inheriting Core/Supervisor privilege (not evidenced beyond add-on Cosign)
+- entry_id: tm-1b38c9ee
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: 'The iOS app''s WebView->native bridge (WebViewExternalMessageHandler.handleExternalMessage, cev-e5000001) dispatches by message type with NO origin/integrity check on the source, while the WebView renders the REMOTE server frontend. Spoofing applies via compromised_backend_or_response: a hostile server response reaches native through the bridge impersonating a legitimate frontend message.'
+  mitigation: 'None claimed: the WebView->native bridge (cev-e5000001) dispatches remote-frontend messages with no origin verification — the design trusts the rendered remote frontend.'
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-243e5056
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: A hostile remote frontend (compromised_backend_or_response / network_mitm) delivers tampered messages the bridge acts on (cev-e5000001); tampering applies because the app trusts remotely-served content with no integrity check, and TLS trust admits user-installed CAs on the platform pattern (cev-f6000002 analog).
+  mitigation: TLS protects transit but the platform trust pattern admits user-installed CAs (cev-f6000002 analog); there is no integrity/origin check on bridge messages from the remote frontend (cev-e5000001).
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-fd996e6d
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: iOS-app-driven actions are attributable only via the absent Core audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of iOS-app-originated consequential actions (confirmed absent)
+- entry_id: tm-7da4d153
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: Tokens persist via ServerManagerKeychain (cev-e5000002) with NO explicit kSecAttrAccessible (defaults to WhenUnlocked, not ThisDeviceOnly), and Firebase config secrets are bundled in the IPA (cev-e5000003). Information disclosure applies via stolen-device extraction and IPA reverse-engineering.
+  mitigation: Tokens are in the iOS Keychain (cev-e5000002) — OS-protected at rest, though the accessibility class is the platform default rather than the hardened ThisDeviceOnly.
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-0ea69aaa
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: The app depends on the single Core instance and the push relay; denial of service applies to app function when those are down, but the app is not itself a server-tier availability asset.
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - app-tier availability is bounded by Core/relay availability (no separate iOS SLO)
+- entry_id: tm-20129245
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: Capturing a token via the bridge (cev-e5000001) or from the Keychain on a stolen/jailbroken device (cev-e5000002, no jailbreak detection per run scope) elevates the attacker to the user's backend privilege. Elevation applies via on-device secret capture.
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence:
+  - jailbreak detection + hardened Keychain accessibility (run scope notes no jailbreak/Frida detection; cev-e5000002 uses default accessibility)
+- entry_id: tm-f8db6c3a
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: Android's TLSHelper (cev-f6000002) loads AndroidCAStore and thus TRUSTS USER-INSTALLED CAs with no fixed-server pinning (self-hosted), so network_mitm via a malicious user-CA can impersonate the server; and the WebView external bus consumes remote-frontend messages. Spoofing applies via MitM and hostile-server-response.
+  mitigation: TLSHelper uses standard X509 validation (cev-f6000002); the mTLS client key is in the hardware-backed Keystore (cev-f6000001).
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-2fdbdeea
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: A MitM (user-CA, cev-f6000002) or hostile remote frontend delivers tampered content/commands (server-sent commands path) the app executes; tampering applies because pinning is absent and the WebView trusts remote content.
+  mitigation: Hardware-backed Keystore protects the mTLS key against tamper-extraction (cev-f6000001).
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-5658e96d
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: Android-app-driven actions are attributable only via the absent Core audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of Android-app-originated consequential actions (confirmed absent)
+- entry_id: tm-c649ef59
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: The Room AppDatabase is built with NO SQLCipher (cev-f6000003), so location_history (raw lat/long) AND session/auth tables (ServerSessionInfo, cev-f6000004) are UNENCRYPTED SQLite at rest. Information disclosure applies via stolen/rooted-device extraction.
+  mitigation: The mTLS client-cert private key is non-exportable in the hardware-backed AndroidKeyStore (cev-f6000001) — that ONE secret is protected, the Room DB is not.
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-4fccdc51
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: The app depends on Core + FCM; denial of service applies to app function when those are down. Not a server-tier availability asset.
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - app-tier availability bounded by Core/FCM availability (no separate Android SLO)
+- entry_id: tm-960550ab
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: On a rooted device (no root/Frida detection per run scope) the unencrypted Room tokens (cev-f6000003/4) are extractable, elevating to the user's backend privilege; a user-CA MitM (cev-f6000002) likewise enables credential capture. Elevation applies via on-device secret capture.
+  mitigation: The mTLS key resists extraction in the Keystore (cev-f6000001), but the bearer tokens in the unencrypted Room DB (cev-f6000004) do not.
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore, FCM, WebView external bus)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-f00c1fb7
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: On Android the tokens live in ServerSessionInfo (cev-f6000004) inside the UNENCRYPTED Room DB (cev-f6000003); on a rooted device they can be modified. Tampering applies on Android (no SQLCipher); on iOS the Keychain (cev-e5000002) resists tamper better.
+  mitigation: iOS tokens are in the Keychain (cev-e5000002); the Android mTLS key is in the Keystore (cev-f6000001) — but the Android bearer tokens are in the unencrypted Room DB (cev-f6000003/4).
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token, expires_in)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-75cfc845
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: Token use from a device is attributable only via the absent Core audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token, expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit attribution of device-token use (confirmed absent at Core tier)
+- entry_id: tm-468940f8
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: Android access/refresh bearer tokens persist in the UNENCRYPTED Room AppDatabase (cev-f6000003/4); iOS tokens use the Keychain with default WhenUnlocked accessibility (cev-e5000002). Information disclosure applies via stolen-device backup/extraction (physical_thief / rooted_device positions).
+  mitigation: iOS uses the OS Keychain (cev-e5000002); the gap is Android's unencrypted Room store (cev-f6000003/4) and iOS's non-hardened accessibility class.
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token, expires_in)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-077b8873
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: Token-store loss logs the user out (re-auth required); availability impact is local to the device, not the backend.
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token, expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - token-store availability is a device-local re-auth concern (no backend impact)
+- entry_id: tm-ed1a9115
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: The mTLS client-cert private key is in the hardware-backed AndroidKeyStore (cev-f6000001); tampering/extraction is resisted by KeyStore non-exportability. Tampering applies only via a Keystore/hardware compromise, which the design relies on being infeasible.
+  mitigation: Key is non-exportable in the hardware-backed AndroidKeyStore (cev-f6000001) — extraction/tamper resistance is the protection.
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-c3af6dfd
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: mTLS-authenticated actions are attributable only via the absent Core audit log; repudiation applies (no audit_log_store).
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit attribution of mTLS-client actions (confirmed absent at Core tier)
+- entry_id: tm-65afa3ba
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: Protection of this key rests entirely on KeyStore non-exportability (cev-f6000001); information disclosure applies only if the hardware-backed store is bypassed (rooted_device with a Keystore weakness), which is the residual risk the design accepts.
+  mitigation: Hardware-backed, non-exportable storage (cev-f6000001) is the confidentiality control.
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-68bfeb45
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: Loss of the Keystore key forces mTLS re-enrollment; availability impact is device-local.
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - Keystore key loss is a device-local re-enrollment concern (no backend impact)
+- entry_id: tm-6699a702
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: Android location_history (raw lat/long) is in the UNENCRYPTED Room AppDatabase (cev-f6000003); tampering applies on a rooted device — the location cache can be modified at rest with no encryption/MAC.
+  mitigation: 'None claimed on Android: the Room DB is built without SQLCipher (cev-f6000003), so the cache is unencrypted SQLite with no at-rest integrity control.'
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines 125-127'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-5ae72b27
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: Cache contents are not bound to any attributable log; repudiation is not the primary concern, but the cache offers no tamper-evidence. Repudiation applies weakly.
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines 125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - tamper-evidence on the on-device cache (none; unencrypted Room DB, cev-f6000003)
+- entry_id: tm-ab01a9be
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: location_history holds raw lat/long + zones in the UNENCRYPTED Room DB (cev-f6000003); information disclosure applies via stolen/rooted-device extraction — this is on-device PII at rest with no encryption.
+  mitigation: 'None claimed on Android: the Room location cache is unencrypted SQLite (no SQLCipher, cev-f6000003).'
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines 125-127'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-968980a2
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: Cache loss degrades offline app features only; availability impact is device-local and minor.
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines 125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - cache availability is a device-local convenience concern (no backend impact)
+- entry_id: tm-0c13aa3c
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: The GoogleService-Info plist is compiled into the IPA (cev-e5000003); tampering means substituting the bundled config in a repackaged IPA, which requires re-signing. Tampering applies in the trojaned-build / repackaging scenario.
+  mitigation: Config integrity rides on the app's code-signature (a repackage requires re-signing with the dev identity).
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-704e3d88
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: Use of the bundled Firebase config is not separately attributable; repudiation is not a primary concern for a static config blob. Applies weakly.
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - attribution is not meaningful for a static bundled config (no per-use record)
+- entry_id: tm-f8b9b826
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: The git-tracked GoogleService-Info-*.plist is bundled in the IPA and recoverable from ANY IPA (cev-e5000003) by the reverse_engineer_with_ipa_apk position; information disclosure applies directly — these are config secrets exposed to anyone with the app.
+  mitigation: 'None: the GoogleService-Info plist is bundled in the IPA (cev-e5000003) and recoverable from any copy — there is no on-device protection for bundled config by design.'
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-e8a7e647
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: The bundled config is static; availability impact is nil (it ships with every copy of the app).
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - a bundled static config has no availability dimension (ships in every IPA)
+- entry_id: tm-ca73a79e
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: The release signing identity (Android keystore/cert, iOS provisioning) signs builds; tampering with or stealing it permits a trojaned, trusted build across the install base (app_signing_identity crown jewel). Tampering applies — its compromise breaks the build's integrity guarantee for all users.
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence:
+  - 'CI signing-key custody/HSM evidence (code-signing config referenced in iOS-CLAUDE #code-signing + run scope; actual key-storage hardening not code-grounded in the index)'
+- entry_id: tm-40ae677d
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: Build provenance/signing events are not bound to a verifiable, tamper-evident record in the index; repudiation of what was signed applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - verifiable signing/build provenance (no attestation evidence in index)
+- entry_id: tm-8638cc30
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: The signing private key must stay secret (CI inflate-secrets / fastlane); information disclosure of it enables trojaned builds. Disclosure applies if the key leaks from CI.
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - CI secret-storage confidentiality for the signing key (referenced design intent; not code-grounded in the index)
+- entry_id: tm-7eb0d7d4
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: Loss of the signing identity blocks new releases (cannot ship updates); availability applies to the release pipeline.
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - signing-key backup/recovery controls for the release pipeline (not evidenced in index)
+- entry_id: tm-3a76ded8
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: 'The bridge dispatches native<->WebView messages: _sendExternal posts to window.externalAppV2 / webkit.messageHandlers.externalBus (cev-07000001) and fireMessage registers window[CALLBACK_EXTERNAL_BUS] (cev-07000002). Spoofing applies: the docs warn callback names must be verified against forgery, and the frontend is served REMOTELY into the WebView, so a hostile frontend can forge bridge messages.'
+  mitigation: 'None code-grounded: the docs recommend verifying the callback name against forgery (cev-07000002), but no enforcement is present in the indexed code — the claimed control is documentation guidance only.'
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-8491797c
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: Bridge messages from a compromised remote frontend (cev-e5000001 consumes them) tamper with native app state/actions; tampering applies because there is no integrity check on the message source.
+  mitigation: 'None code-grounded: there is no integrity/origin check on bridge messages from the remotely-served frontend (cev-e5000001/g7000002).'
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-f99c12f0
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: Bridge-mediated actions are not attributable to a tamper-evident log; repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit/attribution of bridge-mediated actions (none observed)
+- entry_id: tm-b8fe51db
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: The bridge is the token-passing channel native<->WebView (cev-07000001); the token crosses in cleartext within the WebView (boundary item 3). Information disclosure applies if a hostile frontend or an over-permissive bridge reads it.
+  mitigation: 'None code-grounded: the token crosses the bridge in cleartext within the WebView (boundary item 3, cev-07000001) with no additional confidentiality control.'
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-870fe5b0
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: The bridge is in-app messaging; denial of service is local (flooding the bridge degrades the app). Low server-tier impact.
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - bridge-level flooding is an app-local availability concern (no server-tier impact)
+- entry_id: tm-96285f29
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: A forged bridge message (cev-07000002) or a token read off the bridge (cev-07000001) elevates a hostile remote frontend to the user's backend privilege. Elevation applies as the bridge crosses the WebView->native trust boundary ungated.
+  mitigation: 'None code-grounded: callback-name/origin verification is recommended by docs (cev-07000002) but not enforced in the indexed code.'
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-d0dd247d
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: 'handleRequest (cev-08000001) consumes push_token from the request body and rate-limits per token but performs NO caller authentication; the public route POST /api/sendPushNotification (cev-08000002) forwards to APNS/FCM. Spoofing applies: any party with a valid-format FCM token can drive the relay and spoof notifications.'
+  mitigation: Per-token rate limiting (429) bounds abuse volume (cev-08000001); the relay shields provider registration from third parties.
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: high
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-fd37651f
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: Unauthenticated callers (cev-08000001) can submit notification content forwarded to devices; tampering applies — spoofed/tampered notifications reach the user (notification integrity gap).
+  mitigation: Rate-limit caps tampering volume (cev-08000001).
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-aebd71d9
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: The relay does not authenticate or audit who requested a push (cev-08000001); repudiation applies — notification spoofing is deniable (a Non-Repudiation gap).
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - caller-authenticated, audited push-request log on the relay (only per-token rate-limit; no caller auth)
+- entry_id: tm-c59365be
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: The relay handles device push tokens; it shields provider registration from THIRD parties but not from the instance (cev-08000002). Information disclosure applies to push-token confidentiality if the relay or its logs leak tokens.
+  mitigation: The relay forwards without exposing device push tokens to arbitrary third parties (cev-08000002).
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-66c3bf93
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: The relay is the single push path; denial of service applies — flooding it (bounded by per-token rate limit, cev-08000001) degrades notification delivery for users.
+  mitigation: Per-token rate limiting (cev-08000001) provides partial DoS resistance.
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-2c895d92
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: The relay holds no Core privilege; elevation is limited to abusing the push channel (spoofed notifications) rather than backend escalation. Elevation applies narrowly to the notification surface.
+  mitigation: Relay is privilege-isolated from Core; it cannot mint Core tokens (separate Firebase identity).
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-fddd907b
+  asset: APNS / FCM push providers
+  threat: APNS/FCM are terminal external push endpoints; spoofing applies upstream of them (at the relay, cev-08000001) rather than at the providers themselves, which authenticate the relay's provider credentials. The providers are out-of-scope external dependencies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence:
+  - provider-side authentication detail is out-of-scope (external dependency; relay->provider auth not in repos[])
+- entry_id: tm-dff1d910
+  asset: APNS / FCM push providers
+  threat: Notification content tampering occurs upstream at the unauthenticated relay (cev-08000001), not at the providers; tampering at the provider tier is out-of-scope.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence:
+  - provider-tier integrity is out-of-scope (external dependency); the tamperable point is the relay (cev-08000001)
+- entry_id: tm-8baa9866
+  asset: APNS / FCM push providers
+  threat: Provider-side delivery records are out-of-scope; the HA-tier repudiation gap is at the relay (no caller auth/audit, cev-08000001).
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - provider delivery audit is out-of-scope (external dependency)
+- entry_id: tm-af13296d
+  asset: APNS / FCM push providers
+  threat: Push tokens transit to APNS/FCM; provider-side confidentiality is governed by the providers, out-of-scope. The in-scope disclosure point is push-token handling at the relay (cev-08000002).
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - provider-side token confidentiality is out-of-scope (external dependency)
+- entry_id: tm-8c1aef52
+  asset: APNS / FCM push providers
+  threat: APNS/FCM availability is provider-operated and out-of-scope; an outage degrades HA notifications but is not an HA-controlled tier.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - provider availability is out-of-scope (external dependency)
+- entry_id: tm-a1a40116
+  asset: APNS / FCM push providers
+  threat: The providers grant no HA privilege; elevation via the providers is not applicable. Out-of-scope external endpoints.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence:
+  - no privilege path from the providers into HA (external dependency; elevation N/A)
+- entry_id: tm-6a45ae45
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: 'Nabu Casa provides the cloudhook_url + remote_ui_url remote-access path (registration response). Spoofing applies to the cloudhook: a cloudhook_url is a bearer-less webhook endpoint (it maps to the same handle_webhook path, cev-a1000016), so a leaked cloudhook_url impersonates the device from the internet. The Nabu Casa service itself is an out-of-scope external dependency.'
+  mitigation: Nabu Casa authenticates the account-bound tunnel (out-of-scope external dependency); the in-scope gap is that the cloudhook is a bearer-less webhook (maps to cev-a1000016).
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-ef0b94ea
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: Remote requests proxied via Nabu Casa reach Core's REST/WS and the bearer-less webhook; tampering applies on the cloudhook path (cev-a1000015 arbitrary service call) exposed to the internet through the relay.
+  mitigation: Relay-internal integrity is out-of-scope (external dependency); the in-scope exposure is the unmitigated webhook tampering surface (cev-a1000015) reachable via the cloudhook.
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-60ffc638
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: Cloudhook-driven actions inherit the webhook's synthesized context (cev-a1000015) and the absent audit log; repudiation applies for internet-originated cloudhook calls.
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit attribution of cloudhook-originated actions (synthesized context + no audit log)
+- entry_id: tm-43936a6a
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: The relay tunnels traffic to Core; information disclosure depends on Nabu Casa (out-of-scope) plus the in-scope cleartext /api/config and webhook payloads it can carry.
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence:
+  - relay-internal confidentiality is out-of-scope; in-scope disclosure is via the proxied Core endpoints (/api/config cleartext)
+- entry_id: tm-9592581b
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: Nabu Casa is the single managed remote-access path; denial of service of the relay removes remote access. Relay availability is provider-operated (out-of-scope), the dependency is the in-scope concern.
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - relay availability is provider-operated (external dependency); HA depends on it for remote access
+- entry_id: tm-6890dfec
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: A leaked cloudhook_url elevates an internet attacker to the bearer-less webhook's service-call power (cev-a1000015) from outside the LAN; elevation applies via the internet-exposed cloudhook.
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence:
+  - the cloudhook elevates the unmitigated webhook elevation (cev-a1000015) to internet reach; relay-side controls out-of-scope
+- entry_id: tm-5b52595e
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: 'Integrations make outbound calls to external devices/clouds and trust their responses (API10 unsafe consumption, boundary item 6). Spoofing applies: a hostile endpoint impersonates the legitimate device/cloud the integration expects, and Core trusts the integration''s interpretation.'
+  mitigation: 'None central: integrations validate endpoint identity per-vendor (not centrally enforced, boundary item 6); the aggregate runtime offers no central endpoint-authentication.'
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-a4327892
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: A hostile response tampers with the state the integration writes into Core (untrusted-response surface); tampering applies because responses are consumed without central validation (boundary item 6, 'not centrally enforced').
+  mitigation: 'None centrally enforced: integration responses are consumed without central validation (boundary item 6 states it is ''not centrally enforced'').'
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-b1c43116
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: Outbound integration calls and the responses acted upon are not bound to a tamper-evident audit log; repudiation applies.
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - audit log of integration outbound calls and consumed responses (confirmed absent)
+- entry_id: tm-088f10f7
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: 'Outbound integration calls + /api/template render (cev-a1000013) are an SSRF surface: a crafted target can make Core fetch internal resources and disclose them. Information disclosure applies via SSRF, with no documented allow-listing.'
+  mitigation: 'None central: there is no documented SSRF allow-list on integration outbound; /api/template render is @require_admin gated (cev-a1000013) but the outbound allow-list is unspecified.'
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-17b14550
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: A slow/hostile external endpoint blocks the integration on Core's shared event loop; denial of service applies via outbound-call exhaustion.
+  mitigation: 'None documented: outbound integration calls share Core''s event loop with no stated timeout/circuit-breaker.'
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-98e3ee34
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: SSRF via integration outbound or /api/template (cev-a1000013) can reach the internal Supervisor API (cev-b2000001) or other privileged internal services from Core's network position; elevation applies via SSRF pivot.
+  mitigation: The template-render SSRF primitive is @require_admin gated (cev-a1000013).
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud; SSRF)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-59b8e735
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: The mDNS advertisement publishes _home-assistant._tcp.local. with TXT props (uuid, internal/external_url); tampering applies — an attacker on the LAN can spoof/poison the mDNS record to redirect discovery clients to a hostile instance.
+  mitigation: 'None: mDNS is an unauthenticated LAN protocol; the advertisement carries no record-authentication, so LAN spoofing/poisoning is unmitigated by design.'
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a6bbab5d
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: mDNS responses are unauthenticated and unlogged; repudiation applies — no record attributes who advertised a given response.
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - attribution/logging of mDNS responses (none; unauthenticated LAN protocol)
+- entry_id: tm-a84cafab
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: The TXT props leak instance uuid + internal/external URLs to anyone on the LAN; information disclosure applies — discovery reveals the instance's existence and endpoints to a LAN-position attacker.
+  mitigation: 'None: the TXT props (uuid + internal/external URLs) are broadcast to the whole LAN by design; mDNS offers no scoping.'
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-b72b2a31
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: mDNS flooding/poisoning can disrupt LAN discovery; denial of service applies to the discovery convenience, not to direct API access.
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence:
+  - mDNS is a discovery convenience; its disruption does not deny direct API access (low availability impact)
+- entry_id: tm-8e1f31d6
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: TLS terminates at the reverse-proxy / Nabu Casa while HA serves HTTP on 8123 (TLS posture not specified — brief gap); tampering applies on any plaintext hop between the proxy and Core, and on a misconfigured proxy that forwards spoofable headers (cf. the X-Remote-User normalization that only exists at the Supervisor ingress, cev-b2000005).
+  mitigation: The claimed control is TLS termination at the reverse-proxy / Nabu Casa (boundary item 1); the proxy->Core 8123 hop TLS posture is unspecified (brief gap).
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu Casa)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-add7ed4f
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: Edge requests are not bound to a tamper-evident audit log at the HA tier; repudiation applies (no audit_log_store; proxy logs are out-of-band).
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu Casa)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence:
+  - HA-tier audit log of edge requests (confirmed absent; proxy access logs are out-of-band)
+- entry_id: tm-7b776181
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: If the proxy->Core hop is plaintext HTTP on 8123 (TLS posture unspecified), bearer tokens and PII transit in cleartext on that segment; information disclosure applies on the internal hop.
+  mitigation: The claimed control is TLS at the edge (boundary item 1); whether the proxy->Core 8123 hop is encrypted is unspecified (brief gap).
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu Casa)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-278ff0eb
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: The edge is the single internet entrypoint; denial of service applies — flooding the proxy or Core (no documented edge rate-limit) blocks remote access to the single host.
+  mitigation: 'None documented at the HA tier: there is no Core/proxy edge rate-limit or DDoS control in the artifacts.'
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu Casa)'
+  extraction_confidence: medium
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []

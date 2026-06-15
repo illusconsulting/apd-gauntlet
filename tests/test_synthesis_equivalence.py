@@ -122,7 +122,7 @@ def test_apply_clusters_roundtrip_drops_dict_scope_preserves_str_types(tmp_path)
     decisions = {
         "schema_version": 1, "generated_by": "apd-cluster-adjudicator",
         "decisions": [{
-            "group_id": "cluster-cap-0001", "disposition": "merge",
+            "group_id": "cluster-cap-0001", "decision": "merge",
             "merged_title": "PHI is encrypted at rest and in transit end to end",
             "merged_summary": "Envelope encryption at rest plus TLS in transit cover PHI.",
             "merged_detail": "Both lenses confirm complementary PHI protection layers here.",

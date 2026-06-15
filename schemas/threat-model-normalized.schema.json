@@ -47,7 +47,7 @@
           },
           "methodology":           { "type": "string", "enum": ["stride", "linddun", "attack_tree", "pasta", "vast", "trike", "maestro", "free_form", "unknown"] },
           "source_locator":        { "type": "string" },
-          "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "extraction_confidence": { "$ref": "_defs.schema.json#/$defs/ordinal_level" },
           "framework_refs": {
             "type": "object",
             "additionalProperties": false,
@@ -63,10 +63,7 @@
           },
           "inferred_apd_goals": {
             "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["confidentiality", "integrity", "availability", "distributed", "resilient", "ephemeral", "authenticity", "non_repudiation", "immutability"]
-            }
+            "items": { "$ref": "_defs.schema.json#/$defs/apd_goal" }
           }
         }
       }

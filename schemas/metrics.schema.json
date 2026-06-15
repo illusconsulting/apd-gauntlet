@@ -20,6 +20,7 @@
     "unresolved_authored_merges": { "type": "integer", "minimum": 0 },
     "bySeverity": {
       "type": "object", "additionalProperties": false,
+      "description": "Finding counts per severity. This report-facing rollup keys on the report TEMPLATE's display token 'info' (NOT the canonical data token 'informational' — see _defs.schema.json#/$defs/severity). The 'informational' -> 'info' mapping is owned by tools/apd_gauntlet/severity.py.",
       "required": ["critical", "high", "medium", "low", "info"],
       "properties": {
         "critical": { "type": "integer", "minimum": 0 },

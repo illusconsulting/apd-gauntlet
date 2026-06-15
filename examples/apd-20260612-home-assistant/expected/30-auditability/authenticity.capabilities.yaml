@@ -1,0 +1,300 @@
+capability:
+- schema_version: 1
+  id: auth-cap-42c6a13f
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Android Companion mTLS client-cert private key held in the hardware-backed AndroidKeyStore
+  description: 'The Android Companion supports mutual-TLS client authentication to the user''s
+
+    instance using a client certificate whose private key is stored in the
+
+    hardware-backed AndroidKeyStore (KeyStoreRepositoryImpl getInstance
+
+    "AndroidKeyStore"; TLSHelper wires the key manager into the OkHttp SSL factory).
+
+    This is a genuine workload-identity control: the client proves its identity to a
+
+    mTLS-configured server with a non-exportable hardware-bound key, so a stolen
+
+    on-device token alone does not let an attacker present the client certificate
+
+    from another device.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code for the Android client: the mTLS client-cert private key is
+
+    created/held in the AndroidKeyStore and used by the OkHttp client SSL socket
+
+    factory. NOT addressed: this is a CLIENT-to-server identity control gated on the
+
+    user/server having configured mTLS (optional, not default); it does not provide
+
+    device attestation (see the no-attestation finding) and does not authenticate the
+
+    SERVER (see the no-pinning finding). iOS mTLS parity is not confirmed in the
+
+    evidence reviewed. The hardware non-exportability is the protection — a
+
+    software-fallback key would void it.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidKeyStore") // hardware-backed key store for mTLS client-cert private key
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: builder.sslSocketFactory(..., trustManagers[0] as X509TrustManager)
+  - artifact: code-evidence-index.yaml
+    locator: hardware-backed AndroidKeyStore private key non-export
+    excerpt: hardware-backed AndroidKeyStore mitigates rooted_device_attacker_with_frida against android_keystore_mtls_client_key
+  control_mappings:
+    nist_800_53r5:
+    - IA-3
+    - IA-3(1)
+    - IA-5(2)
+    - SC-17
+    masvs:
+    - MASVS-AUTH-2
+  caveats:
+  - mTLS is opt-in per server/user configuration, not a default control.
+  - Provides client identity only; no server-identity pinning and no device attestation accompany it.
+  - iOS mTLS client-cert custody parity not confirmed in the reviewed evidence.
+  related_concerns:
+  - confidentiality
+  - ephemeral
+- schema_version: 1
+  id: auth-cap-f01e6108
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Single revocation-aware access-token validation chokepoint for REST and WebSocket
+  description: 'Access-token authenticity is verified at one chokepoint: async_validate_access_token
+
+    decodes the HS256 JWT with the per-refresh-token jwt_key, restricts the algorithm to
+
+    HS256 (no alg:none / key-confusion surface), applies a 10s leeway, checks the issuer,
+
+    and rejects the token if its backing refresh token was revoked or the user is
+
+    inactive. The REST auth middleware and the WebSocket auth_required->auth handshake
+
+    both route through this validation, and the WS path additionally registers a
+
+    revoke-token callback that drops the live socket when the token is revoked. This is a
+
+    well-scoped token-authenticity verification with explicit algorithm pinning and
+
+    revocation propagation.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code for Core''s interactive bearer path (REST middleware + WS handshake):
+
+    algorithm is pinned to HS256, the signing key is the per-refresh-token jwt_key, and
+
+    revocation/inactive-user are enforced at validation. NOT addressed: the per-token
+
+    jwt_key never rotates and refresh/long-lived tokens are effectively non-expiring
+
+    (Ephemeral findings) — so authenticity verification is strong at the moment of check
+
+    but the credential it verifies is long-lived; and this chokepoint does NOT cover the
+
+    bearer-LESS mobile_app webhook path (separate finding). Algorithm-pinning prevents
+
+    key-confusion only because HS256 is the sole accepted algorithm.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"]) ... not refresh_token.user.is_active
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: refresh_token := self._hass.auth.async_validate_access_token(access_token) ... async_register_revoke_token_callback
+  - artifact: code-evidence-index.yaml
+    locator: revocation-aware token validation chokepoint REST+WS
+    excerpt: revocation-aware validation chokepoint mitigates compromised_user_session_token minting via refresh_token_jwt_signing_keys
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - SC-23
+    - SC-23(3)
+    - IA-2(8)
+    mitre_attack_mitigations:
+    - id: M1047
+      rationale: Algorithm-pinned, revocation-aware token validation rejects forged or revoked tokens at a single audited chokepoint (counters T1550.001 application access token reuse).
+  caveats:
+  - 'The verified credential is long-lived: jwt_key never rotates and refresh/long-lived tokens do not expire (Ephemeral).'
+  - Does not cover the bearer-less mobile_app webhook path.
+  - HS256-only is what prevents key-confusion; no asymmetric verification option.
+  related_concerns:
+  - ephemeral
+  - non_repudiation
+- schema_version: 1
+  id: auth-cap-8144e2be
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Homeassistant auth provider uses bcrypt password hashing with constant-time, enumeration-resistant login
+  description: 'The homeassistant auth provider hashes passwords with bcrypt (rounds=12,
+
+    Data.hash_password) and validates them in constant time: validate_login runs a dummy
+
+    bcrypt.checkpw on a user miss "to make timing the same as if user was found" and uses
+
+    timing-safe comparison, defending the credential-verification path against user
+
+    enumeration. This strengthens the authenticity of the primary knowledge factor — the
+
+    stored verifier is a salted adaptive hash and the verification side-channel is closed.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code for the homeassistant password provider: bcrypt rounds=12 +
+
+    constant-time validate_login with a dummy-hash miss path. NOT addressed: this is the
+
+    single knowledge factor only — MFA is opt-in and not enforced (see the MFA finding),
+
+    and bcrypt''s 72-byte input truncation means passwords longer than 72 bytes are
+
+    silently truncated before hashing. Does not speak to the legacy_api_password /
+
+    trusted_networks providers, which carry their own authenticity weaknesses.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.hash_password:L189-L198@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: hashed = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12))
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.validate_login:L160-L187@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'bcrypt.checkpw(b"foo", dummy) ... # check a hash to make timing the same as if user was found'
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - IA-2
+  caveats:
+  - Single knowledge factor only; MFA is opt-in and unenforced.
+  - bcrypt truncates input to 72 bytes, silently dropping longer-password entropy.
+  - Does not cover the legacy_api_password / trusted_networks providers.
+  related_concerns:
+  - confidentiality
+- schema_version: 1
+  id: auth-cap-eba3a527
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Supervisor ingress strips client-supplied X-Remote-User-* headers before injecting its own
+  description: 'The Supervisor ingress header path (_init_header) sets X-Remote-User-Id / -Name /
+
+    -Display-Name from the authenticated session AND, in the same loop, filters/strips any
+
+    inbound copies of those headers from the client request before forwarding to the
+
+    add-on. This prevents a client reaching the add-on THROUGH ingress from spoofing the
+
+    identity headers, so the asserted user identity an add-on receives over the ingress
+
+    path reflects the Supervisor session rather than client-supplied input.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code: ingress overwrites the X-Remote-User-* headers from session data
+
+    and strips inbound copies in the forward path. This is a PARTIAL authenticity control:
+
+    it closes client-through-ingress header spoofing, but the conveyed identity remains an
+
+    UNSIGNED header the add-on cannot independently verify, so an add-on reached outside
+
+    ingress (host network / direct container call) or trusting the header on faith is still
+
+    exposed (see the header-trust finding). Scope is the ingress hop only.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: if name in (... REMOTE_USER_ID ...): continue'
+  - artifact: code-evidence-index.yaml
+    locator: ingress strips client X-Remote-User-* before injecting
+    excerpt: ingress header stripping mitigates malicious_or_compromised_addon spoofing identity over the user_permission_policy_engine surface
+  control_mappings:
+    nist_800_53r5:
+    - AC-4
+    - SC-23
+    - IA-9
+  caveats:
+  - Conveyed identity is an unsigned header the add-on cannot cryptographically verify.
+  - Protects only the ingress hop; add-ons reachable outside ingress are not covered.
+  - Pairs with the open header-trust finding (auth-0a00000b).
+  related_concerns:
+  - integrity
+- schema_version: 1
+  id: auth-cap-e9f55df8
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Supervisor SecurityMiddleware authenticates the add-on by SUPERVISOR_TOKEN and gates by declared role with default-deny
+  description: 'The Supervisor SecurityMiddleware.token_validation resolves the inbound
+
+    SUPERVISOR_TOKEN to the calling add-on identity, then matches the request path against
+
+    a per-role URL allow-list (role_access[hassio_role], with ROLE_ADMIN matching .* and
+
+    narrower regexes for default/homeassistant/backup/manager) and DEFAULT-DENIES on no
+
+    match. This is a real identity-bound authorization gate: each add-on caller is
+
+    identified by its issued token and constrained to the API surface its declared role
+
+    permits, so a low-role add-on cannot reach the full privileged Supervisor API.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code: token->app resolution + per-role regex URL ACL with default-deny.
+
+    Authenticity-relevant face: the caller identity (which add-on) is established from the
+
+    SUPERVISOR_TOKEN and bound to a role. NOT addressed here: an add-on running with the
+
+    admin role or with protection-mode disabled matches ROLE_ADMIN''s .* and reaches the
+
+    full API including the Docker host-root plane — so the gate''s strength depends on the
+
+    role/protection configuration (an authorization-scope concern routed to api-security /
+
+    Integrity), and the SUPERVISOR_TOKEN lifecycle (rotation/expiry) is unspecified
+
+    (Ephemeral).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): request_from = app ... else: _LOGGER.warning("no role")'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS:L111-L237@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'ROLE_ADMIN: re.compile(r".*") ... per-role path regexes'
+  - artifact: code-evidence-index.yaml
+    locator: SUPERVISOR_TOKEN add-on authn + declared-role gate
+    excerpt: SUPERVISOR_TOKEN role gate mitigates malicious_or_compromised_addon escalation to supervisor_docker_control_plane
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - AC-3
+    - AC-6
+    - SC-23
+  caveats:
+  - An admin-role or protection-disabled add-on matches .* and reaches the host-root Docker plane.
+  - SUPERVISOR_TOKEN rotation/expiry/revocation lifecycle is unspecified (Ephemeral).
+  - Identity binding is per-token; no per-request signature beyond the bearer.
+  related_concerns:
+  - ephemeral
+  - integrity

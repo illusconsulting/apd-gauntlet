@@ -1,0 +1,312 @@
+capability:
+- schema_version: 1
+  id: intg-cap-ecebb879
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Per-entity READ permission enforced at the state view with deny-all-by-default policy compilation
+  description: 'APIEntityStateView.get (cev-a1000011) calls
+
+    user.permissions.check_entity(entity_id, POLICY_READ) and raises Unauthorized
+
+    when the policy denies, and filter_entity_ids_by_permission (cev-a1000007)
+
+    scopes bulk entity lists per policy for non-admin users. The decision functions
+
+    are produced by compile_policy (cev-a1000006), which fails CLOSED: an empty/None
+
+    policy compiles to deny-all (apply_policy_deny_all returns False), so a missing
+
+    or unparseable policy denies access rather than defaulting open. This is the
+
+    runtime authorization control on the read path and contradicts the
+
+    auth_permissions.md "not enforced yet" doc note (the code-recon pass resolves the
+
+    brief''s load-bearing authz gap to ENFORCED for reads).
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: per-entity READ enforcement on GET /api/states/{entity_id}
+
+    (cev-a1000011) and per-entity scoping of bulk reads (cev-a1000007), with
+
+    deny-all-by-default compilation (cev-a1000006). NOT covered (see related
+
+    findings): the WRITE path is admin-or-deny with no per-entity write policy
+
+    (intg-state-write-coarse-authz); the per-entity filter SHORT-CIRCUITS to allow-all
+
+    for any admin (cev-a1000007) and owner is unconditional all-access (cev-a1000008),
+
+    so there is no sub-admin write scoping; the webhook path bypasses this engine
+
+    entirely (intg-webhook-callservice-noauthz).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise Unauthorized(entity_id=entity_id)'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False ... if policy is True: def apply_policy_allow_all'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-3(7)
+    - AC-6(1)
+    - SI-10
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: Per-entity policy enforcement with deny-all default restricts which accounts may read which entities, limiting valid-account abuse to scoped entities.
+  caveats:
+  - Read-only control; the write path (POST /api/states) has no per-entity policy (finding intg-state-write-coarse-authz).
+  - Short-circuits to allow-all for admins (cev-a1000007) and owner (cev-a1000008) — no scoping above the admin boundary.
+  - Bypassed entirely by the bearer-less webhook service-call path (cev-a1000015).
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: intg-cap-7a54b1a7
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Single-chokepoint access-token validation rejects revoked refresh tokens and inactive users before any write
+  description: 'async_validate_access_token (cev-a1000002) is the single validation chokepoint
+
+    for HS256 access JWTs: it verify-and-decodes with a 10s leeway and pinned
+
+    algorithms=["HS256"], and rejects the token if the backing refresh token has been
+
+    revoked or the user is not active. The WS handshake (AuthPhase.async_handle,
+
+    cev-a1000010) routes through the same validation and additionally registers a
+
+    revoke callback that drops the live socket on revocation. This gives every
+
+    authenticated write a consistent precondition-integrity gate (the token is
+
+    structurally valid, signed by the bound jwt_key, not revoked, user active) at one
+
+    place rather than ad hoc per route.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: centralized validation with fixed algorithm, revocation check, and
+
+    active-user check (cev-a1000002) reused by REST middleware (cev-a1000009) and the
+
+    WS handshake (cev-a1000010). NOT covered: the integrity of the per-refresh-token
+
+    jwt_key itself is only 0600-file-protected at rest with no MAC
+
+    (intg-storage-no-integrity-mac), so a tampered/leaked jwt_key forges a token that
+
+    this chokepoint accepts as valid; revocation is by refresh-token delete only, with
+
+    no automatic access-token expiry analysis in this lens (routed to ephemeral).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"]) ... not refresh_token.user.is_active
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: refresh_token := self._hass.auth.async_validate_access_token(access_token) ... async_register_revoke_token_callback
+  - artifact: code-evidence-index.yaml
+    locator: single-chokepoint access-token validation rejects revoked
+    excerpt: token-validation chokepoint rejecting revoked tokens mitigates compromised_user_session_token against user_credentials_store
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - SC-23
+    - IA-2
+    mitre_attack_mitigations:
+    - id: M1047
+      rationale: Centralized token validation that rejects revoked/inactive tokens at one chokepoint enables consistent detection and rejection of forged or stale application access tokens.
+  caveats:
+  - Pinned to HS256 with a per-refresh-token jwt_key; key integrity at rest is only file-permission-protected (finding intg-storage-no-integrity-mac).
+  - Revocation is manual (refresh-token delete); no automatic access-token TTL analysis in this lens (ephemeral).
+  related_concerns:
+  - authenticity
+  - ephemeral
+- schema_version: 1
+  id: intg-cap-e88c8857
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Supervisor SecurityMiddleware enforces a default-deny per-role URL ACL on the privileged add-on API
+  description: 'SecurityMiddleware.token_validation (cev-b2000001) resolves the SUPERVISOR_TOKEN
+
+    to an add-on app, then matches the request path against patterns.role_access for
+
+    that add-on''s declared hassio_role; on no match it default-denies (logs a warning
+
+    and does not grant). The per-role path allow-lists (ADDONS_ROLE_ACCESS,
+
+    cev-b2000002) constrain which Supervisor API routes each role may reach, gating
+
+    access to the Docker-socket control plane (cev-b2000003) for any caller below the
+
+    admin role. Ingress additionally strips inbound X-Remote-User-* headers and
+
+    re-injects session-derived values (cev-b2000005), preventing a client from
+
+    spoofing an identity header into an add-on via the ingress path. These are
+
+    write-path authorization controls on the most privileged surface.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: token->app->role-ACL default-deny enforcement (cev-b2000001), per-role
+
+    path allow-lists (cev-b2000002), and ingress header-injection-with-strip
+
+    (cev-b2000005). NOT covered: ROLE_ADMIN matches everything (re.compile(".*"),
+
+    cev-b2000002), so an admin-role add-on or one with protection mode disabled
+
+    reaches the full Supervisor API and the Docker socket -> host root — the gate
+
+    weakens to nothing for that configuration; runtime enforcement of protection-mode
+
+    and AppArmor was not separately confirmed in code beyond the role ACL.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): request_from = app ... else: _LOGGER.warning("%s no role for %s")'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: if name in (... REMOTE_USER_ID ...): continue'
+  - artifact: code-evidence-index.yaml
+    locator: SecurityMiddleware default-deny per-role URL ACL
+    excerpt: SecurityMiddleware default-deny role ACL mitigates malicious_or_compromised_addon reaching supervisor_docker_control_plane
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-4
+    - AC-6
+    - SC-7
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: The per-role default-deny URL ACL restricts add-on principals to their declared role's routes, limiting which add-on accounts reach the privileged Docker-socket control plane.
+  caveats:
+  - ROLE_ADMIN matches everything (.*); an admin-role or protection-off add-on bypasses the gate to the Docker socket / host root (cev-b2000002/3).
+  - Protection-mode and AppArmor enforcement not separately confirmed in code beyond the role ACL.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: intg-cap-70ef26f7
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Optional NaCl SecretBox authenticated encryption on mobile_app webhook payload bodies
+  description: 'Registration mints an optional NaCl SecretBox secret (data[CONF_SECRET] =
+
+    secrets.token_hex(SecretBox.KEY_SIZE), cev-a1000014), and when enabled the client
+
+    MUST send an "encrypted" payload (sending-data.md). libsodium SecretBox is
+
+    authenticated encryption (Poly1305 MAC), so an enabled webhook secret provides
+
+    body integrity and confidentiality against modification in transit — a payload
+
+    integrity control on the bearer-less webhook write path.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: the secret is minted at registration and SecretBox AEAD protects the
+
+    body when supports_encryption is enabled (cev-a1000014; sending-data.md). NOT
+
+    covered / caveated: encryption is OPTIONAL (a registration may proceed without it
+
+    if libsodium is unavailable), it protects only the body — NOT webhook_call_service
+
+    authorization (intg-webhook-callservice-noauthz) — and no nonce/sequence binding
+
+    is documented, so it is not a replay-protection control
+
+    (intg-webhook-no-idempotency).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
+  - artifact: api/native-app/sending-data.md
+    locator: '#implementing-encryption, lines 93-95'
+    excerpt: mobile_app supports two way encrypted communication via Sodium
+  - artifact: code-evidence-index.yaml
+    locator: optional NaCl SecretBox webhook body AEAD
+    excerpt: optional NaCl SecretBox webhook-body AEAD partially mitigates leaked_device_webhook_id payload tampering on mobile_app_webhook_api
+  control_mappings:
+    nist_800_53r5:
+    - SC-8(1)
+    - SI-7
+    - SC-13
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: NaCl SecretBox authenticated encryption of the webhook body provides a MAC that detects in-transit modification of the payload when the secret is enabled.
+  caveats:
+  - Encryption is OPTIONAL — a registration may proceed unencrypted if libsodium is unavailable.
+  - Protects the body only, not webhook_call_service authorization (finding intg-webhook-callservice-noauthz).
+  - No documented nonce/sequence binding — not a replay-protection control (finding intg-webhook-no-idempotency).
+  related_concerns:
+  - confidentiality
+- schema_version: 1
+  id: intg-cap-e18bb24c
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Permission policy compilation fails closed to deny-all on an empty or corrupt policy
+  description: 'compile_policy (cev-a1000006) compiles an empty or None policy to
+
+    apply_policy_deny_all (returns False for every entity/key), so a missing,
+
+    truncated, or unparseable policy record denies access rather than defaulting open.
+
+    This is a safe-by-default integrity property for the authorization-decision path:
+
+    corruption of the policy source degrades to refusal, not to silent allow. (It is
+
+    the defensive complement to the tamper risk in finding
+
+    intg-storage-no-integrity-mac, where a policy record tampered to True/allow-all
+
+    escalates — fail-closed protects against accidental corruption and truncation, not
+
+    against a directed tamper-to-True.)
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: deny-all compilation for empty/None policy (cev-a1000006). NOT covered:
+
+    this protects against absent/corrupt-to-empty policy only; a DIRECTED tamper that
+
+    sets a policy to True (allow-all) or flips is_admin still escalates silently
+
+    because there is no integrity MAC on the record (finding
+
+    intg-storage-no-integrity-mac); owner all-access (cev-a1000008) is unconditional
+
+    regardless of policy state.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False ... if policy is True: def apply_policy_allow_all'
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - AC-3
+    - SC-24
+  caveats:
+  - Fail-closed protects against empty/corrupt-to-empty policy only; a directed tamper-to-allow still escalates (finding intg-storage-no-integrity-mac).
+  - Owner all-access (cev-a1000008) is unconditional regardless of policy state.
+  related_concerns:
+  - resilient

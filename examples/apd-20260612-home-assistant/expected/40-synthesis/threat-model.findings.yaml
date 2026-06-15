@@ -1,0 +1,13 @@
+# MOVED — do not add records here.
+#
+# The canonical tier-4 threat-model evaluator finding file for this run is:
+#   40-threat-model/threat-model.findings.yaml
+# (that is the path the rollup, audit, report transform, and synthesis loader read,
+# and the only *.findings.yaml location the validator's canonical-record-dir gate
+# accepts for tmeval-* findings).
+#
+# This stub intentionally carries NO `finding:` root key so it contributes zero
+# records and cannot create a duplicate id. Coverage artifacts for this phase live at:
+#   40-synthesis/threat-model-coverage.yaml
+#   40-synthesis/threat-model-coverage-report.md
+moved_to: 40-threat-model/threat-model.findings.yaml

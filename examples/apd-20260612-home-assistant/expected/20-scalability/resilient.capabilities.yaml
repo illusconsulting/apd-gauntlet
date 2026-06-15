@@ -1,0 +1,164 @@
+capability:
+- schema_version: 1
+  id: resil-cap-fa365a2d
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: Permission engine fails closed (deny-all) on an empty, missing, or unparseable policy
+  description: 'compile_policy (cev-a1000006) compiles a per-entity allow/deny decision
+
+    function and, when the policy is empty or None, returns apply_policy_deny_all
+
+    (a function that returns False for every entity). The failure behavior on a
+
+    corrupt or missing policy is therefore fail-closed: the engine fails into a
+
+    known safe state (deny-all) rather than failing open to allow-all. This is
+
+    the Resilient fail-safe / fail-in-known-state property of the authorization
+
+    control — a corrupted policy source degrades to "deny" (a safe denial-of-
+
+    service for legitimate users) rather than silent privilege escalation.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the per-entity permission decision path in Core
+
+    (compile_policy, cev-a1000006), grounded in code evidence. This is one
+
+    fail-safe point, NOT a platform-wide degradation strategy: it does not
+
+    address the shared-event-loop stall failure mode, outbound-integration
+
+    timeouts/breakers, or any declared read-only/safe-mode for dependency
+
+    unavailability — those are open Resilient findings (resil-01000001/2/8).
+
+    The owner identity short-circuits the policy entirely (cev-a1000008), so
+
+    the fail-closed property protects non-owner scoping only.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False'
+  control_mappings:
+    nist_800_53r5:
+    - SC-24
+    - CP-12
+    - SI-13
+  caveats:
+  - This is a single fail-safe point in the authorization path, not a platform-wide graceful-degradation strategy (see resil-01000008).
+  - Owner identity short-circuits the policy (cev-a1000008), so the fail-closed property governs non-owner scoping only.
+  - Fail-closed deny-all is a safe-by-default posture but is a denial-of-service for legitimate users on policy corruption (the availability trade-off).
+  related_concerns:
+  - authenticity
+  - availability
+- schema_version: 1
+  id: resil-cap-6a038f48
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: WebSocket connection state self-corrects by dropping the live socket on token revocation
+  description: 'The WS auth handshake (AuthPhase.async_handle, cev-a1000010) registers an
+
+    async_register_revoke_token_callback so that when the backing refresh token
+
+    is revoked, the live WebSocket socket is dropped rather than left open in a
+
+    now-invalid state. This is a Resilient state-recovery behavior on the
+
+    connection lifecycle: a revocation event drives the connection to a known
+
+    state (closed) automatically, without waiting for the next request or a
+
+    manual sweep, so the system converges to a consistent connection state on a
+
+    security-relevant change.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the Core WebSocket connection lifecycle (cev-a1000010),
+
+    grounded in code evidence. Covers the drop-on-revocation transition only;
+
+    it does NOT address reconnect/backoff behavior on the client side
+
+    (unspecified — resil-01000005), nor any WS connection/subscription quota
+
+    (an open Availability finding, avail-4be2dd70). The recovery here is the
+
+    server forcing the socket closed; the client''s resilient reconnection is
+
+    out of scope of this capability.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_register_revoke_token_callback
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - SC-24
+  caveats:
+  - Covers the server-side drop-on-revocation transition only; client reconnect/backoff behavior is unspecified (resil-01000005).
+  - Does not bound the number of WS connections/subscriptions, which remains an open Availability concern (avail-4be2dd70).
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: resil-cap-c76c9240
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: Push relay enforces a per-token rate limit bounding abuse on the single notification path
+  description: 'The Firebase Cloud Functions push relay (handlers.handleRequest,
+
+    cev-08000001) reads the push_token from the request body and applies a
+
+    per-token rate limit, rejecting with a 429 when the limit is exceeded. On
+
+    the single notification path this is a partial backpressure / admission
+
+    control: it bounds the volume one token can drive through the relay, so a
+
+    single misbehaving or abusive sender cannot arbitrarily saturate the shared
+
+    relay and starve other users'' notification delivery.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed at the relay''s handleRequest entrypoint (cev-08000001), grounded
+
+    in code evidence — a per-token (not per-caller) rate limit returning 429.
+
+    It bounds per-token volume only; it is NOT relay-outage resilience (no
+
+    retry/queue/fallback when the relay itself is down — resil-01000006), does
+
+    NOT authenticate the caller (any valid-format token drives the relay — a
+
+    Non-Repudiation/Authenticity gap owned elsewhere), and does not provide a
+
+    relay availability SLA or regional redundancy (avail-a2cfd41c).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: rateLimitInfo = await rateLimiter.checkRateLimit(token)
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+  caveats:
+  - Bounds per-token volume only; it is not relay-outage resilience (no retry/queue/fallback when the relay is down — resil-01000006).
+  - The relay does not authenticate the caller (cev-08000001), so the rate limit is the only abuse bound on an otherwise unauthenticated path.
+  - Does not provide a relay availability SLA or regional redundancy (avail-a2cfd41c).
+  related_concerns:
+  - availability
+  - non_repudiation

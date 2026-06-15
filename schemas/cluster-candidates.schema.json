@@ -34,7 +34,7 @@
                 "id": { "type": "string", "minLength": 1 },
                 "agent": { "type": "string", "minLength": 1 },
                 "apd_goal": { "type": "string", "minLength": 1 },
-                "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+                "severity": { "$ref": "_defs.schema.json#/$defs/severity" },
                 "title": { "type": "string", "minLength": 10 },
                 "summary": { "type": "string", "minLength": 10 },
                 "first_evidence": {

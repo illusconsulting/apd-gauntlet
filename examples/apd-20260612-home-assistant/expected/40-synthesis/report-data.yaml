@@ -1,0 +1,86 @@
+schema_version: 1
+
+exec_summary:
+  paragraphs:
+    - "Reviewed across the API-security and mobile-applications domains, this assessment examined Home Assistant — a self-hosted home-automation platform spanning 23 code-grounded repositories — as one trusted, single-process Core sitting behind a host-root-equivalent Supervisor layer and in front of adversary-controlled mobile Companion clients. Both domain packs are squarely applicable: the API-security lens governs the Core REST/WebSocket surface, the privileged Supervisor API, the add-on role model, and the token lifecycle, while the mobile-applications lens governs the iOS and Android clients, their on-device secret stores, the WebView/JS-bridge, deep links, and the push relay. The defining architectural signal is concentration of blast radius: a single trust domain holds the entire secret estate as plaintext on disk, a container-to-host-root bridge accepts privileged operations with no caller identity check, and consequential physical actions leave no attributable record."
+    - "The finding shape is a heavy concentration of high-severity trustworthiness and auditability gaps standing against a genuinely real — but narrowly-scoped — set of confirmed controls. The most material weaknesses cluster in three places: at-rest confidentiality and integrity of the secret estate (plaintext .storage and the Recorder history DB, where a single file read forges HS256 tokens and a single file write rewrites the permission policy undetected); the host-root control plane (the os-agent D-Bus and add-on→Supervisor→Docker-socket chain); and auditability, where there is no security audit log at all, so lock/alarm actuation, the auth lifecycle, and host-root operations are unattributable. The attack-path analysis found every declared attacker-position/crown-jewel pair reachable, dominated by direct single-hop compromises with no mitigating control on the path. The most actionable next moves are an at-rest protection program over .storage, the Recorder DB, and backups; a real authorization boundary on the os-agent and Supervisor host-root hops; and the introduction of a single attributable security-audit stream — reviewers should work the headline findings in priority order."
+
+headline_findings:
+  - {id: auth-6924f467, rank: 1}
+  - {id: merged-1119b0be, rank: 2}
+  - {id: merged-a49cb674, rank: 3}
+  - {id: merged-66801b1b, rank: 4}
+  - {id: auth-3f2314a4, rank: 5}
+  - {id: auth-8f0d8172, rank: 6}
+  - {id: ephem-f19f24f9, rank: 7}
+  - {id: conf-3060c50e, rank: 8}
+  - {id: conf-2029ce78, rank: 9}
+  - {id: auth-7162fd48, rank: 10}
+
+strengths:
+  - id: auth-cap-f01e6108
+    caveats:
+      - "Verifies a long-lived credential: the per-refresh-token jwt_key never rotates and refresh/long-lived tokens are effectively non-expiring, so the verification is strong at the moment of check but the credential it accepts can outlive any incident."
+      - "Does not cover the bearer-less mobile_app webhook path, which routes around this chokepoint entirely."
+      - "HS256-only pinning is what prevents key-confusion; there is no asymmetric verification option, and a leaked/forged jwt_key from plaintext .storage produces a token this chokepoint accepts as valid."
+  - id: conf-cap-88473a97
+    caveats:
+      - "Read-side only: per-entity scoping applies to GET /api/states, but the WRITE path (POST /api/states) is admin-or-deny with no per-entity write policy, and the webhook service-call path applies no per-entity check at all."
+      - "Admin sessions short-circuit per-entity scoping to allow-all and the owner is unconditional all-access, so this protects only against non-admin over-reach."
+      - "/api/config is unscoped and returns precise home geolocation and filesystem paths to any bearer holder."
+  - id: conf-cap-01c47d42
+    caveats:
+      - "Covers the mTLS client-cert private key only; the session/refresh bearer tokens and the location_history table live in the UNENCRYPTED Android Room database."
+      - "Non-exportability protects the key at rest but does not prevent in-place use on an unlocked, rooted device (no root/Frida detection accompanies it)."
+      - "mTLS is opt-in per server configuration, not a default, and authenticates the client to the server — not the server to the client (no pinning)."
+  - id: auth-cap-e9f55df8
+    caveats:
+      - "An add-on running with the admin role or with protection-mode disabled matches the ROLE_ADMIN '.*' pattern and reaches the full Supervisor API including the host-root Docker plane."
+      - "The SUPERVISOR_TOKEN rotation/expiry/revocation lifecycle is unspecified."
+      - "Identity binding is per-token only; there is no per-request signature beyond the bearer, and the os-agent D-Bus hop downstream performs no caller authz of its own."
+  - id: conf-cap-1044dbb3
+    caveats:
+      - "The strong bcrypt hash is persisted to plaintext .storage with no encryption-at-rest, alongside the MFA/TOTP seeds and per-token jwt_keys, which are NOT one-way and are recoverable in cleartext."
+      - "This protects the password factor only; MFA is opt-in and unenforced, so a single password compromise of the all-access owner is sufficient."
+  - id: intg-cap-e18bb24c
+    caveats:
+      - "Fail-closed compilation protects only against an absent or corrupt-to-empty policy; a DIRECTED tamper that sets a policy record to True (allow-all) still escalates silently because there is no integrity MAC on the .storage record."
+      - "Owner all-access is unconditional regardless of policy state."
+  - id: ephem-cap-5113fad9
+    caveats:
+      - "Revocation is manual and user-initiated; there is no automatic time-based expiry or rotation that would fire it without a human noticing the compromise first."
+      - "Because refresh tokens never expire and jwt_keys never rotate, a stolen token remains replayable until the user happens to revoke it explicitly."
+
+next_steps:
+  - rank: 1
+    text: "Authenticate the D-Bus caller in each os-agent host-root method (polkit / bus-name + uid check) so AddSSHAuthKey and ScheduleWipeDevice verify the Supervisor identity before performing a host-root operation."
+    refs: [auth-6924f467]
+  - rank: 2
+    text: "Apply an at-rest protection program — encryption AND a content MAC plus a versioned, drift-detected change path — across .storage, the Recorder history DB, and Supervisor backups so a single file read no longer forges tokens and a single file write no longer rewrites policy or history undetected."
+    refs: [merged-1119b0be, merged-a49cb674]
+  - rank: 3
+    text: "Introduce one attributable security-audit stream covering device actuation, the full auth/token lifecycle, and every ALLOWED privileged Supervisor operation, with a non-null resolved actor on every entry."
+    refs: [merged-66801b1b]
+  - rank: 4
+    text: "Make the per-request NaCl signature mandatory on the mobile_app webhook and bind webhook calls to a verifiable device identity with per-entity write authorization and a rate limit, so a leaked bearer-less webhook_id cannot actuate locks/alarms."
+    refs: [auth-3f2314a4, ephem-053957f3]
+  - rank: 5
+    text: "Enforce Cosign signature verification as a hard admission gate at add-on install/run and pin base images by immutable digest, closing the supply-chain path that escalates an unsigned image to the host-root Docker plane."
+    refs: [auth-8f0d8172]
+  - rank: 6
+    text: "Introduce an absolute refresh-token lifetime with rotation and reuse detection, bound the 10-year Long-Lived Access Token to a configurable default and maximum, and rotate the per-token jwt_key."
+    refs: [ephem-f19f24f9, ephem-9915ab91]
+  - rank: 7
+    text: "Gate the native↔WebView external-auth bridge by verified origin and stop handing the raw bearer token to remotely-served WebView content; add trust-on-first-use server-identity pinning and exclude user-installed CAs on the mobile instance channel."
+    refs: [conf-3060c50e, conf-2029ce78, auth-1787eae1]
+  - rank: 8
+    text: "Require MFA on the owner and admin surfaces, declare an AAL target per surface, and retire IP-as-identity / shared-secret auth providers so the all-access owner cannot be password-only."
+    refs: [auth-7162fd48]
+  - rank: 9
+    text: "Provide a failure-domain boundary for the integration tier and isolate the recorder write path and consequential-actuation path from the shared event loop with per-call timeouts, circuit breakers, and bulkheads."
+    refs: [dist-66e3e208, merged-0ccd3ea6]
+
+posture_summary:
+  trustworthiness: "Strong primitives at the verification edge (bcrypt with constant-time login, per-entity READ enforcement, a revocation-aware token chokepoint) sit on top of a plaintext-at-rest secret estate where a single file read forges tokens and a single file write rewrites the permission policy and history undetected, plus adversary-controlled mobile clients with unencrypted on-device token/PII stores and no TLS pinning."
+  scalability: "Single-host, single-process Core is the intended appliance model and an explicit, documented constraint, but 2000+ unsandboxed integrations and the recorder path share one event loop with no bulkhead or quota, credentials never rotate or expire, and the only redundant copy is a default-unencrypted backup that is the sole recovery path."
+  auditability: "There is no security audit log anywhere — lock/alarm actuation, the auth lifecycle, and host-root D-Bus operations are unattributable — and the host-root bridge accepts privileged calls with no caller identity, while supply-chain provenance (image signing, SBOM, attestation) is advisory rather than enforced."

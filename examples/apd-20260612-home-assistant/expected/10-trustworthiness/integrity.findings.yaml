@@ -1,0 +1,857 @@
+finding:
+- schema_version: 1
+  id: intg-5df46115
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: mobile_app webhook_call_service actuates arbitrary services (locks/alarms) with no per-entity write-path authorization
+  summary: A bearer-less webhook_id holder calls any Core service via webhook_call_service with a synthesized context and no per-entity permission check, mutating lock/alarm state outside the permission engine.
+  detail: 'webhook_call_service (cev-a1000015) invokes hass.services.async_call(domain,
+
+    service, service_data, ...) under a synthesized registration_context and applies
+
+    NO per-entity permission check. The entrypoint handle_webhook (cev-a1000016)
+
+    authenticates the caller solely by possession of the webhook_id (a 32-hex
+
+    token_hex value minted at cev-a1000014); the webhook itself is bearer-LESS, and
+
+    sending-data.md is explicit: "These requests do not need to contain
+
+    authentication." Any holder of a leaked webhook_id (the leaked_device_webhook_id
+
+    attacker position) can therefore drive call_service against arbitrary domains —
+
+    including lock.unlock and alarm_control_panel.disarm — with no entity scoping
+
+    and no per-action authorization. This is a write-path authorization gap on the
+
+    designated consequential-action surface (device control / state mutation per the
+
+    context brief §2 Adjudication-impact analog).
+
+
+    Severity is high under the *api-security* rubric clause "BFLA exposing admin
+
+    functions to authenticated low-privilege users (OWASP API5)" — the missing
+
+    per-entity/per-service write check lets a low-or-no-privilege principal
+
+    (webhook_id possession) reach a privilege-altering operation (physical actuation)
+
+    with no role check. It is also high under the *mobile-applications* rubric clause
+
+    "An exported component, unverified deep link, or custom URL scheme accepts
+
+    unauthenticated parameters that drive an in-app state change without server
+
+    re-verification" applied to the bearer-less device webhook. It does not reach
+
+    critical because the webhook_id is a 256-bit-class opaque secret (not trivially
+
+    enumerable) and an optional NaCl SecretBox body secret can be required, so the
+
+    blast radius is bounded by webhook_id secrecy rather than open to the
+
+    unauthenticated internet. Per the "do not average" rule the higher of the two
+
+    pack clauses governs (high).
+
+
+    The integrity defect of record is that webhook_call_service does not re-derive
+
+    authorization server-side: it trusts that webhook_id possession implies authority
+
+    to call any service. The optional NaCl secret protects payload confidentiality,
+
+    not write-path authorization.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: await hass.services.async_call(data[ATTR_DOMAIN], data[ATTR_SERVICE], ... context=registration_context(...))
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]
+  - artifact: api/native-app/sending-data.md
+    locator: '#interaction-basics, line 63'
+    excerpt: These requests do not need to contain authentication.
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000015 webhook_call_service no per-entity authz
+    excerpt: leaked_device_webhook_id calls arbitrary services (lock.unlock/alarm.disarm) via mobile_app_webhook_api with no per-entity authz
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-6
+    - AC-3(7)
+    - SI-10
+    mitre_attack:
+    - technique: T1190
+      sub_technique: null
+      tactic: TA0001
+      rationale: A leaked webhook_id is a public-facing application input that drives privileged service calls with no per-entity authorization, actuating physical locks/alarms.
+    cwe:
+    - CWE-862
+    - CWE-639
+    owasp_api_top10:
+    - API5:2023
+    masvs:
+    - MASVS-PLATFORM-1
+    - MASVS-AUTH-1
+  recommendation:
+    posture: required
+    summary: Scope webhook_call_service to the registering device's permitted entities/services and re-authorize each call server-side.
+    detail: 'Replace the unscoped hass.services.async_call in webhook_call_service
+
+      (cev-a1000015) with a permission check derived from the registering user''s
+
+      policy: resolve the config_entry''s owning user (handle_webhook, cev-a1000016
+
+      already holds the config_entry) and run the per-entity check that
+
+      APIEntityStateView.get already performs for reads (cev-a1000011,
+
+      user.permissions.check_entity), extended to a POLICY_CONTROL check on the
+
+      target entity_id(s) inside service_data. At minimum, restrict the callable
+
+      domains/services to an allowlist scoped to the device registration rather than
+
+      the full service registry. Make the optional NaCl SecretBox secret
+
+      (supports_encryption, cev-a1000014) mandatory at registration so webhook_id
+
+      possession alone is insufficient. Server-side re-authorization is the integrity
+
+      invariant; webhook_id secrecy is not an authorization control.
+
+      '
+    references:
+    - 'internal: api/native-app/sending-data.md #call-a-service-action'
+  related_concerns:
+  - authenticity
+  - non_repudiation
+  cross_references: []
+- schema_version: 1
+  id: intg-d5c5bca5
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: critical
+  confidence: high
+  title: os-agent AddSSHAuthKey/ScheduleWipeDevice write to host root with no in-method caller authorization
+  summary: os-agent D-Bus methods append an arbitrary key to root authorized_keys and schedule a datadisk wipe with no caller-authorization check in the method, so any D-Bus-reachable caller mutates host-root state.
+  detail: 'system.system.AddSSHAuthKey (cev-c3000001) opens the root authorized_keys file
+
+    O_APPEND|O_CREATE and writes an attacker-supplied key ("key added for user root")
+
+    with NO authorization check inside the method body. system.system.ScheduleWipeDevice
+
+    (cev-c3000002) schedules a destructive factory-reset / datadisk wipe over the same
+
+    D-Bus interface, again with no in-method caller gate. The cross-repo edge
+
+    cev-0a000004 confirms Supervisor reaches these methods over the system D-Bus
+
+    (io.hass.os) as the container->host-root bridge. Because the method itself does
+
+    not verify the caller, the integrity of the host''s root trust store and of the
+
+    datadisk depends entirely on the D-Bus policy / socket reachability outside the
+
+    method — an unsafe-default write-path authorization posture: a single
+
+    container/Supervisor compromise that can speak the D-Bus interface writes a root
+
+    SSH key (persistent host-root foothold) or wipes the device.
+
+
+    Severity is critical under the *api-security* rubric clause "Authentication bypass
+
+    to high-privilege functions with no factor required" — the privileged host-mutation
+
+    function executes with no in-method authorization factor — read together with the
+
+    *mobile-applications* doctrine that a consequential write must be re-authorized at
+
+    the point that performs it. The write target (root authorized_keys / datadisk) is
+
+    the maximal-blast-radius integrity asset (host-root persistence; irreversible wipe).
+
+    The control of record is a per-method caller-authorization check; D-Bus reachability
+
+    alone is not an authorization decision.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.AddSSHAuthKey:L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: file := os.OpenFile(sshAuthKeyFileName, O_APPEND|O_CREATE|O_WRONLY, 0644) ... "key added for user root"
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: 'func (d system) ScheduleWipeDevice(...) # schedule factory-reset / datadisk wipe over D-Bus'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor (D-Bus client) -> system.system.AddSSHAuthKey (os-agent):L57-L75@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: 'CROSS_CHANNEL: Supervisor calls os-agent host methods over the system D-Bus (io.hass.os)'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-6
+    - CM-5
+    - SI-7
+    mitre_attack:
+    - technique: T1098
+      sub_technique: T1098.004
+      tactic: TA0003
+      rationale: AddSSHAuthKey appends an attacker-supplied key to root authorized_keys with no caller authorization, establishing persistent host-root SSH access.
+    cwe:
+    - CWE-862
+    - CWE-306
+  recommendation:
+    posture: required
+    summary: Enforce a per-method caller-authorization check inside AddSSHAuthKey/ScheduleWipeDevice and a restrictive D-Bus policy.
+    detail: 'Add an explicit caller-identity check at the top of each privileged os-agent
+
+      method (cev-c3000001, cev-c3000002) — validate the D-Bus sender against an
+
+      allowlist (the Supervisor unit''s well-known name / uid) before performing the
+
+      host mutation, rather than relying solely on bus reachability. Pair this with a
+
+      least-privilege D-Bus policy file restricting io.hass.os method invocation to
+
+      the Supervisor principal, and constrain AddSSHAuthKey to a key-format/owner
+
+      allowlist so an arbitrary key cannot be appended. For ScheduleWipeDevice,
+
+      require a confirmation token bound to an authenticated Supervisor request so a
+
+      single D-Bus message cannot trigger an irreversible wipe.
+
+      '
+    references:
+    - 'internal: 00-SYSTEM-OVERVIEW.md #trust-boundaries item 5'
+  related_concerns:
+  - authenticity
+  - availability
+  cross_references: []
+- schema_version: 1
+  id: intg-4768c0f0
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Core .storage auth/permission/integration records have no MAC or content hash, so file tampering silently forges keys and escalates privilege
+  summary: All .storage is plaintext JSON gated only by 0600 file perms; there is no integrity protection on refresh-token jwt_keys, user/group policy, or integration secrets, so a file-write primitive forges signing keys or escalates a user with no detection.
+  detail: 'Store._write_prepared_data (cev-a1000017) writes ALL .storage records — including
+
+    .storage/auth (refresh tokens + per-token HS256 jwt_key, cev-a1000003),
+
+    .storage/auth_provider.homeassistant (bcrypt hashes), and config_entries /
+
+    OAuth2 token storage (integration secrets) — as plaintext UTF-8 JSON. The only
+
+    at-rest control is self._private (0600 file permissions); there is NO MAC, no
+
+    signature, and no content hash on the records. compile_policy (cev-a1000006) then
+
+    consumes the per-user policy records with no integrity check, and its own note is
+
+    explicit: corruption => silent escalation. _OwnerPermissions (cev-a1000008) and
+
+    the admin allow-all short-circuit (cev-a1000007) mean a tampered policy/user
+
+    record that flips is_admin or owner status grants total control of the single
+
+    privileged Core domain. A tampered jwt_key likewise lets an attacker mint a valid
+
+    HS256 access JWT (cev-a1000001) — token forgery — with no integrity alarm.
+
+
+    This is an Integrity finding (tamper-detection on durable records that drive
+
+    authorization decisions), distinct from the Confidentiality concern that the same
+
+    files are plaintext (routed to confidentiality) and distinct from the Immutability
+
+    concern of long-term alteration of historical records (routed to immutability).
+
+    The defect of record is the absence of any write-time integrity binding (HMAC /
+
+    signed record / content hash) on the at-rest authorization and key estate.
+
+
+    Severity is high under the *api-security* rubric clause "Forgeable session tokens
+
+    at platform scope" (a tampered jwt_key yields token forgery) combined with
+
+    "BFLA exposing admin functions" (a tampered policy record escalates to admin). It
+
+    is not scored critical here because exploitation presupposes the attacker already
+
+    holds a write primitive to the config directory (lateral-only precondition per the
+
+    *api-security* "Hardening weakness exploitable only after adjacent compromise"
+
+    framing), so the higher clause is bounded by that precondition; the maximal token-
+
+    forgery consequence keeps it at high rather than medium.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'write_method(path, json_data, self._private, mode=mode)  # plaintext UTF-8 JSON; 0600 only, NO encryption/MAC'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False ... if policy is True: def apply_policy_allow_all'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.models.RefreshToken:L104-L121@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'jwt_key: str = attr.ib(factory=lambda: secrets.token_hex(64))'
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000017 Store._write_prepared_data (plaintext .storage)
+    excerpt: malicious_or_compromised_addon with file-write tampers plaintext .storage forging refresh_token_jwt_signing_keys (no MAC)
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - SI-7(1)
+    - CM-5
+    - SC-28
+    mitre_attack:
+    - technique: T1606
+      sub_technique: T1606.001
+      tactic: TA0006
+      rationale: Tampering a plaintext jwt_key record in .storage/auth lets the attacker forge a valid HS256 access JWT because no MAC binds the record's integrity.
+    cwe:
+    - CWE-353
+    - CWE-345
+  recommendation:
+    posture: recommended
+    summary: Bind a keyed MAC or signed-record integrity check to security-critical .storage records and verify it on load.
+    detail: 'For the authorization/key estate written by Store._write_prepared_data
+
+      (cev-a1000017) — .storage/auth (jwt_keys, refresh tokens), the homeassistant
+
+      auth provider, and the per-user permission/policy records compile_policy reads
+
+      (cev-a1000006) — add a keyed integrity tag (HMAC over the serialized record
+
+      using a key held outside the same plaintext store, e.g. derived from an OS
+
+      keyring or a boot secret) and verify it on every load, refusing to compile a
+
+      policy or accept a jwt_key whose MAC does not validate. This converts a silent
+
+      tamper-to-escalation into a detected integrity-violation event. This complements
+
+      (does not replace) the Confidentiality recommendation to encrypt the store at
+
+      rest; integrity verification must hold even if encryption is added.
+
+      '
+    references:
+    - 'external: NIST SP 800-53r5 SI-7 Software, Firmware, and Information Integrity'
+  related_concerns:
+  - confidentiality
+  - immutability
+  cross_references: []
+- schema_version: 1
+  id: intg-d6c5e666
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: risk
+  severity: medium
+  confidence: high
+  title: POST /api/states write is admin-or-deny with no per-entity write policy while reads are per-entity scoped
+  summary: State writes enforce only is_admin with no per-entity policy, so any admin token mutates arbitrary entity state, despite reads being scoped per-entity — an asymmetric, coarse write-path authorization.
+  detail: 'APIEntityStateView.post (cev-a1000012) gates state WRITE on user.is_admin only and
+
+    raises Unauthorized otherwise; there is NO per-entity write policy check. This is
+
+    asymmetric with the READ path: APIEntityStateView.get (cev-a1000011) enforces a
+
+    per-entity POLICY_READ check via user.permissions.check_entity, and
+
+    filter_entity_ids_by_permission (cev-a1000007) scopes read results per policy.
+
+    Consequently the consequential-write surface (entity-state mutation, which feeds
+
+    automations that actuate physical devices) has coarser authorization than reads:
+
+    any admin token writes arbitrary entity state with no entity scoping, and the
+
+    admin short-circuit (cev-a1000007) plus owner all-access (cev-a1000008) mean there
+
+    is no sub-admin write-scoping tier at all.
+
+
+    This is the write-path-authorization granularity facet (who may mutate which
+
+    entity), distinct from the identity-verification of the admin (authenticity).
+
+    Severity is medium under the *api-security* rubric clause "Defense-in-depth gap
+
+    where a single compensating control is the only barrier" — the only write barrier
+
+    is the binary admin flag, with no per-entity write policy as a second tier — rather
+
+    than high, because the admin gate genuinely blocks non-admin writes (it is coarse,
+
+    not absent). It would escalate if a non-admin write path were found.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.post:L257-L275@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.is_admin: raise Unauthorized(entity_id=entity_id)  # NO per-entity write policy'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise Unauthorized(entity_id=entity_id)'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.filter_entity_ids_by_permission:L32-L39@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if user.is_admin or user.permissions.access_all_entities(key): return list(entity_ids)'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-6(1)
+    - AC-3(7)
+    - SI-10
+    owasp_api_top10:
+    - API5:2023
+    cwe:
+    - CWE-862
+  recommendation:
+    posture: recommended
+    summary: Add a per-entity POLICY_CONTROL write check mirroring the existing per-entity read check.
+    detail: 'Mirror the read-path enforcement on the write path: in APIEntityStateView.post
+
+      (cev-a1000012), before mutating state, run user.permissions.check_entity(
+
+      entity_id, POLICY_CONTROL) (the control key compile_policy already supports,
+
+      cev-a1000006) so non-owner principals can be granted scoped write access to a
+
+      subset of entities rather than all-or-nothing on the is_admin flag. This brings
+
+      write authorization to parity with the per-entity read scoping at cev-a1000011
+
+      and removes the coarse admin-or-deny barrier as the sole write control.
+
+      '
+    references:
+    - 'internal: auth/auth_permissions.md #permissions (read/control/edit keys)'
+  related_concerns:
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: intg-ebff194f
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: medium
+  confidence: medium
+  title: mobile_app webhook write path has no idempotency key or dedup, so retried/replayed call_service requests double-actuate
+  summary: handle_webhook shows no idempotency or dedup on the bearer-less webhook entrypoint, so a replayed or retried call_service payload re-executes the consequential action with no exactly-once guarantee.
+  detail: 'The webhook write path (handle_webhook, cev-a1000016) maps webhook_id ->
+
+    config_entry and dispatches the payload (e.g. call_service -> webhook_call_service,
+
+    cev-a1000015) with no observed idempotency-key handling and no replay/dedup
+
+    window. sending-data.md instructs clients to construct an unauthenticated webhook
+
+    URL and POST to it, and the only documented client guidance is "expect to receive
+
+    a 200 response for all your requests" with no idempotency contract. Because the
+
+    payload drives consequential service calls (actuating locks/alarms), a replayed or
+
+    client-retried request re-executes the side effect: there is no exactly-once or
+
+    effectively-once guarantee on this surface. The optional NaCl SecretBox protects
+
+    payload confidentiality/authenticity of the body but is not a replay-protection
+
+    mechanism (no nonce/sequence binding is documented).
+
+
+    This is the transactional-guarantee/idempotency facet of Integrity on a
+
+    consequential-write surface. Severity is medium under the *api-security* rubric
+
+    clause "Defense-in-depth gap where a single compensating control is the only
+
+    barrier" applied to the missing replay/idempotency control; it is not high because
+
+    the action set is device actuation rather than financial/irreversible mutation, and
+
+    re-actuating an idempotent device service (turn_on twice) is often benign — but
+
+    replay of a non-idempotent or stateful service (e.g. a toggle, a counter, a script
+
+    trigger) is not. Confidence is medium because the absence of a rate-limit/dedup is
+
+    observed in code (no such call in handle_webhook) but a higher-layer reverse-proxy
+
+    control cannot be excluded from the artifacts.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]  # no bearer, no rate-limit / dedup observed'
+  - artifact: api/native-app/sending-data.md
+    locator: '#response, line 86'
+    excerpt: As a general rule, expect to receive a 200 response for all your requests.
+  prerequisite_evidence:
+  - Reverse-proxy / Nabu Casa cloudhook rate-limit or replay-protection configuration on the /api/webhook path (not in the supplied artifacts)
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    - SC-5
+    owasp_api_top10:
+    - API4:2023
+    cwe:
+    - CWE-799
+  recommendation:
+    posture: recommended
+    summary: Add a replay/idempotency window and per-webhook_id rate limit to the webhook entrypoint.
+    detail: 'On the webhook entrypoint (handle_webhook, cev-a1000016), derive an idempotency
+
+      key from the encrypted body''s nonce (or require a client-supplied idempotency
+
+      token) and reject duplicate keys within a bounded window so a retried or
+
+      replayed call_service does not re-execute the side effect. Add a per-webhook_id
+
+      rate limit (the push relay already does per-token rate limiting at
+
+      cev-08000001, a reusable pattern) to bound flooding of the single Core event
+
+      loop. For consequential, non-idempotent service calls, the server-side
+
+      re-authorization recommended in finding intg-webhook-callservice-noauthz should
+
+      also gate replay.
+
+      '
+    references:
+    - 'internal: api/native-app/sending-data.md #interaction-basics'
+  related_concerns:
+  - availability
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: intg-3b33966f
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: high
+  title: iOS/Android WebView external-message bridge dispatches native commands with no origin or integrity check on the remote-served frontend
+  summary: The WebView external bus dispatches by message type into native handlers while the WebView renders the remote server frontend, with no origin/integrity validation of the message source, so a compromised or MitM'd server response reaches native privilege.
+  detail: 'WebViewExternalMessageHandler.handleExternalMessage (cev-e5000001) parses an
+
+    incoming bridge message and switch-dispatches it by type (case .configGet,
+
+    case .tagRead, ...) into native capability, but the WebView renders the REMOTE
+
+    server frontend and there is NO origin or integrity check on the message source.
+
+    The frontend side (ExternalMessaging._sendExternal, cev-07000001;
+
+    ExternalMessaging.fireMessage, cev-07000002) is the matching JS->native /
+
+    native->JS channel, and frontend-external-authentication.md itself warns that the
+
+    native->WebView callback names "must be verified" against forgery — yet the recon
+
+    notes confirm no origin/integrity check is enforced on handleExternalMessage. The
+
+    mobile TLS trust loads user-installed CAs with no pinning (cev-f6000002), so a
+
+    network_mitm or a compromised_backend_or_response can substitute a hostile frontend
+
+    that drives the bridge.
+
+
+    This is the inbound-untrusted-input / WebView-bridge-integrity facet: an inbound
+
+    bridge value is treated as a trusted command rather than as data requiring a
+
+    validated, origin-checked boundary. Severity is high under the
+
+    *mobile-applications* rubric clause "A WebView JavaScript bridge exposes native
+
+    capability or data to loaded web content without origin allowlisting" — untrusted
+
+    content (a substituted/compromised remote frontend) crosses into native privilege.
+
+    It is not scored critical because the bridge command set is a typed switch (not
+
+    arbitrary native-method invocation) and the cross-repo edge cev-0a000005 targets
+
+    the user-configured instance URL rather than an attacker-fixed origin, bounding the
+
+    mass-exploit vector. Verifying the loaded content''s origin/identity is the
+
+    Authenticity complement (routed); the input-validation/typed-boundary duty is the
+
+    Integrity finding of record.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: guard let incomingMessage = WebSocketMessage(dictionary) ... switch externalBusMessage { case .configGet ... case .tagRead ... }
+  - artifact: code-evidence-index.yaml
+    locator: code:src.external_app.external_messaging.ExternalMessaging.fireMessage:L381-L428@505966e84f3a90347c66261592908a02a4118189
+    excerpt: window[CALLBACK_EXTERNAL_BUS] = (msg) => this.receiveMessage(msg)
+  - artifact: auth/frontend-external-authentication.md
+    locator: '#external-authentication, callback-name forgery warning'
+    excerpt: callback names must be verified to avoid forgery
+  - artifact: code-evidence-index.yaml
+    locator: cev-e5000001 remote-frontend bridge no origin/integrity check
+    excerpt: compromised_backend_or_response drives native via WebView bridge (no origin check) over mobile_stored_session_and_refresh_tokens
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    - SC-18
+    - SC-7
+    - AC-6
+    cwe:
+    - CWE-749
+    - CWE-20
+    masvs:
+    - MASVS-PLATFORM-2
+    maswe:
+    - MASWE-0069
+  recommendation:
+    posture: required
+    summary: Validate and allowlist bridge messages and verify the loaded content origin before dispatching native commands.
+    detail: 'In handleExternalMessage (cev-e5000001), before switch-dispatching, validate the
+
+      message against a typed allowlist of expected commands and reject-on-fail, and
+
+      confirm the WebView''s current origin matches the user-configured instance URL
+
+      (an HTTPS-only origin allowlist) so a substituted/mixed-content origin cannot
+
+      drive the bridge. Verify the native->WebView callback name as
+
+      frontend-external-authentication.md already warns (cev-07000002). Treat every
+
+      value arriving over the bridge as untrusted input subject to per-field
+
+      validation; do not let a remote-served frontend message be a trusted native
+
+      command.
+
+      '
+    references:
+    - 'internal: auth/frontend-external-authentication.md'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references: []
+- schema_version: 1
+  id: intg-8b158cfe
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: gap
+  severity: high
+  confidence: medium
+  title: Core integrations consume untrusted device/cloud responses with no central response validation while running unsandboxed at Core's full privilege
+  summary: Integration responses and forged inbound webhooks from untrusted devices/clouds are trusted per-integration with no central schema/response validation, and a single integration's tampering reaches all Core state because integrations are unsandboxed.
+  detail: 'The context brief and trust-boundary map state that Core integrations consume
+
+    responses from untrusted devices/clouds and forged inbound webhooks
+
+    (compromised_third_party_integration; API10 unsafe consumption), and that response/
+
+    endpoint authenticity is "per-integration (not centrally enforced)." The system
+
+    overview is explicit that integrations are NOT sandboxed from each other and run
+
+    with Core''s full privilege, so a single integration that ingests a malicious
+
+    response tampers with all Core state, the permission engine, and .storage with no
+
+    in-process integrity boundary (the threat model records this as tm-d98660ae /
+
+    tm-e185c6a7, Tampering). There is no central response-validation or schema-
+
+    enforcement layer at the Core<->external-device boundary (asset-inventory
+
+    boundary tb-6a2d8c14).
+
+
+    This is the unsafe-consumption / inbound-integrity facet (validate-before-act on
+
+    untrusted upstream responses), distinct from the SSRF/outbound concern. Severity
+
+    is high under the *api-security* rubric: it matches "Unsafe consumption of
+
+    third-party APIs without response validation (OWASP API10)" (which the rubric bands
+
+    medium) but escalates to high here because the *amplifier* — no inter-integration
+
+    isolation, full Core privilege — turns a single trusted-but-wrong response into
+
+    tampering of the entire Core state machine (the rubric''s "do not average" rule
+
+    takes the higher band driven by the unsandboxed-privilege multiplier). Confidence
+
+    is medium: the unsandboxed-privilege design is high-confidence (overview lines
+
+    20-22), but per-vendor response-validation behavior is modeled at the aggregate
+
+    level and not enumerated per integration in the code-evidence-index.
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#what-home-assistant-is, lines 20-22 (trust posture)'
+    excerpt: integrations are not sandboxed from each other and run with Core's full privilege
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@require_admin async def post ... tpl = _cached_template(data["template"], ...); tpl.async_render(...)'
+  - artifact: code-evidence-index.yaml
+    locator: '#what-home-assistant-is lines 20-22 (not sandboxed, full privilege)'
+    excerpt: compromised_third_party_integration response tampers all Core state including integration_secret_storage (unsandboxed)
+  prerequisite_evidence:
+  - Per-integration inbound-response validation behavior (schema enforcement / response allowlisting) for the high-traffic integration classes — not enumerated per integration in code-evidence-index.yaml
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    - SI-15
+    - SC-7
+    - AC-4
+    owasp_api_top10:
+    - API10:2023
+    cwe:
+    - CWE-20
+    - CWE-345
+  recommendation:
+    posture: recommended
+    summary: Introduce a central inbound-response validation contract at the integration boundary and constrain integration privilege.
+    detail: 'Provide a shared, framework-level response-validation helper at the
+
+      Core<->external-device boundary (tb-6a2d8c14) that integrations use to validate
+
+      untrusted device/cloud responses against a typed schema with reject-on-fail
+
+      before the response mutates Core state, rather than each integration trusting
+
+      the remote schema (API10). Because the unsandboxed full-privilege model means a
+
+      single bad response tampers all Core state, pair the validation contract with the
+
+      longer-term integration-isolation direction (process/capability sandboxing) so
+
+      the blast radius of one misbehaving integration is bounded. The admin-gated
+
+      /api/template render (cev-a1000013) is a related server-side-template sink that
+
+      should not be reachable from integration-controlled input.
+
+      '
+    references:
+    - 'internal: 00-SYSTEM-OVERVIEW.md #trust-boundaries item 6'
+  related_concerns:
+  - authenticity
+  - confidentiality
+  cross_references: []
+- schema_version: 1
+  id: intg-2b80f92e
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  disposition: risk
+  severity: low
+  confidence: medium
+  title: mobile_app webhook rejects invalid plaintext JSON but documents no validation error for invalid encrypted JSON
+  summary: The webhook contract returns 400 for invalid plaintext JSON but explicitly does not for invalid encrypted JSON, leaving malformed decrypted payloads without a defined reject-on-fail / dead-letter behavior.
+  detail: 'The documented webhook data-quality contract (sending-data.md) states a 400 is
+
+    returned "if your JSON is invalid. However, you will not receive this error if the
+
+    encrypted JSON is invalid." This is an input-validation/data-quality asymmetry on
+
+    the write path: the plaintext branch has a defined reject-on-fail (400), but the
+
+    encrypted branch''s behavior on a malformed decrypted payload is undefined in the
+
+    contract — there is no documented reject, quarantine, or dead-letter outcome, so a
+
+    malformed-after-decrypt message may be silently dropped or partially processed.
+
+    The typed field constraints documented for messages such as update_location
+
+    (gps_accuracy "Must be greater than 0", etc.) further imply per-field validation
+
+    whose enforcement on the encrypted branch is unspecified.
+
+
+    This is the data-quality-contract facet (defined behavior for malformed input at
+
+    an ingestion point). Severity is low under the *api-security* rubric clause
+
+    "Documentation deficiency / OpenAPI specification drift from implemented behavior
+
+    in non-security-critical surfaces" — the asymmetry is primarily a contract/
+
+    observability gap rather than a direct exploit — but it is recorded because the
+
+    encrypted branch is the one carrying location PII. Confidence is medium because
+
+    the asymmetry is documented but the actual server-side handling of a malformed
+
+    decrypted body is not enumerated in the code-evidence-index.
+
+    '
+  evidence:
+  - artifact: api/native-app/sending-data.md
+    locator: '#response, line 88'
+    excerpt: You will receive a 400 status code if your JSON is invalid. However, you will not receive this error if the encrypted JSON is invalid.
+  - artifact: api/native-app/sending-data.md
+    locator: '#update-device-location, gps_accuracy row'
+    excerpt: GPS accuracy in meters. Must be greater than 0.
+  prerequisite_evidence:
+  - Server-side handling of a malformed-after-decrypt webhook body (reject / quarantine / dead-letter behavior) — not enumerated in code-evidence-index.yaml
+  control_mappings:
+    nist_800_53r5:
+    - SI-10
+    cwe:
+    - CWE-20
+  recommendation:
+    posture: consider
+    summary: Define and document a reject-on-fail outcome for malformed decrypted webhook payloads symmetric with the plaintext 400.
+    detail: 'Extend the webhook data-quality contract so a payload that decrypts to invalid
+
+      JSON or fails per-field validation returns a defined error (or is dead-lettered
+
+      with a logged, monitorable outcome) symmetric with the plaintext 400 path
+
+      documented in sending-data.md, rather than being silently dropped. This gives
+
+      the location-PII-carrying encrypted branch the same reject-on-fail data-quality
+
+      guarantee as the plaintext branch.
+
+      '
+    references:
+    - 'internal: api/native-app/sending-data.md #response'
+  related_concerns: []
+  cross_references: []

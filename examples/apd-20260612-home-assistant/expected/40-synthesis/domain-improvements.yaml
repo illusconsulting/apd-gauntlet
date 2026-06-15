@@ -1,0 +1,314 @@
+schema_version: 1
+generated_by: domain-auditor
+examined_domains:
+- api-security
+- mobile-applications
+# ---------------------------------------------------------------------------
+# Union-check note. Of the 48 deterministic coverage-delta candidates, the large
+# majority resolve to crown-jewel / attacker-position / trust-boundary PATTERNS
+# both packs already declare under generic names (user_credentials_store,
+# pii_profile_store, session_token_signing_keys, compromised_user_session_token,
+# client_to_backend_api, application_to_data_tier, etc.). Those are NOT genuine
+# pack gaps and are not materialized. Only the candidates verified ABSENT from
+# both packs' domain.yaml (and flagged "[CUSTOM]" / "in neither pack's catalog"
+# in .apd-run.yaml) are captured deterministically below: the container->host-root
+# control plane, the malicious-add-on and leaked-webhook-id positions, and the
+# Supervisor->Docker-socket/os-agent host boundary. Four judgment opportunities
+# follow, each verified absent from the merged apd-domain skill.
+# ---------------------------------------------------------------------------
+improvements:
+
+# === Deterministic — genuine pack gaps (4) ===================================
+
+- id: dimpr-0188638b
+  improvement_type: missing_crown_jewel
+  target_pack: api-security
+  target_file: domain.yaml
+  source: deterministic
+  priority: high
+  evidence:
+  - kind: asset_inventory
+    ref: asset-e7c1b958
+    note: "Docker socket / host-root control plane (/run/docker.sock + os-agent D-Bus); the top HA crown jewel, in neither pack's catalog."
+  rationale: >-
+    The api-security pack's crown_jewels stop at the application tier (credentials,
+    PII, tokens, signing keys, audit, backups, integration secrets). It has no
+    pattern for a container-orchestration control plane whose possession yields
+    arbitrary container exec equals host root — the single most consequential
+    target in a self-hosted/add-on platform. Owning the Docker socket plus the
+    SUPERVISOR_TOKEN-gated supervisor proxy collapses every other jewel below it.
+  suggested_action: >-
+    Add a host/container control-plane crown jewel to the api-security pack's
+    crown_jewels so platform-runtime control surfaces (Docker socket, privileged
+    orchestrator API, host-agent D-Bus) are scored as a top-tier target rather
+    than left to the application-tier patterns.
+  insertion_hint:
+    yaml_path: "crown_jewels"
+  draft_snippet: |
+    - pattern: container_orchestration_control_plane
+      description: "The container/host control plane an application platform exposes — the Docker (or containerd/Kubernetes) socket, the privileged orchestrator/supervisor API, and the host-agent D-Bus/system interface. Possession yields arbitrary container exec equal to host root, collapsing every application-tier jewel beneath it; the weakest link is a single token or unauthenticated local socket."
+
+- id: dimpr-a0ddef69
+  improvement_type: missing_attacker_position
+  target_pack: api-security
+  target_file: domain.yaml
+  source: deterministic
+  priority: medium
+  evidence:
+  - kind: asset_inventory
+    ref: idn-7d1b4c83
+    note: "Third-party integration/device principal — the untrusted add-on/extension running in-platform with a scoped API role."
+  rationale: >-
+    The api-security positions cover supply_chain_attacker (build-time) and
+    compromised_third_party_integration (forged webhooks / hostile responses), but
+    neither models a third-party add-on/extension container running INSIDE the
+    platform with an elevated API role or a disabled protection mode, which pivots
+    through the supervisor/orchestrator to the host control plane. That east-west
+    in-platform extension is a distinct runtime position from a build-time or
+    external integration attacker.
+  suggested_action: >-
+    Add a malicious-or-overprivileged in-platform extension attacker position to
+    api-security so runs with an add-on/plugin/extension model evaluate the
+    container-to-orchestrator-to-host pivot explicitly.
+  insertion_hint:
+    yaml_path: "attacker_positions"
+  draft_snippet: |
+    - position: malicious_or_overprivileged_platform_addon
+      description: "A third-party add-on, plugin, or extension running inside the platform with an elevated API role or a disabled protection/isolation mode. It abuses its granted scope to reach the orchestrator/supervisor API and the container control plane, pivoting container-to-host; the position behind east-west and privilege-bridge findings in extensible self-hosted platforms."
+
+- id: dimpr-529bf939
+  improvement_type: missing_attacker_position
+  target_pack: api-security
+  target_file: domain.yaml
+  source: deterministic
+  priority: medium
+  evidence:
+  - kind: asset_inventory
+    ref: idn-1f5c8b23
+    note: "Registered device / webhook_id (cloudhook) holder — actuates services into Core with no bearer token."
+  rationale: >-
+    No api-security position models the holder of a long-lived, bearer-less
+    per-device callback secret (a webhook_id / cloudhook URL) that drives
+    consequential service calls without an access token. This is distinct from
+    compromised_user_session_token (bearer) and compromised_third_party_integration
+    (external partner): it is possession of a static device-scoped string that IS
+    the credential for an inbound control path.
+  suggested_action: >-
+    Add a leaked-device-callback-secret attacker position so the bearer-less
+    inbound webhook/callback control path is evaluated against any system minting
+    long-lived per-device webhook or cloudhook secrets.
+  insertion_hint:
+    yaml_path: "attacker_positions"
+  draft_snippet: |
+    - position: leaked_device_callback_secret_holder
+      description: "An attacker holding a leaked long-lived per-device callback secret — a webhook_id, cloudhook URL, or equivalent static device-scoped string that is itself the credential. With no bearer token, signature, or caller identity required, the holder is cryptographically indistinguishable from the genuine device and can actuate consequential service calls through the inbound callback path."
+
+- id: dimpr-ceef4265
+  improvement_type: missing_trust_boundary
+  target_pack: api-security
+  target_file: domain.yaml
+  source: deterministic
+  priority: medium
+  evidence:
+  - kind: asset_inventory
+    ref: tb-3e7b1a58
+    note: "Supervisor -> Docker socket (host root) & os-agent (D-Bus host ops); crosses asset-4f9d2a68, asset-e7c1b958, asset-2e7b9f14."
+  rationale: >-
+    The api-security default_trust_boundaries top out at application_to_data_tier
+    and application_to_third_party; there is no boundary for the crossing from the
+    orchestrator/supervisor process into the host control plane (container runtime
+    socket and host-agent D-Bus). That crossing is exactly where container-to-host
+    privilege escalation is contained or lost, and self-hosted/add-on platforms
+    live or die on it.
+  suggested_action: >-
+    Add an orchestrator-to-host-control-plane trust boundary to api-security so
+    the Docker-socket and host-agent D-Bus crossing gets first-class boundary
+    treatment (caller authentication, scoped tokens, protection-mode enforcement).
+  insertion_hint:
+    yaml_path: "default_trust_boundaries"
+  draft_snippet: |
+    - boundary: orchestrator_to_host_control_plane
+      description: "The crossing from the in-platform orchestrator/supervisor process to the host control plane — the container-runtime socket (Docker/containerd) and the host-agent system D-Bus/management interface. Where caller authentication, least-privilege scoped tokens, and protection-mode enforcement must contain container-to-host privilege escalation; an unauthenticated local socket or host-agent method here is a host-root primitive."
+
+# === Judgment — verified absent from merged apd-domain skill (4) =============
+
+- id: dimpr-b33ccb51
+  improvement_type: missing_common_pattern
+  target_pack: api-security
+  target_file: common-patterns/authenticity.md
+  apd_goal: authenticity
+  source: judgment
+  priority: high
+  evidence:
+  - kind: finding
+    ref: auth-3f2314a4
+    note: "mobile_app webhook authenticates by possession of a 32-hex webhook_id alone — no bearer, no per-request signature, no caller identity."
+  rationale: >-
+    The api-security authenticity patterns cover OAuth/JWT, mTLS, and signed
+    payloads, but none names the bearer-LESS callback anti-pattern: a single static
+    possession factor (a webhook_id) is the sole authenticator for a consequential
+    control surface, with an optional-only per-request signature. A leaked secret is
+    indistinguishable from the genuine device. This recurs in any system that mints
+    long-lived device callback secrets and treats request signing as opt-in.
+  suggested_action: >-
+    Add an authenticity common-pattern documenting the bearer-less callback
+    anti-pattern and the finding-of-record (make the per-request signature
+    mandatory; bind the callback to a verifiable device/user identity).
+  insertion_hint:
+    markdown_section:
+      level: 2
+      text: "Pattern: bearer-less callback authenticated by a static possession factor"
+  draft_snippet: |
+    ## Pattern: bearer-less callback authenticated by a static possession factor
+
+    **Symptom.** An inbound callback/webhook endpoint that drives consequential
+    actions (service calls, state changes, actuation) authenticates on possession of
+    a single long-lived static string (a `webhook_id`, callback URL, or shared secret)
+    with no bearer token, no mandatory per-request signature, and no caller-identity
+    assertion. Any per-request MAC/encryption is presented as an optional client flag.
+
+    **Why it is an Authenticity finding.** The identity claim "I am this registered
+    device" is unverifiable beyond replaying a static bearer-equivalent string; a
+    leaked secret is cryptographically indistinguishable from the genuine caller.
+    Maps to OWASP API2 (Broken Authentication), CWE-306/CWE-345, NIST IA-9/SC-23.
+
+    **Severity.** High when the callback can reach a consequential control surface
+    (PII access, financial action, physical/device actuation) under a synthesized
+    rather than authenticated principal. Medium when the callback is read-only or
+    fully signature-gated by default.
+
+    **Finding of record.** The absent MANDATORY per-request signature (verified MAC
+    over the body, nonce-replay-protected) and the absent binding of the callback to a
+    verifiable device/user identity — not merely the existence of the static id.
+
+- id: dimpr-97a729a9
+  improvement_type: missing_common_pattern
+  target_pack: mobile-applications
+  target_file: common-patterns/authenticity.md
+  apd_goal: authenticity
+  source: judgment
+  priority: medium
+  evidence:
+  - kind: finding
+    ref: auth-1787eae1
+    note: "Android Companion: default CA + user-installed CAs, no pinning; backend is a user-entered self-hosted URL with no fixed cert, so a static pin is impossible — TOFU pin is the control of record."
+  rationale: >-
+    The mobile-applications authenticity pattern for MASVS-NETWORK-2 assumes a
+    fixed, vendor-controlled server whose certificate/SPKI can be statically pinned.
+    It does not address the self-hosted / user-entered-instance case where there is
+    no fixed server certificate to pin, so a static pin set is impossible and the
+    correct finding-of-record is the ABSENT trust-on-first-use pin (or user-confirmable
+    certificate identity) plus the un-scoped trust of user-installed CAs.
+  suggested_action: >-
+    Add a mobile authenticity common-pattern covering server-identity verification
+    for user-entered/self-hosted backends, where TOFU pinning and CA-store scoping
+    replace a static pin set as the control of record.
+  insertion_hint:
+    markdown_section:
+      level: 2
+      text: "Pattern: server-identity verification for self-hosted / user-entered backends (no static pin possible)"
+  draft_snippet: |
+    ## Pattern: server-identity verification for self-hosted / user-entered backends (no static pin possible)
+
+    **Symptom.** The app connects to a user-entered, self-hosted backend URL with no
+    fixed vendor certificate. Default platform TLS trusts the full device CA store
+    (including user-installed and MDM/enterprise CAs) with no certificate or public-key
+    pinning. A static pin set (MASVS-NETWORK-2) is genuinely impossible because the
+    server certificate is chosen by the operator, not the vendor.
+
+    **Why it is still an Authenticity finding.** Without pinning, server identity
+    reduces to "some CA in the device store signed this leaf." A network MitM who can
+    get a CA into the store (user-installed MitM CA, enterprise/MDM CA, compromised
+    public CA) impersonates the backend and harvests the bearer token or rewrites
+    responses the WebView/native bridge then trusts. Maps to MASVS-NETWORK-2,
+    MASWE-0052, CWE-295, NIST SC-8(1)/IA-9.
+
+    **Finding of record.** The absent trust-on-first-use (TOFU) pin — capture the
+    leaf/SPKI on first successful connection and pin it, surfacing a later mismatch as
+    a security event — plus scoping the trust manager to the system CA store
+    (excluding user-added CAs) for the configured instance unless the user explicitly
+    opts into a custom CA. A static pin set is NOT the expected control here.
+
+    **Severity.** High on a high-value channel that carries the session bearer token;
+    the device-trust assumption is low once a user-installed CA is in scope.
+
+- id: dimpr-45813a89
+  improvement_type: missing_common_pattern
+  target_pack: api-security
+  target_file: common-patterns/availability.md
+  apd_goal: availability
+  source: judgment
+  priority: medium
+  evidence:
+  - kind: finding
+    ref: dist-66e3e208
+    note: "Single-host single-process Core: auth subsystem, recorder DB, supervisor, integrations all co-reside in one event loop / one failure domain, no replication."
+  rationale: >-
+    The api-security availability patterns assume a multi-tier service that can be
+    sized, replicated, and load-shed at the boundary. They do not name the
+    single-process appliance constraint where the entire platform — including the
+    in-process authentication service and every integration — shares ONE event loop
+    and ONE failure domain, so any one slow integration, an unthrottled handshake,
+    or host loss takes down the whole system including auth. This availability shape
+    is structural to appliance / self-hosted single-binary products.
+  suggested_action: >-
+    Add an availability common-pattern for the single-process / single-event-loop
+    appliance, documenting the per-component bounding (timeouts, back-pressure,
+    bounded queues) and boundary load-shedding that substitute for replication.
+  insertion_hint:
+    markdown_section:
+      level: 2
+      text: "Pattern: single-process / single-event-loop appliance (one failure domain for auth + everything)"
+  draft_snippet: |
+    ## Pattern: single-process / single-event-loop appliance (one failure domain for auth + everything)
+
+    **Symptom.** The whole platform runs as one process on a single event loop /
+    single host: the authentication subsystem, the datastore session, the control
+    plane, and every in-process integration/plugin co-reside in one failure domain
+    with no clustering, replication, or second node. There is no live replica — only
+    a backup archive (a recovery artifact, not failover).
+
+    **Why it is an Availability finding (route topology to Distributed, behavior to
+    Resilient).** A single slow or blocking in-process integration, an unthrottled
+    pre-auth handshake, or host loss starves or stops the one event loop and produces
+    a TOTAL platform outage — including the in-process authentication service, so no
+    user can authenticate during the incident. Maps to the single-AZ-auth-service
+    framing escalated by the auth co-residency; NIST SC-5/SC-6, CP-2.
+
+    **Finding of record.** Absent per-component bounding on the shared loop —
+    execution timeouts and isolation around each integration, bounded write/queue
+    back-pressure for the datastore, and a connection/subscription quota plus
+    boundary load-shedding on pre-auth handshakes — as the realistic substitute for
+    the replication an appliance form factor cannot provide.
+
+    **Severity.** High where the in-process auth service shares the failure domain;
+    do not rate critical absent a confidentiality or authentication-bypass impact.
+
+- id: dimpr-d9f4995e
+  improvement_type: missing_consequential_action
+  target_pack: api-security
+  target_file: consequential-actions.md
+  source: judgment
+  priority: high
+  evidence:
+  - kind: finding
+    ref: auth-6924f467
+    note: "os-agent host-root D-Bus methods (AddSSHAuthKey, ScheduleWipeDevice) and Docker container exec are consequential host-control actions; not enumerated as an auditable category."
+  rationale: >-
+    The api-security consequential-action surface enumerates authentication, authz,
+    PII, payment, session, OAuth, admin-config, integration, break-glass, and DSAR
+    events — but has no category for host / container control-plane operations
+    (container create/exec/run, image deployment to the runtime, host-agent
+    privileged methods like SSH-key injection or device wipe). These are the most
+    consequential actions in an orchestrated/self-hosted platform and must be
+    auditable; their absence is an AU-2 (Auditable Events) gap.
+  suggested_action: >-
+    Add a "Host and container control-plane operations" category to the
+    api-security consequential-actions list so orchestrator/host-agent privileged
+    actions are evaluated for audit coverage.
+  insertion_hint:
+    markdown_section:
+      level: 2
+      text: "Host and container control-plane operations"
+  draft_snippet: |
+    - Container lifecycle on the host runtime (create, start, exec-inside, run, stop, remove) via the container socket

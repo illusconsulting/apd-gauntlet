@@ -1,0 +1,2744 @@
+schema_version: 1
+generated_by: threat_model_author
+source_artifact: runs/apd-20260612-home-assistant/00-context/asset-inventory.yaml
+methodology: stride
+extraction_summary:
+  entry_count: 212
+  high_confidence_count: 0
+  medium_confidence_count: 0
+  low_confidence_count: 212
+  parser_used: author-threat-model (deterministic skeleton)
+entries:
+- entry_id: tm-604e858d
+  asset: Owner user (onboarding user, all permissions)
+  threat: '(S on Owner user (onboarding user, all permissions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#owner, lines 27-29 (always all permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-2c5a72a4
+  asset: Owner user (onboarding user, all permissions)
+  threat: '(R on Owner user (onboarding user, all permissions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#owner, lines 27-29 (always all permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-ed40ea5a
+  asset: Non-admin / low-priv user (group-scoped permission policy)
+  threat: '(S on Non-admin / low-priv user (group-scoped permission policy): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 9-12 (group membership grants permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-e0354647
+  asset: Non-admin / low-priv user (group-scoped permission policy)
+  threat: '(R on Non-admin / low-priv user (group-scoped permission policy): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 9-12 (group membership grants permissions)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-da24d791
+  asset: Long-Lived Access Token holder
+  threat: '(S on Long-Lived Access Token holder: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, line 15 (Long-Lived Access Token from /profile)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-b3adb0da
+  asset: Long-Lived Access Token holder
+  threat: '(R on Long-Lived Access Token holder: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, line 15 (Long-Lived Access Token from /profile)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-0d3c7c70
+  asset: System user (HAOS / Supervisor system tokens, never exposed)
+  threat: '(S on System user (HAOS / Supervisor system tokens, never exposed): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#refresh-token-types, line 51 (System tokens for HA OS and Supervisor)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-739d40ab
+  asset: System user (HAOS / Supervisor system tokens, never exposed)
+  threat: '(R on System user (HAOS / Supervisor system tokens, never exposed): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#refresh-token-types, line 51 (System tokens for HA OS and Supervisor)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-246d1c80
+  asset: Add-on / app principal (SUPERVISOR_TOKEN + declared API role)
+  threat: '(S on Add-on / app principal (SUPERVISOR_TOKEN + declared API role): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#api-role, lines 7-19 (default<homeassistant<backup<manager<admin)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-120b1af2
+  asset: Add-on / app principal (SUPERVISOR_TOKEN + declared API role)
+  threat: '(R on Add-on / app principal (SUPERVISOR_TOKEN + declared API role): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#api-role, lines 7-19 (default<homeassistant<backup<manager<admin)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-7ea1be11
+  asset: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  threat: '(S on Ingress-authenticated user (X-Remote-User-Id/Name headers): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-8750241f
+  asset: Ingress-authenticated user (X-Remote-User-Id/Name headers)
+  threat: '(R on Ingress-authenticated user (X-Remote-User-Id/Name headers): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-bc2e5928
+  asset: Registered mobile device (webhook_id / cloudhook holder)
+  threat: '(S on Registered mobile device (webhook_id / cloudhook holder): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (webhook_id, secret)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-f5b35971
+  asset: Registered mobile device (webhook_id / cloudhook holder)
+  threat: '(R on Registered mobile device (webhook_id / cloudhook holder): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (webhook_id, secret)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-1cb7ee17
+  asset: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  threat: '(S on IndieAuth OAuth2 client (client_id IS the redirect URL; no secret):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-2895b973
+  asset: IndieAuth OAuth2 client (client_id IS the redirect URL; no secret)
+  threat: '(R on IndieAuth OAuth2 client (client_id IS the redirect URL; no secret):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-the-user, lines 8-11 (IndieAuth OAuth2)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-b4aa2f4e
+  asset: Trusted-networks / command-line / legacy auth provider principal
+  threat: '(S on Trusted-networks / command-line / legacy auth provider principal:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication-authorization-model, lines 67-69'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-a89ffc0d
+  asset: Trusted-networks / command-line / legacy auth provider principal
+  threat: '(R on Trusted-networks / command-line / legacy auth provider principal:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication-authorization-model, lines 67-69'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-f74859e9
+  asset: Push-relay service account (Firebase Cloud Functions identity)
+  threat: '(S on Push-relay service account (Firebase Cloud Functions identity): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#deploy-your-own, lines 27-47 (firebase deploy, functions:config)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-ffee159e
+  asset: Push-relay service account (Firebase Cloud Functions identity)
+  threat: '(R on Push-relay service account (Firebase Cloud Functions identity): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#deploy-your-own, lines 27-47 (firebase deploy, functions:config)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-d63ca8d3
+  asset: Third-party integration / device principal (untrusted device/cloud)
+  threat: '(S on Third-party integration / device principal (untrusted device/cloud):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (untrusted device/cloud responses)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-08574d60
+  asset: Third-party integration / device principal (untrusted device/cloud)
+  threat: '(R on Third-party integration / device principal (untrusted device/cloud):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (untrusted device/cloud responses)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-e52467da
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(S on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-17243a49
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(T on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e8760dbd
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(R on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-1356a45c
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(I on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-e014a2b8
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(D on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-6e9f32ec
+  asset: Home Assistant Core (Python asyncio app)
+  threat: '(E on Home Assistant Core (Python asyncio app): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is, para 1'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-336bb98e
+  asset: Core REST API (/api/, port 8123)
+  threat: '(S on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-1c9a0d9b
+  asset: Core REST API (/api/, port 8123)
+  threat: '(T on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-ef5f421c
+  asset: Core REST API (/api/, port 8123)
+  threat: '(R on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-dadbb4e0
+  asset: Core REST API (/api/, port 8123)
+  threat: '(I on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-e45b053e
+  asset: Core REST API (/api/, port 8123)
+  threat: '(D on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-e7cd6e33
+  asset: Core REST API (/api/, port 8123)
+  threat: '(E on Core REST API (/api/, port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#rest-api, lines 6-15'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-091d29f2
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(S on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-4dce1c6f
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(T on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-81292a15
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(R on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-8ea12131
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(I on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-d9548591
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(D on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-6d8398cf
+  asset: Core WebSocket API (/api/websocket)
+  threat: '(E on Core WebSocket API (/api/websocket): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#websocket-api, lines 5-20 (auth_required handshake)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-51da745b
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(S on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-e32719c9
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(T on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-829889a2
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(R on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-5aebe039
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(I on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-f03b5bd4
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(D on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-174d5748
+  asset: Core auth subsystem (providers, users, groups, tokens)
+  threat: '(E on Core auth subsystem (providers, users, groups, tokens): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authentication, full doc'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-97dc31d6
+  asset: Core user permission policy engine
+  threat: '(S on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-236b0917
+  asset: Core user permission policy engine
+  threat: '(T on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-d4c0db4b
+  asset: Core user permission policy engine
+  threat: '(R on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-ce587b38
+  asset: Core user permission policy engine
+  threat: '(I on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-5d07fdef
+  asset: Core user permission policy engine
+  threat: '(D on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-037c0ef0
+  asset: Core user permission policy engine
+  threat: '(E on Core user permission policy engine: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#permissions, lines 5-48 (policy/groups, owner=all)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-4ebb248c
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(S on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-4320a3cd
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(T on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-721244bc
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(R on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-51e0311b
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(I on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-cbad17b4
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(D on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-f0b3dfa0
+  asset: mobile_app integration backend (registrations + webhook in Core)
+  threat: '(E on mobile_app integration backend (registrations + webhook in Core):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#registering-the-device, lines 33-79 (POST /api/mobile_app/registrations,
+    webhook_id)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-9ac057f2
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(S on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-e75c6d49
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(T on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-13711396
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(R on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-a57c94f0
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(I on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-0fba3d91
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(D on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-995cf712
+  asset: Core integration runtime (2000+ in-process integrations)
+  threat: '(E on Core integration runtime (2000+ in-process integrations): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#what-home-assistant-is + repo map core row'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-90ee1e4f
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(S on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-29fca413
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(T on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-0edbe3ef
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(R on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-cbc33874
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(I on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-855d17fb
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(D on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-317dee41
+  asset: Supervisor service (add-on lifecycle, ingress, backups, Core mgmt)
+  threat: '(E on Supervisor service (add-on lifecycle, ingress, backups, Core mgmt):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map supervisor row, lines 34'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-0a8a1e19
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(S on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-882265ce
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(T on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-8b217f7b
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(R on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-db669afc
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(I on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-5775cad8
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(D on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-9e0f94b7
+  asset: Privileged Supervisor API (http://supervisor/)
+  threat: '(E on Privileged Supervisor API (http://supervisor/): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#endpoints, lines 6-19 (SUPERVISOR_TOKEN bearer)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e6282448
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(S on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-67c8f351
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(T on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-2674815d
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(R on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-8c412b51
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(I on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-d5cf0780
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(D on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-5d77b560
+  asset: os-agent (Go D-Bus host daemon)
+  threat: '(E on os-agent (Go D-Bus host daemon): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map os-agent row, line 35'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-8e984788
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(S on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-5c0d9328
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(T on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-36b82a7f
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(R on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-ba687d7a
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(I on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-25d20c60
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(D on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-d3f9e9c7
+  asset: Supervisor ingress proxy (X-Remote-User-* header injection)
+  threat: '(E on Supervisor ingress proxy (X-Remote-User-* header injection): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-39742857
+  asset: Lit/TS web frontend SPA
+  threat: '(S on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-08e6fd49
+  asset: Lit/TS web frontend SPA
+  threat: '(T on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a1d5910d
+  asset: Lit/TS web frontend SPA
+  threat: '(R on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-981cb048
+  asset: Lit/TS web frontend SPA
+  threat: '(I on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-97fee248
+  asset: Lit/TS web frontend SPA
+  threat: '(D on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-081c6aef
+  asset: Lit/TS web frontend SPA
+  threat: '(E on Lit/TS web frontend SPA: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#repository-map frontend row, line 52'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-86080c3a
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: '(T on Recorder history DB (SQLite/MariaDB/PostgreSQL): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-95438b31
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: '(R on Recorder history DB (SQLite/MariaDB/PostgreSQL): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-5f7f105b
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: '(I on Recorder history DB (SQLite/MariaDB/PostgreSQL): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-668178a8
+  asset: Recorder history DB (SQLite/MariaDB/PostgreSQL)
+  threat: '(D on Recorder history DB (SQLite/MariaDB/PostgreSQL): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 100-102 (presence/geolocation/lock/alarm)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-7624ed8f
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: '(T on .storage/auth + auth_provider.homeassistant (user credentials store):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-42f2734f
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: '(R on .storage/auth + auth_provider.homeassistant (user credentials store):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-c1d4d3cd
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: '(I on .storage/auth + auth_provider.homeassistant (user credentials store):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-b68cd642
+  asset: .storage/auth + auth_provider.homeassistant (user credentials store)
+  threat: '(D on .storage/auth + auth_provider.homeassistant (user credentials store):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 96-97 (password hashes, auth records)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-8df56b52
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: '(T on Refresh-token / JWT signing key store (per-refresh-token jwt_key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-15ab927f
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: '(R on Refresh-token / JWT signing key store (per-refresh-token jwt_key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-e3e4b110
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: '(I on Refresh-token / JWT signing key store (per-refresh-token jwt_key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-31e1a1ee
+  asset: Refresh-token / JWT signing key store (per-refresh-token jwt_key)
+  threat: '(D on Refresh-token / JWT signing key store (per-refresh-token jwt_key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: refresh_token_jwt_signing_keys, lines 91-94'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-ba1cf84a
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: '(T on .storage config_entries + OAuth2 token storage (integration secret
+    vault): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device
+    creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a3ca53aa
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: '(R on .storage config_entries + OAuth2 token storage (integration secret
+    vault): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device
+    creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-b7313c8c
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: '(I on .storage config_entries + OAuth2 token storage (integration secret
+    vault): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device
+    creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-60249083
+  asset: .storage config_entries + OAuth2 token storage (integration secret vault)
+  threat: '(D on .storage config_entries + OAuth2 token storage (integration secret
+    vault): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, lines 98-99 (OAuth tokens/API keys/device
+    creds for 2000+ integrations)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-068f95c2
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: '(T on Supervisor backup archive store (full/partial snapshots): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-f41eed16
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: '(R on Supervisor backup archive store (full/partial snapshots): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-d8ff8dac
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: '(I on Supervisor backup archive store (full/partial snapshots): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-500f5624
+  asset: Supervisor backup archive store (full/partial snapshots)
+  threat: '(D on Supervisor backup archive store (full/partial snapshots): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#sensitive-data-inventory, line 106 (full snapshots: secrets+tokens+DB)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-3c3f814b
+  asset: configuration.yaml + .storage config directory
+  threat: '(T on configuration.yaml + .storage config directory: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude,
+    whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-491dc8ec
+  asset: configuration.yaml + .storage config directory
+  threat: '(R on configuration.yaml + .storage config directory: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude,
+    whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-002dfce2
+  asset: configuration.yaml + .storage config directory
+  threat: '(I on configuration.yaml + .storage config directory: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude,
+    whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-2629d30b
+  asset: configuration.yaml + .storage config directory
+  threat: '(D on configuration.yaml + .storage config directory: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-apiconfig, lines 110-128 (config_dir, latitude/longitude,
+    whitelist_external_dirs)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-dac22703
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(S on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-8132deda
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(T on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-79e98011
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(R on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-c5e1d995
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(I on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-d47f0436
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(D on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-235af23c
+  asset: Docker socket / host-root control plane (/run/docker.sock)
+  threat: '(E on Docker socket / host-root control plane (/run/docker.sock): to be
+    grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 5 + supervisor row (Docker socket = host
+    root)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-d07c2a31
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(S on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-7ecaa621
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(T on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-5bc75d1a
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(R on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-4bafaba0
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(I on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-389e4fac
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(D on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-f6f59027
+  asset: HAOS appliance image (Buildroot operating-system)
+  threat: '(E on HAOS appliance image (Buildroot operating-system): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: ADR-0015 (HAOS appliance image)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-8219a004
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(S on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-bbcc597f
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(T on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-be72e60c
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(R on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-61c8f669
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(I on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-440cdb25
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(D on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-130a07ca
+  asset: Add-on containers (third-party Docker images w/ config.yaml role/AppArmor)
+  threat: '(E on Add-on containers (third-party Docker images w/ config.yaml role/AppArmor):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'addon config.yaml (auth_api, map ssl/share, ports, startup: system)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-1fb9c127
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(S on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-2cbfad82
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(T on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-6cb6c4d5
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(R on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-29592b9f
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(I on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-9f4c1a81
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(D on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-da114a65
+  asset: Container base images (alpine/debian) + wheels/npm supply chain
+  threat: '(E on Container base images (alpine/debian) + wheels/npm supply chain:
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: line 1 (BUILD_FROM ghcr.io base-python image) + wheels mount lines
+    36-48
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-22400041
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(S on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-e5d71b40
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(T on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a976268c
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(R on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-391abb40
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(I on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-982ab8ff
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(D on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-e26a5da7
+  asset: iOS Companion app (Swift, WKWebView, Keychain, APNS)
+  threat: '(E on iOS Companion app (Swift, WKWebView, Keychain, APNS): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview, lines 7-13 (WKWebView, Keychain, multi-platform)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-834740d1
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(S on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-7a7f70be
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(T on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-26bbff8b
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(R on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-d884d8be
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(I on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-a807b7bb
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(D on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-c3fb50a0
+  asset: Android Companion app (Kotlin, WebView, Keystore, FCM)
+  threat: '(E on Android Companion app (Kotlin, WebView, Keystore, FCM): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#project-overview + #security (EncryptedSharedPreferences/Keystore,
+    FCM, WebView external bus)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-87c282a5
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: '(T on On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token,
+    expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-08be8e18
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: '(R on On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token,
+    expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-fc168d20
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: '(I on On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token,
+    expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-c6eed6c7
+  asset: On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo)
+  threat: '(D on On-device session/refresh token store (iOS Keychain / Android ServerSessionInfo):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#get-access-token, lines 44-55 (external app stores access_token,
+    expires_in)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-67cd6829
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: '(T on Android hardware-backed Keystore (mTLS client-cert private key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-87162ab5
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: '(R on Android hardware-backed Keystore (mTLS client-cert private key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-3729d103
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: '(I on Android hardware-backed Keystore (mTLS client-cert private key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-811c5229
+  asset: Android hardware-backed Keystore (mTLS client-cert private key)
+  threat: '(D on Android hardware-backed Keystore (mTLS client-cert private key):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: android_keystore_mtls_client_key, lines 121-124'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-a125a810
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: '(T on On-device location/entity cache (Android Room location_history /
+    iOS AppEntityRegistry): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines
+    125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-649fbb7e
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: '(R on On-device location/entity cache (Android Room location_history /
+    iOS AppEntityRegistry): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines
+    125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-b6afe049
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: '(I on On-device location/entity cache (Android Room location_history /
+    iOS AppEntityRegistry): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines
+    125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-418f1282
+  asset: On-device location/entity cache (Android Room location_history / iOS AppEntityRegistry)
+  threat: '(D on On-device location/entity cache (Android Room location_history /
+    iOS AppEntityRegistry): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: mobile_on_device_location_and_entity_cache, lines
+    125-127'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-9a9f8389
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: '(T on iOS-bundled GoogleService-Info plist (Firebase config secrets): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e8b5d37f
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: '(R on iOS-bundled GoogleService-Info plist (Firebase config secrets): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-8c51b9ca
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: '(I on iOS-bundled GoogleService-Info plist (Firebase config secrets): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-57e300c6
+  asset: iOS-bundled GoogleService-Info plist (Firebase config secrets)
+  threat: '(D on iOS-bundled GoogleService-Info plist (Firebase config secrets): to
+    be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: 'crown_jewels: ios_bundled_firebase_config_secrets, lines 128-131'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-2ab648cd
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: '(T on Mobile app release signing identity (Android keystore/cert, iOS provisioning):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml
+    lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-05d901f8
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: '(R on Mobile app release signing identity (Android keystore/cert, iOS provisioning):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml
+    lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-e15d9f6c
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: '(I on Mobile app release signing identity (Android keystore/cert, iOS provisioning):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml
+    lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-97d7bf20
+  asset: Mobile app release signing identity (Android keystore/cert, iOS provisioning)
+  threat: '(D on Mobile app release signing identity (Android keystore/cert, iOS provisioning):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#code-signing, lines 82-88 (DEVELOPMENT_TEAM, provisioning) + .apd-run.yaml
+    lines 132-135'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-81e3d6ef
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(S on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-b4ddadfc
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(T on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-063735ce
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(R on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-ae50f625
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(I on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-8c070ae5
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(D on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-be78869a
+  asset: JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers)
+  threat: '(E on JS external-auth bridge (window.externalAppV2 / webkit.messageHandlers):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#external-authentication, lines 9-12, 23-42 (token-passing JS bridge)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-fe7df635
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(S on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-a53c071c
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(T on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e1c3f0fd
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(R on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-7bd3fff5
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(I on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-3d622e12
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(D on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-1e961529
+  asset: mobile-apps-fcm-push relay (Firebase Cloud Functions)
+  threat: '(E on mobile-apps-fcm-push relay (Firebase Cloud Functions): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#mobile-apps-fcm-push, lines 1-2, 42-47 (firebase deploy, push
+    relay)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-a9a60039
+  asset: APNS / FCM push providers
+  threat: '(S on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-d683a5fd
+  asset: APNS / FCM push providers
+  threat: '(T on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-d03aab92
+  asset: APNS / FCM push providers
+  threat: '(R on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-7f6af2e4
+  asset: APNS / FCM push providers
+  threat: '(I on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-f49cf988
+  asset: APNS / FCM push providers
+  threat: '(D on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-29b7fc59
+  asset: APNS / FCM push providers
+  threat: '(E on APNS / FCM push providers: to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 7 (HA instance <-> push relay <-> APNS/FCM)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-416794e4
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(S on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-5ef8ff3d
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(T on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-e7c23319
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(R on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-b43da9b9
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(I on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-095190d8
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(D on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-7d74f8a8
+  asset: Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url)
+  threat: '(E on Nabu Casa cloud relay / cloudhook (remote access + cloudhook_url):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: registration response, lines 74-79 (cloudhook_url, remote_ui_url)
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-613a03ad
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(S on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: S
+  inferred_apd_goals:
+  - authenticity
+  prerequisite_evidence: []
+- entry_id: tm-61b26a95
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(T on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-43011b4a
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(R on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-ea39d8a2
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(I on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-e5c578cc
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(D on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-d03a3d7e
+  asset: External devices / cloud services reached by integrations (outbound)
+  threat: '(E on External devices / cloud services reached by integrations (outbound):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 6 (Core integration -> external device/cloud;
+    SSRF)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: E
+  inferred_apd_goals:
+  - authenticity
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-2224ec14
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: '(T on mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-13ef0ef7
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: '(R on mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-253a2f7f
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: '(I on mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-dad0bebf
+  asset: mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.)
+  threat: '(D on mDNS / Zeroconf LAN discovery surface (_home-assistant._tcp.local.):
+    to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#instance-discovery, lines 5-29 (mDNS advertisement, TXT props)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []
+- entry_id: tm-c2ac4b80
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: '(T on Reverse-proxy / internet edge to Core (port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu
+    Casa)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: T
+  inferred_apd_goals:
+  - integrity
+  prerequisite_evidence: []
+- entry_id: tm-0b9d4354
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: '(R on Reverse-proxy / internet edge to Core (port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu
+    Casa)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: R
+  inferred_apd_goals:
+  - non_repudiation
+  prerequisite_evidence: []
+- entry_id: tm-7beef5ee
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: '(I on Reverse-proxy / internet edge to Core (port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu
+    Casa)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: I
+  inferred_apd_goals:
+  - confidentiality
+  prerequisite_evidence: []
+- entry_id: tm-98a16103
+  asset: Reverse-proxy / internet edge to Core (port 8123)
+  threat: '(D on Reverse-proxy / internet edge to Core (port 8123): to be grounded)'
+  mitigation: null
+  methodology: stride
+  source_locator: '#trust-boundaries item 1 (Internet/LAN -> Core REST+WS API; reverse-proxy/Nabu
+    Casa)'
+  extraction_confidence: low
+  framework_refs:
+    stride_letter: D
+  inferred_apd_goals:
+  - availability
+  prerequisite_evidence: []

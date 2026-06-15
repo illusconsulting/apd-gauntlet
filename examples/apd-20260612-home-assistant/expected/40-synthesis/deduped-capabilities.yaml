@@ -1,0 +1,1499 @@
+capability:
+- schema_version: 1
+  id: auth-cap-42c6a13f
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Android Companion mTLS client-cert private key held in the hardware-backed
+    AndroidKeyStore
+  description: 'The Android Companion supports mutual-TLS client authentication to
+    the user''s
+
+    instance using a client certificate whose private key is stored in the
+
+    hardware-backed AndroidKeyStore (KeyStoreRepositoryImpl getInstance
+
+    "AndroidKeyStore"; TLSHelper wires the key manager into the OkHttp SSL factory).
+
+    This is a genuine workload-identity control: the client proves its identity to
+    a
+
+    mTLS-configured server with a non-exportable hardware-bound key, so a stolen
+
+    on-device token alone does not let an attacker present the client certificate
+
+    from another device.
+
+    '
+  maturity: implemented
+  scope: "Confirmed in code for the Android client: the mTLS client-cert private key\
+    \ is\ncreated/held in the AndroidKeyStore and used by the OkHttp client SSL socket\n\
+    factory. NOT addressed: this is a CLIENT-to-server identity control gated on the\n\
+    user/server having configured mTLS (optional, not default); it does not provide\n\
+    device attestation (see the no-attestation finding) and does not authenticate\
+    \ the\nSERVER (see the no-pinning finding). iOS mTLS parity is not confirmed in\
+    \ the\nevidence reviewed. The hardware non-exportability is the protection \u2014\
+    \ a\nsoftware-fallback key would void it.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidKeyStore") // hardware-backed key store
+      for mTLS client-cert private key
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.TLSHelper.TLSHelper.setupOkHttpClientSSLSocketFactory:L24-L43@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: builder.sslSocketFactory(..., trustManagers[0] as X509TrustManager)
+  control_mappings:
+    nist_800_53r5:
+    - IA-3
+    - IA-3(1)
+    - IA-5(2)
+    - SC-17
+    masvs:
+    - MASVS-AUTH-2
+  caveats:
+  - mTLS is opt-in per server/user configuration, not a default control.
+  - Provides client identity only; no server-identity pinning and no device attestation
+    accompany it.
+  - iOS mTLS client-cert custody parity not confirmed in the reviewed evidence.
+  related_concerns:
+  - confidentiality
+  - ephemeral
+- schema_version: 1
+  id: auth-cap-8144e2be
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Homeassistant auth provider uses bcrypt password hashing with constant-time,
+    enumeration-resistant login
+  description: "The homeassistant auth provider hashes passwords with bcrypt (rounds=12,\n\
+    Data.hash_password) and validates them in constant time: validate_login runs a\
+    \ dummy\nbcrypt.checkpw on a user miss \"to make timing the same as if user was\
+    \ found\" and uses\ntiming-safe comparison, defending the credential-verification\
+    \ path against user\nenumeration. This strengthens the authenticity of the primary\
+    \ knowledge factor \u2014 the\nstored verifier is a salted adaptive hash and the\
+    \ verification side-channel is closed.\n"
+  maturity: implemented
+  scope: "Confirmed in code for the homeassistant password provider: bcrypt rounds=12\
+    \ +\nconstant-time validate_login with a dummy-hash miss path. NOT addressed:\
+    \ this is the\nsingle knowledge factor only \u2014 MFA is opt-in and not enforced\
+    \ (see the MFA finding),\nand bcrypt's 72-byte input truncation means passwords\
+    \ longer than 72 bytes are\nsilently truncated before hashing. Does not speak\
+    \ to the legacy_api_password /\ntrusted_networks providers, which carry their\
+    \ own authenticity weaknesses.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.hash_password:L189-L198@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: hashed = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12))
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.validate_login:L160-L187@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'bcrypt.checkpw(b"foo", dummy) ... # check a hash to make timing the
+      same as if user was found'
+  control_mappings:
+    nist_800_53r5:
+    - IA-5
+    - IA-5(1)
+    - IA-2
+  caveats:
+  - Single knowledge factor only; MFA is opt-in and unenforced.
+  - bcrypt truncates input to 72 bytes, silently dropping longer-password entropy.
+  - Does not cover the legacy_api_password / trusted_networks providers.
+  related_concerns:
+  - confidentiality
+- schema_version: 1
+  id: auth-cap-e9f55df8
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Supervisor SecurityMiddleware authenticates the add-on by SUPERVISOR_TOKEN
+    and gates by declared role with default-deny
+  description: 'The Supervisor SecurityMiddleware.token_validation resolves the inbound
+
+    SUPERVISOR_TOKEN to the calling add-on identity, then matches the request path
+    against
+
+    a per-role URL allow-list (role_access[hassio_role], with ROLE_ADMIN matching
+    .* and
+
+    narrower regexes for default/homeassistant/backup/manager) and DEFAULT-DENIES
+    on no
+
+    match. This is a real identity-bound authorization gate: each add-on caller is
+
+    identified by its issued token and constrained to the API surface its declared
+    role
+
+    permits, so a low-role add-on cannot reach the full privileged Supervisor API.
+
+    '
+  maturity: implemented
+  scope: "Confirmed in code: token->app resolution + per-role regex URL ACL with default-deny.\n\
+    Authenticity-relevant face: the caller identity (which add-on) is established\
+    \ from the\nSUPERVISOR_TOKEN and bound to a role. NOT addressed here: an add-on\
+    \ running with the\nadmin role or with protection-mode disabled matches ROLE_ADMIN's\
+    \ .* and reaches the\nfull API including the Docker host-root plane \u2014 so\
+    \ the gate's strength depends on the\nrole/protection configuration (an authorization-scope\
+    \ concern routed to api-security /\nIntegrity), and the SUPERVISOR_TOKEN lifecycle\
+    \ (rotation/expiry) is unspecified\n(Ephemeral).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): request_from
+      = app ... else: _LOGGER.warning("no role")'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.ADDONS_ROLE_ACCESS:L111-L237@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'ROLE_ADMIN: re.compile(r".*") ... per-role path regexes'
+  control_mappings:
+    nist_800_53r5:
+    - IA-9
+    - AC-3
+    - AC-6
+    - SC-23
+  caveats:
+  - An admin-role or protection-disabled add-on matches .* and reaches the host-root
+    Docker plane.
+  - SUPERVISOR_TOKEN rotation/expiry/revocation lifecycle is unspecified (Ephemeral).
+  - Identity binding is per-token; no per-request signature beyond the bearer.
+  related_concerns:
+  - ephemeral
+  - integrity
+- schema_version: 1
+  id: auth-cap-eba3a527
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Supervisor ingress strips client-supplied X-Remote-User-* headers before
+    injecting its own
+  description: 'The Supervisor ingress header path (_init_header) sets X-Remote-User-Id
+    / -Name /
+
+    -Display-Name from the authenticated session AND, in the same loop, filters/strips
+    any
+
+    inbound copies of those headers from the client request before forwarding to the
+
+    add-on. This prevents a client reaching the add-on THROUGH ingress from spoofing
+    the
+
+    identity headers, so the asserted user identity an add-on receives over the ingress
+
+    path reflects the Supervisor session rather than client-supplied input.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed in code: ingress overwrites the X-Remote-User-* headers from session
+    data
+
+    and strips inbound copies in the forward path. This is a PARTIAL authenticity
+    control:
+
+    it closes client-through-ingress header spoofing, but the conveyed identity remains
+    an
+
+    UNSIGNED header the add-on cannot independently verify, so an add-on reached outside
+
+    ingress (host network / direct container call) or trusting the header on faith
+    is still
+
+    exposed (see the header-trust finding). Scope is the ingress hop only.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in
+      request.headers: if name in (... REMOTE_USER_ID ...): continue'
+  control_mappings:
+    nist_800_53r5:
+    - AC-4
+    - SC-23
+    - IA-9
+  caveats:
+  - Conveyed identity is an unsigned header the add-on cannot cryptographically verify.
+  - Protects only the ingress hop; add-ons reachable outside ingress are not covered.
+  - Pairs with the open header-trust finding (auth-0a00000b).
+  related_concerns:
+  - integrity
+- schema_version: 1
+  id: auth-cap-f01e6108
+  agent: authenticity
+  apd_tier: auditability
+  apd_goal: authenticity
+  title: Single revocation-aware access-token validation chokepoint for REST and WebSocket
+  description: 'Access-token authenticity is verified at one chokepoint: async_validate_access_token
+
+    decodes the HS256 JWT with the per-refresh-token jwt_key, restricts the algorithm
+    to
+
+    HS256 (no alg:none / key-confusion surface), applies a 10s leeway, checks the
+    issuer,
+
+    and rejects the token if its backing refresh token was revoked or the user is
+
+    inactive. The REST auth middleware and the WebSocket auth_required->auth handshake
+
+    both route through this validation, and the WS path additionally registers a
+
+    revoke-token callback that drops the live socket when the token is revoked. This
+    is a
+
+    well-scoped token-authenticity verification with explicit algorithm pinning and
+
+    revocation propagation.
+
+    '
+  maturity: implemented
+  scope: "Confirmed in code for Core's interactive bearer path (REST middleware +\
+    \ WS handshake):\nalgorithm is pinned to HS256, the signing key is the per-refresh-token\
+    \ jwt_key, and\nrevocation/inactive-user are enforced at validation. NOT addressed:\
+    \ the per-token\njwt_key never rotates and refresh/long-lived tokens are effectively\
+    \ non-expiring\n(Ephemeral findings) \u2014 so authenticity verification is strong\
+    \ at the moment of check\nbut the credential it verifies is long-lived; and this\
+    \ chokepoint does NOT cover the\nbearer-LESS mobile_app webhook path (separate\
+    \ finding). Algorithm-pinning prevents\nkey-confusion only because HS256 is the\
+    \ sole accepted algorithm.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"])
+      ... not refresh_token.user.is_active
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: refresh_token := self._hass.auth.async_validate_access_token(access_token)
+      ... async_register_revoke_token_callback
+  control_mappings:
+    nist_800_53r5:
+    - IA-2
+    - SC-23
+    - SC-23(3)
+    - IA-2(8)
+    mitre_attack_mitigations:
+    - id: M1047
+      rationale: Algorithm-pinned, revocation-aware token validation rejects forged
+        or revoked tokens at a single audited chokepoint (counters T1550.001 application
+        access token reuse).
+  caveats:
+  - 'The verified credential is long-lived: jwt_key never rotates and refresh/long-lived
+    tokens do not expire (Ephemeral).'
+  - Does not cover the bearer-less mobile_app webhook path.
+  - HS256-only is what prevents key-confusion; no asymmetric verification option.
+  related_concerns:
+  - ephemeral
+  - non_repudiation
+- schema_version: 1
+  id: avail-cap-f97d3d6b
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  title: Per-token rate limiting on the Firebase push-relay request handler
+  description: 'The mobile-apps-fcm-push relay request handler (cev-08000001) enforces
+    a
+
+    per-push_token rate limit: it reads push_token from the request body,
+
+    rejects a missing token with 403, and calls
+
+    rateLimiter.checkRateLimit(token), returning 429 when the per-token quota
+
+    is exceeded. This is an identity-dimensioned (per-token) resource-
+
+    consumption control with explicit breach behavior on the one availability
+
+    surface in scope that actually has a throttle.
+
+    '
+  maturity: implemented
+  scope: "Confirmed for the push-relay request handler (functions/handlers.js,\ncev-08000001):\
+    \ per-token (push_token) rate limit with a 429 breach\nresponse. NOT addressed:\
+    \ this is the only rate limit observed anywhere in\nthe Home Assistant availability\
+    \ surface \u2014 the Core REST boundary, the WS\nauth_required handshake, the\
+    \ bearer-less mobile_app webhook entrypoint, and\nthe Supervisor API all lack\
+    \ a documented rate limit (see availability\nfindings avail-0002webh, avail-0003rest,\
+    \ and the threat-model D cells). The\nrelay limit bounds notification-spam abuse,\
+    \ not relay-outage availability.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: rateLimitInfo = await rateLimiter.checkRateLimit(token)
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+  caveats:
+  - Per-token threshold, time window, and reset behavior are not stated in the artifacts;
+    only the existence of the per-token check and the 429 response are confirmed.
+  - No caller authentication on the relay (Authenticity concern); the rate limit is
+    keyed on an unauthenticated push_token.
+  - This control protects only the push-relay tier, not the Core or Supervisor availability
+    surfaces.
+  related_concerns:
+  - resilient
+  - authenticity
+- schema_version: 1
+  id: conf-cap-01c47d42
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Android mTLS client-cert private key held in non-exportable hardware-backed
+    AndroidKeyStore
+  description: "`common...data.keychain.KeyStoreRepositoryImpl` (cev-f6000001) stores\
+    \ the\nmTLS client-certificate private key in `KeyStore.getInstance(\"AndroidKeyStore\"\
+    )`,\nthe hardware-backed Android key store. The protection of\nandroid_keystore_mtls_client_key\
+    \ rests on the key being non-exportable: it\ncannot be read out of the TEE/StrongBox\
+    \ into app memory, so even a rooted\ndevice or a process-memory dump does not\
+    \ yield the raw private key \u2014 the\nattacker can at most use it in place while\
+    \ the device is unlocked. This is\nthe correct custody model for an on-device\
+    \ asymmetric secret.\n"
+  maturity: implemented
+  scope: "Confirmed for the Android Companion mTLS client-cert private key via the\n\
+    AndroidKeyStore (code-grounded, cev-f6000001). NOT extended to the\nsession/refresh\
+    \ bearer tokens or the location_history table, which live in\nthe UNENCRYPTED\
+    \ Room database (see finding conf-androidr) \u2014 so this\ncapability covers\
+    \ the mTLS key only, not the broader on-device secret\nestate. iOS-side key custody\
+    \ (Keychain) is evaluated separately and has a\nhardening gap (finding conf-ioskeych).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidKeyStore") // hardware-backed key store
+  control_mappings:
+    nist_800_53r5:
+    - SC-12
+    - SC-12(3)
+    - SC-28
+    - IA-7
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: Non-exportable hardware-backed key storage mitigates collection of
+        the mTLS private key from device storage or process memory (T1409, T1552).
+    masvs:
+    - MASVS-STORAGE-1
+    - MASVS-CRYPTO-2
+    mitre_attack:
+    - technique: T1409
+      sub_technique: null
+      tactic: TA0035
+      rationale: A non-exportable AndroidKeyStore key denies the Stored Application
+        Data extraction of the mTLS private key even on a device with file access.
+    d3fend:
+    - technique: D3-CBAN
+      rationale: Hardware-backed non-exportable custody of the client-cert private
+        key underpins certificate-based authentication of the device to the backend.
+      counters_attack:
+      - T1409
+  caveats:
+  - Covers the mTLS key only; bearer tokens and location PII are in the unencrypted
+    Room DB (finding conf-androidr).
+  - Non-exportability protects key-at-rest; it does not prevent in-place use on an
+    unlocked rooted device.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: conf-cap-1044dbb3
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: User passwords stored as bcrypt hashes (rounds=12) with a constant-time miss
+    path
+  description: '`homeassistant.auth.providers.homeassistant.Data.hash_password`
+
+    (cev-a1000004) hashes passwords with `bcrypt.hashpw(..., bcrypt.gensalt(rounds=12))`,
+
+    and `validate_login` (cev-a1000005) performs a dummy `bcrypt.checkpw` on a
+
+    user miss so login timing does not reveal account existence. Passwords are
+
+    therefore never persisted in recoverable form, and the bcrypt work factor
+
+    (rounds=12) raises the cost of offline cracking should the hash store be
+
+    read. This is the correct one-way-storage posture for the credential
+
+    factor.
+
+    '
+  maturity: implemented
+  scope: "Confirmed for the homeassistant auth provider's password factor\n(code-grounded,\
+    \ cev-a1000004/5). Important boundary: the bcrypt HASH is\nstrong, but it is persisted\
+    \ to .storage as PLAINTEXT JSON (no\nencryption-at-rest layer, finding conf-st0rag31)\
+    \ alongside the MFA/TOTP\nseeds and the per-token jwt_keys \u2014 so this capability\
+    \ protects the\npassword factor specifically, NOT the surrounding secret estate.\
+    \ The\n72-byte bcrypt truncation is noted but standard.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.hash_password:L189-L198@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: hashed = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12))
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.validate_login:L160-L187@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'bcrypt.checkpw(b"foo", dummy) # check a hash to make timing the same'
+  control_mappings:
+    nist_800_53r5:
+    - IA-5(1)
+    - SC-13
+    - SC-28(1)
+    mitre_attack_mitigations:
+    - id: M1027
+      rationale: bcrypt rounds=12 one-way hashing of passwords raises the cost of
+        offline credential cracking (T1110) if the .storage auth file is read.
+    mitre_attack:
+    - technique: T1110
+      sub_technique: T1110.002
+      tactic: TA0006
+      rationale: The bcrypt rounds=12 work factor materially slows offline Password
+        Cracking of a recovered hash store.
+    d3fend:
+    - technique: D3-CH
+      rationale: bcrypt rounds=12 one-way hashing with per-user salt is the Credential
+        Hardening technique applied to the stored password factor.
+      counters_attack:
+      - T1110
+  caveats:
+  - The bcrypt hash is stored in plaintext .storage with no encryption-at-rest (finding
+    conf-st0rag31).
+  - MFA/TOTP seeds and jwt_keys in the same store are NOT one-way and are recoverable
+    in plaintext.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: conf-cap-277b2364
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Optional NaCl SecretBox encryption of mobile_app webhook payload bodies (in-transit
+    confidentiality, opt-in)
+  description: "At device registration, `RegistrationsView.post` (cev-a1000014) mints\
+    \ a\nper-device `CONF_SECRET` of `secrets.token_hex(SecretBox.KEY_SIZE)` so the\n\
+    mobile_app webhook path can encrypt request bodies with libsodium's NaCl\nSecretBox\
+    \ (authenticated symmetric encryption). When enabled\n(`supports_encryption`),\
+    \ webhook payloads \u2014 location, sensor PII \u2014 are\nconfidential in transit\
+    \ independent of the transport TLS, which is\nvaluable on the bearer-less cloudhook\
+    \ path that may traverse the Nabu Casa\nrelay.\n"
+  maturity: implemented
+  scope: 'Confirmed that the registration path mints a SecretBox key and the webhook
+
+    supports encrypted bodies (code-grounded, cev-a1000014). The decisive
+
+    caveat: encryption is OPT-IN (`supports_encryption`), so the default /
+
+    non-encrypting client sends payloads in cleartext at the application layer,
+
+    and the per-device secret is itself persisted to the on-device store
+
+    (unencrypted Android Room, finding conf-androidr) and to plaintext
+
+    .storage server-side (finding conf-st0rag31). This capability covers
+
+    payload-body confidentiality ONLY when a client opts in; it does not
+
+    protect the webhook_id (which is the bearer-less authenticator) and does
+
+    not add per-entity authorization to the service-call path (cev-a1000015).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-12
+    - SC-13
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: NaCl SecretBox authenticated encryption of webhook bodies mitigates
+        interception of location/sensor PII in transit (T1040) when enabled.
+    mitre_attack:
+    - technique: T1040
+      sub_technique: null
+      tactic: TA0006
+      rationale: SecretBox-encrypted bodies deny Network Sniffing of the webhook payload
+        PII independent of the transport layer.
+  caveats:
+  - Encryption is opt-in (supports_encryption); default clients send cleartext application-layer
+    payloads.
+  - The per-device secret is persisted to the unencrypted on-device Room DB and plaintext
+    server-side .storage.
+  - Protects body confidentiality only; the webhook_id remains a bearer-less authenticator
+    with no per-entity authz (cev-a1000015).
+  related_concerns:
+  - authenticity
+  - integrity
+- schema_version: 1
+  id: conf-cap-88473a97
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Per-entity READ permission enforced at the state-read API (access scoping
+    at data-element granularity)
+  description: "`homeassistant.components.api.APIEntityStateView.get` (cev-a1000011)\n\
+    enforces `user.permissions.check_entity(entity_id, POLICY_READ)` and\nraises `Unauthorized`\
+    \ on deny, and `filter_entity_ids_by_permission`\n(cev-a1000007) scopes the entity\
+    \ set a non-admin user can read per the\ncompiled policy (`compile_policy`, cev-a1000006,\
+    \ which fails closed to\ndeny-all on an empty/None policy). This is genuine field-/element-level\n\
+    confidentiality scoping for entity-state reads, and it RESOLVES the intake\nbrief's\
+    \ open question \u2014 the per-entity policy is enforced at runtime,\ncontradicting\
+    \ the \"not enforced yet\" documentation.\n"
+  maturity: implemented
+  scope: 'Confirmed for entity-state READS on GET /api/states/{entity_id}
+
+    (cev-a1000011) and the filtered list path (cev-a1000007), with deny-all
+
+    default (cev-a1000006). NOT extended in two material ways: (1) the filter
+
+    SHORT-CIRCUITS to allow-all for ANY admin (cev-a1000007) and the owner is
+
+    unconditional all-access (cev-a1000008), so this scoping protects against
+
+    non-admin over-reach only; (2) the WRITE path (POST /api/states) is
+
+    admin-or-deny with NO per-entity write policy (cev-a1000012), and
+
+    /api/config is unscoped (finding conf-apiconfig). The webhook service-call
+
+    path applies no per-entity check at all (cev-a1000015).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise
+      Unauthorized(entity_id=entity_id)'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.filter_entity_ids_by_permission:L32-L39@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if user.is_admin or user.permissions.access_all_entities(key): return
+      list(entity_ids)'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-3(7)
+    - AC-4
+    - AC-6
+    - AC-24
+  caveats:
+  - Admin sessions short-circuit per-entity scoping to allow-all (cev-a1000007); owner
+    is unconditional all-access (cev-a1000008).
+  - 'Read-side only: state WRITE is admin-granularity (cev-a1000012) and /api/config
+    is unscoped (finding conf-apiconfig).'
+  - No tamper-evident audit of permission decisions (route to non_repudiation).
+  related_concerns:
+  - authenticity
+  - non_repudiation
+- schema_version: 1
+  id: dist-cap-43ec806f
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  title: Single-host single-instance topology is an explicit, documented architectural
+    choice across all four supported deployment methods
+  description: 'The deployment topology is a deliberate, documented decision rather
+    than an
+
+    accidental gap. The system overview enumerates four supported install
+
+    methods (Home Assistant OS, Supervised, Container, Core) and frames Core as
+
+    "a single, highly-privileged trust domain," and the ADR set (0012-0016)
+
+    defines the supported installation/topology surface while ADR-0018 scopes the
+
+    recorder database engines. The topology is intentionally single-instance and
+
+    local-first; this capability records that the absence of clustering is a
+
+    declared design boundary (which lets the Distributed findings frame the SPOF
+
+    as a known constraint operators can plan around, not an oversight).
+
+    '
+  maturity: designed
+  scope: "Confirmed: the four single-instance deployment topologies are documented\
+    \ and\nintentional (overview lines 108-116; ADRs 0012-0016, 0018). NOT confirmed\
+    \ and\nexplicitly NOT provided by this capability: any redundancy, replication,\n\
+    multi-AZ/multi-region placement, clustering, or automated failover \u2014 none\n\
+    exists in any topology. This is a documentation/intent capability about the\n\
+    boundary being declared, not a resilience capability. Data-residency /\nregion-binding\
+    \ policy is unaddressed (no multi-region surface exists).\n"
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#deployment-topologies, lines 108-116'
+    excerpt: Home Assistant OS ... Supervised ... Container ... Core (bare Python
+      venv)
+  - artifact: architecture/adr/0018-supported-databases.md
+    locator: '#decision, lines 36-42'
+    excerpt: Limit DB support to ... MariaDB ... MySQL ... PostgreSQL ... SQLite
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - SC-36
+  caveats:
+  - This is an intent/documentation capability only; it confers no redundancy, replication,
+    or failover (see all Distributed findings, which it contextualizes rather than
+    mitigates).
+  - The hardening baseline (org/SECURITY.md) does not currently restate the single-failure-domain
+    constraint for operators; recommended in dist-0a1b2c3d.
+  related_concerns:
+  - availability
+  - resilient
+- schema_version: 1
+  id: dist-cap-827afb47
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  title: Token-revocation state is consistently propagated to the live WebSocket connection
+    within the single Core process
+  description: "The WebSocket auth phase registers a per-connection revoke callback\
+    \ when a\nsocket authenticates (cev-a1000010), so when a refresh token is revoked\
+    \ the\nbound live socket is dropped rather than continuing to serve a\nnow-invalid\
+    \ session. Because Core is a single process owning all its\nsockets, this gives\
+    \ strongly-consistent revocation propagation across the\none failure domain: there\
+    \ is no cross-instance staleness window in which one\nnode would keep serving\
+    \ a connection another node revoked, precisely because\nthere is only one node.\
+    \ Within the Distributed lens this is the one place the\nsingle-process topology\
+    \ yields a consistency benefit \u2014 token revocation is a\nlocal, immediate,\
+    \ in-process event with no eventual-consistency lag.\n"
+  maturity: implemented
+  scope: "Confirmed in code for the WebSocket auth handshake path (cev-a1000010):\n\
+    revocation drops the live socket within the single Core process. NOT a\ndistributed\
+    \ capability \u2014 it works precisely because there is exactly one\nprocess and\
+    \ one failure domain; it does not extend to any multi-instance,\nreplicated, or\
+    \ cross-host topology (none exists). The REST request path is\nre-validated per\
+    \ request (cev-a1000002) rather than via a held callback.\nDoes not address availability\
+    \ of the single instance (see findings) or\ncross-node consistency (not applicable\
+    \ \u2014 no second node).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: registers revoke callback to drop the socket on token revocation
+  control_mappings:
+    nist_800_53r5:
+    - SC-23
+    - SC-10
+    - AC-12
+  caveats:
+  - The consistency property holds only because the topology is single-process/single-host;
+    it provides no benefit toward (and is not a substitute for) replication, failover,
+    or horizontal scale.
+  - Per-request REST validation (cev-a1000002) is a separate mechanism; this capability
+    is scoped to the WS held-connection path.
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: ephem-cap-32f4a499
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Core container image pins base layers and binaries by immutable sha256 digest
+  description: "The Core container build follows immutable-infrastructure digest pinning:\n\
+    the Dockerfile frontend is pinned by digest\n(`# syntax=docker/dockerfile@sha256:2780b5c3\u2026\
+    `) and the bundled go2rtc\nbinary is copied from a digest-pinned image\n(`go2rtc:1.9.14@sha256:675c318b\u2026\
+    `) (`infra/core-Dockerfile` lines 1, 29).\nPinning by `@sha256:` makes the resolved\
+    \ bytes reproducible across rebuilds\nrather than dependent on what a floating\
+    \ tag points at, which is the\nimmutable-infrastructure / deploy-replace property\
+    \ the Ephemeral lens looks\nfor at the image layer.\n"
+  maturity: implemented
+  scope: "Confirmed for the Core image: the buildkit frontend and the go2rtc binary\n\
+    are digest-pinned (IaC evidence, infra/core-Dockerfile). NOT addressed \u2014\n\
+    and explicitly contradicted \u2014 at the add-on layer: the mosquitto add-on base\n\
+    is pinned to the mutable floating `:trixie` tag (finding ephem-0a000007), so\n\
+    this capability does not extend to the add-on build path. The `BUILD_FROM`\narg\
+    \ of the Core image itself is supplied externally and its digest-pinning\nis not\
+    \ visible in this Dockerfile.\n"
+  evidence:
+  - artifact: infra/core-Dockerfile
+    locator: line 1, syntax directive
+    excerpt: '# syntax=docker/dockerfile@sha256:2780b5c3bab67f1f76c781860de469442999ed1a0d7992a5efdf2cffc0e3d769'
+  - artifact: infra/core-Dockerfile
+    locator: line 29, go2rtc COPY --from
+    excerpt: go2rtc:1.9.14@sha256:675c318b23c06fd862a61d262240c9a63436b4050d177ffc68a32710d9e05bae
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - CM-2(2)
+    - SA-15(7)
+  caveats:
+  - Digest pinning is confirmed only for the Core image; the add-on build uses a mutable
+    floating tag (ephem-0a000007).
+  - The Core BUILD_FROM base image arg is external to this Dockerfile; its pinning
+    is not confirmed here.
+  related_concerns:
+  - authenticity
+  - immutability
+- schema_version: 1
+  id: ephem-cap-5113fad9
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Immediate refresh-token revocation that cascades to all access tokens and
+    drops live WebSocket sockets
+  description: "A user-initiated revocation channel exists and is immediate: revoking\
+    \ a\nrefresh token \"will immediately revoke the refresh token and all access\n\
+    tokens that it has ever granted\" (`auth_api.md` \xA7\"Revoking a refresh\ntoken\"\
+    ). In code, `async_validate_access_token` rejects any access token\nwhose backing\
+    \ refresh token has been revoked or whose user is inactive\n(cev-a1000002), and\
+    \ the WebSocket auth phase registers a revoke callback\n(`async_register_revoke_token_callback`)\
+    \ so that an already-established WS\nconnection is torn down when its token is\
+    \ revoked (cev-a1000010). This means\nthe system has a working revocation propagation\
+    \ path even though tokens do\nnot auto-expire.\n"
+  maturity: implemented
+  scope: "Confirmed: revocation is immediate, cascades from refresh token to all\n\
+    derived access tokens, and propagates to live WS sockets via a revoke\ncallback\
+    \ (cev-a1000010). NOT addressed: revocation is user-initiated and\nmanual \u2014\
+    \ there is no automatic time-based expiry or rotation that would\nfire revocation\
+    \ without a human action (findings ephem-0a000001/0a000002),\nand the WS revoke-callback\
+    \ cross-cuts Distributed for connection-lifecycle.\n"
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: "\xA7'Revoking a refresh token', line 140"
+    excerpt: immediately revoke the refresh token and all access tokens that it has
+      ever granted
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_register_revoke_token_callback
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - AC-12(1)
+    - IA-5
+    - SC-10
+    mitre_attack:
+    - technique: T1550
+      sub_technique: T1550.001
+      tactic: TA0008
+      rationale: Immediate cascade revocation invalidates a stolen application access
+        token at the validation chokepoint, countering its continued use.
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: User-driven account/token management lets an operator immediately
+        revoke a refresh token and all access tokens it granted.
+  caveats:
+  - Revocation is manual/user-initiated; there is no automatic time-based expiry to
+    trigger it (ephem-0a000001).
+  related_concerns:
+  - authenticity
+  - distributed
+- schema_version: 1
+  id: ephem-cap-f5d582d0
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Short-lived (1800s) access tokens backed by a separate longer-lived refresh
+    token
+  description: "Home Assistant separates a short-lived access token from a longer-lived\n\
+    refresh token. The token endpoint issues access tokens with\n`\"expires_in\":\
+    \ 1800` (`auth_api.md` \xA7\"Authorization code\"), i.e. a 30-minute\nTTL, and\
+    \ the access token is an HS256 JWT carrying an expiry enforced at\nvalidation:\
+    \ `async_validate_access_token` decodes with a 10-second leeway\nand the issuer/expiry\
+    \ check (cev-a1000002), and `async_create_access_token`\nsets `exp = access_token_expiration`\
+    \ (cev-a1000001). This bounds the window\nin which a stolen access token (as opposed\
+    \ to the refresh token) is usable\nto 30 minutes plus the 10-second clock-skew\
+    \ leeway.\n"
+  maturity: implemented
+  scope: "Confirmed: access-token TTL is 1800s and is enforced at the central\nvalidation\
+    \ chokepoint (cev-a1000002) for both REST and WS auth. NOT\naddressed by this\
+    \ capability: the backing refresh token never expires and\nis not rotated (finding\
+    \ ephem-0a000001), Long-Lived Access Tokens last 10\nyears (ephem-0a000002), and\
+    \ the per-token jwt_key never rotates\n(ephem-0a000003) \u2014 so the short access-token\
+    \ TTL is undermined by the\nunbounded refresh-token lifetime behind it. This capability\
+    \ is the\naccess-token half only.\n"
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: "\xA7'Authorization code', lines 86-95"
+    excerpt: '"expires_in": 1800'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"])
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - SC-23
+    masvs:
+    - MASVS-AUTH-2
+  caveats:
+  - The 30-minute access-token TTL is undercut by the never-expiring, non-rotating
+    refresh token behind it (ephem-0a000001).
+  - No refresh-token rotation, so the short access-token window is not paired with
+    reuse detection.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: ephem-cap-fb2d6d4d
+  agent: ephemeral
+  apd_tier: scalability
+  apd_goal: ephemeral
+  title: Short-lived signed paths with a 30-second default expiry for GET authorization
+  description: "For GET requests that cannot carry an Authorization header (downloads,\n\
+    frontend-initiated links), Home Assistant issues signed paths that are\n\"meant\
+    \ to be shortlived\" with a documented default expiration of 30 seconds\n(`auth_api.md`\
+    \ \xA7\"Signed paths\"). The signed path's validity is additionally\ntied to the\
+    \ lifetime of the creating refresh token: \"If the refresh token is\ndeleted,\
+    \ the signed url is no longer valid\", \"If the user is deleted, the\nsigned url\
+    \ is no longer valid\", and \"If Home Assistant is restarted, the\nsigned url\
+    \ is no longer valid\". This is a genuine ephemeral-by-design\ncredential: a tightly\
+    \ time-boxed, revocation-coupled authorization grant.\n"
+  maturity: designed
+  scope: "Confirmed from the developer auth documentation: signed paths default to\
+    \ a\n30-second expiry and are invalidated on refresh-token deletion, user\ndeletion,\
+    \ and restart. Maturity is designed (the evidence is the auth\nreference doc,\
+    \ not a code-recon pointer to the signing/verification\nimplementation). NOT addressed:\
+    \ the access check is only at request receipt\n\u2014 a response that streams\
+    \ past the expiry continues (documented caveat), and\nthis capability covers only\
+    \ the signed-path GET surface, not the bearer or\nwebhook paths.\n"
+  evidence:
+  - artifact: auth/auth_api.md
+    locator: "\xA7'Signed paths', lines 235, 260-265"
+    excerpt: "Signed paths \u2026 are meant to be shortlived. The default expiration\
+      \ is 30 seconds"
+  control_mappings:
+    nist_800_53r5:
+    - AC-12
+    - IA-5
+    - SC-23
+  caveats:
+  - 'Maturity is designed: grounded in the auth reference doc, not a code-recon evidence
+    pointer to the signing implementation.'
+  - Access is validated only at request receipt; a long-running response continues
+    past expiry (documented).
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: immut-cap-5e14aa20
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  title: Supervisor backup supports optional password-based archive protection (default
+    off)
+  description: 'The Supervisor backup path exposes Backup.set_password, allowing an
+    operator to
+
+    apply a password to a backup archive. When set, the password-based protection
+
+    raises the cost of silently tampering with or reading the archive offline. From
+
+    the Immutability lens this is the only mechanism that can lend any tamper-
+
+    resistance to the archive content, and it is recorded here for completeness as
+    a
+
+    partial, opt-in control rather than as an effective immutability guarantee.
+
+    '
+  maturity: implemented
+  scope: "Confirmed present as an OPTIONAL parameter that defaults to None (off) \u2014\
+    \ see\nfinding immut-bkp00002 for the gap. NOT addressed: there is no object-lock/WORM/\n\
+    retention/legal-hold on the archive store, no signed integrity manifest\nindependent\
+    \ of the password, and no default protection \u2014 when the password is\nunset\
+    \ (the default) the archive has neither encryption nor any integrity MAC.\nThis\
+    \ capability is a per-backup opt-in only; it provides no immutability of the\n\
+    storage tier and no protection against deletion.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'self._password: str | None = None ... def set_password(self, password):
+      self._password = password or None'
+  control_mappings:
+    nist_800_53r5:
+    - CP-9(8)
+    - MP-4
+  caveats:
+  - "Defaults to None (off) \u2014 default backups have neither encryption nor an\
+    \ integrity MAC."
+  - "No object-lock/WORM/retention/legal-hold on the archive store \u2014 does not\
+    \ prevent deletion."
+  - No signed manifest independent of the password; integrity rests on the encryption
+    mode when set.
+  - Confidentiality of the archive at rest is routed to the Confidentiality lens.
+  related_concerns:
+  - confidentiality
+  - availability
+- schema_version: 1
+  id: immut-cap-937d14c1
+  agent: immutability
+  apd_tier: auditability
+  apd_goal: immutability
+  title: Core Dockerfile pins the docker/dockerfile build frontend by immutable sha256
+    content digest
+  description: "The core image build declares its dockerfile frontend with an immutable\n\
+    content-digest reference \u2014 `# syntax=docker/dockerfile@sha256:2780b5c3...`\
+    \ \u2014\nrather than a floating tag. This is a genuine, if narrow, immutability\
+    \ control:\nthe dockerfile-processing frontend that interprets the build is frozen\
+    \ to an\nexact, reproducible artifact and cannot silently change under the same\
+    \ reference.\nIt establishes that the project understands and applies digest pinning\
+    \ in at\nleast one place in its build graph.\n"
+  maturity: implemented
+  scope: 'Confirmed ONLY for the dockerfile *syntax frontend* in the core Dockerfile
+    (line
+
+    1). NOT addressed and explicitly absent (see finding immut-img00005): the base
+
+    image itself (core/supervisor build FROM mutable BUILD_FROM / version tags) and
+
+    the add-on base images (mosquitto build_from :trixie floating tags) are NOT
+
+    digest-pinned, and there is no retained per-deploy SBOM or immutable
+
+    deployment-provenance record. This capability covers a single build-frontend pin,
+
+    not the runtime image artifacts.
+
+    '
+  evidence:
+  - artifact: infra/core-Dockerfile
+    locator: line 1 syntax directive
+    excerpt: '# syntax=docker/dockerfile@sha256:2780b5c3bab67f1f76c781860de469442999ed1a0d7992a5efdf2cffc0e3d769'
+  control_mappings:
+    nist_800_53r5:
+    - CM-2
+    - SR-4
+    - SI-7
+  caveats:
+  - Pin covers the dockerfile frontend only; the base image (BUILD_FROM) is NOT digest-pinned.
+  - "Add-on base images use floating :trixie tags (infra/addon-mosquitto-build.yaml)\
+    \ \u2014 mutable."
+  - No per-deploy SBOM or immutable deployment record links a running container to
+    a frozen digest.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: intg-cap-70ef26f7
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Optional NaCl SecretBox authenticated encryption on mobile_app webhook payload
+    bodies
+  description: "Registration mints an optional NaCl SecretBox secret (data[CONF_SECRET]\
+    \ =\nsecrets.token_hex(SecretBox.KEY_SIZE), cev-a1000014), and when enabled the\
+    \ client\nMUST send an \"encrypted\" payload (sending-data.md). libsodium SecretBox\
+    \ is\nauthenticated encryption (Poly1305 MAC), so an enabled webhook secret provides\n\
+    body integrity and confidentiality against modification in transit \u2014 a payload\n\
+    integrity control on the bearer-less webhook write path.\n"
+  maturity: implemented
+  scope: "Confirmed: the secret is minted at registration and SecretBox AEAD protects\
+    \ the\nbody when supports_encryption is enabled (cev-a1000014; sending-data.md).\
+    \ NOT\ncovered / caveated: encryption is OPTIONAL (a registration may proceed\
+    \ without it\nif libsodium is unavailable), it protects only the body \u2014 NOT\
+    \ webhook_call_service\nauthorization (intg-webhook-callservice-noauthz) \u2014\
+    \ and no nonce/sequence binding\nis documented, so it is not a replay-protection\
+    \ control\n(intg-webhook-no-idempotency).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
+  - artifact: api/native-app/sending-data.md
+    locator: '#implementing-encryption, lines 93-95'
+    excerpt: mobile_app supports two way encrypted communication via Sodium
+  control_mappings:
+    nist_800_53r5:
+    - SC-8(1)
+    - SI-7
+    - SC-13
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: NaCl SecretBox authenticated encryption of the webhook body provides
+        a MAC that detects in-transit modification of the payload when the secret
+        is enabled.
+  caveats:
+  - "Encryption is OPTIONAL \u2014 a registration may proceed unencrypted if libsodium\
+    \ is unavailable."
+  - Protects the body only, not webhook_call_service authorization (finding intg-webhook-callservice-noauthz).
+  - "No documented nonce/sequence binding \u2014 not a replay-protection control (finding\
+    \ intg-webhook-no-idempotency)."
+  related_concerns:
+  - confidentiality
+- schema_version: 1
+  id: intg-cap-7a54b1a7
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Single-chokepoint access-token validation rejects revoked refresh tokens
+    and inactive users before any write
+  description: 'async_validate_access_token (cev-a1000002) is the single validation
+    chokepoint
+
+    for HS256 access JWTs: it verify-and-decodes with a 10s leeway and pinned
+
+    algorithms=["HS256"], and rejects the token if the backing refresh token has been
+
+    revoked or the user is not active. The WS handshake (AuthPhase.async_handle,
+
+    cev-a1000010) routes through the same validation and additionally registers a
+
+    revoke callback that drops the live socket on revocation. This gives every
+
+    authenticated write a consistent precondition-integrity gate (the token is
+
+    structurally valid, signed by the bound jwt_key, not revoked, user active) at
+    one
+
+    place rather than ad hoc per route.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: centralized validation with fixed algorithm, revocation check,
+    and
+
+    active-user check (cev-a1000002) reused by REST middleware (cev-a1000009) and
+    the
+
+    WS handshake (cev-a1000010). NOT covered: the integrity of the per-refresh-token
+
+    jwt_key itself is only 0600-file-protected at rest with no MAC
+
+    (intg-storage-no-integrity-mac), so a tampered/leaked jwt_key forges a token that
+
+    this chokepoint accepts as valid; revocation is by refresh-token delete only,
+    with
+
+    no automatic access-token expiry analysis in this lens (routed to ephemeral).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_validate_access_token:L654-L682@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: verify_and_decode(token, jwt_key, leeway=10, issuer=issuer, algorithms=["HS256"])
+      ... not refresh_token.user.is_active
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: refresh_token := self._hass.auth.async_validate_access_token(access_token)
+      ... async_register_revoke_token_callback
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - SC-23
+    - IA-2
+    mitre_attack_mitigations:
+    - id: M1047
+      rationale: Centralized token validation that rejects revoked/inactive tokens
+        at one chokepoint enables consistent detection and rejection of forged or
+        stale application access tokens.
+  caveats:
+  - Pinned to HS256 with a per-refresh-token jwt_key; key integrity at rest is only
+    file-permission-protected (finding intg-storage-no-integrity-mac).
+  - Revocation is manual (refresh-token delete); no automatic access-token TTL analysis
+    in this lens (ephemeral).
+  related_concerns:
+  - authenticity
+  - ephemeral
+- schema_version: 1
+  id: intg-cap-e18bb24c
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Permission policy compilation fails closed to deny-all on an empty or corrupt
+    policy
+  description: "compile_policy (cev-a1000006) compiles an empty or None policy to\n\
+    apply_policy_deny_all (returns False for every entity/key), so a missing,\ntruncated,\
+    \ or unparseable policy record denies access rather than defaulting open.\nThis\
+    \ is a safe-by-default integrity property for the authorization-decision path:\n\
+    corruption of the policy source degrades to refusal, not to silent allow. (It\
+    \ is\nthe defensive complement to the tamper risk in finding\nintg-storage-no-integrity-mac,\
+    \ where a policy record tampered to True/allow-all\nescalates \u2014 fail-closed\
+    \ protects against accidental corruption and truncation, not\nagainst a directed\
+    \ tamper-to-True.)\n"
+  maturity: implemented
+  scope: 'Confirmed: deny-all compilation for empty/None policy (cev-a1000006). NOT
+    covered:
+
+    this protects against absent/corrupt-to-empty policy only; a DIRECTED tamper that
+
+    sets a policy to True (allow-all) or flips is_admin still escalates silently
+
+    because there is no integrity MAC on the record (finding
+
+    intg-storage-no-integrity-mac); owner all-access (cev-a1000008) is unconditional
+
+    regardless of policy state.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False ... if policy
+      is True: def apply_policy_allow_all'
+  control_mappings:
+    nist_800_53r5:
+    - SI-7
+    - AC-3
+    - SC-24
+  caveats:
+  - Fail-closed protects against empty/corrupt-to-empty policy only; a directed tamper-to-allow
+    still escalates (finding intg-storage-no-integrity-mac).
+  - Owner all-access (cev-a1000008) is unconditional regardless of policy state.
+  related_concerns:
+  - resilient
+- schema_version: 1
+  id: intg-cap-e88c8857
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Supervisor SecurityMiddleware enforces a default-deny per-role URL ACL on
+    the privileged add-on API
+  description: 'SecurityMiddleware.token_validation (cev-b2000001) resolves the SUPERVISOR_TOKEN
+
+    to an add-on app, then matches the request path against patterns.role_access for
+
+    that add-on''s declared hassio_role; on no match it default-denies (logs a warning
+
+    and does not grant). The per-role path allow-lists (ADDONS_ROLE_ACCESS,
+
+    cev-b2000002) constrain which Supervisor API routes each role may reach, gating
+
+    access to the Docker-socket control plane (cev-b2000003) for any caller below
+    the
+
+    admin role. Ingress additionally strips inbound X-Remote-User-* headers and
+
+    re-injects session-derived values (cev-b2000005), preventing a client from
+
+    spoofing an identity header into an add-on via the ingress path. These are
+
+    write-path authorization controls on the most privileged surface.
+
+    '
+  maturity: implemented
+  scope: "Confirmed: token->app->role-ACL default-deny enforcement (cev-b2000001),\
+    \ per-role\npath allow-lists (cev-b2000002), and ingress header-injection-with-strip\n\
+    (cev-b2000005). NOT covered: ROLE_ADMIN matches everything (re.compile(\".*\"\
+    ),\ncev-b2000002), so an admin-role add-on or one with protection mode disabled\n\
+    reaches the full Supervisor API and the Docker socket -> host root \u2014 the\
+    \ gate\nweakens to nothing for that configuration; runtime enforcement of protection-mode\n\
+    and AppArmor was not separately confirmed in code beyond the role ACL.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): request_from
+      = app ... else: _LOGGER.warning("%s no role for %s")'
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in
+      request.headers: if name in (... REMOTE_USER_ID ...): continue'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-4
+    - AC-6
+    - SC-7
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: The per-role default-deny URL ACL restricts add-on principals to
+        their declared role's routes, limiting which add-on accounts reach the privileged
+        Docker-socket control plane.
+  caveats:
+  - ROLE_ADMIN matches everything (.*); an admin-role or protection-off add-on bypasses
+    the gate to the Docker socket / host root (cev-b2000002/3).
+  - Protection-mode and AppArmor enforcement not separately confirmed in code beyond
+    the role ACL.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: intg-cap-ecebb879
+  agent: integrity
+  apd_tier: trustworthiness
+  apd_goal: integrity
+  title: Per-entity READ permission enforced at the state view with deny-all-by-default
+    policy compilation
+  description: 'APIEntityStateView.get (cev-a1000011) calls
+
+    user.permissions.check_entity(entity_id, POLICY_READ) and raises Unauthorized
+
+    when the policy denies, and filter_entity_ids_by_permission (cev-a1000007)
+
+    scopes bulk entity lists per policy for non-admin users. The decision functions
+
+    are produced by compile_policy (cev-a1000006), which fails CLOSED: an empty/None
+
+    policy compiles to deny-all (apply_policy_deny_all returns False), so a missing
+
+    or unparseable policy denies access rather than defaulting open. This is the
+
+    runtime authorization control on the read path and contradicts the
+
+    auth_permissions.md "not enforced yet" doc note (the code-recon pass resolves
+    the
+
+    brief''s load-bearing authz gap to ENFORCED for reads).
+
+    '
+  maturity: implemented
+  scope: 'Confirmed: per-entity READ enforcement on GET /api/states/{entity_id}
+
+    (cev-a1000011) and per-entity scoping of bulk reads (cev-a1000007), with
+
+    deny-all-by-default compilation (cev-a1000006). NOT covered (see related
+
+    findings): the WRITE path is admin-or-deny with no per-entity write policy
+
+    (intg-state-write-coarse-authz); the per-entity filter SHORT-CIRCUITS to allow-all
+
+    for any admin (cev-a1000007) and owner is unconditional all-access (cev-a1000008),
+
+    so there is no sub-admin write scoping; the webhook path bypasses this engine
+
+    entirely (intg-webhook-callservice-noauthz).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise
+      Unauthorized(entity_id=entity_id)'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False ... if policy
+      is True: def apply_policy_allow_all'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-3(7)
+    - AC-6(1)
+    - SI-10
+    mitre_attack_mitigations:
+    - id: M1018
+      rationale: Per-entity policy enforcement with deny-all default restricts which
+        accounts may read which entities, limiting valid-account abuse to scoped entities.
+  caveats:
+  - Read-only control; the write path (POST /api/states) has no per-entity policy
+    (finding intg-state-write-coarse-authz).
+  - "Short-circuits to allow-all for admins (cev-a1000007) and owner (cev-a1000008)\
+    \ \u2014 no scoping above the admin boundary."
+  - Bypassed entirely by the bearer-less webhook service-call path (cev-a1000015).
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: nonrep-cap-510a35c7
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  title: Recorder history DB with context_user_id field provides a durable, queryable
+    record of entity-state changes
+  description: "Home Assistant Core persists entity-state history to the Recorder\
+    \ DB\n(cev-a1000018 `session_scope`, backed by SQLite/MariaDB/PostgreSQL), exposed\n\
+    to users via /api/history and /api/logbook. Each context carries a\n`context_user_id`\
+    \ field intended to associate a state change with the user who\ncaused it. This\
+    \ is a durable, queryable trace of WHAT changed and WHEN, and \u2014\nwhen the\
+    \ field is populated \u2014 a corroborating signal of WHO. It is the only\nstructurally\
+    \ durable record of consequential state changes in the system.\n"
+  maturity: implemented
+  scope: "Confirmed: a durable, queryable history of entity-state changes exists in\
+    \ the\nRecorder DB with a context_user_id field for actor association\n(cev-a1000018;\
+    \ /api/logbook in api/rest.md).\nNOT addressed / explicitly out of scope: this\
+    \ is a user-facing state-history\nsurface, NOT a security audit log \u2014 it\
+    \ does not record authentication events,\ntoken/credential lifecycle, permission\
+    \ decisions, administrative/Supervisor\noperations, or host-root actions (see\
+    \ findings nonrep-00000001 / 4 / 5 / 6).\nThe actor field is observed NULL in\
+    \ the documented sample (context_user_id:\nnull), so attribution is frequently\
+    \ absent (finding nonrep-00000002).\nTamper-resistance and retention of these\
+    \ rows is an Immutability question (the\nrows have no MAC / append-only protection);\
+    \ the recorder is a mutable store.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state
+      history'
+  - artifact: api/rest.md
+    locator: /api/logbook sample response, lines 360-383
+    excerpt: '"context_user_id": null'
+  control_mappings:
+    nist_800_53r5:
+    - AU-3
+    - AU-12
+  caveats:
+  - 'Not a security audit log: covers entity-state history only, not auth/token/permission/admin
+    events.'
+  - context_user_id is observed null in the documented sample, so actor attribution
+    is frequently absent.
+  - "Recorder rows are mutable (no MAC / append-only / WORM) \u2014 alteration resistance\
+    \ is an Immutability gap."
+  - Owner (cev-a1000008) is unconditional all-access; there is no separate audit-reader
+    role over this history.
+  related_concerns:
+  - immutability
+  - authenticity
+  - confidentiality
+- schema_version: 1
+  id: nonrep-cap-e865e0d3
+  agent: non_repudiation
+  apd_tier: auditability
+  apd_goal: non_repudiation
+  title: Supervisor SecurityMiddleware emits a diagnostic warning naming the add-on
+    on a role-denied privileged API call
+  description: 'The Supervisor authorization chokepoint, SecurityMiddleware token_validation
+
+    (cev-b2000001), emits a `_LOGGER.warning("%s no role for %s")` identifying the
+
+    requesting add-on and the path when a SUPERVISOR_TOKEN-bearing caller is denied
+
+    by the per-role URL ACL. This provides a partial, attributable signal of
+
+    DENIED privileged-access attempts against the host-root-equivalent Supervisor
+
+    API.
+
+    '
+  maturity: implemented
+  scope: "Confirmed: denied (role-miss) privileged Supervisor API calls produce a\n\
+    diagnostic warning naming the add-on and path (cev-b2000001).\nNOT addressed /\
+    \ explicitly out of scope: this is a diagnostic logger line, NOT\na durable, tamper-evident,\
+    \ retained audit stream; and it covers only the DENY\nbranch \u2014 successful\
+    \ (ALLOWED) privileged operations such as add-on install,\nbackup create/restore,\
+    \ and Docker container exec produce NO record (finding\nnonrep-00000005). There\
+    \ is no actor beyond the add-on identity, no separate\naudit sink, and no retention/access-control\
+    \ posture.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: 'else: _LOGGER.warning("%s no role for %s")'
+  control_mappings:
+    nist_800_53r5:
+    - AU-2
+    - AU-12
+  caveats:
+  - Covers only the DENY branch; successful privileged operations are unrecorded (finding
+    nonrep-00000005).
+  - A transient diagnostic logger line, not a durable/retained/tamper-evident audit
+    stream.
+  - No separate audit sink, retention policy, or audit-read access control.
+  related_concerns:
+  - authenticity
+  - immutability
+- schema_version: 1
+  id: resil-cap-6a038f48
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: WebSocket connection state self-corrects by dropping the live socket on token
+    revocation
+  description: 'The WS auth handshake (AuthPhase.async_handle, cev-a1000010) registers
+    an
+
+    async_register_revoke_token_callback so that when the backing refresh token
+
+    is revoked, the live WebSocket socket is dropped rather than left open in a
+
+    now-invalid state. This is a Resilient state-recovery behavior on the
+
+    connection lifecycle: a revocation event drives the connection to a known
+
+    state (closed) automatically, without waiting for the next request or a
+
+    manual sweep, so the system converges to a consistent connection state on a
+
+    security-relevant change.
+
+    '
+  maturity: implemented
+  scope: "Confirmed for the Core WebSocket connection lifecycle (cev-a1000010),\n\
+    grounded in code evidence. Covers the drop-on-revocation transition only;\nit\
+    \ does NOT address reconnect/backoff behavior on the client side\n(unspecified\
+    \ \u2014 resil-01000005), nor any WS connection/subscription quota\n(an open Availability\
+    \ finding, avail-4be2dd70). The recovery here is the\nserver forcing the socket\
+    \ closed; the client's resilient reconnection is\nout of scope of this capability.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_register_revoke_token_callback
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - SC-24
+  caveats:
+  - Covers the server-side drop-on-revocation transition only; client reconnect/backoff
+    behavior is unspecified (resil-01000005).
+  - Does not bound the number of WS connections/subscriptions, which remains an open
+    Availability concern (avail-4be2dd70).
+  related_concerns:
+  - ephemeral
+  - authenticity
+- schema_version: 1
+  id: resil-cap-c76c9240
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: Push relay enforces a per-token rate limit bounding abuse on the single notification
+    path
+  description: 'The Firebase Cloud Functions push relay (handlers.handleRequest,
+
+    cev-08000001) reads the push_token from the request body and applies a
+
+    per-token rate limit, rejecting with a 429 when the limit is exceeded. On
+
+    the single notification path this is a partial backpressure / admission
+
+    control: it bounds the volume one token can drive through the relay, so a
+
+    single misbehaving or abusive sender cannot arbitrarily saturate the shared
+
+    relay and starve other users'' notification delivery.
+
+    '
+  maturity: implemented
+  scope: "Confirmed at the relay's handleRequest entrypoint (cev-08000001), grounded\n\
+    in code evidence \u2014 a per-token (not per-caller) rate limit returning 429.\n\
+    It bounds per-token volume only; it is NOT relay-outage resilience (no\nretry/queue/fallback\
+    \ when the relay itself is down \u2014 resil-01000006), does\nNOT authenticate\
+    \ the caller (any valid-format token drives the relay \u2014 a\nNon-Repudiation/Authenticity\
+    \ gap owned elsewhere), and does not provide a\nrelay availability SLA or regional\
+    \ redundancy (avail-a2cfd41c).\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:functions.handlers.handleRequest:L51-L95@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: rateLimitInfo = await rateLimiter.checkRateLimit(token)
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+  caveats:
+  - "Bounds per-token volume only; it is not relay-outage resilience (no retry/queue/fallback\
+    \ when the relay is down \u2014 resil-01000006)."
+  - The relay does not authenticate the caller (cev-08000001), so the rate limit is
+    the only abuse bound on an otherwise unauthenticated path.
+  - Does not provide a relay availability SLA or regional redundancy (avail-a2cfd41c).
+  related_concerns:
+  - availability
+  - non_repudiation
+- schema_version: 1
+  id: resil-cap-fa365a2d
+  agent: resilient
+  apd_tier: scalability
+  apd_goal: resilient
+  title: Permission engine fails closed (deny-all) on an empty, missing, or unparseable
+    policy
+  description: "compile_policy (cev-a1000006) compiles a per-entity allow/deny decision\n\
+    function and, when the policy is empty or None, returns apply_policy_deny_all\n\
+    (a function that returns False for every entity). The failure behavior on a\n\
+    corrupt or missing policy is therefore fail-closed: the engine fails into a\n\
+    known safe state (deny-all) rather than failing open to allow-all. This is\nthe\
+    \ Resilient fail-safe / fail-in-known-state property of the authorization\ncontrol\
+    \ \u2014 a corrupted policy source degrades to \"deny\" (a safe denial-of-\nservice\
+    \ for legitimate users) rather than silent privilege escalation.\n"
+  maturity: implemented
+  scope: "Confirmed for the per-entity permission decision path in Core\n(compile_policy,\
+    \ cev-a1000006), grounded in code evidence. This is one\nfail-safe point, NOT\
+    \ a platform-wide degradation strategy: it does not\naddress the shared-event-loop\
+    \ stall failure mode, outbound-integration\ntimeouts/breakers, or any declared\
+    \ read-only/safe-mode for dependency\nunavailability \u2014 those are open Resilient\
+    \ findings (resil-01000001/2/8).\nThe owner identity short-circuits the policy\
+    \ entirely (cev-a1000008), so\nthe fail-closed property protects non-owner scoping\
+    \ only.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'def apply_policy_deny_all(entity_id, key): return False'
+  control_mappings:
+    nist_800_53r5:
+    - SC-24
+    - CP-12
+    - SI-13
+  caveats:
+  - This is a single fail-safe point in the authorization path, not a platform-wide
+    graceful-degradation strategy (see resil-01000008).
+  - Owner identity short-circuits the policy (cev-a1000008), so the fail-closed property
+    governs non-owner scoping only.
+  - Fail-closed deny-all is a safe-by-default posture but is a denial-of-service for
+    legitimate users on policy corruption (the availability trade-off).
+  related_concerns:
+  - authenticity
+  - availability

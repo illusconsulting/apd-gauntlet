@@ -1,0 +1,807 @@
+finding:
+- schema_version: 1
+  id: dist-66e3e208
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: high
+  confidence: high
+  title: Single-host single-process Core is a platform-wide single point of failure with no replication or multi-node topology
+  summary: HA Core, the auth subsystem, the Recorder DB, Supervisor, and os-agent all run in one process or one host with no clustering, no replication, and no second failure domain, so host loss takes the entire automation platform offline.
+  detail: 'Home Assistant is, by design, a single Python asyncio Core process on a
+
+    single host. The system overview states verbatim that "A single trusted
+
+    Python Core process exposes a local-first REST + WebSocket API, runs 2,000+
+
+    in-process integrations ... and persists automation state and history," and
+
+    that "Core is a single, highly-privileged trust domain." The threat model
+
+    records this as a single point of failure (tm-296e2800): "Core is a single
+
+    asyncio process on a single host by design (no clustering claim) ...
+
+    exhausting the event loop, the recorder DB, or the host crashes the whole
+
+    automation platform including locks/alarms." All of the load-bearing
+
+    components co-reside in this one failure domain: the auth subsystem is
+
+    in-process with Core (tm-6fab88e3), the Recorder history DB shares the same
+
+    host (tm-60f1d9cf), and the Supervisor + add-on/plugin containers + os-agent
+
+    sit on the same host.
+
+
+    This is the topology root cause behind several Availability findings. There
+
+    is no second node, no multi-AZ placement, no multi-region posture, no
+
+    primary/replica or quorum replication of state, and no horizontal scaling.
+
+    The only "copy" of the system is the Supervisor backup archive (a recovery
+
+    artifact, not a live replica), and a host loss or the os-agent
+
+    ScheduleWipeDevice path (cev-c3000002) destroys the single live instance with
+
+    no automatic failover. The deployment-topology section (overview lines
+
+    108-116) enumerates four install methods (OS, Supervised, Container, Core)
+
+    but all four are single-instance; none introduces a clustered or replicated
+
+    mode.
+
+
+    This finding is strictly the TOPOLOGY fact (one failure domain, no
+
+    replication). The uptime/SLO consequence is routed to Availability
+
+    (avail-754cfc01) and the failure-on-component-loss behavior (degrade,
+
+    restart, recovery) to Resilient. Severity is high under the *api-security*
+
+    rubric distributed common-pattern "Single-AZ deployment of the authentication
+
+    service, session store, or payment service" calibrated to high: here the
+
+    single host is the failure domain for the entire platform including the
+
+    in-process authentication service, so a host incident produces total
+
+    authentication and automation outage. It does not rise to critical in this
+
+    lens because the harm is availability/topology, not a confidentiality or
+
+    authentication-bypass impact; HA is also an owner-operated self-hosted
+
+    product with no contractual multi-node commitment in the artifacts.
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#what-home-assistant-is, lines 12-22'
+    excerpt: A single trusted Python Core process ... Core is a single, highly-privileged trust domain
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-36
+    - SC-36(1)
+    - CP-7
+    - CP-7(1)
+    - SC-7(21)
+    cwe:
+    - CWE-1188
+  recommendation:
+    posture: recommended
+    summary: Document the single-host SPOF as an explicit architectural constraint and define the failure domain in the hardening baseline.
+    detail: 'State explicitly in the hardening guidance (org/SECURITY.md is currently a
+
+      6-line pointer) that the supported topologies (overview lines 108-116) are
+
+      all single-instance: there is no Core clustering, no state replication, and
+
+      no automated failover, so the host is the platform''s single failure domain.
+
+      Where higher availability of the consequential alarm/lock path is required,
+
+      name the compensating pattern operators must supply out of band (a
+
+      warm-standby host restored from a recent Supervisor backup with a defined
+
+      RTO/RPO, or LAN-local device-side automations that survive a Core outage),
+
+      rather than implying a resilience the single-host topology does not provide.
+
+      Coordinate the SLO half with the Availability lens and the failover-behavior
+
+      half with the Resilient lens.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 (No SLO/RTO/RPO; HA is single-Core single-host by design)'
+  related_concerns:
+  - availability
+  - resilient
+  cross_references:
+  - avail-754cfc01
+  - avail-5af6fee5
+- schema_version: 1
+  id: dist-b98dc00a
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: high
+  confidence: high
+  title: 2000+ integrations share Core's single process and event loop with no failure-domain isolation, preventing fault containment or horizontal scale
+  summary: Every integration runs in-process at Core's full privilege on the one asyncio event loop with no isolation boundary, so the integration tier cannot be scaled out, partitioned, or fault-contained — one integration's failure is the whole platform's failure domain.
+  detail: 'The integration tier is the largest moving part of Core, and it is entirely
+
+    co-located inside the single Core process. The overview states "integrations
+
+    are not sandboxed from each other and run with Core''s full privilege," and
+
+    the threat model records that integrations "share Core''s single event loop
+
+    with no per-integration resource quota" (tm-35a0b188) and that there is "no
+
+    in-process integrity boundary protecting Core''s state machine from a single
+
+    misbehaving integration" (tm-d98660ae). From the Distributed lens this is an
+
+    in-process-state / no-failure-domain-boundary topology problem: because the
+
+    2000+ integrations and Core''s own state machine occupy one process and one
+
+    event loop, the integration tier has no failure domain of its own. It cannot
+
+    be partitioned across processes or hosts, cannot be horizontally scaled
+
+    independently of Core, and a fault in any one integration is not contained —
+
+    it shares the single failure domain with the auth subsystem, the API
+
+    surface, and the recorder write path (cev-a1000018).
+
+
+    This is distinct from the Availability finding on the missing per-integration
+
+    resource quota (avail-235dacf0, which owns the capacity-ceiling facet) and
+
+    from the Integrity findings on the absent inter-integration trust boundary
+
+    (tm-e185c6a7). The topology fact owned here is that the design provides no
+
+    process/host boundary along which the integration tier could be isolated into
+
+    its own failure domain — the standard distributed remedy (run untrusted or
+
+    high-fan-out workers in a separate, independently-restartable process or
+
+    container) is structurally absent.
+
+
+    Severity is high under the *api-security* rubric distributed common-pattern
+
+    "In-process state in the application tier preventing horizontal scale"
+
+    (calibrated medium-to-high "depending on what''s in-process"); here what is
+
+    in-process is the entire 2000+-integration tier plus Core''s authorization
+
+    state, so the upper bound of that band applies. The blast radius of the
+
+    missing isolation is the whole single failure domain. The behavior a healthy
+
+    design would add around an integration (timeout, bulkhead, circuit-break) is
+
+    routed to Resilient; the capacity ceiling to Availability; here the concern
+
+    is strictly the absence of a failure-domain boundary for the integration
+
+    tier.
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#what-home-assistant-is, lines 20-22'
+    excerpt: integrations are not sandboxed from each other and run with Core's full privilege
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-36
+    - SC-7(21)
+    - SC-7(5)
+    - SC-6
+    cwe:
+    - CWE-1189
+  recommendation:
+    posture: recommended
+    summary: Provide a failure-domain boundary for the integration tier (out-of-process or per-integration worker isolation) so one integration is not the whole platform's failure domain.
+    detail: 'Introduce a topology boundary that lets high-fan-out, untrusted, or
+
+      blocking integrations run in a separate, independently-restartable failure
+
+      domain (a worker process or sidecar container) rather than on Core''s single
+
+      event loop alongside the auth subsystem and recorder write path
+
+      (cev-a1000018). This is the topology complement to the Availability lens''s
+
+      per-integration resource quota and the Resilient lens''s timeout/bulkhead
+
+      work — isolate the tier into its own failure domain so a fault in one
+
+      integration can be contained and restarted without taking Core down. Do not
+
+      duplicate the quota or bulkhead recommendations; this one is specifically
+
+      about creating the process/host boundary they would then be applied across.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §8 (integrations run unsandboxed in one process)'
+  related_concerns:
+  - availability
+  - resilient
+  - integrity
+  cross_references:
+  - avail-235dacf0
+- schema_version: 1
+  id: dist-69bbaf5c
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: No replication topology for the Recorder DB or .storage; the single live copy of all state and secrets has no replica
+  summary: The Recorder history DB and the .storage estate (auth, tokens, integration secrets) exist as a single live copy on the one host with no primary/replica, quorum, or cross-node replication; the Supervisor backup archive is the only redundant copy and is a recovery artifact, not a live replica.
+  detail: 'Home Assistant persists two state estates: the Recorder history DB
+
+    (SQLite/MariaDB/PostgreSQL per ADR-0018, default SQLite) and the .storage
+
+    config directory holding auth records, refresh tokens, jwt_keys, and
+
+    integration OAuth secrets, all written as plaintext JSON (cev-a1000017). The
+
+    artifacts specify no replication topology for either: there is no
+
+    primary/replica configuration, no multi-primary or quorum scheme, and no
+
+    cross-node or cross-AZ replication. ADR-0018 constrains the supported DB
+
+    engines but says nothing about replicating the recorder; the recommended
+
+    default is the built-in SQLite, which is an in-host file with no replication
+
+    primitive at all. The only redundant copy of this state is the Supervisor
+
+    backup archive (cev-b2000006), which is a point-in-time recovery artifact —
+
+    asynchronous, manually or schedule-triggered, and not a live replica that
+
+    can take over on host loss.
+
+
+    The Distributed concern is data locality and replication topology: a single
+
+    live copy of the entire state-and-secret estate, bound to one host, with no
+
+    replica. Combined with the single-host SPOF (dist-0a1b2c3d), this means a
+
+    storage-substrate loss (disk failure, the ScheduleWipeDevice path
+
+    cev-c3000002, or host loss) loses the only live copy with no replicated
+
+    fallback. The recovery-objective and restore-verification facet of the backup
+
+    is routed to Availability (avail-5af6fee5); the at-rest-encryption facet to
+
+    Confidentiality; the immutability/retention facet to Immutability. Here the
+
+    concern is strictly the absence of a replication topology for the live state.
+
+
+    Severity is medium under the *api-security* rubric distributed
+
+    common-patterns (the "single AZ / single failure domain for state" family,
+
+    calibrated below the auth-service-outage high because a recovery path —
+
+    backup — does exist even though no live replica does). It is not high because
+
+    the data is recoverable from backup; it is not low because the loss window
+
+    between backups is the full RPO and there is no replicated copy to bound it.
+
+    '
+  evidence:
+  - artifact: architecture/adr/0018-supported-databases.md
+    locator: '#decision, lines 36-54'
+    excerpt: The recommendation is to use the built-in SQLite database when possible.
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: ALL .storage ... written as PLAINTEXT UTF-8 JSON
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-36
+    - SC-36(1)
+    - CP-9
+    - CP-7
+    cwe:
+    - CWE-1188
+  recommendation:
+    posture: recommended
+    summary: Document that recorder/.storage state has no live replica and name the replication option for higher-durability deployments.
+    detail: 'State in the hardening baseline that the default topology keeps a single
+
+      live copy of the Recorder DB and the .storage estate (cev-a1000017) with no
+
+      replication, and that the Supervisor backup (cev-b2000006) is the only
+
+      redundancy — a point-in-time recovery artifact, not a live replica. For
+
+      deployments needing higher durability, name the available option (point the
+
+      recorder at an external MariaDB/PostgreSQL per ADR-0018 with engine-level
+
+      replication, so at least the history estate has a replicated copy) and note
+
+      that .storage/auth and integration secrets still travel only with the
+
+      backup. Coordinate the RTO/RPO half with Availability and the
+
+      backup-encryption half with Confidentiality.
+
+      '
+    references:
+    - 'internal: 00-context/asset-inventory.yaml (asset-a5e2c738 recorder DB; asset-1f6a8c40 backup archive)'
+  related_concerns:
+  - availability
+  - confidentiality
+  - immutability
+  cross_references:
+  - avail-5af6fee5
+- schema_version: 1
+  id: dist-b4e9697a
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Core application tier is stateful in-process (WS subscriptions, revoke callbacks, integration state), so it cannot be made stateless or horizontally scaled
+  summary: WebSocket subscriptions, the token-revocation callback registry, and integration runtime state live in Core's process memory rather than an externalized store, so there is no stateless application tier and no path to running multiple Core instances behind a load balancer.
+  detail: 'A horizontally-scalable design externalizes per-connection and per-session
+
+    state to a shared store so any instance can serve any request. Home Assistant
+
+    Core does the opposite: state is held in the single process. The WebSocket
+
+    auth phase registers a per-connection revoke callback in-process
+
+    (cev-a1000010: "registers revoke callback to drop the socket on token
+
+    revocation"), so the binding between a token''s revocation and the live socket
+
+    only exists inside the one process that owns the socket. The 2000+
+
+    integrations hold their runtime state in-process (tm-d98660ae), and the
+
+    permission/authorization state is in-process (cev-a1000007/8). There is no
+
+    externalized session store, no shared subscription registry, and no
+
+    distributed coordination layer.
+
+
+    The Distributed consequence is that the application tier is inherently
+
+    stateful and instance-bound: a second Core instance could not transparently
+
+    take over the first instance''s WebSocket subscriptions or in-flight
+
+    integration state, and there is no externalized store to make Core stateless.
+
+    This forecloses the standard horizontal-scale and rolling-restart patterns —
+
+    any Core restart drops all WebSocket connections and in-memory subscription
+
+    state, and there is no instance to fail over to (this compounds the
+
+    single-host SPOF, dist-0a1b2c3d). The *behavior* on restart (reconnect,
+
+    resubscribe, replay) is a Resilient concern; the topology fact owned here is
+
+    the in-process, non-externalized state that prevents a stateless tier.
+
+
+    Severity is medium under the *api-security* rubric distributed
+
+    common-pattern "In-process state in the application tier preventing
+
+    horizontal scale" (the lower end of the medium-to-high band, because for a
+
+    single-host owner-operated product the inability to horizontally scale is a
+
+    design choice rather than an unmet scaling requirement; it becomes material
+
+    only at the rolling-restart / failover boundary, which the single-host
+
+    topology already lacks).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: registers revoke callback to drop the socket on token revocation
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#what-home-assistant-is, lines 20-22'
+    excerpt: integrations are not sandboxed from each other and run with Core's full privilege
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-36
+    - SC-7(21)
+    - CP-7
+    cwe:
+    - CWE-1189
+  recommendation:
+    posture: consider
+    summary: Document the stateful-in-process boundary so operators do not assume Core can be horizontally scaled or rolling-restarted without connection loss.
+    detail: 'Record in the architecture/hardening notes that Core holds WebSocket
+
+      subscription state and the token-revocation binding (cev-a1000010) in
+
+      process memory, so Core is a stateful, single-instance tier: there is no
+
+      externalized session store and no supported multi-instance/load-balanced
+
+      mode. This sets correct operator expectations (a restart drops all live
+
+      WS connections and there is no peer to absorb them) and frames any future
+
+      scale-out work as requiring externalized subscription/session state, not
+
+      just a second process. Pair the reconnect-behavior half with the Resilient
+
+      lens.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §8 (Availability/Distributed/Resilient are topology-bounded to one node)'
+  related_concerns:
+  - resilient
+  - availability
+  cross_references:
+  - dist-66e3e208
+- schema_version: 1
+  id: dist-d08ed969
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Control plane (Supervisor/os-agent) and data plane (Core) share one host and one failure domain
+  summary: The Supervisor control plane that manages Core's lifecycle, and the os-agent host bridge, are co-resident host-root processes on the same host as the Core data plane, so a control-plane fault or host incident takes the data plane with it and there is no out-of-band management domain.
+  detail: 'A resilient distributed design separates the control plane (which manages,
+
+    schedules, restarts, and recovers workloads) from the data plane (which
+
+    serves traffic) so that one can survive and act on the other''s failure. Home
+
+    Assistant co-locates them: the Supervisor manages the Core container,
+
+    backups, and add-on lifecycle (overview line 34) and binds the Docker socket
+
+    (cev-b2000003), and os-agent exposes host operations over D-Bus
+
+    (cev-c3000001/2) — all on the same host as the Core data plane. There is no
+
+    separate management host or out-of-band control domain. The cross-repo edges
+
+    confirm the tight coupling: Supervisor mints and holds a Core access token
+
+    and calls Core as a privileged client (cev-0a000002), and Supervisor drives
+
+    the host Docker daemon and os-agent over local sockets/D-Bus
+
+    (cev-0a000003/cev-0a000004).
+
+
+    The Distributed consequence is a shared failure domain across the
+
+    control/data-plane boundary: a host incident, a host-root compromise, or the
+
+    ScheduleWipeDevice path (cev-c3000002) takes down both the workload and the
+
+    plane that would otherwise recover it; conversely the control plane has no
+
+    surviving peer to fail over to. The management plane cannot act on the data
+
+    plane''s failure from outside the failed domain because it is inside it. The
+
+    privilege-escalation and host-root-blast-radius facets of this co-location
+
+    are owned by the tier-1 Integrity/Authenticity findings (tm-83f43c8e,
+
+    tm-cbe50d76); the topology fact owned here is the absence of any
+
+    control-plane/data-plane failure-domain separation.
+
+
+    Severity is medium under the *api-security* rubric distributed
+
+    common-patterns (single-failure-domain family). It is medium rather than
+
+    high because, for the supported single-host topologies (overview lines
+
+    108-116), control/data-plane co-location is the intended appliance model and
+
+    the dominant security harm (host-root blast radius) is carried by the
+
+    tier-1 trustworthiness findings; the Distributed concern is the topology
+
+    constraint that no out-of-band recovery domain exists.
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#trust-boundaries, lines 88-89'
+    excerpt: Supervisor controls the Docker socket ... the container-to-host-root boundary
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.docker.manager.DockerAPI.__init__:L271-L279@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: Supervisor binds the Docker socket (/run/docker.sock)
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-7
+    - SC-7(21)
+    - SC-36
+    - CP-7
+    cwe:
+    - CWE-1189
+  recommendation:
+    posture: consider
+    summary: Document the control-plane/data-plane co-location and name the out-of-band recovery the appliance topology lacks.
+    detail: 'Note in the hardening baseline that the Supervisor control plane and the
+
+      Core data plane share one host and one failure domain, so the management
+
+      plane cannot recover Core from outside a failed/compromised host
+
+      (cev-b2000003, cev-0a000002). For operators who need management-plane
+
+      survivability, name the out-of-band recovery pattern they must supply (a
+
+      separate host that can restore the Supervisor backup, or external
+
+      monitoring that triggers a rebuild), rather than relying on the in-host
+
+      Supervisor watchdog alone. Coordinate the host-root-blast-radius half with
+
+      the tier-1 Integrity/Authenticity findings and the watchdog-behavior half
+
+      with Resilient.
+
+      '
+    references:
+    - 'internal: 00-context/threat-model-normalized.yaml (tm-83f43c8e, tm-cbe50d76 host-root scope)'
+  related_concerns:
+  - resilient
+  - availability
+  - integrity
+  cross_references:
+  - dist-66e3e208
+- schema_version: 1
+  id: dist-658bd883
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: gap
+  severity: low
+  confidence: medium
+  title: Load distribution is single-instance; mobile/frontend clients and the cloudhook relay all route to one backend with no load balancer or multi-instance fan-out
+  summary: The iOS and Android apps, the frontend SPA, and any internet exposure (reverse proxy or single Nabu Casa cloudhook) are all distributed clients of exactly one Core backend with no load balancer, no instance pool, and no client-side failover target.
+  detail: 'The system has a genuinely distributed client population — two native mobile
+
+    apps, the Lit/TS frontend SPA (served by Core and embedded in the apps''
+
+    WebViews), and the js-websocket client — but they all converge on a single
+
+    Core backend. The cross-repo edge cev-0a000005 records the mobile-to-Core hop
+
+    as targeting "the user-entered self-hosted instance URL (no fixed host)"; the
+
+    frontend''s availability "is bounded to Core''s single-host availability (no
+
+    separate SPA SLO)" (tm-... frontend entry, inferred_apd_goals availability,
+
+    prerequisite note line 1165). Internet exposure is via a reverse proxy or the
+
+    single Nabu Casa cloudhook/remote-UI URL (asset-6e4c8d13), and the
+
+    registration response hands the device one webhook_id / cloudhook_url
+
+    (cev-a1000014) pointing at the one instance.
+
+
+    The Distributed concern is load distribution and request routing: there is no
+
+    load balancer, no instance pool, no health-check-driven routing across
+
+    instances, and no second backend a client could fail over to. Every client
+
+    request — bearer-token REST/WS and the bearer-less webhook/cloudhook path —
+
+    resolves to the single Core. This is the client-side mirror of the
+
+    single-host SPOF (dist-0a1b2c3d): the distribution exists only on the client
+
+    side, not the server side.
+
+
+    Severity is low under the *api-security* rubric: this is a
+
+    topology/defense-in-depth observation on a single-instance design, not an
+
+    exploitable control gap, and for a self-hosted owner-operated product the
+
+    single backend is the intended model. Confidence is medium because a
+
+    reverse-proxy or Nabu Casa relay could add some routing out of band, but the
+
+    artifacts describe only a single-instance target with no multi-instance
+
+    routing. The relay''s own availability dependency is routed to Availability
+
+    (avail-a2cfd41c).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:iOS WebView (remote frontend) -> Core REST+WS API (user instance URL):L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
+    excerpt: Target is the user-entered self-hosted instance URL (no fixed host)
+  - artifact: api/native-app/setup.md
+    locator: registration response, lines 74-79
+    excerpt: returns webhook_id, secret, cloudhook_url
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-7
+    - SC-5
+    - SC-36
+  recommendation:
+    posture: consider
+    summary: State that clients target a single backend with no load balancer or failover target so operators understand the reachability model.
+    detail: 'Document that all clients (mobile, frontend, webhook/cloudhook callers)
+
+      resolve to a single Core instance (cev-0a000005, cev-a1000014) with no
+
+      server-side load distribution or failover target. If an operator fronts
+
+      Core with a reverse proxy or the Nabu Casa relay, note what that layer does
+
+      and does not provide (TLS termination and remote reachability, but not a
+
+      second backend). This frames client reconnection expectations and is the
+
+      client-side complement to the single-host SPOF finding; pair the
+
+      relay-outage behavior with Availability and Resilient.
+
+      '
+    references:
+    - 'internal: 00-context/asset-inventory.yaml (asset-6e4c8d13 Nabu Casa relay; asset-9c2e6a47 reverse-proxy edge)'
+  related_concerns:
+  - availability
+  - resilient
+  cross_references:
+  - dist-66e3e208
+  - avail-a2cfd41c
+- schema_version: 1
+  id: dist-a0ea311c
+  agent: distributed
+  apd_tier: scalability
+  apd_goal: distributed
+  disposition: blocked
+  severity: low
+  confidence: low
+  title: DNS resolution topology (plugin-dns CoreDNS) as a potential single dependency for the HA network is undocumented
+  summary: The HAOS topology routes the HA network's DNS through a single CoreDNS plugin container, but the artifacts do not document its redundancy, fallback resolver, or failure behavior, so whether DNS is a hidden single dependency cannot be assessed.
+  detail: 'The run config and overview name a plugin-dns CoreDNS plugin container that
+
+    provides "DNS for the HA network" (overview line 38, run-config line 31),
+
+    making it a plausible hidden single dependency: integrations, add-ons, and
+
+    Core''s outbound calls to devices/clouds (the SSRF/outbound surface,
+
+    tb-6a2d8c14) likely resolve names through this one plugin. A single DNS plane
+
+    is a classic hidden SPOF — if it is the only resolver and it fails, name
+
+    resolution for every integration and update path fails even though the rest
+
+    of the host is healthy.
+
+
+    However, none of the supplied artifacts document the CoreDNS plugin''s
+
+    topology: whether it forwards to redundant upstream resolvers, whether Core
+
+    or add-ons have a fallback resolver if the plugin is down, or how a DNS-plane
+
+    failure propagates. The plugin-dns repo is dependency-role and was not
+
+    deep-read into the input set, and the code-evidence index contains no
+
+    plugin-dns entry. Per the block-on-ambiguity discipline I do not infer the
+
+    DNS plane is a single point of failure from its mere presence — its
+
+    redundancy posture is unknown. This is recorded as blocked with the
+
+    prerequisite evidence named.
+
+
+    Severity is low and confidence low because the topology is unknown; the
+
+    finding would calibrate higher only if the DNS plane is confirmed to be a
+
+    single non-redundant resolver with no fallback (the *api-security* rubric
+
+    distributed single-dependency pattern), which the artifacts do not establish.
+
+    '
+  evidence:
+  - artifact: 00-SYSTEM-OVERVIEW.md
+    locator: '#repository-map, line 38 (plugin-dns row)'
+    excerpt: CoreDNS plugin container (DNS for the HA network)
+  prerequisite_evidence:
+  - 'plugin-dns CoreDNS topology: upstream resolver redundancy and forwarding configuration'
+  - Whether Core and add-ons have a fallback resolver if the CoreDNS plugin is unavailable
+  - How a DNS-plane failure propagates to integration outbound, add-on, and update paths
+  control_mappings:
+    nist_800_53r5:
+    - SC-22
+    - SC-20
+    - SC-36
+  recommendation:
+    posture: consider
+    summary: Document the CoreDNS plugin's redundancy and fallback-resolver behavior to confirm whether DNS is a single dependency.
+    detail: 'Provide the plugin-dns CoreDNS topology: the upstream resolvers it forwards
+
+      to, whether those are redundant, and what Core and add-ons do for name
+
+      resolution if the plugin container is unavailable. This resolves whether the
+
+      DNS plane is a hidden single dependency for the integration-outbound
+
+      (tb-6a2d8c14), add-on, and update paths, or whether a fallback resolver
+
+      bounds that failure. Until documented, operators cannot reason about
+
+      DNS-plane redundancy on the appliance topology.
+
+      '
+    references:
+    - 'internal: .apd-run.yaml (plugin-dns: CoreDNS plugin container — LAN discovery / DNS plane)'
+  related_concerns:
+  - availability
+  - resilient
+  cross_references: []

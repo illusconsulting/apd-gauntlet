@@ -1,0 +1,319 @@
+techniques:
+- id: T1499
+  sub_technique: T1499.002
+  tactic: TA0040
+  name: Endpoint Denial of Service
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - avail-4be2dd70
+  - avail-a292763c
+  mitigated_by_capabilities: []
+- id: T1557
+  sub_technique: null
+  tactic: TA0006
+  name: Adversary-in-the-Middle
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  mitigated_by_capabilities:
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041
+- id: T1409
+  sub_technique: null
+  tactic: TA0035
+  name: Stored Application Data
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-205c53a5
+  mitigated_by_capabilities: []
+- id: T1417
+  sub_technique: null
+  tactic: TA0006
+  name: Input Capture
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-3060c50e
+  mitigated_by_capabilities: []
+- id: T1577
+  sub_technique: null
+  tactic: TA0009
+  name: Compromise Application Executable
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-7a74a4a0
+  mitigated_by_capabilities: []
+- id: T1634
+  sub_technique: null
+  tactic: TA0035
+  name: Credentials from Password Store
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-a30cca33
+  mitigated_by_capabilities: []
+- id: T1213
+  sub_technique: null
+  tactic: TA0009
+  name: Data from Information Repositories
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-ef49b4b0
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1078
+  sub_technique: null
+  tactic: TA0003
+  name: Valid Accounts
+  exposure_finding_count: 4
+  exposure_finding_ids:
+  - auth-3f2314a4
+  - auth-7162fd48
+  - ephem-053957f3
+  - ephem-9915ab91
+  mitigated_by_capabilities:
+  - capability_id: conf-cap-1044dbb3
+    mitigation_id: M1027
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1550
+  sub_technique: T1550.001
+  tactic: TA0008
+  name: Use Alternate Authentication Material
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - ephem-f19f24f9
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: conf-cap-1044dbb3
+    mitigation_id: M1027
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1528
+  sub_technique: null
+  tactic: TA0006
+  name: Steal Application Access Token
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-3dbf15e7
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1543
+  sub_technique: null
+  tactic: TA0003
+  name: Create or Modify System Process
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-6924f467
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1195
+  sub_technique: T1195.002
+  tactic: TA0001
+  name: Supply Chain Compromise
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-8f0d8172
+  mitigated_by_capabilities:
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1525
+  sub_technique: null
+  tactic: TA0003
+  name: Implant Internal Image
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - immut-5a5ef5bd
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+- id: T1098
+  sub_technique: T1098.004
+  tactic: TA0003
+  name: Account Manipulation
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - merged-1119b0be
+  - merged-66801b1b
+  mitigated_by_capabilities:
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1005
+  sub_technique: null
+  tactic: TA0009
+  name: Data from Local System
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  mitigated_by_capabilities: []
+- id: T1530
+  sub_technique: null
+  tactic: TA0009
+  name: Data from Cloud Storage
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1552
+  sub_technique: T1552.001
+  tactic: TA0006
+  name: Unsecured Credentials
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-1044dbb3
+    mitigation_id: M1027
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+- id: T1606
+  sub_technique: T1606.001
+  tactic: TA0006
+  name: Forge Web Credentials
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - merged-1119b0be
+  - merged-a49cb674
+  mitigated_by_capabilities:
+  - capability_id: auth-cap-f01e6108
+    mitigation_id: M1047
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-7a54b1a7
+    mitigation_id: M1047
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1070
+  sub_technique: null
+  tactic: TA0005
+  name: Indicator Removal
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  mitigated_by_capabilities:
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041
+- id: T1190
+  sub_technique: null
+  tactic: TA0001
+  name: Exploit Public-Facing Application
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  mitigated_by_capabilities: []
+- id: T1490
+  sub_technique: null
+  tactic: TA0040
+  name: Inhibit System Recovery
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  mitigated_by_capabilities:
+  - capability_id: ephem-cap-5113fad9
+    mitigation_id: M1018
+  - capability_id: intg-cap-e88c8857
+    mitigation_id: M1018
+  - capability_id: intg-cap-ecebb879
+    mitigation_id: M1018
+- id: T1565
+  sub_technique: T1565.001
+  tactic: TA0040
+  name: Data Manipulation
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  mitigated_by_capabilities:
+  - capability_id: conf-cap-01c47d42
+    mitigation_id: M1041
+  - capability_id: conf-cap-277b2364
+    mitigation_id: M1041
+  - capability_id: intg-cap-70ef26f7
+    mitigation_id: M1041

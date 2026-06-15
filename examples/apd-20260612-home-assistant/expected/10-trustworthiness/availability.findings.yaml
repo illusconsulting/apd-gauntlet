@@ -1,0 +1,640 @@
+finding:
+- schema_version: 1
+  id: avail-754cfc01
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: No availability SLO/SLI declared for the Core device-control + alarm path
+  summary: Home Assistant Core declares no availability target, SLI, or error budget for its consequential device-control/alarm/lock path, so reachability against a stated objective cannot be verified.
+  detail: 'The consequential-action path in this system is physical device control
+
+    and alarm/lock state mutation (POST /api/services/<domain>/<service> and
+
+    POST /api/states/<entity_id>), which the brief identifies as the
+
+    adjudication-equivalent path with real safety stakes (a downed instance =
+
+    no automation, no alarm). The threat-model author flagged D=21 blocked
+
+    cells: "no documented rate-limit / SLO / capacity model," and the intake
+
+    evidence-gap list records "No SLO/RTO/RPO; HA is single-Core single-host
+
+    by design." No artifact states an availability objective (e.g. monthly
+
+    uptime), a success-rate or p95-latency SLI on the service-call path, a
+
+    time window, or an error budget.
+
+
+    Without a declared SLO and matching SLIs there is no objective against
+
+    which to measure whether the platform is reachable when an alarm or lock
+
+    automation must fire, and no basis to prioritize reliability work. This is
+
+    a measurement gap, not a topology gap; the single-host topology that
+
+    *produces* the availability ceiling is routed to Distributed and the
+
+    failure-on-component-loss behavior to Resilient.
+
+
+    Severity is medium under the *api-security* rubric clause "SLO and error
+
+    budget undeclared for consequential paths (authentication, payment,
+
+    PII-read)" — here the consequential path is device-control/alarm. The
+
+    rubric pegs this pattern at medium (cannot verify implicit availability
+
+    commitments; cannot prioritize reliability work). It does not rise higher
+
+    because Home Assistant is a self-hosted, owner-operated product with no
+
+    contractual uptime clause in the artifacts.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: No bearer, no rate-limit observed here.
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'await hass.services.async_call(...) # actuates locks/alarms'
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CP-2
+    - CP-2(3)
+    - SI-13
+    cwe:
+    - CWE-770
+  recommendation:
+    posture: recommended
+    summary: Declare an availability SLO + SLIs for the device-control/alarm path and publish a hardening baseline target.
+    detail: 'Define an availability objective for the consequential path
+
+      (service-call success rate and end-to-end latency on POST
+
+      /api/services/<domain>/<service> and POST /api/states/<entity_id>),
+
+      an SLI to measure it, and a rolling window. For a single-host
+
+      owner-operated deployment the realistic ceiling is the host''s own
+
+      uptime; state that ceiling explicitly in the hardening guidance
+
+      (org/SECURITY.md is currently a 6-line pointer with no hardening
+
+      content) so operators of safety automations (alarm, lock) understand
+
+      the reachability they are committing to. Pair this with the capacity
+
+      and health-check work in the related findings.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 Evidence Gaps (No SLO/RTO/RPO)'
+  related_concerns:
+  - distributed
+  - resilient
+  cross_references: []
+- schema_version: 1
+  id: avail-a292763c
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: high
+  confidence: high
+  title: mobile_app webhook entrypoint has no rate limit, exhausting the single Core event loop
+  summary: handle_webhook accepts unauthenticated webhook_id-keyed requests that drive blocking service calls on the single Core event loop with no observed rate limit, enabling resource-exhaustion DoS of the whole platform.
+  detail: 'handle_webhook (cev-a1000016) maps a webhook_id to a config_entry with no
+
+    bearer token and the code recon explicitly notes "No bearer, no rate-limit
+
+    observed here." The path then reaches webhook_call_service (cev-a1000015),
+
+    which calls arbitrary services with blocking=True on Core''s single asyncio
+
+    event loop. Because Core is a single process on a single host
+
+    (tm-296e2800) with no documented per-caller throttle, a holder (or
+
+    guesser) of a webhook_id — or any party hitting the public cloudhook URL —
+
+    can flood the one event loop with blocking service calls and degrade or
+
+    stall the entire automation platform, including the alarm and lock paths.
+
+
+    This is the Availability facet (resource consumption / SC-5) of the
+
+    bearer-less webhook surface. The authentication-by-possession and
+
+    missing-authz facets are owned by Authenticity/Integrity; here the concern
+
+    is strictly unrestricted resource consumption against the single-process
+
+    failure domain.
+
+
+    Severity is high under the *api-security* rubric. The availability
+
+    common-pattern "No timeout/quota on a path that can exhaust the single
+
+    request handler" calibrates to high because vendor/caller slow-down
+
+    cascades to total handler exhaustion and cannot be remediated mid-incident
+
+    without restart; here the blocking=True service call on the single event
+
+    loop is exactly that single-handler exhaustion surface, and the caller is
+
+    unauthenticated. OWASP API4 (Unrestricted Resource Consumption) applies.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.handle_webhook:L172-L180@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: No bearer, no rate-limit observed here.
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.webhook.webhook_call_service:L269-L292@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: async_call(..., blocking=True, context=registration_context(...))
+  - artifact: code-evidence-index.yaml
+    locator: cev-a1000016 No bearer no rate-limit
+    excerpt: leaked_device_webhook_id floods mobile_app_webhook_api (no bearer, no rate-limit) on single event loop
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+    mitre_attack:
+    - technique: T1499
+      sub_technique: T1499.002
+      tactic: TA0040
+      rationale: An unthrottled webhook_id-keyed entrypoint driving blocking service calls on the single Core event loop lets an attacker exhaust the application's request-handling capacity (service exhaustion flood).
+    cwe:
+    - CWE-770
+    owasp_api_top10:
+    - API4:2023
+  recommendation:
+    posture: required
+    summary: Add a per-webhook_id and per-source rate limit + a non-blocking dispatch bound on the webhook path.
+    detail: 'Apply a rate limit keyed on webhook_id and on source identity at the
+
+      handle_webhook entrypoint (cev-a1000016) before the call reaches
+
+      webhook_call_service (cev-a1000015), with explicit behavior on breach
+
+      (reject with 429 + Retry-After). Bound the work the single event loop
+
+      will accept from one webhook so a flood of blocking=True service calls
+
+      cannot starve alarm/lock automations. Because the cloudhook URL is
+
+      internet-reachable, the limit must apply at the Core boundary, not only
+
+      at the reverse proxy.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 (mobile_app webhook authN/authZ; no rate-limiting)'
+  related_concerns:
+  - resilient
+  - authenticity
+  cross_references: []
+- schema_version: 1
+  id: avail-4be2dd70
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: high
+  confidence: medium
+  title: No rate limit on Core REST/WS boundary, including the WS auth_required handshake and expensive routes
+  summary: The Core REST and WebSocket boundary has no documented rate limit; unauthenticated WS auth_required handshakes and expensive REST routes can exhaust the single event loop.
+  detail: "The Core REST API (tm-04eb6424) and WebSocket API (tm-621d5347) are served\nby the single Core asyncio process with no documented throttle at the\nboundary. Three resource-exhaustion surfaces follow on the single event\nloop:\n\n- The WS handshake (cev-a1000010) runs auth_required -> auth before the\n  socket is authenticated; an attacker can open many sockets to occupy the\n  handshake/validation path on the one event loop with no connection\n  quota documented.\n- Expensive REST routes (/api/template server-side Jinja2 render\n  cev-a1000013, and /api/history) do proportional work; the threat model\n  notes \"no documented throttle on expensive routes.\"\n- The WS server holds long-lived sockets/subscriptions with \"no stated\n  connection/subscription quota\" (tm-621d5347).\n\nTLS terminates at a reverse proxy and HA serves HTTP on 8123, but the\nthreat model records no throttle is documented at the Core boundary\nitself, so any reverse-proxy throttle (if present) is not in\
+    \ evidence.\n\nSeverity is high under the *api-security* rubric: the availability\ncommon-pattern \"no timeout/quota on a path that exhausts the single\nrequest handler\" is high, and OWASP API4 (Unrestricted Resource\nConsumption) applies to the auth-handshake and expensive-route surfaces.\nConfidence is medium because a reverse-proxy or per-IP guard could exist\nout-of-band; the artifacts are silent on it, but the in-code WS handshake\nand expensive-route surfaces are confirmed.\n"
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: auth_required->auth handshake; validates access token
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APITemplateView.post:L479-L505@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: tpl = _cached_template(data["template"], ...); tpl.async_render(...)
+  - artifact: code-evidence-index.yaml
+    locator: WS auth_required handshake + expensive REST routes no rate limit
+    excerpt: unauthenticated_internet floods the unthrottled Core REST/WS boundary fronting recorder_history_db
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - SC-5
+    - SC-5(1)
+    - SC-6
+    mitre_attack:
+    - technique: T1499
+      sub_technique: T1499.002
+      tactic: TA0040
+      rationale: An unthrottled WS auth_required handshake and expensive REST routes on the single event loop let an attacker flood the application until legitimate requests cannot be served.
+    cwe:
+    - CWE-770
+    owasp_api_top10:
+    - API4:2023
+  recommendation:
+    posture: recommended
+    summary: Enforce per-IP/per-token connection and request rate limits at the Core boundary, including the pre-auth WS handshake and expensive routes.
+    detail: 'Add a connection/handshake quota on the WS path (cev-a1000010) so a
+
+      flood of unauthenticated auth_required sockets cannot saturate the event
+
+      loop, and a per-route rate limit on /api/template (cev-a1000013) and
+
+      /api/history. Specify per-endpoint thresholds, the identity dimension
+
+      (per-IP for pre-auth, per-token post-auth), the time window, and the
+
+      breach behavior. If a reverse-proxy throttle is the intended control,
+
+      document it in the hardening baseline so the boundary is not silently
+
+      unbounded.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 (TLS posture at the Core boundary)'
+  related_concerns:
+  - distributed
+  - resilient
+  cross_references: []
+- schema_version: 1
+  id: avail-235dacf0
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: high
+  confidence: medium
+  title: No per-integration resource quota; one of 2000+ in-process integrations can stall the Core event loop or recorder DB
+  summary: 2000+ integrations share Core's single event loop and recorder DB with no per-integration resource quota, so one slow or misbehaving integration degrades the whole platform's availability.
+  detail: 'Integrations run unsandboxed in Core''s single asyncio process at full
+
+    privilege, and the threat model records that "a misbehaving integration
+
+    blocks Core''s single event loop or exhausts the recorder DB ... integrations
+
+    share Core''s single event loop with no per-integration resource quota"
+
+    (tm-35a0b188). The recorder DB session path (cev-a1000018) is the
+
+    home-occupancy/lock/alarm history store; recorder exhaustion or a blocking
+
+    integration call also degrades /api/history and any automation that reads
+
+    history (tm-60f1d9cf). Because there is one process and one host, the blast
+
+    radius of a single slow integration or an unbounded recorder write is the
+
+    entire automation platform, including safety automations.
+
+
+    This is the capacity/resource-availability facet (no quota / no ceiling on
+
+    a shared resource). The *behavior* a healthy design would add — timeouts,
+
+    bulkheads, circuit-breaking around an integration — is owned by Resilient;
+
+    the *isolation topology* (sandboxing integrations out of the single
+
+    process) is owned by Distributed. Here the Availability concern is the
+
+    absence of any capacity ceiling or resource quota protecting the shared
+
+    event loop and recorder DB.
+
+
+    Severity is high under the *api-security* rubric availability common-pattern
+
+    "no timeout on outbound calls ... thread-pool exhaustion possible during
+
+    vendor degradation" (high: vendor/integration slow-down cascades to total
+
+    exhaustion, not remediable mid-incident without restart). Confidence is
+
+    medium: the absence of a quota is confirmed in the threat model, but the
+
+    precise recorder back-pressure behavior (e.g. queue bound) is not in the
+
+    code-evidence index.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: Recorder DB session for entity-state history
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: return jwt.encode({...}, refresh_token.jwt_key, algorithm="HS256")
+  prerequisite_evidence:
+  - Recorder DB write back-pressure / queue-bound behavior and any per-integration execution timeout or watchdog
+  control_mappings:
+    nist_800_53r5:
+    - SC-6
+    - SC-5
+    - SI-13
+    cwe:
+    - CWE-400
+  recommendation:
+    posture: recommended
+    summary: Bound per-integration resource use (execution timeout + recorder write back-pressure) so one integration cannot starve the shared loop.
+    detail: 'Introduce a per-integration execution-time budget / watchdog on the
+
+      shared event loop and a bounded recorder write queue (cev-a1000018) so a
+
+      single slow or runaway integration cannot block the loop or exhaust the
+
+      recorder DB that backs alarm/lock history. This is a capacity ceiling;
+
+      pair it with the Resilient lens''s timeout/bulkhead recommendation and
+
+      the Distributed lens''s integration-isolation recommendation rather than
+
+      duplicating them.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §8 (integrations run unsandboxed in one process)'
+  related_concerns:
+  - resilient
+  - distributed
+  cross_references: []
+- schema_version: 1
+  id: avail-5af6fee5
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: medium
+  confidence: high
+  title: Supervisor backup is the sole recovery path with no RTO/RPO, restore verification, or retention
+  summary: Full/partial Supervisor backups are the only recovery mechanism for the single-host instance, yet no recovery-time/recovery-point objective, restore-test cadence, or retention is defined.
+  detail: 'Supervisor backups (cev-b2000006) bundle config, the recorder DB, and
+
+    secrets/tokens into full/partial archives and are the recovery path for
+
+    the single-host instance (tm-28d50718: "Backups are the recovery path for
+
+    the single-host instance; denial of service / data-loss applies if backups
+
+    are absent, corrupted, or destroyed"). The intake evidence-gap list
+
+    records "No SLO/RTO/RPO" and "No object-lock/WORM/retention policy stated
+
+    for backups." There is therefore no stated recovery-point objective (how
+
+    much history loss is acceptable on restore), no recovery-time objective
+
+    (how long to stand the instance back up), and no documented periodic
+
+    restore verification.
+
+
+    The availability concern here is the recovery-timeliness/recoverability
+
+    facet of the contingency plan: a recovery mechanism whose timeliness and
+
+    point-of-recovery are undefined cannot be relied on to meet any
+
+    reachability objective after a host loss or the catastrophic
+
+    ScheduleWipeDevice path (cev-c3000002). The *confidentiality* of the
+
+    default-unencrypted backup is routed to Confidentiality; the *immutability*
+
+    / retention / object-lock gap is routed to Immutability; this finding is
+
+    strictly the absence of recovery objectives and restore verification.
+
+
+    Severity is medium under the *api-security* rubric availability
+
+    common-pattern family (SLO/contingency undeclared for the recovery path).
+
+    It is medium rather than high because backups do exist (a recovery path is
+
+    present), but their objectives are unstated and unverified.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
+    excerpt: full snapshots (config + recorder DB + secrets/tokens)
+  - artifact: code-evidence-index.yaml
+    locator: code:system.system.ScheduleWipeDevice:L29-L55@bbaf039bab5024f5397f442b081bb964c9d4f7f6
+    excerpt: schedule factory-reset / datadisk wipe over D-Bus
+  - artifact: code-evidence-index.yaml
+    locator: supervisor backup default-unencrypted full snapshot
+    excerpt: physical_thief_with_stolen_device reads a default-unencrypted supervisor_backup_archive (secrets+DB+tokens)
+  prerequisite_evidence: []
+  control_mappings:
+    nist_800_53r5:
+    - CP-9
+    - CP-9(1)
+    - CP-10
+    - CP-2
+    cwe:
+    - CWE-404
+  recommendation:
+    posture: recommended
+    summary: Define RTO/RPO for restore from backup, document a periodic restore-verification procedure, and state a retention policy.
+    detail: 'State the recovery-point objective the backup cadence delivers (the
+
+      acceptable recorder-history loss window) and a recovery-time objective
+
+      for rebuilding the single-host instance from a Supervisor archive
+
+      (cev-b2000006). Document and schedule a restore-verification procedure so
+
+      backups are known-good (an unverified backup is not a recovery control).
+
+      Coordinate the retention/immutability half with the Immutability lens and
+
+      the at-rest-encryption half with the Confidentiality lens.
+
+      '
+    references:
+    - 'internal: 00-context/context-brief.md §6 (DR/RTO/RPO + availability targets; Backup immutability / retention)'
+  related_concerns:
+  - resilient
+  - immutability
+  cross_references: []
+- schema_version: 1
+  id: avail-77752ee2
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: blocked
+  severity: medium
+  confidence: low
+  title: Health-check depth and watchdog semantics for Core/Supervisor are undocumented
+  summary: The artifacts do not document liveness vs readiness vs dependency health checks, nor the Supervisor watchdog/observer behavior, so whether failures are detected and acted on cannot be assessed.
+  detail: 'The run config names a plugin-observer container ("health/observer plugin")
+
+    and Supervisor manages the Core container lifecycle, implying some watchdog
+
+    capability exists. However, none of the supplied artifacts document the
+
+    health-check model: whether checks distinguish liveness (process alive),
+
+    readiness (can serve requests), and dependency health (recorder DB,
+
+    integrations reachable); whether they are deep (exercise the data path) or
+
+    shallow (port open); and whether the Supervisor watchdog restarts Core on
+
+    a failed deep check or only on process death. The plugin-observer and
+
+    supervisor repos are dependency-role and were not deep-read into the input
+
+    set, and the code-evidence index contains no observer/watchdog entry.
+
+
+    Per the block-on-ambiguity discipline, I do not infer that health checks
+
+    are shallow or absent from silence. This is recorded as blocked with the
+
+    prerequisite evidence named. Severity medium reflects the availability
+
+    common-pattern "health checks specified as shallow checks only" tier (the
+
+    severity that would apply *if* the checks turn out shallow); confidence is
+
+    low because the depth is unknown.
+
+    '
+  evidence:
+  - artifact: repos/supervisor-README.md
+    locator: lines 5-9
+    excerpt: container-based system for managing your Home Assistant Core installation
+  prerequisite_evidence:
+  - 'Supervisor watchdog policy: what condition restarts Core and on what interval'
+  - plugin-observer health-check depth (liveness vs readiness vs dependency; shallow port check vs deep data-path check)
+  - Whether health checks gate any load-balancer or restart decision
+  control_mappings:
+    nist_800_53r5:
+    - SI-13
+    - CP-10
+    - SC-5
+  recommendation:
+    posture: consider
+    summary: Document the Core/Supervisor health-check and watchdog model and add deep readiness checks.
+    detail: 'Provide the health-check model for Core and the Supervisor watchdog: a
+
+      deep readiness check that exercises the recorder DB and the auth path
+
+      (not just port 8123 liveness), and the watchdog condition that triggers
+
+      a Core restart. This resolves the blocked assessment and lets the
+
+      single-host instance self-recover from a hung-but-alive Core rather than
+
+      requiring manual intervention.
+
+      '
+    references:
+    - 'internal: .apd-run.yaml (plugin-observer: health/observer plugin container)'
+  related_concerns:
+  - resilient
+  cross_references: []
+- schema_version: 1
+  id: avail-a2cfd41c
+  agent: availability
+  apd_tier: trustworthiness
+  apd_goal: availability
+  disposition: gap
+  severity: low
+  confidence: medium
+  title: Push-notification delivery depends on a single Firebase relay with no stated availability SLA
+  summary: Mobile push notifications (including alarm/security alerts) route through a single hosted Firebase Cloud Functions relay whose availability characteristics and SLA are unstated.
+  detail: 'The mobile-apps-fcm-push relay (cev-08000001, cev-08000002) is a single
+
+    Firebase Cloud Functions service that forwards every push notification to
+
+    APNS/FCM. Security-relevant alerts (alarm-triggered, lock, presence
+
+    notifications) depend on this relay being reachable. The relay is named in
+
+    the inventory as an external_dependency with medium confidence, and no
+
+    artifact states its availability target, regional redundancy, or a
+
+    fallback delivery path if the relay (or its single configured region,
+
+    us-central1 per the README) is unavailable. The relay does apply a
+
+    per-token rate limit (a capability recorded separately), which bounds
+
+    abuse but does not address relay-outage availability.
+
+
+    The Availability concern is dependency reliability: a critical
+
+    notification dependency with no cited SLA, where the design''s overall
+
+    notification-delivery availability is bounded by this single relay''s
+
+    availability. The *behavior* when the relay is down (retry, queue, degrade)
+
+    is routed to Resilient.
+
+
+    Severity is low under the *api-security* rubric: this is a
+
+    defense-in-depth / dependency-reliability gap on a notification path, not
+
+    the primary control plane (device control works LAN-locally without the
+
+    relay). Confidence is medium because the relay''s redundancy posture is not
+
+    in the artifacts.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:__route__POST__/api/sendPushNotification:L40-L43@142579dc41ee534f0d60bc390c4661dba051a995
+    excerpt: Public relay route forwarding notifications to APNS/FCM
+  - artifact: mobile/mobile-apps-fcm-push-README.md
+    locator: lines 36-41
+    excerpt: set the app.region setting ... another location than us-central1
+  prerequisite_evidence:
+  - Firebase relay availability SLA / regional-redundancy posture and any push-delivery fallback path
+  control_mappings:
+    nist_800_53r5:
+    - CP-2(5)
+    - SC-5
+    - SI-13
+  recommendation:
+    posture: consider
+    summary: State the push-relay availability dependency and a degraded notification path for relay outage.
+    detail: 'Document the Firebase relay as a single external availability dependency
+
+      for notification delivery (cev-08000002) and define the behavior when it
+
+      is unreachable — e.g. a local/persistent-notification fallback so that an
+
+      alarm event is still surfaced in the app on next reachable connection.
+
+      Coordinate the outage-behavior half with the Resilient lens.
+
+      '
+    references:
+    - 'internal: 00-context/asset-inventory.yaml (asset-8c1d7e46 push relay; tb-1f5c9a83)'
+  related_concerns:
+  - resilient
+  - distributed
+  cross_references: []

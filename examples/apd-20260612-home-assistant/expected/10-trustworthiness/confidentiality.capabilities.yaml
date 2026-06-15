@@ -1,0 +1,279 @@
+capability:
+- schema_version: 1
+  id: conf-cap-01c47d42
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Android mTLS client-cert private key held in non-exportable hardware-backed AndroidKeyStore
+  description: '`common...data.keychain.KeyStoreRepositoryImpl` (cev-f6000001) stores the
+
+    mTLS client-certificate private key in `KeyStore.getInstance("AndroidKeyStore")`,
+
+    the hardware-backed Android key store. The protection of
+
+    android_keystore_mtls_client_key rests on the key being non-exportable: it
+
+    cannot be read out of the TEE/StrongBox into app memory, so even a rooted
+
+    device or a process-memory dump does not yield the raw private key — the
+
+    attacker can at most use it in place while the device is unlocked. This is
+
+    the correct custody model for an on-device asymmetric secret.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the Android Companion mTLS client-cert private key via the
+
+    AndroidKeyStore (code-grounded, cev-f6000001). NOT extended to the
+
+    session/refresh bearer tokens or the location_history table, which live in
+
+    the UNENCRYPTED Room database (see finding conf-androidr) — so this
+
+    capability covers the mTLS key only, not the broader on-device secret
+
+    estate. iOS-side key custody (Keychain) is evaluated separately and has a
+
+    hardening gap (finding conf-ioskeych).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:common...data.keychain.KeyStoreRepositoryImpl:L108-L112@bf8215602c19f20f4abf9c1dbfcbc2a3e4cf1bea
+    excerpt: KeyStore.getInstance("AndroidKeyStore") // hardware-backed key store
+  - artifact: code-evidence-index.yaml
+    locator: non-exportable hardware-backed AndroidKeyStore
+    excerpt: non-exportable AndroidKeyStore mitigates rooted_device_attacker_with_frida extracting android_keystore_mtls_client_key
+  control_mappings:
+    nist_800_53r5:
+    - SC-12
+    - SC-12(3)
+    - SC-28
+    - IA-7
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: Non-exportable hardware-backed key storage mitigates collection of the mTLS private key from device storage or process memory (T1409, T1552).
+    masvs:
+    - MASVS-STORAGE-1
+    - MASVS-CRYPTO-2
+    mitre_attack:
+    - technique: T1409
+      sub_technique: null
+      tactic: TA0035
+      rationale: A non-exportable AndroidKeyStore key denies the Stored Application Data extraction of the mTLS private key even on a device with file access.
+    d3fend:
+    - technique: D3-CBAN
+      rationale: Hardware-backed non-exportable custody of the client-cert private key underpins certificate-based authentication of the device to the backend.
+      counters_attack:
+      - T1409
+  caveats:
+  - Covers the mTLS key only; bearer tokens and location PII are in the unencrypted Room DB (finding conf-androidr).
+  - Non-exportability protects key-at-rest; it does not prevent in-place use on an unlocked rooted device.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: conf-cap-1044dbb3
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: User passwords stored as bcrypt hashes (rounds=12) with a constant-time miss path
+  description: '`homeassistant.auth.providers.homeassistant.Data.hash_password`
+
+    (cev-a1000004) hashes passwords with `bcrypt.hashpw(..., bcrypt.gensalt(rounds=12))`,
+
+    and `validate_login` (cev-a1000005) performs a dummy `bcrypt.checkpw` on a
+
+    user miss so login timing does not reveal account existence. Passwords are
+
+    therefore never persisted in recoverable form, and the bcrypt work factor
+
+    (rounds=12) raises the cost of offline cracking should the hash store be
+
+    read. This is the correct one-way-storage posture for the credential
+
+    factor.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for the homeassistant auth provider''s password factor
+
+    (code-grounded, cev-a1000004/5). Important boundary: the bcrypt HASH is
+
+    strong, but it is persisted to .storage as PLAINTEXT JSON (no
+
+    encryption-at-rest layer, finding conf-st0rag31) alongside the MFA/TOTP
+
+    seeds and the per-token jwt_keys — so this capability protects the
+
+    password factor specifically, NOT the surrounding secret estate. The
+
+    72-byte bcrypt truncation is noted but standard.
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.hash_password:L189-L198@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: hashed = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12))
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.providers.homeassistant.Data.validate_login:L160-L187@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'bcrypt.checkpw(b"foo", dummy) # check a hash to make timing the same'
+  control_mappings:
+    nist_800_53r5:
+    - IA-5(1)
+    - SC-13
+    - SC-28(1)
+    mitre_attack_mitigations:
+    - id: M1027
+      rationale: bcrypt rounds=12 one-way hashing of passwords raises the cost of offline credential cracking (T1110) if the .storage auth file is read.
+    mitre_attack:
+    - technique: T1110
+      sub_technique: T1110.002
+      tactic: TA0006
+      rationale: The bcrypt rounds=12 work factor materially slows offline Password Cracking of a recovered hash store.
+    d3fend:
+    - technique: D3-CH
+      rationale: bcrypt rounds=12 one-way hashing with per-user salt is the Credential Hardening technique applied to the stored password factor.
+      counters_attack:
+      - T1110
+  caveats:
+  - The bcrypt hash is stored in plaintext .storage with no encryption-at-rest (finding conf-st0rag31).
+  - MFA/TOTP seeds and jwt_keys in the same store are NOT one-way and are recoverable in plaintext.
+  related_concerns:
+  - authenticity
+- schema_version: 1
+  id: conf-cap-88473a97
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Per-entity READ permission enforced at the state-read API (access scoping at data-element granularity)
+  description: '`homeassistant.components.api.APIEntityStateView.get` (cev-a1000011)
+
+    enforces `user.permissions.check_entity(entity_id, POLICY_READ)` and
+
+    raises `Unauthorized` on deny, and `filter_entity_ids_by_permission`
+
+    (cev-a1000007) scopes the entity set a non-admin user can read per the
+
+    compiled policy (`compile_policy`, cev-a1000006, which fails closed to
+
+    deny-all on an empty/None policy). This is genuine field-/element-level
+
+    confidentiality scoping for entity-state reads, and it RESOLVES the intake
+
+    brief''s open question — the per-entity policy is enforced at runtime,
+
+    contradicting the "not enforced yet" documentation.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed for entity-state READS on GET /api/states/{entity_id}
+
+    (cev-a1000011) and the filtered list path (cev-a1000007), with deny-all
+
+    default (cev-a1000006). NOT extended in two material ways: (1) the filter
+
+    SHORT-CIRCUITS to allow-all for ANY admin (cev-a1000007) and the owner is
+
+    unconditional all-access (cev-a1000008), so this scoping protects against
+
+    non-admin over-reach only; (2) the WRITE path (POST /api/states) is
+
+    admin-or-deny with NO per-entity write policy (cev-a1000012), and
+
+    /api/config is unscoped (finding conf-apiconfig). The webhook service-call
+
+    path applies no per-entity check at all (cev-a1000015).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.api.APIEntityStateView.get:L242-L255@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if not user.permissions.check_entity(entity_id, POLICY_READ): raise Unauthorized(entity_id=entity_id)'
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.auth.permissions.filter_entity_ids_by_permission:L32-L39@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: 'if user.is_admin or user.permissions.access_all_entities(key): return list(entity_ids)'
+  control_mappings:
+    nist_800_53r5:
+    - AC-3
+    - AC-3(7)
+    - AC-4
+    - AC-6
+    - AC-24
+  caveats:
+  - Admin sessions short-circuit per-entity scoping to allow-all (cev-a1000007); owner is unconditional all-access (cev-a1000008).
+  - 'Read-side only: state WRITE is admin-granularity (cev-a1000012) and /api/config is unscoped (finding conf-apiconfig).'
+  - No tamper-evident audit of permission decisions (route to non_repudiation).
+  related_concerns:
+  - authenticity
+  - non_repudiation
+- schema_version: 1
+  id: conf-cap-277b2364
+  agent: confidentiality
+  apd_tier: trustworthiness
+  apd_goal: confidentiality
+  title: Optional NaCl SecretBox encryption of mobile_app webhook payload bodies (in-transit confidentiality, opt-in)
+  description: 'At device registration, `RegistrationsView.post` (cev-a1000014) mints a
+
+    per-device `CONF_SECRET` of `secrets.token_hex(SecretBox.KEY_SIZE)` so the
+
+    mobile_app webhook path can encrypt request bodies with libsodium''s NaCl
+
+    SecretBox (authenticated symmetric encryption). When enabled
+
+    (`supports_encryption`), webhook payloads — location, sensor PII — are
+
+    confidential in transit independent of the transport TLS, which is
+
+    valuable on the bearer-less cloudhook path that may traverse the Nabu Casa
+
+    relay.
+
+    '
+  maturity: implemented
+  scope: 'Confirmed that the registration path mints a SecretBox key and the webhook
+
+    supports encrypted bodies (code-grounded, cev-a1000014). The decisive
+
+    caveat: encryption is OPT-IN (`supports_encryption`), so the default /
+
+    non-encrypting client sends payloads in cleartext at the application layer,
+
+    and the per-device secret is itself persisted to the on-device store
+
+    (unencrypted Android Room, finding conf-androidr) and to plaintext
+
+    .storage server-side (finding conf-st0rag31). This capability covers
+
+    payload-body confidentiality ONLY when a client opts in; it does not
+
+    protect the webhook_id (which is the bearer-less authenticator) and does
+
+    not add per-entity authorization to the service-call path (cev-a1000015).
+
+    '
+  evidence:
+  - artifact: code-evidence-index.yaml
+    locator: code:homeassistant.components.mobile_app.http_api.RegistrationsView.post:L67-L88@28076bcad6158160647ac62c92f1ff5acd4851ca
+    excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
+  control_mappings:
+    nist_800_53r5:
+    - SC-8
+    - SC-8(1)
+    - SC-12
+    - SC-13
+    mitre_attack_mitigations:
+    - id: M1041
+      rationale: NaCl SecretBox authenticated encryption of webhook bodies mitigates interception of location/sensor PII in transit (T1040) when enabled.
+    mitre_attack:
+    - technique: T1040
+      sub_technique: null
+      tactic: TA0006
+      rationale: SecretBox-encrypted bodies deny Network Sniffing of the webhook payload PII independent of the transport layer.
+  caveats:
+  - Encryption is opt-in (supports_encryption); default clients send cleartext application-layer payloads.
+  - The per-device secret is persisted to the unencrypted on-device Room DB and plaintext server-side .storage.
+  - Protects body confidentiality only; the webhook_id remains a bearer-less authenticator with no per-entity authz (cev-a1000015).
+  related_concerns:
+  - authenticity
+  - integrity
