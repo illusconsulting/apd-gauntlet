@@ -336,9 +336,19 @@ function FindingDetail({ finding, embedded = false, onOpenPath }) {
         {f.lens_perspectives?.length > 0 && (
           <section className="finding-detail__block">
             <div className="finding-detail__block-head"><span>Lens perspectives merged</span></div>
-            <div className="tagrow">
-              {f.lens_perspectives.map((id) => (
-                <span key={id} className="pill" style={{ fontSize: "10.5px" }}>{id}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              {f.lens_perspectives.map((lp, i) => (
+                <div key={lp.lens || i}>
+                  <span className="pill" style={{ fontSize: "10.5px", textTransform: "capitalize" }}>
+                    {(lp.lens || "lens").replace(/_/g, " ")}
+                  </span>
+                  {lp.summary && (
+                    <p style={{ margin: "var(--space-2) 0 0", color: "var(--ink-2)", lineHeight: 1.6 }}>{lp.summary}</p>
+                  )}
+                  {lp.detail && (
+                    <p style={{ margin: "var(--space-2) 0 0", color: "var(--ink-3)", fontSize: "var(--text-xs)", lineHeight: 1.55 }}>{lp.detail}</p>
+                  )}
+                </div>
               ))}
             </div>
           </section>

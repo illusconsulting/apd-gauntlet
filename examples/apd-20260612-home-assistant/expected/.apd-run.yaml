@@ -74,6 +74,13 @@ taxonomies:
   - masvs               # auto-seeded by mobile-applications pack
   - maswe               # auto-seeded by mobile-applications pack
 
+# ADR-0022 derived compliance projections — re-express the run's NIST 800-53r5
+# coverage in the HIPAA Security Rule + NIST CSF 2.0 auditor vocabularies
+# (healthcare-facing crosswalk view, not an audit attestation).
+projections:
+  - hipaa
+  - csf2
+
 # ---------------------------------------------------------------------------
 # CROWN JEWELS — code-grounded, all 20 candidate patterns (8 api-security + 12
 # mobile-applications) evaluated against the 23 CBM graphs; 16 confirmed

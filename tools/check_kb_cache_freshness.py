@@ -22,6 +22,10 @@ DATA = pathlib.Path(__file__).resolve().parent / "apd_gauntlet" / "data"
 # + fetched_at) in the committed cache.
 COVERED = [
     "atlas-techniques.json",    # _meta: source, source_sha256, fetched_at
+    "capec.json",                # top-level: source_url, source_sha256, fetched_at
+    "mitre-attack-detection.json", # top-level: source_url, source_sha256, fetched_at
+    "hipaa-800-53-crosswalk.json", # _meta: source, source_sha256, fetched_at (CPRT-grounded)
+    "csf2-800-53-crosswalk.json",  # _meta: source, source_sha256, fetched_at (CPRT-grounded)
     "cwe.json",                  # top-level: source_url, source_sha256, fetched_at
     "d3fend.json",               # top-level: source_url, source_sha256, fetched_at
     "masvs.json",                # _meta: source, source_sha256, commit, fetched_at

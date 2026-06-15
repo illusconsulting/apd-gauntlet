@@ -421,6 +421,10 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--ink-3);
+  /* Long, space-less code_recon locators (code:a.b.c:L1-L2@<sha>) must wrap
+     inside the grid track rather than overflow into the excerpt column. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .evidence-item__where strong { color: var(--ink); font-weight: 500; }
 .evidence-item__excerpt {
@@ -428,6 +432,8 @@
   font-size: var(--text-xs);
   color: var(--ink-2);
   line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .recommendation {
   background: var(--paper-2);

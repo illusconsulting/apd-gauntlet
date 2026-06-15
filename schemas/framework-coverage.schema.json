@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/framework-coverage.schema.json",
+  "title": "APD Gauntlet Compliance Projection (derived 800-53r5 -> framework view)",
+  "description": "Synthesizer-authored derived view (ADR-0022). Projects the existing NIST 800-53r5 control coverage into an auditor framework (HIPAA Security Rule, NIST CSF 2.0) via a published crosswalk. NOT an audit attestation: each row carries the NIST IR 8477 STRM relationship of its contributing controls and a fidelity flag.",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "target", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "target":         { "type": "string", "enum": ["hipaa", "csf2"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_id", "target_title", "source_controls", "finding_count",
+                     "finding_ids", "capability_count", "capability_ids", "posture", "fidelity"],
+        "additionalProperties": false,
+        "properties": {
+          "target_id":    { "type": "string", "minLength": 1 },
+          "target_title": { "type": "string" },
+          "source_controls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "relationship"],
+              "additionalProperties": false,
+              "properties": {
+                "id":           { "type": "string", "minLength": 1 },
+                "relationship": { "type": "string" }
+              }
+            }
+          },
+          "finding_count":    { "type": "integer", "minimum": 0 },
+          "finding_ids":      { "type": "array", "items": { "type": "string" } },
+          "capability_count": { "type": "integer", "minimum": 0 },
+          "capability_ids":   { "type": "array", "items": { "type": "string" } },
+          "posture":  { "type": "string", "enum": ["gapped", "covered", "gapped_and_covered", "silent"] },
+          "fidelity": { "type": "string", "enum": ["exact", "partial"] }
+        }
+      }
+    }
+  }
+}

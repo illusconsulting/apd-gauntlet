@@ -169,7 +169,7 @@ the *finding* record (which carries `schema_version: const 1`) by design.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json",
   "title": "APD Gauntlet Domain-Improvement Opportunity",
   "type": "object",
   "required": [
@@ -406,7 +406,7 @@ case; all other goals are spelled identically in enum and filename).
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvements-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvements-doc.schema.json",
   "title": "APD Gauntlet Domain-Improvements Document",
   "type": "object",
   "required": ["schema_version", "generated_by", "examined_domains", "improvements"],
@@ -420,7 +420,7 @@ case; all other goals are spelled identically in enum and filename).
     },
     "improvements": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json" }
     }
   }
 }
@@ -436,7 +436,7 @@ empty run still emits `examined_domains: [...]`:
 improvements: []}` — schema-valid, `improvements` empty.
 
 The `improvements[].items` `$ref` uses the **full absolute `$id` URI**
-(`https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json`),
+(`https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json`),
 matching the five existing `-doc` wrappers (`nist-coverage-doc` et al.) and
 resolving through `validate.build_registry()` (which indexes every
 `schemas/*.schema.json` by its absolute `$id`, not by relative filename). A bare

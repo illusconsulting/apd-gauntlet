@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/rejected-records.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/rejected-records.schema.json",
   "title": "APD Gauntlet Rejected Records",
   "description": "Records excluded from clustering (validation failures) and stale-capability maturity downgrades, with a reason per record.",
   "type": "object",

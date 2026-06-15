@@ -11,7 +11,7 @@ from apd_gauntlet.validate import build_registry
 def _validator():
     reg = build_registry()
     schema = reg.contents(
-        "https://github.com/shoveleejoe/apd-gauntlet/schemas/metrics.schema.json"
+        "https://github.com/illusconsulting/apd-gauntlet/schemas/metrics.schema.json"
     )
     return jsonschema.Draft202012Validator(schema, registry=reg)
 

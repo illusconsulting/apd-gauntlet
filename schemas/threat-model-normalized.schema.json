@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/threat-model-normalized.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/threat-model-normalized.schema.json",
   "title": "APD Gauntlet Normalized Threat Model",
   "type": "object",
   "required": ["schema_version", "generated_by", "source_artifact", "methodology", "entries"],

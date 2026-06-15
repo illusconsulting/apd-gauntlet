@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-candidates.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/cluster-candidates.schema.json",
   "title": "APD Gauntlet Cluster Candidates",
   "description": "Mechanical candidate groups emitted by the cluster-candidates command (5a). Read by the apd-cluster-adjudicator.",
   "type": "object",

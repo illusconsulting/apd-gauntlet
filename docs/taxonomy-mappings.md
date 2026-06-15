@@ -135,6 +135,44 @@ This writes `tools/apd_gauntlet/data/masvs.json` (MASVS v2.1.0 controls) and `to
 
 When `masvs` is declared, the synthesizer emits `40-synthesis/masvs-coverage.yaml` (schema: `masvs-coverage.schema.json`) — one entry per cited control with `finding_count`, `capability_count`, surfaces, and a `posture` from `coverage_logic.posture()`. When `maswe` is declared, it emits `40-synthesis/maswe-coverage.yaml` (schema: `maswe-coverage.schema.json`) — one entry per cited weakness with `finding_count`, the filing `category`/`status`, and the `parent_masvs` controls. The report renders these as the **"OWASP MASVS"** and **"OWASP MASWE"** taxonomy families in two Coverage sub-tabs.
 
+## Derived views vs. emission taxonomies (v1.7+)
+
+The taxonomies above are **emission** taxonomies: a specialist agent authors the
+mapping into a record's `control_mappings` under the high-confidence bar. As of
+[ADR-0022](adrs/0022-derived-cross-framework-views.md) the gauntlet also supports
+**derived views** — cross-framework relationships the *synthesizer* computes from
+anchors specialists already emit plus a bundled authoritative crosswalk catalog.
+A derived view never adds a `control_mappings` key, never appears in specialist
+discipline, and never sits in the run-config `taxonomies` enum; it is gated on
+its input anchors being present, and its absence-of-link is silence (never a
+negative finding).
+
+The first derived view is the **MITRE CAPEC bridge** (`40-synthesis/capec-bridge.yaml`,
+schema `capec-bridge.schema.json`). For each finding it uses CAPEC — the
+authoritative link between CWE weaknesses and ATT&CK techniques — to **corroborate**
+a co-tagged `cwe` + `mitre_attack` technique (a real attack pattern relates both)
+and to **suggest** the missing side when only one is tagged. It is emitted only
+when both `cwe` and `mitre_attack` are declared and a bridge or suggestion exists.
+Refresh the catalog with `apd-gauntlet refresh-capec` (writes `data/capec.json`).
+CAPEC ids resolve to titles + `capec.mitre.org` URLs in the report.
+
+Two more derived views ship alongside it:
+
+- **ATT&CK detection overlay** (`detection-coverage.yaml`) — for each exposed
+  ATT&CK technique, the data components ATT&CK says are required to detect it
+  (the telemetry/Non-Repudiation side). Gated on `mitre_attack`; the catalog is
+  refreshed by `refresh-mitre` (writes `data/mitre-attack-detection.json`).
+- **Compliance projection** (`hipaa-coverage.yaml`, `csf2-coverage.yaml`) — the
+  run's NIST 800-53r5 coverage projected into the HIPAA Security Rule and NIST
+  CSF 2.0, carrying the STRM relationship + an `exact|partial` fidelity flag.
+  Opt-in via the run-config `projections:` list. Rendered as a *derived
+  projection — not an audit attestation*. The crosswalk data is **grounded
+  against NIST CPRT exports** (`apd-gauntlet refresh-crosswalks --csf2-json …
+  --hipaa-json …`): control-level mappings are validated to be a subset of NIST's
+  stated references (CSF 2.0 is family-level; HIPAA 800-66r2 is publication-level,
+  so its control selections come from 800-66r1 Appendix D), and titles + provenance
+  are pulled from the exports.
+
 ## Synthesizer rollups
 
 When the relevant taxonomies are declared and findings/capabilities carry the mappings, the synthesizer emits:
@@ -158,6 +196,7 @@ apd-gauntlet refresh-owasp
 apd-gauntlet refresh-d3fend
 apd-gauntlet refresh-atlas
 apd-gauntlet refresh-mas
+apd-gauntlet refresh-capec
 ```
 
 Each script applies a 60-second HTTP timeout, a 200 MiB response cap, and records a `source_sha256` and `fetched_at` in the projected JSON. Recommended cadence: **quarterly**, or whenever a taxonomy publishes a new edition you intend to adopt.

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/run-config.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/run-config.schema.json",
   "title": "APD Gauntlet Run Configuration",
   "type": "object",
   "required": ["run_id", "domains", "framework_version"],
@@ -33,6 +33,15 @@
       "items": {
         "type": "string",
         "enum": ["cwe", "mitre_attack", "d3fend", "owasp_top10", "owasp_api_top10", "owasp_llm_top10", "mitre_atlas", "masvs", "maswe"]
+      }
+    },
+    "projections": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "ADR-0022 derived compliance projections to emit: the synthesizer projects the run's NIST 800-53r5 coverage into these auditor frameworks via a published crosswalk. Opt-in (not a specialist-emission taxonomy); a derived coverage view, never an audit attestation.",
+      "items": {
+        "type": "string",
+        "enum": ["hipaa", "csf2"]
       }
     },
     "threat_model": {

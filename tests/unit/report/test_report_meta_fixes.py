@@ -30,7 +30,7 @@ from apd_gauntlet.report.transform import _count_artifact_types
     "slug, expected",
     [
         # The headline bug: lowercase multi-word repo after GitHub-.
-        ("Users-shoveleejoe-Documents-GitHub-open-notebook", "Open Notebook"),
+        ("Users-user-Documents-GitHub-open-notebook", "Open Notebook"),
         ("Users-x-Documents-GitHub-data-formulator", "Data Formulator"),
         # CamelCase repo names are preserved, not title-flattened.
         ("Users-alice-Documents-GitHub-MyProject", "MyProject"),
@@ -47,7 +47,7 @@ def test_humanise_slug_recovers_repo_name(slug: str, expected: str) -> None:
 
 def test_humanise_slug_never_returns_parent_dir() -> None:
     """The exact open-notebook regression: must NOT be 'GitHub'."""
-    assert _humanise_slug("Users-shoveleejoe-Documents-GitHub-open-notebook") != "GitHub"
+    assert _humanise_slug("Users-user-Documents-GitHub-open-notebook") != "GitHub"
 
 
 def test_extract_subject_explicit_wins() -> None:
@@ -59,7 +59,7 @@ def test_extract_subject_explicit_wins() -> None:
 
 
 def test_extract_subject_humanises_cbm_slug() -> None:
-    run_cfg = {"cbm_project": "Users-shoveleejoe-Documents-GitHub-open-notebook"}
+    run_cfg = {"cbm_project": "Users-user-Documents-GitHub-open-notebook"}
     assert _extract_subject(run_cfg) == "Open Notebook"
 
 

@@ -1,0 +1,403 @@
+schema_version: 1
+generated_by: synthesizer
+target: hipaa
+entries:
+- target_id: 164.312(a)(2)(i)
+  target_title: Unique User Identification
+  source_controls:
+  - id: AC-2
+    relationship: intersects_with
+  - id: AC-2(2)
+    relationship: intersects_with
+  - id: AC-2(3)
+    relationship: intersects_with
+  - id: IA-2
+    relationship: intersects_with
+  - id: IA-2(1)
+    relationship: intersects_with
+  - id: IA-2(2)
+    relationship: intersects_with
+  - id: IA-2(8)
+    relationship: intersects_with
+  finding_count: 13
+  finding_ids:
+  - apath-069b3352
+  - apath-1c6e6d93
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-3dbf15e7
+  - auth-3f2314a4
+  - auth-6924f467
+  - auth-7162fd48
+  - auth-dfed90e4
+  - ephem-053957f3
+  - ephem-9915ab91
+  - ephem-a879a34b
+  - merged-a49cb674
+  capability_count: 3
+  capability_ids:
+  - auth-cap-8144e2be
+  - auth-cap-f01e6108
+  - intg-cap-7a54b1a7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.308(a)(4)
+  target_title: Information Access Management
+  source_controls:
+  - id: AC-2
+    relationship: intersects_with
+  - id: AC-2(2)
+    relationship: intersects_with
+  - id: AC-2(3)
+    relationship: intersects_with
+  - id: AC-3
+    relationship: intersects_with
+  - id: AC-3(7)
+    relationship: intersects_with
+  finding_count: 9
+  finding_ids:
+  - apath-069b3352
+  - apath-1c6e6d93
+  - conf-ef49b4b0
+  - ephem-053957f3
+  - ephem-9915ab91
+  - ephem-a879a34b
+  - merged-1119b0be
+  - merged-66801b1b
+  - merged-a49cb674
+  capability_count: 5
+  capability_ids:
+  - auth-cap-e9f55df8
+  - conf-cap-88473a97
+  - intg-cap-e18bb24c
+  - intg-cap-e88c8857
+  - intg-cap-ecebb879
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(a)(2)(iv)
+  target_title: Encryption and Decryption
+  source_controls:
+  - id: SC-13
+    relationship: intersects_with
+  - id: SC-28
+    relationship: intersects_with
+  - id: SC-28(1)
+    relationship: intersects_with
+  finding_count: 10
+  finding_ids:
+  - apath-5390f103
+  - apath-58d38c18
+  - apath-81ea3f91
+  - apath-9cb7577b
+  - apath-b3a517fc
+  - conf-205c53a5
+  - conf-7a74a4a0
+  - conf-a30cca33
+  - merged-1119b0be
+  - merged-a49cb674
+  capability_count: 4
+  capability_ids:
+  - conf-cap-01c47d42
+  - conf-cap-1044dbb3
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(a)(1)
+  target_title: Access Control
+  source_controls:
+  - id: AC-3
+    relationship: intersects_with
+  - id: AC-3(7)
+    relationship: intersects_with
+  - id: AC-6
+    relationship: intersects_with
+  - id: AC-6(1)
+    relationship: intersects_with
+  - id: AC-6(2)
+    relationship: intersects_with
+  - id: AC-6(5)
+    relationship: intersects_with
+  - id: AC-6(9)
+    relationship: intersects_with
+  finding_count: 8
+  finding_ids:
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-6924f467
+  - auth-7162fd48
+  - conf-ef49b4b0
+  - ephem-a879a34b
+  - merged-1119b0be
+  - merged-66801b1b
+  capability_count: 5
+  capability_ids:
+  - auth-cap-e9f55df8
+  - conf-cap-88473a97
+  - intg-cap-e18bb24c
+  - intg-cap-e88c8857
+  - intg-cap-ecebb879
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(c)(1)
+  target_title: Integrity
+  source_controls:
+  - id: AU-9
+    relationship: intersects_with
+  - id: AU-9(2)
+    relationship: intersects_with
+  - id: AU-9(3)
+    relationship: intersects_with
+  - id: AU-9(4)
+    relationship: intersects_with
+  - id: AU-9(6)
+    relationship: intersects_with
+  - id: SI-7
+    relationship: intersects_with
+  - id: SI-7(1)
+    relationship: intersects_with
+  - id: SI-7(6)
+    relationship: intersects_with
+  - id: SI-7(8)
+    relationship: intersects_with
+  finding_count: 8
+  finding_ids:
+  - apath-37351bc1
+  - apath-9cb7577b
+  - auth-3794d338
+  - auth-8a380b11
+  - auth-8f0d8172
+  - immut-5a5ef5bd
+  - merged-1119b0be
+  - merged-66801b1b
+  capability_count: 4
+  capability_ids:
+  - immut-cap-937d14c1
+  - intg-cap-70ef26f7
+  - intg-cap-7a54b1a7
+  - intg-cap-e18bb24c
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(a)(2)(iii)
+  target_title: Automatic Logoff
+  source_controls:
+  - id: AC-12
+    relationship: intersects_with
+  - id: AC-12(1)
+    relationship: intersects_with
+  finding_count: 6
+  finding_ids:
+  - apath-069b3352
+  - apath-6f901446
+  - ephem-053957f3
+  - ephem-db8641be
+  - ephem-f19f24f9
+  - merged-a49cb674
+  capability_count: 4
+  capability_ids:
+  - dist-cap-827afb47
+  - ephem-cap-5113fad9
+  - ephem-cap-f5d582d0
+  - ephem-cap-fb2d6d4d
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(d)
+  target_title: Person or Entity Authentication
+  source_controls:
+  - id: IA-2
+    relationship: intersects_with
+  - id: IA-2(1)
+    relationship: intersects_with
+  - id: IA-2(2)
+    relationship: intersects_with
+  - id: IA-2(8)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-3dbf15e7
+  - auth-3f2314a4
+  - auth-6924f467
+  - auth-7162fd48
+  - auth-dfed90e4
+  capability_count: 3
+  capability_ids:
+  - auth-cap-8144e2be
+  - auth-cap-f01e6108
+  - intg-cap-7a54b1a7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(e)(1)
+  target_title: Transmission Security
+  source_controls:
+  - id: SC-8
+    relationship: intersects_with
+  - id: SC-8(1)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-a5e48149
+  - apath-ff51339a
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  - conf-3060c50e
+  - tmeval-5c02d052
+  capability_count: 2
+  capability_ids:
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(e)(2)(i)
+  target_title: Integrity Controls
+  source_controls:
+  - id: SC-8
+    relationship: intersects_with
+  - id: SC-8(1)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-a5e48149
+  - apath-ff51339a
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  - conf-3060c50e
+  - tmeval-5c02d052
+  capability_count: 2
+  capability_ids:
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(e)(2)(ii)
+  target_title: Encryption
+  source_controls:
+  - id: SC-13
+    relationship: intersects_with
+  finding_count: 4
+  finding_ids:
+  - apath-5390f103
+  - apath-81ea3f91
+  - conf-205c53a5
+  - merged-a49cb674
+  capability_count: 3
+  capability_ids:
+  - conf-cap-1044dbb3
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.308(a)(7)(ii)(A)
+  target_title: Data Backup Plan
+  source_controls:
+  - id: CP-9
+    relationship: intersects_with
+  - id: CP-9(1)
+    relationship: intersects_with
+  - id: CP-9(8)
+    relationship: intersects_with
+  finding_count: 5
+  finding_ids:
+  - apath-b3a517fc
+  - avail-5af6fee5
+  - dist-69bbaf5c
+  - merged-1119b0be
+  - merged-a49cb674
+  capability_count: 1
+  capability_ids:
+  - immut-cap-5e14aa20
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.310(d)(2)(iv)
+  target_title: Data Backup and Storage
+  source_controls:
+  - id: CP-9
+    relationship: intersects_with
+  - id: CP-9(1)
+    relationship: intersects_with
+  - id: CP-9(8)
+    relationship: intersects_with
+  finding_count: 5
+  finding_ids:
+  - apath-b3a517fc
+  - avail-5af6fee5
+  - dist-69bbaf5c
+  - merged-1119b0be
+  - merged-a49cb674
+  capability_count: 1
+  capability_ids:
+  - immut-cap-5e14aa20
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.312(b)
+  target_title: Audit Controls
+  source_controls:
+  - id: AU-12
+    relationship: intersects_with
+  - id: AU-12(1)
+    relationship: intersects_with
+  - id: AU-2
+    relationship: intersects_with
+  - id: AU-3
+    relationship: intersects_with
+  - id: AU-3(1)
+    relationship: intersects_with
+  finding_count: 4
+  finding_ids:
+  - apath-95a6ebd6
+  - merged-0ccd3ea6
+  - merged-66801b1b
+  - nonrep-af1c55d3
+  capability_count: 2
+  capability_ids:
+  - nonrep-cap-510a35c7
+  - nonrep-cap-e865e0d3
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: 164.308(a)(7)(ii)(B)
+  target_title: Disaster Recovery Plan
+  source_controls:
+  - id: CP-10
+    relationship: intersects_with
+  finding_count: 3
+  finding_ids:
+  - avail-5af6fee5
+  - merged-0ccd3ea6
+  - merged-4f0fe6c1
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+  fidelity: partial
+- target_id: 164.308(a)(1)(ii)(D)
+  target_title: Information System Activity Review
+  source_controls:
+  - id: AU-6
+    relationship: intersects_with
+  - id: AU-6(3)
+    relationship: intersects_with
+  finding_count: 2
+  finding_ids:
+  - merged-0ccd3ea6
+  - merged-66801b1b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+  fidelity: partial
+- target_id: 164.308(a)(5)(ii)(C)
+  target_title: Log-in Monitoring
+  source_controls:
+  - id: AU-6
+    relationship: intersects_with
+  - id: AU-6(3)
+    relationship: intersects_with
+  finding_count: 2
+  finding_ids:
+  - merged-0ccd3ea6
+  - merged-66801b1b
+  capability_count: 0
+  capability_ids: []
+  posture: gapped
+  fidelity: partial

@@ -1,213 +1,134 @@
 # APD Gauntlet
 
-**Multi-agent security architecture review for technical plans.** You feed it a tech plan plus supplementary artifacts (PRD, code, IaC, diagrams, threat models, ADRs); nine specialist agents — orchestrated by Claude Code — review it through nine independent lenses; a synthesizer dedups across lenses, surfaces contradictions, and emits an advisory report.
+**Multi-agent security architecture review for technical plans and running systems.** You give it a tech plan plus whatever supporting artifacts you have (PRD, source code, IaC, diagrams, threat models, ADRs); nine specialist agents — orchestrated by Claude Code — review it through nine independent security lenses; a synthesizer dedups across lenses, surfaces contradictions, and emits an advisory report with an interactive HTML view.
 
-The output is **structured advisory input for an architect, not a gate**. It does not approve or block changes — it makes the human review better-informed and harder to bypass.
+The output is **structured advisory input for an architect — not a gate.** It doesn't approve or block changes; it makes the human review better-informed and harder to bypass.
+
+## 1. What it does
+
+The review is organized around the **APD framework — three tiers, nine goals:**
 
 ```text
-APD framework — 3 tiers × 9 goals
-─────────────────────────────────
-Trustworthiness   →  Confidentiality · Integrity · Availability
-Scalability       →  Distributed · Resilient · Ephemeral
-Auditability      →  Authenticity · Non-Repudiation · Immutability
+Trustworthiness  →  Confidentiality · Integrity · Availability
+Scalability      →  Distributed · Resilient · Ephemeral
+Auditability     →  Authenticity · Non-Repudiation · Immutability
 ```
 
-Findings carry NIST 800-53r5 + MITRE ATT&CK mappings (and CWE / OWASP Top 10 / API / LLM / MITRE ATLAS mappings when the run declares those taxonomies). Capabilities carry NIST + ATT&CK mitigation + optional D3FEND mappings. Severity is calibrated against an explicit, domain-specific rubric — never a free-text guess.
+Each run produces:
 
----
+- **An advisory report** (`40-synthesis/advisory-report.md`) and a self-contained interactive **HTML report** with tabs for Start-here, Overview, Findings, Capabilities, Coverage, Threat model, Attack paths, Architecture, and Annexes.
+- **Findings and capabilities**, each severity-calibrated against an explicit domain rubric and mapped to **NIST 800-53r5** and **MITRE ATT&CK** by default — plus **CWE, OWASP Top 10 / API / LLM, MITRE ATLAS, OWASP MASVS/MASWE, and D3FEND** when the run declares them.
+- **Derived cross-framework views** the synthesizer computes for free: a **CAPEC bridge** (corroborating each finding's CWE ↔ ATT&CK technique), an **ATT&CK detection overlay** (the telemetry needed to detect each exposed technique), and a **compliance crosswalk** projecting NIST 800-53r5 coverage into the **HIPAA Security Rule** and **NIST CSF 2.0** (opt-in via the run's `projections:` setting).
 
-## At a glance
+Optional, when you supply the inputs:
 
-| You give it | It produces |
-|---|---|
-| A tech plan + supporting artifacts | An advisory report (`40-synthesis/advisory-report.md`) and an interactive HTML view |
-| A threat model (optional — Threat Dragon, MS TMT, STRIDE, LINDDUN, MAESTRO, attack trees) | A coverage/contradiction/silence report against your TM |
-| Crown jewels + attacker positions (optional, v1.4+) | A BloodHound-style attack-path graph with a D3FEND defensive overlay on bottleneck edges |
-| A domain pack (PBM ships in v1; api-security, identity-security, security-tooling, agentic-ai ship in v1.5) | Calibrated severity, consequential-action surface, immutability classes, and per-goal domain sidecars that bound each lens agent's context |
+- **Threat-model evaluation** — coverage / contradiction / silence against a supplied TM (Threat Dragon, MS TMT, STRIDE, LINDDUN, MAESTRO, attack trees).
+- **Code reconnaissance (accuracy/quality boost)** — grounds findings in *real call-graph behavior* instead of design-doc intent, via the **DeusData [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (CBM)** graph. The `apd-code-recon` agent queries an indexed codebase with the `mcp__codebase-memory-mcp__*` tools — `search_graph`, `trace_path`, `get_code_snippet`, `query_graph`, `get_architecture`, `search_code` — and emits a code-evidence index the nine lens agents cite (across one or many repositories). This is the single biggest lever on finding accuracy when source is available.
+- **Attack-path analysis** — a BloodHound-style asset graph from declared crown jewels + attacker positions, with a **D3FEND** defensive overlay on bottleneck edges.
+- **Domain packs** — calibrate severity and lens context for your domain. Six ship today: `pbm`, `api-security`, `identity-security`, `security-tooling`, `agentic-ai`, `mobile-applications`.
 
----
+## 2. How to run it
 
-## Prerequisites
+**Prerequisites:** Python ≥ 3.10, [Claude Code](https://claude.com/claude-code) (with agent + skill support), and a tech plan (plus any optional artifacts) for the change you want reviewed.
 
-- **Python ≥ 3.10** (for the `apd-gauntlet` CLI — validator, scaffold, HTML report generator).
-- **Claude Code** with agent and skill support — the gauntlet's specialist agents run as Claude Code subagents.
-- **A tech plan** for the change you want reviewed. Optional but recommended: PRD, source code, IaC, architecture diagrams, threat models, ADRs, runbooks, test reports.
-
----
-
-## Install
-
-Install into an isolated environment — a virtual environment or `pipx` — so the
-`apd-gauntlet` console script stays off system Python and on your `PATH`:
+**1 — Get the repo and install the CLI.** Running the gauntlet happens from a clone of this repo (the workflow runner, agents, and skills live here):
 
 ```bash
-python3 -m venv .venv && . .venv/bin/activate   # or: pipx install apd-gauntlet
-pip install apd-gauntlet
-apd-gauntlet --version    # prints the installed version, confirming the CLI is on your PATH
+git clone https://github.com/illusconsulting/apd-gauntlet.git && cd apd-gauntlet
+python3 -m venv .venv && . .venv/bin/activate
+pip install apd-gauntlet      # installs the apd-gauntlet CLI + the Claude Code agent/skill bundle
+apd-gauntlet --version        # confirms the CLI is on your PATH
 ```
 
-That installs both the Python CLI and the Claude Code agent + skill bundle.
-
----
-
-## First run (~10 minutes)
-
-The fastest way to see what a finished report looks like is to validate the bundled example run and open its HTML view. No Claude Code session required.
-
-### 1. Validate the bundled example run
+**2 — (Optional) See a finished report first.** A complete synthetic example ships in the repo — validate it and open its HTML, no Claude Code session required:
 
 ```bash
-git clone https://github.com/shoveleejoe/apd-gauntlet.git
-cd apd-gauntlet
-apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
-```
-
-You should see `Clean.` — the run is well-formed against every schema and cross-file invariant.
-
-### 2. View the HTML report
-
-A completed run ships a self-contained HTML bundle at `<run>/40-synthesis/report-html/`; the bundled example's is committed under `examples/`. Two ways to open it:
-
-```bash
-# Option A — open directly (no server)
+apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/        # prints "Clean."
 open examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html/index.html
 ```
 
-```bash
-# Option B — serve over HTTP (recommended; some browsers restrict
-# file:// access for the Mermaid attack-graph rendering)
-cd examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html
-python3 -m http.server 8080
-# then open http://localhost:8080
-```
-
-The report has six tabs: **Overview, Findings, Capabilities, Coverage** (NIST / ATT&CK / APD-component rollups), **Attack paths** (asset graph + enumerated paths), and **Annexes** (contradictions, severity disagreements).
-
-### 3. Scaffold your own run
+**3 — Scaffold your run.** Point `--inputs` at a folder of your artifacts and pick a domain pack:
 
 ```bash
 apd-gauntlet init-run apd-$(date +%Y%m%d)-my-feature \
-  --inputs ~/path/to/tech-plan-and-artifacts/ \
-  --domain pbm
+  --inputs ~/path/to/artifacts/ \
+  --domain pbm \
+  --taxonomies cwe,mitre_attack,d3fend        # optional; add owasp_api_top10, mitre_atlas, …
 ```
 
-This creates `runs/apd-YYYYMMDD-my-feature/` with the expected subdirectory layout and copies your artifacts into `inputs/`.
+This creates `runs/apd-YYYYMMDD-my-feature/` (gitignored, so a real report is never committed by accident) and copies your artifacts into `inputs/`.
 
-### 4. Run the gauntlet
+> **For code-grounded reviews (strongly recommended when you have the source — it's the biggest accuracy lever):** index the codebase into the DeusData [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (CBM) so the `apd-code-recon` agent can trace real call paths rather than infer from prose.
+>
+> 1. Install and run `codebase-memory-mcp` and register it in your Claude Code config so its `mcp__codebase-memory-mcp__*` tools (`index_repository`, `index_status`, `list_projects`, `get_architecture`, `search_graph`, `trace_path`, `get_code_snippet`, `query_graph`, `search_code`) are reachable from the agent runtime.
+> 2. Index each repo under review into a CBM **project** (e.g. ask Claude Code to `index_repository`; confirm with `list_projects` / `index_status`).
+> 3. Enable it in `.apd-run.yaml`:
+>
+> ```yaml
+> code_recon: auto             # default — runs if CBM is reachable, skips with a note otherwise
+> # code_recon: enabled        # hard-fail if CBM is unreachable
+> cbm_project: <project-name>  # the indexed CBM project (or repos: [{cbm_project: …}] for multi-repo systems)
+> ```
+>
+> The agent emits `00-context/code-evidence-index.yaml` (cited by every lens) and a code-architecture brief. Full guide: **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)**.
 
-In Claude Code, from the repo root, run the `apd-gauntlet` workflow runner against the scaffolded run directory:
+**4 — Run the gauntlet in Claude Code.** From the repo root, in a live session, drive the runner against your run directory:
 
 ```text
-> Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
+Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
 ```
 
-> **Run it in the foreground.** The specialists run as subagents of your live
-> Claude Code session — drive the runner in-session, not in the background
-> (`run_in_background`) or headlessly, which can interrupt the dispatches and
-> leave an empty run directory. Confirm scaffolding with the
-> [Preflight checklist](docs/running-the-gauntlet.md#preflight-confirm-scaffolding-is-in-place)
-> and read the full foreground statement in
-> [docs/running-the-gauntlet.md](docs/running-the-gauntlet.md).
+> **Run it in the foreground** — the nine specialists run as subagents of your live session. Don't run it in the background or headlessly, which can interrupt the dispatches and leave an empty run directory. See **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)** for the full operator guide (preflight, code recon, threat-model and attack-path passes).
 
-The runner (`.claude/workflows/apd-gauntlet.js`) phases the run end-to-end: it builds the `apd-domain` skill from the active pack(s) — including per-goal sidecars that each lens agent reads instead of the full cross-goal skill — runs intake, dispatches the nine specialist agents by tier, then runs the decomposed synthesis and the report-completeness audit. The completeness audit enforces eight checks before writing the HTML report; if any check fails the run blocks rather than shipping a degraded report. When it finishes (~10–30 minutes depending on artifact volume), validate and view the report exactly like step 1–2 above.
+The runner builds the domain skill, runs intake, dispatches the nine lens agents by tier, then synthesizes and runs a report-completeness audit that **blocks rather than ships a degraded report**. It finishes in ~10–30 minutes depending on artifact volume.
 
-For the full operator workflow including code reconnaissance, threat-model evaluation, and attack-path analysis, see **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)**.
-
----
-
-## Example run
-
-A complete, **synthetic** example run ships under `examples/`. Reviews you generate land in
-`runs/`, which is gitignored — so a real (potentially sensitive) security report is never
-committed by accident.
-
-| Run | Domain pack | Subject | What it demonstrates |
-|---|---|---|---|
-| `apd-20260601-claim-event-bus` | `pbm` | Synthetic claim-event bus (Kafka/PHI) | A complete gauntlet output across all nine goals — the canonical "what does a report look like" example, with NIST / ATT&CK / APD-component coverage rollups and attack-path enumeration |
-
-Validate it:
+**5 — View the report.** Validate and open it exactly like step 2:
 
 ```bash
-apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
+apd-gauntlet validate runs/apd-YYYYMMDD-my-feature/
+open runs/apd-YYYYMMDD-my-feature/40-synthesis/report-html/index.html
+# Or serve over HTTP (recommended; some browsers block file:// for graph rendering):
+#   cd runs/apd-YYYYMMDD-my-feature/40-synthesis/report-html && python3 -m http.server 8080
 ```
 
-The HTML report at `examples/apd-20260601-claim-event-bus/expected/40-synthesis/report-html/index.html` is preloaded — open it the same way as step 2 above.
+## 3. Example prompts & commands
 
----
+**In a Claude Code session** (natural language — the `apd-gauntlet` skill picks it up):
 
-## Customize for your domain
+- `Run the apd-gauntlet workflow on runs/apd-20260612-home-assistant/`
+- `Scaffold a gauntlet run for the artifacts in ./inputs against the api-security and mobile-applications packs, then run it`
+- `Run the gauntlet on runs/apd-…/ with code recon enabled and my supplied threat model`
+- `Rebuild the HTML report for runs/apd-…/`
 
-The framework is domain-neutral; the **calibration** is domain-specific. Five packs ship today:
+**Code-grounding with CBM** — prepare the codebase-memory-mcp graph before a code-recon run (the `mcp__codebase-memory-mcp__*` tools, called from a Claude Code session):
 
-- **`pbm`** — Pharmacy Benefit Management (the reference pack)
-- **`api-security`** — OWASP API Top 10 anchored
-- **`identity-security`** — NIST 800-63B + OAuth/OIDC/SAML + GDPR
-- **`security-tooling`** — NIST 800-115 + ATT&CK + CFAA/ROE (two-axis severity)
-- **`agentic-ai`** — autonomous LLM-agent systems (OWASP LLM Top 10; ATLAS/MAESTRO grounding)
+- `Index the repo at ./payments-service into codebase-memory-mcp` → `index_repository`
+- `List the indexed CBM projects and their index status` → `list_projects` · `index_status`
+- `Show the architecture of the payments-service project` → `get_architecture`
+- `Trace the call path from handle_request to the audit logger; show the snippet` → `search_graph` · `trace_path` · `get_code_snippet`
+- …then run the gauntlet with `code_recon: enabled` and `cbm_project: payments-service` in `.apd-run.yaml`.
 
-Author a new pack with `apd-gauntlet build-domain-skill <pack-name>` and the structure documented in **[docs/adapting-to-other-domains.md](docs/adapting-to-other-domains.md)**. A pack defines:
+**From your terminal** (the `apd-gauntlet` CLI — every command supports `--help`):
 
-- A severity rubric (what's critical vs high vs medium for your domain)
-- The consequential-action surface (what must produce audit logs)
-- Immutability classes (what data must not change)
-- A field-level data taxonomy with regulatory citations
-- Per-goal "common patterns" the specialists use as hint catalogues
+```bash
+# Scaffold · validate · report
+apd-gauntlet init-run <id> --inputs DIR --domain pbm [--taxonomies cwe,mitre_attack,d3fend]
+apd-gauntlet validate <run-dir>                 # schema + semantic + cross-file checks
+apd-gauntlet build-report <run-dir>             # (re)generate the HTML report
+apd-gauntlet summarize <run-dir>                # finding / capability statistics
 
----
+# Optional passes
+apd-gauntlet parse-threat-model <file>          # normalize a supplied threat model
+apd-gauntlet analyze-attack-paths <run-dir>     # asset graph + enumerated paths + D3FEND overlay
 
-## CLI reference
+# Domain packs
+apd-gauntlet build-domain-skill <pack>          # assemble the apd-domain skill from a pack
+apd-gauntlet validate-domain <pack>             # lint a pack for completeness
 
-| Command | Purpose |
-|---|---|
-| `apd-gauntlet init-run <id> --inputs DIR [--domain pbm]` | Scaffold a new run directory |
-| `apd-gauntlet validate <run-dir>` | Run schema + semantic + cross-file validation |
-| `apd-gauntlet build-report <run-dir>` | Regenerate the HTML report |
-| `apd-gauntlet analyze-attack-paths <run-dir>` | (v1.4+) Build asset graph + enumerate paths |
-| `apd-gauntlet parse-threat-model <file>` | Normalize a TM into the gauntlet's graph format |
-| `apd-gauntlet build-domain-skill <pack>` | Assemble the `apd-domain` skill from a pack (full cross-goal SKILL.md + per-goal by-goal/ sidecars; pass `--full-only` to suppress sidecars) |
-| `apd-gauntlet validate-domain <pack>` | Lint a domain pack for completeness |
-| `apd-gauntlet summarize <run-dir>` | Finding / capability statistics |
-| `apd-gauntlet lint-agents` | Check agent file frontmatter |
-| `apd-gauntlet check-ids <yaml>` | Verify deterministic IDs |
-| `apd-gauntlet refresh-mitre / refresh-cwe / refresh-d3fend / refresh-owasp / refresh-atlas` | Refresh cached taxonomy data |
-
-Every command supports `--help`.
-
----
-
-## Documentation
-
-| Doc | When you need it |
-|---|---|
-| [Running the gauntlet](docs/running-the-gauntlet.md) | Operator guide — full workflow including code recon, TM evaluation, attack-path analysis |
-| [HTML report](docs/html-report.md) | Report structure, regeneration, what `report-data.yaml` adds |
-| [Attack-path analysis](docs/attack-path-analysis.md) | v1.4+ — crown jewels, attacker positions, D3FEND overlay, `apath-` finding flavors |
-| [Threat modeling](docs/threat-modeling.md) | Supplying a TM, supported formats, the `tmeval-` finding flavors |
-| [Adapting to other domains](docs/adapting-to-other-domains.md) | Authoring a new domain pack |
-| [Architecture](docs/architecture.md) | How the gauntlet works under the hood |
-| [Extending agents](docs/extending-agents.md) | Framework-level contributor guide |
-| [Taxonomy mappings](docs/taxonomy-mappings.md) | NIST / ATT&CK / CWE / OWASP / D3FEND wiring |
-| [Schema evolution](docs/schema-evolution.md) | Versioning policy |
-| [ADRs](docs/adrs/) | Design rationale |
-
----
-
-## Troubleshooting
-
-**`apd-gauntlet: command not found`** — make sure your pip install location is on `PATH`. Verify with `pip show apd-gauntlet` and check the `Location` field's parent `bin/` directory.
-
-**HTML report shows a blank Coverage / Attack paths tab** — the synthesizer may have emitted a YAML shape the transforms don't recognize. The transforms tolerate four shape variants today (chainguard-era, crAPI-era, caldera-era, authentik-era); if you hit a fifth, run `apd-gauntlet build-report <run-dir>` and check the console output, then open an issue with a redacted copy of the offending `40-synthesis/*.yaml` file.
-
-**Validator fails with cross-file errors** — start with `apd-gauntlet validate <run-dir> --schema-only` to isolate schema problems from semantic ones, then re-run without the flag once the schema is clean.
-
-**Mermaid graph labels are invisible in the report** — your browser's strict-mode CSP may be stripping `<foreignObject>` content. Either use Option B (HTTP server) instead of `file://`, or regenerate with `apd-gauntlet build-report` against v1.4.0 or newer.
-
----
-
-## Contributing
-
-Domain pack proposals welcome — open an issue first using the `domain_pack_proposal` template. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, test conventions, and the PR checklist.
-
-## License
-
-[Apache 2.0](LICENSE).
+# Refresh cached reference data (quarterly, or when a taxonomy publishes a new edition)
+apd-gauntlet refresh-mitre        # ATT&CK techniques + mitigations + detection overlay
+apd-gauntlet refresh-cwe          # CWE
+apd-gauntlet refresh-capec        # CAPEC (CWE ↔ ATT&CK bridge)
+apd-gauntlet refresh-d3fend / refresh-atlas / refresh-mas / refresh-owasp
+apd-gauntlet refresh-crosswalks --csf2-json <export> --hipaa-json <export>   # HIPAA + CSF 2.0
+```

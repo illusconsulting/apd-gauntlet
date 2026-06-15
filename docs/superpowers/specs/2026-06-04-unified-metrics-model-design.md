@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-04
 - **Status:** Approved (brainstorming) — pending spec review. Revised after adversarial spec-verification (16-item punch-list folded in).
-- **Author:** Jon King (with Claude)
+- **Author:** APD Gauntlet contributors (with Claude)
 - **Topic:** Single canonical metrics artifact (`40-synthesis/metrics.yaml`) consumed by the report-writer, transform, and audit; removal of the report summary block's parallel recomputation.
 
 ---

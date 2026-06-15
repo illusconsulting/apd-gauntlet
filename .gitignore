@@ -40,3 +40,8 @@ runs/
 
 # Superpowers brainstorm scratch (visual companion mockups) — local only
 .superpowers/
+
+# NIST CPRT raw exports (inputs to refresh-crosswalks; grounded data committed instead)
+docs/cprt_*.json
+docs/cprt_*.xlsx
+docs/csf-pf-*.xlsx

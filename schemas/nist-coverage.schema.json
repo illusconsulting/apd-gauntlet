@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/nist-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/nist-coverage.schema.json",
   "title": "APD Gauntlet NIST 800-53r5 Coverage Row",
   "type": "object",
   "required": ["id", "family", "title", "finding_count", "finding_ids", "capability_count", "capability_ids", "posture"],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/metrics.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/metrics.schema.json",
   "title": "APD Gauntlet Report Metrics (canonical summary block)",
   "type": "object",
   "additionalProperties": false,

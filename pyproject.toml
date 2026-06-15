@@ -43,8 +43,8 @@ dev = [
 apd-gauntlet = "apd_gauntlet.cli:main"
 
 [project.urls]
-Repository = "https://github.com/shoveleejoe/apd-gauntlet"
-Issues     = "https://github.com/shoveleejoe/apd-gauntlet/issues"
+Repository = "https://github.com/illusconsulting/apd-gauntlet"
+Issues     = "https://github.com/illusconsulting/apd-gauntlet/issues"
 
 [tool.setuptools.packages.find]
 where = ["tools"]

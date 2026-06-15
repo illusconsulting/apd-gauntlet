@@ -82,7 +82,7 @@ def _write_recon(dst: pathlib.Path, components: list[dict]) -> None:
             {
                 "name": "core",
                 "kind": "service",
-                "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core",
+                "repo": "Users-user-Documents-GitHub-home-assistant-repos-core",
                 "provenance": {"source": "artifact", "locator": "brief.md#core"},
                 "analysis_state": "analyzed",
             },
@@ -277,7 +277,7 @@ def test_first_finding_id_recorded(tmp_path):
 # --- repo reconciliation (display-named c4-recon process container) -----------
 
 # The real repo string for HA core in the committed index (its short-name "core").
-CORE_REPO = "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+CORE_REPO = "Users-user-Documents-GitHub-home-assistant-repos-core"
 
 
 def _write_recon_containers(dst: pathlib.Path, containers: list[dict]) -> None:

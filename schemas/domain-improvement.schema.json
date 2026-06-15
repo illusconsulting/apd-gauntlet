@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json",
   "title": "APD Gauntlet Domain-Improvement Opportunity",
   "type": "object",
   "required": [

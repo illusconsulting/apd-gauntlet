@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/defense-graph.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/defense-graph.schema.json",
   "title": "APD Gauntlet Defense Graph",
   "description": "Defense overlay showing D3FEND techniques that counter attack techniques traversing bottleneck edges. Each bottleneck carries the exposed attack techniques, candidate D3FEND counters, and the capability-backing status of each.",
   "type": "object",

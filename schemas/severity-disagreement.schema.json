@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreement.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/severity-disagreement.schema.json",
   "title": "APD Gauntlet Severity Disagreement",
   "type": "object",
   "required": ["finding_id", "agent_severities", "chosen_severity", "rationale"],

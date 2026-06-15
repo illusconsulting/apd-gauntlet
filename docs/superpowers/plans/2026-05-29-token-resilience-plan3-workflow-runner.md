@@ -1442,9 +1442,9 @@ In `plugin.json`, change the `"version": "1.4.0"` line to `"version": "1.5.0"` a
   "name": "apd-gauntlet",
   "version": "1.5.0",
   "description": "APD security architecture review framework — 9 specialist agents plus intake, the apd-gauntlet workflow runner, and a synthesizer fallback.",
-  "author": "shoveleejoe",
+  "author": "user",
   "license": "Apache-2.0",
-  "repository": "https://github.com/shoveleejoe/apd-gauntlet",
+  "repository": "https://github.com/illusconsulting/apd-gauntlet",
   "agents": "./.claude/agents/",
   "skills": "./.claude/skills/"
 }

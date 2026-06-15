@@ -83,6 +83,11 @@ window.APD_DATA = {
         "fetched_at": "2026-06-09",
         "source": "https://github.com/OWASP/maswe",
         "count": 118
+      },
+      "capec": {
+        "fetched_at": null,
+        "source": null,
+        "count": 558
       }
     },
     "active_taxonomies": [
@@ -2776,8 +2781,16 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null,
-        null
+        {
+          "lens": "availability",
+          "summary": "The artifacts do not document liveness vs readiness vs dependency health checks, nor the Supervisor watchdog/observer behavior, so whether failures are detected and acted on cannot be assessed.",
+          "detail": "avail-77752ee2: health-check depth and watchdog semantics for Core/Supervisor are undocumented in repos/supervisor-README.md, so whether failures are detected cannot be assessed. Mapped SI-13/CP-10/SC-5."
+        },
+        {
+          "lens": "resilient",
+          "summary": "Whether the Supervisor watchdog auto-restarts a hung-but-alive Core, with what backoff and restart cap, and the add-on restart policy on crash, are not in the artifacts, so the single-host instance's automatic-recovery behavior cannot be assessed.",
+          "detail": "resil-b1d0c558: Supervisor watchdog auto-recovery and add-on restart policy on Core/add-on failure are undocumented in the same supervisor-README.md, so the single-host instance's automatic-recovery behavior cannot be assessed. Mapped SI-13/SI-17/CP-10."
+        }
       ],
       "prerequisite_evidence": []
     },
@@ -2916,7 +2929,11 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null
+        {
+          "lens": "non_repudiation",
+          "summary": "The admin-gated state write and the arbitrary service-call dispatch that actuate physical devices (locks, alarms, switches) emit no security audit record naming who actuated what, defeating dispute response on the highest-impact action path.",
+          "detail": "Three merged Non-Repudiation findings. nonrep-12328d11 (device actuation, POST /api/states + service calls): no attributable record of who actuated what; mapped AU-2/AU-3/AU-10/AU-12/AU-12(1). nonrep-5dd8b9f0 (auth subsystem): login, token issuance/refresh/revocation, and password/MFA changes produce no auditable event, so credential-compromise reconstruction is impossible; mapped AU-2/AU-3/AU-10/AU-12/IA-5. nonrep-3b6ebb6c (Supervisor privileged API): SecurityMiddleware logs only role-DENY warnings, so ALLOWED add-on install, backup, and container-exec calls leave no audit record of the action or its caller; mapped AU-2/AU-3/AU-6(3)/AU-12/AC-6(9)."
+        }
       ],
       "prerequisite_evidence": [],
       "headline": true,
@@ -3052,8 +3069,16 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null,
-        null
+        {
+          "lens": "confidentiality",
+          "summary": "The Recorder history database (SQLite/MariaDB/Postgres) stores raw entity-state history — presence, geolocation/zones, lock and alarm state — with no encryption-at-rest mechanism observed, exposing the high-privacy home-occupancy fact base on any filesystem or DB read.",
+          "detail": "conf-fec577ec: the Recorder store at code:homeassistant.helpers.recorder.session_scope persists the full entity-state history with no encryption-at-rest mechanism observed; on any filesystem or DB read the home-occupancy fact base (presence, geolocation/zones, lock and alarm state) is disclosed. Mapped SC-28/SC-28(1)/SC-13/AC-4; ATT&CK T1005."
+        },
+        {
+          "lens": "immutability",
+          "summary": "The Recorder DB (session_scope) is an ordinary mutable SQLite/MariaDB/Postgres store; presence, geolocation, and lock/alarm state history can be altered or deleted by anyone with DB or host access, and there is no integrity tag to detect it.",
+          "detail": "immut-1e09d798: the Recorder DB at the same session_scope locator is an ordinary mutable store with no append-only, WORM, or content-hash protection; a compromised actor with DB or host access can silently rewrite or delete physical-device event history (presence, geolocation, lock/alarm), and no integrity tag exists to detect the alteration. Mapped AU-9/AU-9(2)/AU-9(3)/SI-7/SI-7(8)/AU-11; ATT&CK T1565, T1070."
+        }
       ],
       "prerequisite_evidence": [],
       "headline": true,
@@ -3179,7 +3204,11 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null
+        {
+          "lens": "resilient",
+          "summary": "2000+ integrations and the recorder write path share one asyncio loop with no bulkhead, per-integration execution-time budget, or watchdog, so one blocking integration starves the consequential alarm/lock and recorder paths.",
+          "detail": "Two merged Resilient findings on the shared loop. resil-5e5a02f0 (outbound side): no per-call timeout or circuit breaker on integration calls to external devices/clouds, so a slow/hostile endpoint blocks the loop and cascades platform-wide; mapped SI-13/SC-5/CP-13. resil-cb12ebae (isolation side): no bulkhead, per-integration execution-time budget, or watchdog isolating one integration from the shared loop, so one blocking integration starves the alarm/lock and recorder paths; mapped SC-6/SI-13/SC-5."
+        }
       ],
       "prerequisite_evidence": []
     },
@@ -3346,8 +3375,16 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null,
-        null
+        {
+          "lens": "integrity",
+          "summary": "All .storage is plaintext JSON gated only by 0600 file perms; there is no integrity protection on refresh-token jwt_keys, user/group policy, or integration secrets, so a file-write primitive forges signing keys or escalates a user with no detection.",
+          "detail": "intg-4768c0f0: Store._write_prepared_data writes .storage as plaintext UTF-8 JSON with 0600 perms and no MAC/content hash; a file-write primitive forges refresh-token jwt_keys or escalates a user via the permission policy with no read-time detection. Mapped SI-7/SI-7(1)/CM-5/SC-28; ATT&CK T1606."
+        },
+        {
+          "lens": "immutability",
+          "summary": "Config is YAML plus mutable plaintext .storage written in place by Store._write_prepared_data; there is no version-history requirement, no signed-commit/GitOps path as the only route to change, and no drift detection between a declared state and the running state.",
+          "detail": "immut-8eb14ea4: configuration.yaml plus .storage (same Store._write_prepared_data locator) carry no required version history, no signed-commit/GitOps-only change path, and no declared-vs-actual drift detection, so config changes leave no immutable change record. Mapped CM-2/CM-2(2)/CM-2(3)/CM-3/CM-3(1)/CM-6."
+        }
       ],
       "prerequisite_evidence": [],
       "headline": true,
@@ -5594,6 +5631,1932 @@ window.APD_DATA = {
       ]
     }
   ],
+  "capec_bridge": {
+    "bridges": [
+      {
+        "finding_id": "auth-23048c0c",
+        "capec_id": "CAPEC-141",
+        "capec_name": "Cache Poisoning",
+        "cwe": [
+          "CWE-345"
+        ],
+        "attack": [
+          "T1557"
+        ]
+      },
+      {
+        "finding_id": "auth-7162fd48",
+        "capec_id": "CAPEC-70",
+        "capec_name": "Try Common or Default Usernames and Passwords",
+        "cwe": [
+          "CWE-308"
+        ],
+        "attack": [
+          "T1078"
+        ]
+      },
+      {
+        "finding_id": "auth-7162fd48",
+        "capec_id": "CAPEC-560",
+        "capec_name": "Use of Known Domain Credentials",
+        "cwe": [
+          "CWE-308"
+        ],
+        "attack": [
+          "T1078"
+        ]
+      },
+      {
+        "finding_id": "auth-8f0d8172",
+        "capec_id": "CAPEC-186",
+        "capec_name": "Malicious Software Update",
+        "cwe": [
+          "CWE-494"
+        ],
+        "attack": [
+          "T1195"
+        ]
+      },
+      {
+        "finding_id": "auth-8f0d8172",
+        "capec_id": "CAPEC-538",
+        "capec_name": "Open-Source Library Manipulation",
+        "cwe": [
+          "CWE-494"
+        ],
+        "attack": [
+          "T1195"
+        ]
+      },
+      {
+        "finding_id": "auth-8f0d8172",
+        "capec_id": "CAPEC-691",
+        "capec_name": "Spoof Open-Source Software Metadata",
+        "cwe": [
+          "CWE-494"
+        ],
+        "attack": [
+          "T1195"
+        ]
+      },
+      {
+        "finding_id": "auth-8f0d8172",
+        "capec_id": "CAPEC-695",
+        "capec_name": "Repo Jacking",
+        "cwe": [
+          "CWE-494"
+        ],
+        "attack": [
+          "T1195"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-125",
+        "capec_name": "Flooding",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-130",
+        "capec_name": "Excessive Allocation",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-469",
+        "capec_name": "HTTP DoS",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-482",
+        "capec_name": "TCP Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-488",
+        "capec_name": "HTTP Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-489",
+        "capec_name": "SSL Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-4be2dd70",
+        "capec_id": "CAPEC-528",
+        "capec_name": "XML Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-125",
+        "capec_name": "Flooding",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-130",
+        "capec_name": "Excessive Allocation",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-469",
+        "capec_name": "HTTP DoS",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-482",
+        "capec_name": "TCP Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-488",
+        "capec_name": "HTTP Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-489",
+        "capec_name": "SSL Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-a292763c",
+        "capec_id": "CAPEC-528",
+        "capec_name": "XML Flood",
+        "cwe": [
+          "CWE-770"
+        ],
+        "attack": [
+          "T1499"
+        ]
+      }
+    ],
+    "suggestions": [
+      {
+        "finding_id": "auth-4e7d1059",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-21",
+          "CAPEC-60",
+          "CAPEC-94",
+          "CAPEC-473"
+        ],
+        "suggested": [
+          "T1036.001",
+          "T1134",
+          "T1134.001",
+          "T1528",
+          "T1539",
+          "T1550.004",
+          "T1553.002",
+          "T1557"
+        ]
+      },
+      {
+        "finding_id": "avail-235dacf0",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-227"
+        ],
+        "suggested": [
+          "T1499"
+        ]
+      },
+      {
+        "finding_id": "avail-5af6fee5",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-125",
+          "CAPEC-130",
+          "CAPEC-131",
+          "CAPEC-666"
+        ],
+        "suggested": [
+          "T1498.001",
+          "T1499",
+          "T1499.001",
+          "T1499.003"
+        ]
+      },
+      {
+        "finding_id": "avail-754cfc01",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-125",
+          "CAPEC-130",
+          "CAPEC-469",
+          "CAPEC-482",
+          "CAPEC-488",
+          "CAPEC-489",
+          "CAPEC-490",
+          "CAPEC-528"
+        ],
+        "suggested": [
+          "T1498.001",
+          "T1498.002",
+          "T1499",
+          "T1499.001",
+          "T1499.002",
+          "T1499.003"
+        ]
+      },
+      {
+        "finding_id": "dist-66e3e208",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-665"
+        ],
+        "suggested": [
+          "T1211",
+          "T1542.002",
+          "T1556"
+        ]
+      },
+      {
+        "finding_id": "dist-69bbaf5c",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-665"
+        ],
+        "suggested": [
+          "T1211",
+          "T1542.002",
+          "T1556"
+        ]
+      },
+      {
+        "finding_id": "ephem-a879a34b",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-122",
+          "CAPEC-233"
+        ],
+        "suggested": [
+          "T1548"
+        ]
+      },
+      {
+        "finding_id": "intg-2b80f92e",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-13",
+          "CAPEC-31",
+          "CAPEC-267",
+          "CAPEC-473"
+        ],
+        "suggested": [
+          "T1027",
+          "T1036.001",
+          "T1539",
+          "T1553.002",
+          "T1562.003",
+          "T1574.006",
+          "T1574.007"
+        ]
+      },
+      {
+        "finding_id": "intg-8b158cfe",
+        "direction": "cwe_to_attack",
+        "via_capec": [
+          "CAPEC-13",
+          "CAPEC-31",
+          "CAPEC-141",
+          "CAPEC-142",
+          "CAPEC-148",
+          "CAPEC-267",
+          "CAPEC-473",
+          "CAPEC-665"
+        ],
+        "suggested": [
+          "T1027",
+          "T1036.001",
+          "T1211",
+          "T1491",
+          "T1539",
+          "T1542.002",
+          "T1553.002",
+          "T1556",
+          "T1557.002",
+          "T1562.003",
+          "T1574.006",
+          "T1574.007",
+          "T1584.002"
+        ]
+      },
+      {
+        "finding_id": "merged-1119b0be",
+        "direction": "attack_to_cwe",
+        "via_capec": [
+          "CAPEC-196",
+          "CAPEC-268",
+          "CAPEC-464",
+          "CAPEC-668"
+        ],
+        "suggested": [
+          "CWE-117",
+          "CWE-285",
+          "CWE-359",
+          "CWE-384",
+          "CWE-425",
+          "CWE-664",
+          "CWE-693"
+        ]
+      },
+      {
+        "finding_id": "merged-a49cb674",
+        "direction": "attack_to_cwe",
+        "via_capec": [
+          "CAPEC-37",
+          "CAPEC-150",
+          "CAPEC-191",
+          "CAPEC-196",
+          "CAPEC-204",
+          "CAPEC-464",
+          "CAPEC-474",
+          "CAPEC-485",
+          "CAPEC-545",
+          "CAPEC-639",
+          "CAPEC-647"
+        ],
+        "suggested": [
+          "CWE-1239",
+          "CWE-1243",
+          "CWE-1258",
+          "CWE-1266",
+          "CWE-1272",
+          "CWE-1278",
+          "CWE-1301",
+          "CWE-1323",
+          "CWE-1330",
+          "CWE-226",
+          "CWE-285",
+          "CWE-311",
+          "CWE-312",
+          "CWE-314",
+          "CWE-315",
+          "CWE-318",
+          "CWE-330",
+          "CWE-359",
+          "CWE-384",
+          "CWE-522",
+          "CWE-524",
+          "CWE-525",
+          "CWE-552",
+          "CWE-664",
+          "CWE-798"
+        ]
+      }
+    ]
+  },
+  "detection_coverage": [
+    {
+      "technique": "T1078",
+      "technique_name": "Valid Accounts",
+      "exposure_finding_count": 4,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0067",
+          "data_component_name": "Logon Session Creation"
+        },
+        {
+          "data_component_id": "DC0088",
+          "data_component_name": "Logon Session Metadata"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0002",
+          "data_component_name": "User Account Authentication"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1557",
+      "technique_name": "Adversary-in-the-Middle",
+      "exposure_finding_count": 3,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0082",
+          "data_component_name": "Network Connection Creation"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0078",
+          "data_component_name": "Network Traffic Flow"
+        },
+        {
+          "data_component_id": "DC0063",
+          "data_component_name": "Windows Registry Key Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1098",
+      "technique_name": "Account Manipulation",
+      "exposure_finding_count": 2,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0066",
+          "data_component_name": "Active Directory Object Modification"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0010",
+          "data_component_name": "User Account Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1499",
+      "technique_name": "Endpoint Denial of Service",
+      "exposure_finding_count": 2,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0018",
+          "data_component_name": "Host Status"
+        },
+        {
+          "data_component_id": "DC0080",
+          "data_component_name": "Instance Start"
+        },
+        {
+          "data_component_id": "DC0078",
+          "data_component_name": "Network Traffic Flow"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1606",
+      "technique_name": "Forge Web Credentials",
+      "exposure_finding_count": 2,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0067",
+          "data_component_name": "Logon Session Creation"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0035",
+          "data_component_name": "Process Access"
+        },
+        {
+          "data_component_id": "DC0006",
+          "data_component_name": "Web Credential Creation"
+        },
+        {
+          "data_component_id": "DC0007",
+          "data_component_name": "Web Credential Usage"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1005",
+      "technique_name": "Data from Local System",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0064",
+          "data_component_name": "Command Execution"
+        },
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0039",
+          "data_component_name": "File Creation"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1070",
+      "technique_name": "Indicator Removal",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0040",
+          "data_component_name": "File Deletion"
+        },
+        {
+          "data_component_id": "DC0059",
+          "data_component_name": "File Metadata"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0012",
+          "data_component_name": "Scheduled Job Modification"
+        },
+        {
+          "data_component_id": "DC0063",
+          "data_component_name": "Windows Registry Key Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1190",
+      "technique_name": "Exploit Public-Facing Application",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0016",
+          "data_component_name": "Module Load"
+        },
+        {
+          "data_component_id": "DC0082",
+          "data_component_name": "Network Connection Creation"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0078",
+          "data_component_name": "Network Traffic Flow"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1195",
+      "technique_name": "Supply Chain Compromise",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0039",
+          "data_component_name": "File Creation"
+        },
+        {
+          "data_component_id": "DC0059",
+          "data_component_name": "File Metadata"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0016",
+          "data_component_name": "Module Load"
+        },
+        {
+          "data_component_id": "DC0078",
+          "data_component_name": "Network Traffic Flow"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0020",
+          "data_component_name": "Process Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1213",
+      "technique_name": "Data from Information Repositories",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0069",
+          "data_component_name": "Cloud Service Modification"
+        },
+        {
+          "data_component_id": "DC0025",
+          "data_component_name": "Cloud Storage Access"
+        },
+        {
+          "data_component_id": "DC0064",
+          "data_component_name": "Command Execution"
+        },
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0082",
+          "data_component_name": "Network Connection Creation"
+        },
+        {
+          "data_component_id": "DC0102",
+          "data_component_name": "Network Share Access"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1490",
+      "technique_name": "Inhibit System Recovery",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0022",
+          "data_component_name": "Cloud Storage Deletion"
+        },
+        {
+          "data_component_id": "DC0064",
+          "data_component_name": "Command Execution"
+        },
+        {
+          "data_component_id": "DC0040",
+          "data_component_name": "File Deletion"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0041",
+          "data_component_name": "Service Metadata"
+        },
+        {
+          "data_component_id": "DC0049",
+          "data_component_name": "Snapshot Deletion"
+        },
+        {
+          "data_component_id": "DC0063",
+          "data_component_name": "Windows Registry Key Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1525",
+      "technique_name": "Implant Internal Image",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0015",
+          "data_component_name": "Image Creation"
+        },
+        {
+          "data_component_id": "DC0036",
+          "data_component_name": "Image Modification"
+        },
+        {
+          "data_component_id": "DC0080",
+          "data_component_name": "Instance Start"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1528",
+      "technique_name": "Steal Application Access Token",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0083",
+          "data_component_name": "Cloud Service Enumeration"
+        },
+        {
+          "data_component_id": "DC0069",
+          "data_component_name": "Cloud Service Modification"
+        },
+        {
+          "data_component_id": "DC0025",
+          "data_component_name": "Cloud Storage Access"
+        },
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0002",
+          "data_component_name": "User Account Authentication"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1530",
+      "technique_name": "Data from Cloud Storage",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0025",
+          "data_component_name": "Cloud Storage Access"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0002",
+          "data_component_name": "User Account Authentication"
+        },
+        {
+          "data_component_id": "DC0013",
+          "data_component_name": "User Account Metadata"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1543",
+      "technique_name": "Create or Modify System Process",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0064",
+          "data_component_name": "Command Execution"
+        },
+        {
+          "data_component_id": "DC0072",
+          "data_component_name": "Container Creation"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0060",
+          "data_component_name": "Service Creation"
+        },
+        {
+          "data_component_id": "DC0063",
+          "data_component_name": "Windows Registry Key Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1550",
+      "technique_name": "Use Alternate Authentication Material",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0067",
+          "data_component_name": "Logon Session Creation"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0002",
+          "data_component_name": "User Account Authentication"
+        },
+        {
+          "data_component_id": "DC0013",
+          "data_component_name": "User Account Metadata"
+        },
+        {
+          "data_component_id": "DC0007",
+          "data_component_name": "Web Credential Usage"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1552",
+      "technique_name": "Unsecured Credentials",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0038",
+          "data_component_name": "Application Log Content"
+        },
+        {
+          "data_component_id": "DC0070",
+          "data_component_name": "Cloud Service Metadata"
+        },
+        {
+          "data_component_id": "DC0064",
+          "data_component_name": "Command Execution"
+        },
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0039",
+          "data_component_name": "File Creation"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0032",
+          "data_component_name": "Process Creation"
+        },
+        {
+          "data_component_id": "DC0002",
+          "data_component_name": "User Account Authentication"
+        },
+        {
+          "data_component_id": "DC0063",
+          "data_component_name": "Windows Registry Key Modification"
+        }
+      ],
+      "telemetry": "required"
+    },
+    {
+      "technique": "T1565",
+      "technique_name": "Data Manipulation",
+      "exposure_finding_count": 1,
+      "required_data_components": [
+        {
+          "data_component_id": "DC0055",
+          "data_component_name": "File Access"
+        },
+        {
+          "data_component_id": "DC0039",
+          "data_component_name": "File Creation"
+        },
+        {
+          "data_component_id": "DC0059",
+          "data_component_name": "File Metadata"
+        },
+        {
+          "data_component_id": "DC0061",
+          "data_component_name": "File Modification"
+        },
+        {
+          "data_component_id": "DC0085",
+          "data_component_name": "Network Traffic Content"
+        },
+        {
+          "data_component_id": "DC0021",
+          "data_component_name": "OS API Execution"
+        }
+      ],
+      "telemetry": "required"
+    }
+  ],
+  "compliance_projection": {
+    "hipaa": [
+      {
+        "target_id": "164.312(a)(2)(i)",
+        "target_title": "Unique User Identification",
+        "source_controls": [
+          {
+            "id": "AC-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-2(3)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 13,
+        "finding_ids": [
+          "apath-069b3352",
+          "apath-1c6e6d93",
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-3dbf15e7",
+          "auth-3f2314a4",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "auth-dfed90e4",
+          "ephem-053957f3",
+          "ephem-9915ab91",
+          "ephem-a879a34b",
+          "merged-a49cb674"
+        ],
+        "capability_count": 3,
+        "capability_ids": [
+          "auth-cap-8144e2be",
+          "auth-cap-f01e6108",
+          "intg-cap-7a54b1a7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.308(a)(4)",
+        "target_title": "Information Access Management",
+        "source_controls": [
+          {
+            "id": "AC-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-2(3)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-3",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-3(7)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 9,
+        "finding_ids": [
+          "apath-069b3352",
+          "apath-1c6e6d93",
+          "conf-ef49b4b0",
+          "ephem-053957f3",
+          "ephem-9915ab91",
+          "ephem-a879a34b",
+          "merged-1119b0be",
+          "merged-66801b1b",
+          "merged-a49cb674"
+        ],
+        "capability_count": 5,
+        "capability_ids": [
+          "auth-cap-e9f55df8",
+          "conf-cap-88473a97",
+          "intg-cap-e18bb24c",
+          "intg-cap-e88c8857",
+          "intg-cap-ecebb879"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(a)(2)(iv)",
+        "target_title": "Encryption and Decryption",
+        "source_controls": [
+          {
+            "id": "SC-13",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-28",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-28(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 10,
+        "finding_ids": [
+          "apath-5390f103",
+          "apath-58d38c18",
+          "apath-81ea3f91",
+          "apath-9cb7577b",
+          "apath-b3a517fc",
+          "conf-205c53a5",
+          "conf-7a74a4a0",
+          "conf-a30cca33",
+          "merged-1119b0be",
+          "merged-a49cb674"
+        ],
+        "capability_count": 4,
+        "capability_ids": [
+          "conf-cap-01c47d42",
+          "conf-cap-1044dbb3",
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(a)(1)",
+        "target_title": "Access Control",
+        "source_controls": [
+          {
+            "id": "AC-3",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-3(7)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(5)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(9)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 8,
+        "finding_ids": [
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "conf-ef49b4b0",
+          "ephem-a879a34b",
+          "merged-1119b0be",
+          "merged-66801b1b"
+        ],
+        "capability_count": 5,
+        "capability_ids": [
+          "auth-cap-e9f55df8",
+          "conf-cap-88473a97",
+          "intg-cap-e18bb24c",
+          "intg-cap-e88c8857",
+          "intg-cap-ecebb879"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(c)(1)",
+        "target_title": "Integrity",
+        "source_controls": [
+          {
+            "id": "AU-9",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-9(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-9(3)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-9(4)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-9(6)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(6)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 8,
+        "finding_ids": [
+          "apath-37351bc1",
+          "apath-9cb7577b",
+          "auth-3794d338",
+          "auth-8a380b11",
+          "auth-8f0d8172",
+          "immut-5a5ef5bd",
+          "merged-1119b0be",
+          "merged-66801b1b"
+        ],
+        "capability_count": 4,
+        "capability_ids": [
+          "immut-cap-937d14c1",
+          "intg-cap-70ef26f7",
+          "intg-cap-7a54b1a7",
+          "intg-cap-e18bb24c"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(a)(2)(iii)",
+        "target_title": "Automatic Logoff",
+        "source_controls": [
+          {
+            "id": "AC-12",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-12(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 6,
+        "finding_ids": [
+          "apath-069b3352",
+          "apath-6f901446",
+          "ephem-053957f3",
+          "ephem-db8641be",
+          "ephem-f19f24f9",
+          "merged-a49cb674"
+        ],
+        "capability_count": 4,
+        "capability_ids": [
+          "dist-cap-827afb47",
+          "ephem-cap-5113fad9",
+          "ephem-cap-f5d582d0",
+          "ephem-cap-fb2d6d4d"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(d)",
+        "target_title": "Person or Entity Authentication",
+        "source_controls": [
+          {
+            "id": "IA-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-3dbf15e7",
+          "auth-3f2314a4",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "auth-dfed90e4"
+        ],
+        "capability_count": 3,
+        "capability_ids": [
+          "auth-cap-8144e2be",
+          "auth-cap-f01e6108",
+          "intg-cap-7a54b1a7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(e)(1)",
+        "target_title": "Transmission Security",
+        "source_controls": [
+          {
+            "id": "SC-8",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-8(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-a5e48149",
+          "apath-ff51339a",
+          "auth-1787eae1",
+          "auth-23048c0c",
+          "conf-2029ce78",
+          "conf-3060c50e",
+          "tmeval-5c02d052"
+        ],
+        "capability_count": 2,
+        "capability_ids": [
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(e)(2)(i)",
+        "target_title": "Integrity Controls",
+        "source_controls": [
+          {
+            "id": "SC-8",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-8(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-a5e48149",
+          "apath-ff51339a",
+          "auth-1787eae1",
+          "auth-23048c0c",
+          "conf-2029ce78",
+          "conf-3060c50e",
+          "tmeval-5c02d052"
+        ],
+        "capability_count": 2,
+        "capability_ids": [
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(e)(2)(ii)",
+        "target_title": "Encryption",
+        "source_controls": [
+          {
+            "id": "SC-13",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 4,
+        "finding_ids": [
+          "apath-5390f103",
+          "apath-81ea3f91",
+          "conf-205c53a5",
+          "merged-a49cb674"
+        ],
+        "capability_count": 3,
+        "capability_ids": [
+          "conf-cap-1044dbb3",
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.308(a)(7)(ii)(A)",
+        "target_title": "Data Backup Plan",
+        "source_controls": [
+          {
+            "id": "CP-9",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 5,
+        "finding_ids": [
+          "apath-b3a517fc",
+          "avail-5af6fee5",
+          "dist-69bbaf5c",
+          "merged-1119b0be",
+          "merged-a49cb674"
+        ],
+        "capability_count": 1,
+        "capability_ids": [
+          "immut-cap-5e14aa20"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.310(d)(2)(iv)",
+        "target_title": "Data Backup and Storage",
+        "source_controls": [
+          {
+            "id": "CP-9",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 5,
+        "finding_ids": [
+          "apath-b3a517fc",
+          "avail-5af6fee5",
+          "dist-69bbaf5c",
+          "merged-1119b0be",
+          "merged-a49cb674"
+        ],
+        "capability_count": 1,
+        "capability_ids": [
+          "immut-cap-5e14aa20"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.312(b)",
+        "target_title": "Audit Controls",
+        "source_controls": [
+          {
+            "id": "AU-12",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-12(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-3",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-3(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 4,
+        "finding_ids": [
+          "apath-95a6ebd6",
+          "merged-0ccd3ea6",
+          "merged-66801b1b",
+          "nonrep-af1c55d3"
+        ],
+        "capability_count": 2,
+        "capability_ids": [
+          "nonrep-cap-510a35c7",
+          "nonrep-cap-e865e0d3"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.308(a)(7)(ii)(B)",
+        "target_title": "Disaster Recovery Plan",
+        "source_controls": [
+          {
+            "id": "CP-10",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 3,
+        "finding_ids": [
+          "avail-5af6fee5",
+          "merged-0ccd3ea6",
+          "merged-4f0fe6c1"
+        ],
+        "capability_count": 0,
+        "capability_ids": [],
+        "posture": "gapped",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.308(a)(1)(ii)(D)",
+        "target_title": "Information System Activity Review",
+        "source_controls": [
+          {
+            "id": "AU-6",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-6(3)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 2,
+        "finding_ids": [
+          "merged-0ccd3ea6",
+          "merged-66801b1b"
+        ],
+        "capability_count": 0,
+        "capability_ids": [],
+        "posture": "gapped",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "164.308(a)(5)(ii)(C)",
+        "target_title": "Log-in Monitoring",
+        "source_controls": [
+          {
+            "id": "AU-6",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-6(3)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 2,
+        "finding_ids": [
+          "merged-0ccd3ea6",
+          "merged-66801b1b"
+        ],
+        "capability_count": 0,
+        "capability_ids": [],
+        "posture": "gapped",
+        "fidelity": "partial"
+      }
+    ],
+    "csf2": [
+      {
+        "target_id": "PR.DS-01",
+        "target_title": "The confidentiality, integrity, and availability of data-at-rest are protected",
+        "source_controls": [
+          {
+            "id": "SC-13",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-28",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-28(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 10,
+        "finding_ids": [
+          "apath-5390f103",
+          "apath-58d38c18",
+          "apath-81ea3f91",
+          "apath-9cb7577b",
+          "apath-b3a517fc",
+          "conf-205c53a5",
+          "conf-7a74a4a0",
+          "conf-a30cca33",
+          "merged-1119b0be",
+          "merged-a49cb674"
+        ],
+        "capability_count": 4,
+        "capability_ids": [
+          "conf-cap-01c47d42",
+          "conf-cap-1044dbb3",
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.AA-05",
+        "target_title": "Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege and separation of duties",
+        "source_controls": [
+          {
+            "id": "AC-3",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-3(7)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(5)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AC-6(9)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 8,
+        "finding_ids": [
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "conf-ef49b4b0",
+          "ephem-a879a34b",
+          "merged-1119b0be",
+          "merged-66801b1b"
+        ],
+        "capability_count": 5,
+        "capability_ids": [
+          "auth-cap-e9f55df8",
+          "conf-cap-88473a97",
+          "intg-cap-e18bb24c",
+          "intg-cap-e88c8857",
+          "intg-cap-ecebb879"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "DE.CM-09",
+        "target_title": "Computing hardware and software, runtime environments, and their data are monitored to find potentially adverse events",
+        "source_controls": [
+          {
+            "id": "SI-7",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(6)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SI-7(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-37351bc1",
+          "apath-9cb7577b",
+          "auth-3794d338",
+          "auth-8a380b11",
+          "auth-8f0d8172",
+          "immut-5a5ef5bd",
+          "merged-1119b0be"
+        ],
+        "capability_count": 4,
+        "capability_ids": [
+          "immut-cap-937d14c1",
+          "intg-cap-70ef26f7",
+          "intg-cap-7a54b1a7",
+          "intg-cap-e18bb24c"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.AA-01",
+        "target_title": "Identities and credentials for authorized users, services, and hardware are managed by the organization",
+        "source_controls": [
+          {
+            "id": "IA-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-3dbf15e7",
+          "auth-3f2314a4",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "auth-dfed90e4"
+        ],
+        "capability_count": 3,
+        "capability_ids": [
+          "auth-cap-8144e2be",
+          "auth-cap-f01e6108",
+          "intg-cap-7a54b1a7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.AA-03",
+        "target_title": "Users, services, and hardware are authenticated",
+        "source_controls": [
+          {
+            "id": "IA-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(2)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "IA-2(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-89ebba8a",
+          "apath-d37b5700",
+          "auth-3dbf15e7",
+          "auth-3f2314a4",
+          "auth-6924f467",
+          "auth-7162fd48",
+          "auth-dfed90e4"
+        ],
+        "capability_count": 3,
+        "capability_ids": [
+          "auth-cap-8144e2be",
+          "auth-cap-f01e6108",
+          "intg-cap-7a54b1a7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.DS-02",
+        "target_title": "The confidentiality, integrity, and availability of data-in-transit are protected",
+        "source_controls": [
+          {
+            "id": "SC-8",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "SC-8(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 7,
+        "finding_ids": [
+          "apath-a5e48149",
+          "apath-ff51339a",
+          "auth-1787eae1",
+          "auth-23048c0c",
+          "conf-2029ce78",
+          "conf-3060c50e",
+          "tmeval-5c02d052"
+        ],
+        "capability_count": 2,
+        "capability_ids": [
+          "conf-cap-277b2364",
+          "intg-cap-70ef26f7"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.DS-11",
+        "target_title": "Backups of data are created, protected, maintained, and tested",
+        "source_controls": [
+          {
+            "id": "CP-9",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "CP-9(8)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 5,
+        "finding_ids": [
+          "apath-b3a517fc",
+          "avail-5af6fee5",
+          "dist-69bbaf5c",
+          "merged-1119b0be",
+          "merged-a49cb674"
+        ],
+        "capability_count": 1,
+        "capability_ids": [
+          "immut-cap-5e14aa20"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      },
+      {
+        "target_id": "PR.PS-04",
+        "target_title": "Log records are generated and made available for continuous monitoring",
+        "source_controls": [
+          {
+            "id": "AU-12",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-12(1)",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-2",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-3",
+            "relationship": "intersects_with"
+          },
+          {
+            "id": "AU-3(1)",
+            "relationship": "intersects_with"
+          }
+        ],
+        "finding_count": 4,
+        "finding_ids": [
+          "apath-95a6ebd6",
+          "merged-0ccd3ea6",
+          "merged-66801b1b",
+          "nonrep-af1c55d3"
+        ],
+        "capability_count": 2,
+        "capability_ids": [
+          "nonrep-cap-510a35c7",
+          "nonrep-cap-e865e0d3"
+        ],
+        "posture": "gapped_and_covered",
+        "fidelity": "partial"
+      }
+    ]
+  },
   "apd_matrix": {
     "goals": [
       "conf",
@@ -111625,6 +113588,16 @@ window.APD_DATA = {
       "title": "Data from Local System",
       "url": "https://attack.mitre.org/techniques/T1005/"
     },
+    "T1027": {
+      "family": "MITRE ATT&CK",
+      "title": "Obfuscated Files or Information",
+      "url": "https://attack.mitre.org/techniques/T1027/"
+    },
+    "T1036.001": {
+      "family": "MITRE ATT&CK",
+      "title": "Masquerading: Invalid Code Signature",
+      "url": "https://attack.mitre.org/techniques/T1036/001/"
+    },
     "T1040": {
       "family": "MITRE ATT&CK",
       "title": "Network Sniffing",
@@ -111650,6 +113623,16 @@ window.APD_DATA = {
       "title": "Brute Force",
       "url": "https://attack.mitre.org/techniques/T1110/"
     },
+    "T1134": {
+      "family": "MITRE ATT&CK",
+      "title": "Access Token Manipulation",
+      "url": "https://attack.mitre.org/techniques/T1134/"
+    },
+    "T1134.001": {
+      "family": "MITRE ATT&CK",
+      "title": "Access Token Manipulation: Token Impersonation/Theft",
+      "url": "https://attack.mitre.org/techniques/T1134/001/"
+    },
     "T1190": {
       "family": "MITRE ATT&CK",
       "title": "Exploit Public-Facing Application",
@@ -111659,6 +113642,11 @@ window.APD_DATA = {
       "family": "MITRE ATT&CK",
       "title": "Supply Chain Compromise",
       "url": "https://attack.mitre.org/techniques/T1195/"
+    },
+    "T1211": {
+      "family": "MITRE ATT&CK",
+      "title": "Exploitation for Stealth",
+      "url": "https://attack.mitre.org/techniques/T1211/"
     },
     "T1213": {
       "family": "MITRE ATT&CK",
@@ -111680,10 +113668,40 @@ window.APD_DATA = {
       "title": "Inhibit System Recovery",
       "url": "https://attack.mitre.org/techniques/T1490/"
     },
+    "T1491": {
+      "family": "MITRE ATT&CK",
+      "title": "Defacement",
+      "url": "https://attack.mitre.org/techniques/T1491/"
+    },
+    "T1498.001": {
+      "family": "MITRE ATT&CK",
+      "title": "Network Denial of Service: Direct Network Flood",
+      "url": "https://attack.mitre.org/techniques/T1498/001/"
+    },
+    "T1498.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Network Denial of Service: Reflection Amplification",
+      "url": "https://attack.mitre.org/techniques/T1498/002/"
+    },
     "T1499": {
       "family": "MITRE ATT&CK",
       "title": "Endpoint Denial of Service",
       "url": "https://attack.mitre.org/techniques/T1499/"
+    },
+    "T1499.001": {
+      "family": "MITRE ATT&CK",
+      "title": "Endpoint Denial of Service: OS Exhaustion Flood",
+      "url": "https://attack.mitre.org/techniques/T1499/001/"
+    },
+    "T1499.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Endpoint Denial of Service: Service Exhaustion Flood",
+      "url": "https://attack.mitre.org/techniques/T1499/002/"
+    },
+    "T1499.003": {
+      "family": "MITRE ATT&CK",
+      "title": "Endpoint Denial of Service: Application Exhaustion Flood",
+      "url": "https://attack.mitre.org/techniques/T1499/003/"
     },
     "T1525": {
       "family": "MITRE ATT&CK",
@@ -111700,35 +113718,90 @@ window.APD_DATA = {
       "title": "Data from Cloud Storage",
       "url": "https://attack.mitre.org/techniques/T1530/"
     },
+    "T1539": {
+      "family": "MITRE ATT&CK",
+      "title": "Steal Web Session Cookie",
+      "url": "https://attack.mitre.org/techniques/T1539/"
+    },
+    "T1542.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Pre-OS Boot: Component Firmware",
+      "url": "https://attack.mitre.org/techniques/T1542/002/"
+    },
     "T1543": {
       "family": "MITRE ATT&CK",
       "title": "Create or Modify System Process",
       "url": "https://attack.mitre.org/techniques/T1543/"
+    },
+    "T1548": {
+      "family": "MITRE ATT&CK",
+      "title": "Abuse Elevation Control Mechanism",
+      "url": "https://attack.mitre.org/techniques/T1548/"
     },
     "T1550": {
       "family": "MITRE ATT&CK",
       "title": "Use Alternate Authentication Material",
       "url": "https://attack.mitre.org/techniques/T1550/"
     },
+    "T1550.004": {
+      "family": "MITRE ATT&CK",
+      "title": "Use Alternate Authentication Material: Web Session Cookie",
+      "url": "https://attack.mitre.org/techniques/T1550/004/"
+    },
     "T1552": {
       "family": "MITRE ATT&CK",
       "title": "Unsecured Credentials",
       "url": "https://attack.mitre.org/techniques/T1552/"
+    },
+    "T1553.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Subvert Trust Controls: Code Signing",
+      "url": "https://attack.mitre.org/techniques/T1553/002/"
+    },
+    "T1556": {
+      "family": "MITRE ATT&CK",
+      "title": "Modify Authentication Process",
+      "url": "https://attack.mitre.org/techniques/T1556/"
     },
     "T1557": {
       "family": "MITRE ATT&CK",
       "title": "Adversary-in-the-Middle",
       "url": "https://attack.mitre.org/techniques/T1557/"
     },
+    "T1557.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Adversary-in-the-Middle: ARP Cache Poisoning",
+      "url": "https://attack.mitre.org/techniques/T1557/002/"
+    },
+    "T1562.003": {
+      "family": "MITRE ATT&CK",
+      "title": "Impair Defenses: Impair Command History Logging",
+      "url": "https://attack.mitre.org/techniques/T1562/003/"
+    },
     "T1565": {
       "family": "MITRE ATT&CK",
       "title": "Data Manipulation",
       "url": "https://attack.mitre.org/techniques/T1565/"
     },
+    "T1574.006": {
+      "family": "MITRE ATT&CK",
+      "title": "Hijack Execution Flow: Dynamic Linker Hijacking",
+      "url": "https://attack.mitre.org/techniques/T1574/006/"
+    },
+    "T1574.007": {
+      "family": "MITRE ATT&CK",
+      "title": "Hijack Execution Flow: Path Interception by PATH Environment Variable",
+      "url": "https://attack.mitre.org/techniques/T1574/007/"
+    },
     "T1577": {
       "family": "MITRE ATT&CK",
       "title": "Compromise Application Executable",
       "url": "https://attack.mitre.org/techniques/T1577/"
+    },
+    "T1584.002": {
+      "family": "MITRE ATT&CK",
+      "title": "Compromise Infrastructure: DNS Server",
+      "url": "https://attack.mitre.org/techniques/T1584/002/"
     },
     "T1606": {
       "family": "MITRE ATT&CK",
@@ -111740,6 +113813,10 @@ window.APD_DATA = {
       "title": "Credentials from Password Store",
       "url": "https://attack.mitre.org/techniques/T1634/"
     },
+    "CWE-117": {
+      "family": "CWE",
+      "title": "Improper Output Neutralization for Logs"
+    },
     "CWE-1188": {
       "family": "CWE",
       "title": "Initialization of a Resource with an Insecure Default"
@@ -111747,6 +113824,42 @@ window.APD_DATA = {
     "CWE-1189": {
       "family": "CWE",
       "title": "Improper Isolation of Shared Resources on System-on-a-Chip (SoC)"
+    },
+    "CWE-1239": {
+      "family": "CWE",
+      "title": "Improper Zeroization of Hardware Register"
+    },
+    "CWE-1243": {
+      "family": "CWE",
+      "title": "Sensitive Non-Volatile Information Not Protected During Debug"
+    },
+    "CWE-1258": {
+      "family": "CWE",
+      "title": "Exposure of Sensitive System Information Due to Uncleared Debug Information"
+    },
+    "CWE-1266": {
+      "family": "CWE",
+      "title": "Improper Scrubbing of Sensitive Data from Decommissioned Device"
+    },
+    "CWE-1272": {
+      "family": "CWE",
+      "title": "Sensitive Information Uncleared Before Debug/Power State Transition"
+    },
+    "CWE-1278": {
+      "family": "CWE",
+      "title": "Missing Protection Against Hardware Reverse Engineering Using Integrated Circuit (IC) Imaging Techniques"
+    },
+    "CWE-1301": {
+      "family": "CWE",
+      "title": "Insufficient or Incomplete Data Removal within Hardware Component"
+    },
+    "CWE-1323": {
+      "family": "CWE",
+      "title": "Improper Management of Sensitive Trace Data"
+    },
+    "CWE-1330": {
+      "family": "CWE",
+      "title": "Remanent Data Readable after Memory Erase"
     },
     "CWE-1357": {
       "family": "CWE",
@@ -111764,9 +113877,17 @@ window.APD_DATA = {
       "family": "CWE",
       "title": "Exposure of Sensitive Information to an Unauthorized Actor"
     },
+    "CWE-226": {
+      "family": "CWE",
+      "title": "Sensitive Information in Resource Not Removed Before Reuse"
+    },
     "CWE-269": {
       "family": "CWE",
       "title": "Improper Privilege Management"
+    },
+    "CWE-285": {
+      "family": "CWE",
+      "title": "Improper Authorization"
     },
     "CWE-287": {
       "family": "CWE",
@@ -111792,13 +113913,41 @@ window.APD_DATA = {
       "family": "CWE",
       "title": "Use of Single-factor Authentication"
     },
+    "CWE-311": {
+      "family": "CWE",
+      "title": "Missing Encryption of Sensitive Data"
+    },
     "CWE-312": {
       "family": "CWE",
       "title": "Cleartext Storage of Sensitive Information"
     },
+    "CWE-314": {
+      "family": "CWE",
+      "title": "Cleartext Storage in the Registry"
+    },
+    "CWE-315": {
+      "family": "CWE",
+      "title": "Cleartext Storage of Sensitive Information in a Cookie"
+    },
+    "CWE-318": {
+      "family": "CWE",
+      "title": "Cleartext Storage of Sensitive Information in Executable"
+    },
+    "CWE-330": {
+      "family": "CWE",
+      "title": "Use of Insufficiently Random Values"
+    },
     "CWE-345": {
       "family": "CWE",
       "title": "Insufficient Verification of Data Authenticity"
+    },
+    "CWE-359": {
+      "family": "CWE",
+      "title": "Exposure of Private Personal Information to an Unauthorized Actor"
+    },
+    "CWE-384": {
+      "family": "CWE",
+      "title": "Session Fixation"
     },
     "CWE-400": {
       "family": "CWE",
@@ -111808,9 +113957,29 @@ window.APD_DATA = {
       "family": "CWE",
       "title": "Improper Resource Shutdown or Release"
     },
+    "CWE-425": {
+      "family": "CWE",
+      "title": "Direct Request ('Forced Browsing')"
+    },
     "CWE-494": {
       "family": "CWE",
       "title": "Download of Code Without Integrity Check"
+    },
+    "CWE-522": {
+      "family": "CWE",
+      "title": "Insufficiently Protected Credentials"
+    },
+    "CWE-524": {
+      "family": "CWE",
+      "title": "Use of Cache Containing Sensitive Information"
+    },
+    "CWE-525": {
+      "family": "CWE",
+      "title": "Use of Web Browser Cache Containing Sensitive Information"
+    },
+    "CWE-552": {
+      "family": "CWE",
+      "title": "Files or Directories Accessible to External Parties"
     },
     "CWE-613": {
       "family": "CWE",
@@ -111819,6 +113988,14 @@ window.APD_DATA = {
     "CWE-636": {
       "family": "CWE",
       "title": "Not Failing Securely ('Failing Open')"
+    },
+    "CWE-664": {
+      "family": "CWE",
+      "title": "Improper Control of a Resource Through its Lifetime"
+    },
+    "CWE-693": {
+      "family": "CWE",
+      "title": "Protection Mechanism Failure"
     },
     "CWE-749": {
       "family": "CWE",
@@ -111831,6 +114008,10 @@ window.APD_DATA = {
     "CWE-778": {
       "family": "CWE",
       "title": "Insufficient Logging"
+    },
+    "CWE-798": {
+      "family": "CWE",
+      "title": "Use of Hard-coded Credentials"
     },
     "CWE-829": {
       "family": "CWE",
@@ -111908,6 +114089,221 @@ window.APD_DATA = {
       "family": "OWASP MASWE",
       "title": "Emulator Detection Not Implemented",
       "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0099/"
+    },
+    "CAPEC-122": {
+      "family": "MITRE CAPEC",
+      "title": "Privilege Abuse",
+      "url": "https://capec.mitre.org/data/definitions/122.html"
+    },
+    "CAPEC-125": {
+      "family": "MITRE CAPEC",
+      "title": "Flooding",
+      "url": "https://capec.mitre.org/data/definitions/125.html"
+    },
+    "CAPEC-13": {
+      "family": "MITRE CAPEC",
+      "title": "Subverting Environment Variable Values",
+      "url": "https://capec.mitre.org/data/definitions/13.html"
+    },
+    "CAPEC-130": {
+      "family": "MITRE CAPEC",
+      "title": "Excessive Allocation",
+      "url": "https://capec.mitre.org/data/definitions/130.html"
+    },
+    "CAPEC-131": {
+      "family": "MITRE CAPEC",
+      "title": "Resource Leak Exposure",
+      "url": "https://capec.mitre.org/data/definitions/131.html"
+    },
+    "CAPEC-141": {
+      "family": "MITRE CAPEC",
+      "title": "Cache Poisoning",
+      "url": "https://capec.mitre.org/data/definitions/141.html"
+    },
+    "CAPEC-142": {
+      "family": "MITRE CAPEC",
+      "title": "DNS Cache Poisoning",
+      "url": "https://capec.mitre.org/data/definitions/142.html"
+    },
+    "CAPEC-148": {
+      "family": "MITRE CAPEC",
+      "title": "Content Spoofing",
+      "url": "https://capec.mitre.org/data/definitions/148.html"
+    },
+    "CAPEC-150": {
+      "family": "MITRE CAPEC",
+      "title": "Collect Data from Common Resource Locations",
+      "url": "https://capec.mitre.org/data/definitions/150.html"
+    },
+    "CAPEC-186": {
+      "family": "MITRE CAPEC",
+      "title": "Malicious Software Update",
+      "url": "https://capec.mitre.org/data/definitions/186.html"
+    },
+    "CAPEC-191": {
+      "family": "MITRE CAPEC",
+      "title": "Read Sensitive Constants Within an Executable",
+      "url": "https://capec.mitre.org/data/definitions/191.html"
+    },
+    "CAPEC-196": {
+      "family": "MITRE CAPEC",
+      "title": "Session Credential Falsification through Forging",
+      "url": "https://capec.mitre.org/data/definitions/196.html"
+    },
+    "CAPEC-204": {
+      "family": "MITRE CAPEC",
+      "title": "Lifting Sensitive Data Embedded in Cache",
+      "url": "https://capec.mitre.org/data/definitions/204.html"
+    },
+    "CAPEC-21": {
+      "family": "MITRE CAPEC",
+      "title": "Exploitation of Trusted Identifiers",
+      "url": "https://capec.mitre.org/data/definitions/21.html"
+    },
+    "CAPEC-227": {
+      "family": "MITRE CAPEC",
+      "title": "Sustained Client Engagement",
+      "url": "https://capec.mitre.org/data/definitions/227.html"
+    },
+    "CAPEC-233": {
+      "family": "MITRE CAPEC",
+      "title": "Privilege Escalation",
+      "url": "https://capec.mitre.org/data/definitions/233.html"
+    },
+    "CAPEC-267": {
+      "family": "MITRE CAPEC",
+      "title": "Leverage Alternate Encoding",
+      "url": "https://capec.mitre.org/data/definitions/267.html"
+    },
+    "CAPEC-268": {
+      "family": "MITRE CAPEC",
+      "title": "Audit Log Manipulation",
+      "url": "https://capec.mitre.org/data/definitions/268.html"
+    },
+    "CAPEC-31": {
+      "family": "MITRE CAPEC",
+      "title": "Accessing/Intercepting/Modifying HTTP Cookies",
+      "url": "https://capec.mitre.org/data/definitions/31.html"
+    },
+    "CAPEC-37": {
+      "family": "MITRE CAPEC",
+      "title": "Retrieve Embedded Sensitive Data",
+      "url": "https://capec.mitre.org/data/definitions/37.html"
+    },
+    "CAPEC-464": {
+      "family": "MITRE CAPEC",
+      "title": "Evercookie",
+      "url": "https://capec.mitre.org/data/definitions/464.html"
+    },
+    "CAPEC-469": {
+      "family": "MITRE CAPEC",
+      "title": "HTTP DoS",
+      "url": "https://capec.mitre.org/data/definitions/469.html"
+    },
+    "CAPEC-473": {
+      "family": "MITRE CAPEC",
+      "title": "Signature Spoof",
+      "url": "https://capec.mitre.org/data/definitions/473.html"
+    },
+    "CAPEC-474": {
+      "family": "MITRE CAPEC",
+      "title": "Signature Spoofing by Key Theft",
+      "url": "https://capec.mitre.org/data/definitions/474.html"
+    },
+    "CAPEC-482": {
+      "family": "MITRE CAPEC",
+      "title": "TCP Flood",
+      "url": "https://capec.mitre.org/data/definitions/482.html"
+    },
+    "CAPEC-485": {
+      "family": "MITRE CAPEC",
+      "title": "Signature Spoofing by Key Recreation",
+      "url": "https://capec.mitre.org/data/definitions/485.html"
+    },
+    "CAPEC-488": {
+      "family": "MITRE CAPEC",
+      "title": "HTTP Flood",
+      "url": "https://capec.mitre.org/data/definitions/488.html"
+    },
+    "CAPEC-489": {
+      "family": "MITRE CAPEC",
+      "title": "SSL Flood",
+      "url": "https://capec.mitre.org/data/definitions/489.html"
+    },
+    "CAPEC-490": {
+      "family": "MITRE CAPEC",
+      "title": "Amplification",
+      "url": "https://capec.mitre.org/data/definitions/490.html"
+    },
+    "CAPEC-528": {
+      "family": "MITRE CAPEC",
+      "title": "XML Flood",
+      "url": "https://capec.mitre.org/data/definitions/528.html"
+    },
+    "CAPEC-538": {
+      "family": "MITRE CAPEC",
+      "title": "Open-Source Library Manipulation",
+      "url": "https://capec.mitre.org/data/definitions/538.html"
+    },
+    "CAPEC-545": {
+      "family": "MITRE CAPEC",
+      "title": "Pull Data from System Resources",
+      "url": "https://capec.mitre.org/data/definitions/545.html"
+    },
+    "CAPEC-560": {
+      "family": "MITRE CAPEC",
+      "title": "Use of Known Domain Credentials",
+      "url": "https://capec.mitre.org/data/definitions/560.html"
+    },
+    "CAPEC-60": {
+      "family": "MITRE CAPEC",
+      "title": "Reusing Session IDs (aka Session Replay)",
+      "url": "https://capec.mitre.org/data/definitions/60.html"
+    },
+    "CAPEC-639": {
+      "family": "MITRE CAPEC",
+      "title": "Probe System Files",
+      "url": "https://capec.mitre.org/data/definitions/639.html"
+    },
+    "CAPEC-647": {
+      "family": "MITRE CAPEC",
+      "title": "Collect Data from Registries",
+      "url": "https://capec.mitre.org/data/definitions/647.html"
+    },
+    "CAPEC-665": {
+      "family": "MITRE CAPEC",
+      "title": "Exploitation of Thunderbolt Protection Flaws",
+      "url": "https://capec.mitre.org/data/definitions/665.html"
+    },
+    "CAPEC-666": {
+      "family": "MITRE CAPEC",
+      "title": "BlueSmacking",
+      "url": "https://capec.mitre.org/data/definitions/666.html"
+    },
+    "CAPEC-668": {
+      "family": "MITRE CAPEC",
+      "title": "Key Negotiation of Bluetooth Attack (KNOB)",
+      "url": "https://capec.mitre.org/data/definitions/668.html"
+    },
+    "CAPEC-691": {
+      "family": "MITRE CAPEC",
+      "title": "Spoof Open-Source Software Metadata",
+      "url": "https://capec.mitre.org/data/definitions/691.html"
+    },
+    "CAPEC-695": {
+      "family": "MITRE CAPEC",
+      "title": "Repo Jacking",
+      "url": "https://capec.mitre.org/data/definitions/695.html"
+    },
+    "CAPEC-70": {
+      "family": "MITRE CAPEC",
+      "title": "Try Common or Default Usernames and Passwords",
+      "url": "https://capec.mitre.org/data/definitions/70.html"
+    },
+    "CAPEC-94": {
+      "family": "MITRE CAPEC",
+      "title": "Adversary in the Middle (AiTM)",
+      "url": "https://capec.mitre.org/data/definitions/94.html"
     }
   },
   "threat_model": {

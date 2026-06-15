@@ -1,0 +1,154 @@
+{
+  "_meta": {
+    "source": "NIST SP 800-66r2 CPRT export (cprt_SP800_66_2_0_0_06-14-2026.json)",
+    "source_sha256": "ff09781b88d75428a319a56f542a44306ffc2d80360b351f52b49cf5be379cef",
+    "fetched_at": "2026-06-15T02:44:15.551511+00:00",
+    "note": "Standard ids/titles validated/enriched against the 800-66r2 CPRT export; control selections from SP 800-66r1 Appendix D (r2 has no control-level 800-53 crosswalk). intersects_with -> partial fidelity."
+  },
+  "mappings": [
+    {
+      "target_id": "164.308(a)(1)(ii)(D)",
+      "target_title": "Information System Activity Review",
+      "nist": "AU-6",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.308(a)(4)",
+      "target_title": "Information Access Management",
+      "nist": "AC-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.308(a)(4)",
+      "target_title": "Information Access Management",
+      "nist": "AC-3",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.308(a)(5)(ii)(C)",
+      "target_title": "Log-in Monitoring",
+      "nist": "AU-6",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.308(a)(7)(ii)(A)",
+      "target_title": "Data Backup Plan",
+      "nist": "CP-9",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.308(a)(7)(ii)(B)",
+      "target_title": "Disaster Recovery Plan",
+      "nist": "CP-10",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.310(d)(2)(iv)",
+      "target_title": "Data Backup and Storage",
+      "nist": "CP-9",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(1)",
+      "target_title": "Access Control",
+      "nist": "AC-3",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(1)",
+      "target_title": "Access Control",
+      "nist": "AC-6",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(i)",
+      "target_title": "Unique User Identification",
+      "nist": "IA-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(i)",
+      "target_title": "Unique User Identification",
+      "nist": "AC-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(iii)",
+      "target_title": "Automatic Logoff",
+      "nist": "AC-11",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(iii)",
+      "target_title": "Automatic Logoff",
+      "nist": "AC-12",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(iv)",
+      "target_title": "Encryption and Decryption",
+      "nist": "SC-28",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(a)(2)(iv)",
+      "target_title": "Encryption and Decryption",
+      "nist": "SC-13",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(b)",
+      "target_title": "Audit Controls",
+      "nist": "AU-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(b)",
+      "target_title": "Audit Controls",
+      "nist": "AU-3",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(b)",
+      "target_title": "Audit Controls",
+      "nist": "AU-12",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(c)(1)",
+      "target_title": "Integrity",
+      "nist": "SI-7",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(c)(1)",
+      "target_title": "Integrity",
+      "nist": "AU-9",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(d)",
+      "target_title": "Person or Entity Authentication",
+      "nist": "IA-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(e)(1)",
+      "target_title": "Transmission Security",
+      "nist": "SC-8",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(e)(2)(i)",
+      "target_title": "Integrity Controls",
+      "nist": "SC-8",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "164.312(e)(2)(ii)",
+      "target_title": "Encryption",
+      "nist": "SC-13",
+      "relationship": "intersects_with"
+    }
+  ]
+}

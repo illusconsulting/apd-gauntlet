@@ -1,7 +1,7 @@
 # Design — "Start here" reading-guide tab for the HTML report
 
 Status: draft (brainstormed 2026-06-04)
-Owner: Jon King
+Owner: APD Gauntlet contributors
 Feature branch (suggested): `feat/report-start-here-guide`
 
 ## 1. Goal

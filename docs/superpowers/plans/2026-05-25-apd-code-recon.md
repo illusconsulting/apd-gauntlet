@@ -184,7 +184,7 @@ Expected: FAIL with `FileNotFoundError: schemas/run-config.schema.json`.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/run-config.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/run-config.schema.json",
   "title": "APD Gauntlet Run Configuration",
   "type": "object",
   "required": ["run_id", "domain", "framework_version"],
@@ -374,7 +374,7 @@ Expected: FAIL with `FileNotFoundError: schemas/code-evidence-index.schema.json`
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/code-evidence-index.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/code-evidence-index.schema.json",
   "title": "APD Code Evidence Index",
   "type": "object",
   "required": ["code_evidence_index"],

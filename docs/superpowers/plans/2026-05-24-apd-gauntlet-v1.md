@@ -170,8 +170,8 @@ dev = [
 apd-gauntlet = "apd_gauntlet.cli:main"
 
 [project.urls]
-Repository = "https://github.com/shoveleejoe/apd-gauntlet"
-Issues     = "https://github.com/shoveleejoe/apd-gauntlet/issues"
+Repository = "https://github.com/illusconsulting/apd-gauntlet"
+Issues     = "https://github.com/illusconsulting/apd-gauntlet/issues"
 
 [tool.setuptools.packages.find]
 where = ["tools"]
@@ -425,7 +425,7 @@ Should NOT include: `9-agent-apd-framework`, `mnt`.
 - [ ] **Step 2: Push to origin**
 
 Run: `git push origin main`
-Expected: M1 commits visible on <https://github.com/shoveleejoe/apd-gauntlet>.
+Expected: M1 commits visible on <https://github.com/illusconsulting/apd-gauntlet>.
 
 ---
 
@@ -578,7 +578,7 @@ Create `schemas/finding.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/finding.schema.json",
   "title": "APD Gauntlet Finding",
   "type": "object",
   "required": [
@@ -794,7 +794,7 @@ Create `schemas/capability.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/capability.schema.json",
   "title": "APD Gauntlet Capability",
   "type": "object",
   "required": [
@@ -853,8 +853,8 @@ from referencing import Registry, Resource
 finding_schema  = Resource.from_contents(json.loads((REPO / "schemas/finding.schema.json").read_text()))
 capability_schema = Resource.from_contents(json.loads((REPO / "schemas/capability.schema.json").read_text()))
 registry = Registry().with_resources([
-    ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json", finding_schema),
-    ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability_schema),
+    ("https://github.com/illusconsulting/apd-gauntlet/schemas/finding.schema.json", finding_schema),
+    ("https://github.com/illusconsulting/apd-gauntlet/schemas/capability.schema.json", capability_schema),
 ])
 validator = Draft202012Validator(capability_schema.contents, registry=registry)
 ```
@@ -1203,8 +1203,8 @@ def _build_registry() -> Registry:
     finding    = Resource.from_contents(json.loads((SCHEMAS_DIR / "finding.schema.json").read_text()))
     capability = Resource.from_contents(json.loads((SCHEMAS_DIR / "capability.schema.json").read_text()))
     return Registry().with_resources([
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/finding.schema.json",    finding),
-        ("https://github.com/shoveleejoe/apd-gauntlet/schemas/capability.schema.json", capability),
+        ("https://github.com/illusconsulting/apd-gauntlet/schemas/finding.schema.json",    finding),
+        ("https://github.com/illusconsulting/apd-gauntlet/schemas/capability.schema.json", capability),
     ])
 
 
@@ -3116,7 +3116,7 @@ Create `plugin.json`:
   "description": "APD security architecture review framework — 9 specialist agents plus intake, orchestrator, and synthesizer.",
   "author": "APD Gauntlet contributors",
   "license": "Apache-2.0",
-  "repository": "https://github.com/shoveleejoe/apd-gauntlet",
+  "repository": "https://github.com/illusconsulting/apd-gauntlet",
   "agents": "./.claude/agents/",
   "skills": "./.claude/skills/"
 }
@@ -3598,7 +3598,7 @@ git push origin main
 If the repo is still private, make it public now via GitHub UI or:
 
 ```bash
-gh repo edit shoveleejoe/apd-gauntlet --visibility public --accept-visibility-change-consequences
+gh repo edit user/apd-gauntlet --visibility public --accept-visibility-change-consequences
 ```
 
 (Note: this is a manual decision moment — the user should confirm before going public.)
@@ -3632,7 +3632,7 @@ Expected: 1.0.0; help output lists all subcommands.
 
 At this point:
 
-- Repo public at `github.com/shoveleejoe/apd-gauntlet`
+- Repo public at `github.com/illusconsulting/apd-gauntlet`
 - `apd-gauntlet` installable via `pip install apd-gauntlet`
 - Claude Code plugin loadable from `.claude/`
 - Synthetic example validates cleanly

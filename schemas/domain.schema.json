@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain.schema.json",
   "title": "APD Gauntlet Domain Pack Metadata",
   "type": "object",
   "required": ["name", "display_name", "version", "framework_compat", "description", "includes", "regulatory_anchors"],

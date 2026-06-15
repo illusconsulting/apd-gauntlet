@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/report-data.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/report-data.schema.json",
   "title": "APD Gauntlet Report Supplement",
   "type": "object",
   "required": [

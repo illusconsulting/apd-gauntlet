@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/atlas-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/atlas-coverage.schema.json",
   "title": "APD Gauntlet MITRE ATLAS Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "entries"],

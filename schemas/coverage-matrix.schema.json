@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/coverage-matrix.schema.json",
   "title": "APD Gauntlet Coverage Matrix Row",
   "type": "object",
   "required": ["name", "cells"],

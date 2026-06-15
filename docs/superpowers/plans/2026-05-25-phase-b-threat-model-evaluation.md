@@ -224,7 +224,7 @@ These six small tasks address polish items deferred from Phase A. Doing them fir
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/_defs.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/_defs.schema.json",
      "title": "APD Gauntlet shared schema definitions",
      "description": "Reusable $defs for patterns referenced across multiple record schemas.",
      "$defs": {
@@ -607,7 +607,7 @@ The carry-forward pass is complete. Foundation is clean. Begin the actual Phase 
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/threat-model-normalized.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/threat-model-normalized.schema.json",
      "title": "APD Gauntlet Normalized Threat Model",
      "type": "object",
      "required": ["schema_version", "generated_by", "source_artifact", "methodology", "entries"],
@@ -714,7 +714,7 @@ The carry-forward pass is complete. Foundation is clean. Begin the actual Phase 
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/threat-model-coverage.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/threat-model-coverage.schema.json",
      "title": "APD Gauntlet Threat Model Coverage Report",
      "type": "object",
      "required": ["schema_version", "generated_by", "methodology", "surface_coverage", "summary"],

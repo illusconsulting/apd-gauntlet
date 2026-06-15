@@ -1,0 +1,225 @@
+schema_version: 1
+generated_by: synthesizer
+target: csf2
+entries:
+- target_id: PR.DS-01
+  target_title: The confidentiality, integrity, and availability of data-at-rest are
+    protected
+  source_controls:
+  - id: SC-13
+    relationship: intersects_with
+  - id: SC-28
+    relationship: intersects_with
+  - id: SC-28(1)
+    relationship: intersects_with
+  finding_count: 10
+  finding_ids:
+  - apath-5390f103
+  - apath-58d38c18
+  - apath-81ea3f91
+  - apath-9cb7577b
+  - apath-b3a517fc
+  - conf-205c53a5
+  - conf-7a74a4a0
+  - conf-a30cca33
+  - merged-1119b0be
+  - merged-a49cb674
+  capability_count: 4
+  capability_ids:
+  - conf-cap-01c47d42
+  - conf-cap-1044dbb3
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.AA-05
+  target_title: Access permissions, entitlements, and authorizations are defined in
+    a policy, managed, enforced, and reviewed, and incorporate the principles of least
+    privilege and separation of duties
+  source_controls:
+  - id: AC-3
+    relationship: intersects_with
+  - id: AC-3(7)
+    relationship: intersects_with
+  - id: AC-6
+    relationship: intersects_with
+  - id: AC-6(1)
+    relationship: intersects_with
+  - id: AC-6(2)
+    relationship: intersects_with
+  - id: AC-6(5)
+    relationship: intersects_with
+  - id: AC-6(9)
+    relationship: intersects_with
+  finding_count: 8
+  finding_ids:
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-6924f467
+  - auth-7162fd48
+  - conf-ef49b4b0
+  - ephem-a879a34b
+  - merged-1119b0be
+  - merged-66801b1b
+  capability_count: 5
+  capability_ids:
+  - auth-cap-e9f55df8
+  - conf-cap-88473a97
+  - intg-cap-e18bb24c
+  - intg-cap-e88c8857
+  - intg-cap-ecebb879
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: DE.CM-09
+  target_title: Computing hardware and software, runtime environments, and their data
+    are monitored to find potentially adverse events
+  source_controls:
+  - id: SI-7
+    relationship: intersects_with
+  - id: SI-7(1)
+    relationship: intersects_with
+  - id: SI-7(6)
+    relationship: intersects_with
+  - id: SI-7(8)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-37351bc1
+  - apath-9cb7577b
+  - auth-3794d338
+  - auth-8a380b11
+  - auth-8f0d8172
+  - immut-5a5ef5bd
+  - merged-1119b0be
+  capability_count: 4
+  capability_ids:
+  - immut-cap-937d14c1
+  - intg-cap-70ef26f7
+  - intg-cap-7a54b1a7
+  - intg-cap-e18bb24c
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.AA-01
+  target_title: Identities and credentials for authorized users, services, and hardware
+    are managed by the organization
+  source_controls:
+  - id: IA-2
+    relationship: intersects_with
+  - id: IA-2(1)
+    relationship: intersects_with
+  - id: IA-2(2)
+    relationship: intersects_with
+  - id: IA-2(8)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-3dbf15e7
+  - auth-3f2314a4
+  - auth-6924f467
+  - auth-7162fd48
+  - auth-dfed90e4
+  capability_count: 3
+  capability_ids:
+  - auth-cap-8144e2be
+  - auth-cap-f01e6108
+  - intg-cap-7a54b1a7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.AA-03
+  target_title: Users, services, and hardware are authenticated
+  source_controls:
+  - id: IA-2
+    relationship: intersects_with
+  - id: IA-2(1)
+    relationship: intersects_with
+  - id: IA-2(2)
+    relationship: intersects_with
+  - id: IA-2(8)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-89ebba8a
+  - apath-d37b5700
+  - auth-3dbf15e7
+  - auth-3f2314a4
+  - auth-6924f467
+  - auth-7162fd48
+  - auth-dfed90e4
+  capability_count: 3
+  capability_ids:
+  - auth-cap-8144e2be
+  - auth-cap-f01e6108
+  - intg-cap-7a54b1a7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.DS-02
+  target_title: The confidentiality, integrity, and availability of data-in-transit
+    are protected
+  source_controls:
+  - id: SC-8
+    relationship: intersects_with
+  - id: SC-8(1)
+    relationship: intersects_with
+  finding_count: 7
+  finding_ids:
+  - apath-a5e48149
+  - apath-ff51339a
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  - conf-3060c50e
+  - tmeval-5c02d052
+  capability_count: 2
+  capability_ids:
+  - conf-cap-277b2364
+  - intg-cap-70ef26f7
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.DS-11
+  target_title: Backups of data are created, protected, maintained, and tested
+  source_controls:
+  - id: CP-9
+    relationship: intersects_with
+  - id: CP-9(1)
+    relationship: intersects_with
+  - id: CP-9(8)
+    relationship: intersects_with
+  finding_count: 5
+  finding_ids:
+  - apath-b3a517fc
+  - avail-5af6fee5
+  - dist-69bbaf5c
+  - merged-1119b0be
+  - merged-a49cb674
+  capability_count: 1
+  capability_ids:
+  - immut-cap-5e14aa20
+  posture: gapped_and_covered
+  fidelity: partial
+- target_id: PR.PS-04
+  target_title: Log records are generated and made available for continuous monitoring
+  source_controls:
+  - id: AU-12
+    relationship: intersects_with
+  - id: AU-12(1)
+    relationship: intersects_with
+  - id: AU-2
+    relationship: intersects_with
+  - id: AU-3
+    relationship: intersects_with
+  - id: AU-3(1)
+    relationship: intersects_with
+  finding_count: 4
+  finding_ids:
+  - apath-95a6ebd6
+  - merged-0ccd3ea6
+  - merged-66801b1b
+  - nonrep-af1c55d3
+  capability_count: 2
+  capability_ids:
+  - nonrep-cap-510a35c7
+  - nonrep-cap-e865e0d3
+  posture: gapped_and_covered
+  fidelity: partial

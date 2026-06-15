@@ -7,13 +7,24 @@ function Coverage({ data }) {
   const active = (data.meta && data.meta.active_taxonomies) || [];
   const masvsRows = data.masvs_coverage || [];
   const masweRows = data.maswe_coverage || [];
+  const capecData = data.capec_bridge || { bridges: [], suggestions: [] };
+  const detectionRows = data.detection_coverage || [];
+  const compliance = data.compliance_projection || { hipaa: [], csf2: [] };
   const showMasvs = active.includes("masvs") && masvsRows.length > 0;
   const showMaswe = active.includes("maswe") && masweRows.length > 0;
-  // APD matrix is § 9 by default; each MAS sub-tab inserted before it bumps
-  // its section number so the tab labels stay contiguous after ATT&CK (§ 8).
+  // Derived views (ADR-0022) have no active taxonomy — gated purely on data
+  // presence. CAPEC + detection sit right after ATT&CK; compliance near the end.
+  const showCapec = (capecData.bridges.length + capecData.suggestions.length) > 0;
+  const showDetection = detectionRows.length > 0;
+  const showCompliance = (compliance.hipaa.length + compliance.csf2.length) > 0;
+  // APD matrix is § 9 by default; each sub-tab inserted before it bumps its
+  // section number so the tab labels stay contiguous after ATT&CK (§ 8).
   let n = 9;
+  const capecSec = showCapec ? n++ : null;
+  const detectionSec = showDetection ? n++ : null;
   const masvsSec = showMasvs ? n++ : null;
   const masweSec = showMaswe ? n++ : null;
+  const complianceSec = showCompliance ? n++ : null;
   const apdSec = n;
 
   return (
@@ -28,6 +39,16 @@ function Coverage({ data }) {
         <button className={`cov-tab ${tab === "attack" ? "cov-tab--active" : ""}`} onClick={() => setTab("attack")}>
           MITRE ATT&CK · § 8
         </button>
+        {showCapec && (
+          <button className={`cov-tab ${tab === "capec" ? "cov-tab--active" : ""}`} onClick={() => setTab("capec")}>
+            CAPEC bridge · § {capecSec}
+          </button>
+        )}
+        {showDetection && (
+          <button className={`cov-tab ${tab === "detection" ? "cov-tab--active" : ""}`} onClick={() => setTab("detection")}>
+            ATT&CK detection · § {detectionSec}
+          </button>
+        )}
         {showMasvs && (
           <button className={`cov-tab ${tab === "masvs" ? "cov-tab--active" : ""}`} onClick={() => setTab("masvs")}>
             OWASP MASVS · § {masvsSec}
@@ -38,6 +59,11 @@ function Coverage({ data }) {
             OWASP MASWE · § {masweSec}
           </button>
         )}
+        {showCompliance && (
+          <button className={`cov-tab ${tab === "compliance" ? "cov-tab--active" : ""}`} onClick={() => setTab("compliance")}>
+            Compliance crosswalk · § {complianceSec}
+          </button>
+        )}
         <button className={`cov-tab ${tab === "apd" ? "cov-tab--active" : ""}`} onClick={() => setTab("apd")}>
           APD component matrix · § {apdSec}
         </button>
@@ -45,8 +71,11 @@ function Coverage({ data }) {
 
       {tab === "nist" && <NistTable rows={data.nist_rollup} />}
       {tab === "attack" && <AttackTable rows={data.attack_exposure} />}
+      {tab === "capec" && showCapec && <CapecBridgeTable data={capecData} />}
+      {tab === "detection" && showDetection && <DetectionTable rows={detectionRows} />}
       {tab === "masvs" && showMasvs && <MasvsTable rows={masvsRows} />}
       {tab === "maswe" && showMaswe && <MasweTable rows={masweRows} />}
+      {tab === "compliance" && showCompliance && <ComplianceTable data={compliance} />}
       {tab === "apd" && <APDMatrix matrix={data.apd_matrix} />}
     </div>
   );
@@ -267,6 +296,158 @@ function MasweTable({ rows }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function CapecBridgeTable({ data }) {
+  const bridges = data.bridges || [];
+  const suggestions = data.suggestions || [];
+  const dirLabel = (d) => (d === "cwe_to_attack" ? "CWE → ATT&CK" : "ATT&CK → CWE");
+  return (
+    <div>
+      <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+        <strong>Derived view</strong> — not a specialist mapping. MITRE CAPEC attack patterns that connect a finding&rsquo;s CWE weakness to its ATT&CK technique, <strong>corroborating</strong> that the two tags describe one coherent attack. Absence of a bridge is silent, never a mismatch. Authoritative version in <code className="mono">40-synthesis/capec-bridge.yaml</code>.
+      </p>
+      <table className="attack-table">
+        <thead>
+          <tr>
+            <th>Finding</th>
+            <th>CAPEC pattern</th>
+            <th>Weakness (CWE)</th>
+            <th>Technique (ATT&CK)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bridges.map((b, i) => (
+            <tr key={`${b.finding_id}-${b.capec_id}-${i}`}>
+              <td className="mono" style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{b.finding_id}</td>
+              <td><TaxonomyTag id={b.capec_id} /></td>
+              <td><TagRow ids={b.cwe || []} /></td>
+              <td><TagRow ids={b.attack || []} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {suggestions.length > 0 && (
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <h3 style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", marginBottom: "var(--space-2)" }}>
+            Suggested links (advisory)
+          </h3>
+          <p style={{ color: "var(--ink-3)", maxWidth: "72ch", marginBottom: "var(--space-3)", fontSize: "var(--text-xs)", lineHeight: 1.6 }}>
+            Findings tagged on only one side, where a CAPEC pattern implies the missing side. For human review — never auto-applied.
+          </p>
+          <table className="attack-table">
+            <thead>
+              <tr>
+                <th>Finding</th>
+                <th>Direction</th>
+                <th>Via CAPEC</th>
+                <th>Suggested</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suggestions.map((s, i) => (
+                <tr key={`${s.finding_id}-${i}`}>
+                  <td className="mono" style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{s.finding_id}</td>
+                  <td style={{ fontSize: "var(--text-xs)", color: "var(--ink-2)" }}>{dirLabel(s.direction)}</td>
+                  <td><TagRow ids={s.via_capec || []} /></td>
+                  <td><TagRow ids={s.suggested || []} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetectionTable({ rows }) {
+  return (
+    <div>
+      <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+        <strong>Derived view</strong> — for each ATT&CK technique a finding exposes, the data components ATT&CK says are required to <strong>detect</strong> it. Surfaces the telemetry the design must emit to see the attack (an APD <em>Non-Repudiation</em> concern); a technique ATT&CK lists no detection data for is omitted. Authoritative version in <code className="mono">40-synthesis/detection-coverage.yaml</code>.
+      </p>
+      <table className="attack-table">
+        <thead>
+          <tr>
+            <th>Technique</th>
+            <th>Name</th>
+            <th className="num">Findings</th>
+            <th>Required telemetry (data components)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.technique}>
+              <td><TaxonomyTag id={r.technique} /></td>
+              <td style={{ color: "var(--ink)" }}>{r.technique_name}</td>
+              <td className="num">{r.exposure_finding_count}</td>
+              <td>
+                <div className="tagrow">
+                  {(r.required_data_components || []).map((c) => (
+                    <CopyPill
+                      key={c.data_component_id || c.data_component_name}
+                      value={`${c.data_component_id ? c.data_component_id + " " : ""}${c.data_component_name}`}
+                    />
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ComplianceSection({ title, rows }) {
+  if (!rows || rows.length === 0) return null;
+  const postureClass = (p) =>
+    p === "covered" ? "covered" : p === "gapped" ? "gapped" : "both";
+  return (
+    <div style={{ marginBottom: "var(--space-6)" }}>
+      <h3 style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", marginBottom: "var(--space-2)" }}>{title}</h3>
+      <table className="nist-table">
+        <thead>
+          <tr>
+            <th>Requirement</th>
+            <th>Title</th>
+            <th>via 800-53r5</th>
+            <th className="num">Findings</th>
+            <th className="num">Capabilities</th>
+            <th>Posture</th>
+            <th>Fidelity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.target_id}>
+              <td className="mono" style={{ color: "var(--ink)" }}>{r.target_id}</td>
+              <td>{r.target_title}</td>
+              <td><TagRow ids={(r.source_controls || []).map((s) => s.id)} /></td>
+              <td className="num" style={{ color: r.finding_count > 0 ? "var(--sev-high)" : undefined }}>{r.finding_count}</td>
+              <td className="num">{r.capability_count}</td>
+              <td><span className={`cov-cell cov-cell--${postureClass(r.posture)}`}>{r.posture}</span></td>
+              <td style={{ fontSize: "var(--text-xs)", color: r.fidelity === "partial" ? "var(--ink-3)" : "var(--ink-2)" }}>{r.fidelity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ComplianceTable({ data }) {
+  return (
+    <div>
+      <p style={{ color: "var(--ink-2)", maxWidth: "72ch", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
+        <strong>Derived projection — not an audit attestation.</strong> The run&rsquo;s NIST 800-53r5 coverage re-expressed in auditor vocabularies via a published crosswalk. Many mappings are partial (a control only <em>intersects</em> a requirement), shown as <strong>partial</strong> fidelity — do not read a row as full satisfaction of the requirement. Authoritative versions in <code className="mono">40-synthesis/hipaa-coverage.yaml</code> + <code className="mono">csf2-coverage.yaml</code>.
+      </p>
+      <ComplianceSection title="HIPAA Security Rule (§ 164.3xx)" rows={data.hipaa} />
+      <ComplianceSection title="NIST CSF 2.0" rows={data.csf2} />
     </div>
   );
 }

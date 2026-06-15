@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-recon.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/c4-recon.schema.json",
   "title": "APD C4 Recon (agent-authored, content-only)",
   "type": "object",
   "required": ["schema_version", "generated_by", "containers", "components", "uses_edges"],

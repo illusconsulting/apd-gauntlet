@@ -6,6 +6,45 @@ All notable changes to this project will be documented in this file. Format base
 
 ### Added
 
+- **Derived cross-framework views** ([ADR-0022](docs/adrs/0022-derived-cross-framework-views.md)) —
+  a second class of taxonomy artifact authored by the synthesizer (not specialists)
+  from existing anchors + an authoritative crosswalk catalog. First instance: the
+  **MITRE CAPEC bridge** (`40-synthesis/capec-bridge.yaml`, schema
+  `capec-bridge.schema.json`). It corroborates a finding's co-tagged `cwe` +
+  `mitre_attack` technique via a CAPEC attack pattern that relates both, and
+  suggests the missing side when only one is tagged (sub-techniques fold to their
+  parent for matching). Emitted only when both `cwe` and `mitre_attack` are
+  declared and a bridge/suggestion exists; absence of a CAPEC link is silent
+  (never a mismatch). New `apd-gauntlet refresh-capec` + bundled `data/capec.json`;
+  CAPEC ids resolve to titles + `capec.mitre.org` URLs. Rendered as a `CAPEC bridge`
+  sub-tab in the report Coverage screen.
+- **ATT&CK detection overlay** (derived view, ADR-0022) — for each ATT&CK
+  technique a finding exposes, the data components ATT&CK says are required to
+  detect it (the telemetry side, complementing the existing mitigation mapping;
+  an APD Non-Repudiation concern). Gated on the `mitre_attack` anchor; emitted
+  only when an exposed technique has detection data (silence-on-absence). The
+  catalog is projected from the enterprise STIX bundle's v17+
+  detection-strategy → analytic → data-component chain (`refresh-mitre` now also
+  writes `data/mitre-attack-detection.json`). New `detection-coverage.yaml` +
+  schema; rendered as an `ATT&CK detection` Coverage sub-tab.
+- **Compliance projection layer** (derived view, ADR-0022) — the run's NIST
+  800-53r5 coverage projected into the **HIPAA Security Rule** and **NIST CSF 2.0**
+  via a published crosswalk, carrying the NIST IR 8477 STRM relationship and an
+  `exact|partial` fidelity flag. Opt-in via a new run-config `projections:` list;
+  control enhancements fold to their base for matching. New
+  `hipaa-coverage.yaml` / `csf2-coverage.yaml` + shared `framework-coverage.schema.json`;
+  rendered as a `Compliance crosswalk` Coverage sub-tab, explicitly labeled
+  *derived projection — not an audit attestation*. The crosswalk data is
+  **grounded against NIST CPRT exports** by `apd-gauntlet refresh-crosswalks`:
+  control-level mappings are validated to be a subset of NIST's stated 800-53
+  references and titles/provenance are pulled from the exports. (CSF 2.0's CPRT
+  references are family-level and HIPAA 800-66r2's are publication-level, so the
+  control-level selections are curated — CSF 2.0 within NIST's family scope, HIPAA
+  from 800-66r1 Appendix D — and the grounding tool drops any mapping that exceeds
+  NIST's scope.)
+
+  None of the three derived views change `finding`/`capability` `control_mappings`
+  or the run-config `taxonomies` enum.
 - Per-finding attack-path "hop-strip" visualization in the Findings tab for
   `apath-*` risk findings — shows the path, the vulnerable hop, and layered
   fix-at-source + D3FEND choke-point recommendation markers, with a reverse

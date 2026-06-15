@@ -253,7 +253,7 @@ from apd_gauntlet.validate import build_registry
 def _validator():
     reg = build_registry()
     schema = reg.contents(
-        "https://github.com/shoveleejoe/apd-gauntlet/schemas/metrics.schema.json"
+        "https://github.com/illusconsulting/apd-gauntlet/schemas/metrics.schema.json"
     )
     return jsonschema.Draft202012Validator(schema, registry=reg)
 
@@ -289,7 +289,7 @@ Create `schemas/metrics.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/metrics.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/metrics.schema.json",
   "title": "APD Gauntlet Report Metrics (canonical summary block)",
   "type": "object",
   "additionalProperties": false,

@@ -163,7 +163,7 @@ Copy the §4.1 record schema verbatim into `schemas/domain-improvement.schema.js
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json",
   "title": "APD Gauntlet Domain-Improvement Opportunity",
   "type": "object",
   "required": [
@@ -305,7 +305,7 @@ Copy the §4.1 record schema verbatim into `schemas/domain-improvement.schema.js
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvements-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvements-doc.schema.json",
   "title": "APD Gauntlet Domain-Improvements Document",
   "type": "object",
   "required": ["schema_version", "generated_by", "examined_domains", "improvements"],
@@ -319,7 +319,7 @@ Copy the §4.1 record schema verbatim into `schemas/domain-improvement.schema.js
     },
     "improvements": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-improvement.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-improvement.schema.json" }
     }
   }
 }
@@ -330,7 +330,7 @@ Copy the §4.1 record schema verbatim into `schemas/domain-improvement.schema.js
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/domain-coverage-delta-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/domain-coverage-delta-doc.schema.json",
   "title": "APD Gauntlet Domain Coverage-Delta Document",
   "type": "object",
   "required": ["schema_version", "generated_by", "examined_domains", "declared_union", "candidates"],

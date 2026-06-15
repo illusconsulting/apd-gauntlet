@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/capec-bridge.schema.json",
+  "title": "APD Gauntlet CAPEC Bridge (derived CWE<->ATT&CK view)",
+  "description": "Synthesizer-authored derived view (ADR-0022). Not an emission taxonomy: CAPEC ids never appear in a record's control_mappings. Corroborates a finding's co-tagged CWE + ATT&CK technique via an attack pattern that relates both, and suggests the missing side when only one is tagged.",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "bridges", "suggestions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "bridges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding_id", "capec_id", "capec_name", "cwe", "attack"],
+        "additionalProperties": false,
+        "properties": {
+          "finding_id":  { "type": "string", "minLength": 1 },
+          "capec_id":    { "type": "string", "pattern": "^CAPEC-[0-9]+$" },
+          "capec_name":  { "type": "string", "minLength": 1 },
+          "cwe":         { "type": "array", "items": { "type": "string", "pattern": "^CWE-[0-9]+$" } },
+          "attack":      { "type": "array", "items": { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" } }
+        }
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding_id", "direction", "via_capec", "suggested"],
+        "additionalProperties": false,
+        "properties": {
+          "finding_id": { "type": "string", "minLength": 1 },
+          "direction":  { "type": "string", "enum": ["cwe_to_attack", "attack_to_cwe"] },
+          "via_capec":  { "type": "array", "items": { "type": "string", "pattern": "^CAPEC-[0-9]+$" } },
+          "suggested":  { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

@@ -1166,7 +1166,7 @@ def test_mapping_tables_single_sourced_pointer() -> None:
 - [ ] Run the test; confirm it fails (no `## Authoring discipline` section; `_authoring_section()` raises `ValueError`):
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_skill_apd_threat_model_methodologies_authoring.py -q
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_skill_apd_threat_model_methodologies_authoring.py -q
 ```
 
 - [ ] Add the scoping clause to the existing "Never invent threats" rule. Replace this exact block:
@@ -1274,7 +1274,7 @@ so `build_skeleton` does not emit `data_flow` cells.
 - [ ] Run the test; confirm it passes:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_skill_apd_threat_model_methodologies_authoring.py -q
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_skill_apd_threat_model_methodologies_authoring.py -q
 ```
 
 Expected: `7 passed`.
@@ -1282,7 +1282,7 @@ Expected: `7 passed`.
 - [ ] Run markdownlint over the edited skill:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && npx --yes markdownlint-cli2 ".claude/skills/apd-threat-model-methodologies/SKILL.md"
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && npx --yes markdownlint-cli2 ".claude/skills/apd-threat-model-methodologies/SKILL.md"
 ```
 
 Expected: `Summary: 0 error(s)`.
@@ -1290,7 +1290,7 @@ Expected: `Summary: 0 error(s)`.
 - [ ] Commit:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && git add .claude/skills/apd-threat-model-methodologies/SKILL.md tests/test_skill_apd_threat_model_methodologies_authoring.py && git commit -m "feat(threat-model): add Authoring discipline section to methodologies skill (C4)
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && git add .claude/skills/apd-threat-model-methodologies/SKILL.md tests/test_skill_apd_threat_model_methodologies_authoring.py && git commit -m "feat(threat-model): add Authoring discipline section to methodologies skill (C4)
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -1422,7 +1422,7 @@ def test_agent_lints_clean() -> None:
 - [ ] Run the test; confirm it fails (agent file missing):
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_lint_agent_apd_threat_model_author.py -q
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_lint_agent_apd_threat_model_author.py -q
 ```
 
 - [ ] Create the agent file. Write `.claude/agents/apd-threat-model-author.md` with exactly this content:
@@ -1633,7 +1633,7 @@ keeps the run within context.
 - [ ] Run the test; confirm it passes:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_lint_agent_apd_threat_model_author.py -q
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && python -m pytest tests/test_lint_agent_apd_threat_model_author.py -q
 ```
 
 Expected: `14 passed`.
@@ -1641,7 +1641,7 @@ Expected: `14 passed`.
 - [ ] Run the agent linter directly (matches the CI `lint-agents` job):
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && apd-gauntlet lint-agents --agent-dir .claude/agents/
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && apd-gauntlet lint-agents --agent-dir .claude/agents/
 ```
 
 Expected: clean summary, exit 0.
@@ -1649,7 +1649,7 @@ Expected: clean summary, exit 0.
 - [ ] Run markdownlint over the new agent:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && npx --yes markdownlint-cli2 ".claude/agents/apd-threat-model-author.md"
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && npx --yes markdownlint-cli2 ".claude/agents/apd-threat-model-author.md"
 ```
 
 Expected: `Summary: 0 error(s)`.
@@ -1657,7 +1657,7 @@ Expected: `Summary: 0 error(s)`.
 - [ ] Commit:
 
 ```
-cd /Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework && git add .claude/agents/apd-threat-model-author.md tests/test_lint_agent_apd_threat_model_author.py && git commit -m "feat(threat-model): add apd-threat-model-author agent (C2)
+cd /Users/user/Documents/GitHub/APD-sec-arch-framework && git add .claude/agents/apd-threat-model-author.md tests/test_lint_agent_apd_threat_model_author.py && git commit -m "feat(threat-model): add apd-threat-model-author agent (C2)
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```

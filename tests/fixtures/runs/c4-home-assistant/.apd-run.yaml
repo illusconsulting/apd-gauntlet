@@ -16,53 +16,53 @@ code_recon: enabled
 
 repos:
   # --- Backend / API surface (api-security) ---
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-core
     role: primary                    # HA Core: REST/WS API, auth subsystem, recorder DB, 2000+ in-process integrations
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-supervisor
     role: dependency                 # host-root-equivalent: Docker socket, add-on lifecycle, scoped tokens, ingress
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-os-agent
     role: dependency                 # Go D-Bus host agent (datadisk/AppArmor/system) — container->host bridge
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-operating-system
     role: dependency                 # HAOS appliance image (Buildroot)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-cli
     role: dependency                 # `ha` CLI -> Supervisor API
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-cli
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-plugin-cli
     role: dependency                 # Supervisor CLI plugin container
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-dns
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-plugin-dns
     role: dependency                 # CoreDNS plugin container
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-audio
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-plugin-audio
     role: dependency                 # PulseAudio plugin container
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-multicast
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-plugin-multicast
     role: dependency                 # multicast/mDNS plugin container (LAN discovery)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-observer
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-plugin-observer
     role: dependency                 # health/observer plugin container
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-addons
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-addons
     role: dependency                 # official add-on collection (third-party Docker containers; config.yaml role/AppArmor/signing)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-docker
     role: dependency                 # container build + image
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-docker-base
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-docker-base
     role: dependency                 # base images (alpine/debian/ubuntu) — supply-chain floor
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-wheels
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-wheels
     role: dependency                 # Python wheel build infrastructure
   # --- Clients (mobile-applications + frontend) ---
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-iOS
     role: dependency                 # native Swift iOS Companion app (Keychain, WebView, APNS, biometric lock)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-android
     role: dependency                 # native Kotlin Android Companion app (Keystore, WebView, FCM, App Links, Wear/Auto)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-frontend
     role: dependency                 # Lit/TS SPA served by Core + embedded in mobile WebViews
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant-js-websocket
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-home-assistant-js-websocket
     role: peer                       # JS WS client library (auth handshake + connection lifecycle)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push
     role: dependency                 # push-relay (APNS/FCM) — notification integrity + push-token confidentiality
   # --- Documentation / reference ---
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-companion.home-assistant
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-companion.home-assistant
     role: peer                       # companion-app docs site
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-architecture
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-architecture
     role: peer                       # architecture ADRs
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-developers.home-assistant
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-developers.home-assistant
     role: peer                       # developer docs (API/auth/native-app/supervisor)
-  - cbm_project: Users-shoveleejoe-Documents-GitHub-home-assistant-repos-home-assistant.io
+  - cbm_project: Users-user-Documents-GitHub-home-assistant-repos-home-assistant.io
     role: peer                       # end-user docs (authentication, companion app)
 
 taxonomies:

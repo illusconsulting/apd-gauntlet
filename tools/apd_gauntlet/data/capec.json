@@ -1,0 +1,5463 @@
+{
+  "attack_patterns": {
+    "CAPEC-1": {
+      "abstraction": "standard",
+      "name": "Accessing Functionality Not Properly Constrained by ACLs",
+      "related_attack": [
+        "T1574.010"
+      ],
+      "related_cwe": [
+        "CWE-276",
+        "CWE-285",
+        "CWE-434",
+        "CWE-693",
+        "CWE-732",
+        "CWE-1191",
+        "CWE-1193",
+        "CWE-1220",
+        "CWE-1297",
+        "CWE-1311",
+        "CWE-1314",
+        "CWE-1315",
+        "CWE-1318",
+        "CWE-1320",
+        "CWE-1321",
+        "CWE-1327"
+      ]
+    },
+    "CAPEC-10": {
+      "abstraction": "detailed",
+      "name": "Buffer Overflow via Environment Variables",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-302",
+        "CWE-118",
+        "CWE-119",
+        "CWE-74",
+        "CWE-99",
+        "CWE-20",
+        "CWE-680",
+        "CWE-733",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-100": {
+      "abstraction": "standard",
+      "name": "Overflow Buffers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-131",
+        "CWE-129",
+        "CWE-805",
+        "CWE-680"
+      ]
+    },
+    "CAPEC-101": {
+      "abstraction": "detailed",
+      "name": "Server Side Include (SSI) Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-97",
+        "CWE-74",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-102": {
+      "abstraction": "detailed",
+      "name": "Session Sidejacking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-294",
+        "CWE-522",
+        "CWE-523",
+        "CWE-319",
+        "CWE-614"
+      ]
+    },
+    "CAPEC-103": {
+      "abstraction": "standard",
+      "name": "Clickjacking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-104": {
+      "abstraction": "standard",
+      "name": "Cross Zone Scripting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-250",
+        "CWE-638",
+        "CWE-285",
+        "CWE-116",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-105": {
+      "abstraction": "detailed",
+      "name": "HTTP Request Splitting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-113",
+        "CWE-138",
+        "CWE-436"
+      ]
+    },
+    "CAPEC-107": {
+      "abstraction": "detailed",
+      "name": "Cross Site Tracing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-693",
+        "CWE-648"
+      ]
+    },
+    "CAPEC-108": {
+      "abstraction": "detailed",
+      "name": "Command Line Execution through SQL Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-89",
+        "CWE-74",
+        "CWE-20",
+        "CWE-78",
+        "CWE-114"
+      ]
+    },
+    "CAPEC-109": {
+      "abstraction": "detailed",
+      "name": "Object Relational Mapping Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20",
+        "CWE-89",
+        "CWE-564"
+      ]
+    },
+    "CAPEC-11": {
+      "abstraction": "detailed",
+      "name": "Cause Web Server Misclassification",
+      "related_attack": [
+        "T1036.006"
+      ],
+      "related_cwe": [
+        "CWE-430"
+      ]
+    },
+    "CAPEC-110": {
+      "abstraction": "detailed",
+      "name": "SQL Injection through SOAP Parameter Tampering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-89",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-111": {
+      "abstraction": "standard",
+      "name": "JSON Hijacking (aka JavaScript Hijacking)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-345",
+        "CWE-346",
+        "CWE-352"
+      ]
+    },
+    "CAPEC-112": {
+      "abstraction": "meta",
+      "name": "Brute Force",
+      "related_attack": [
+        "T1110"
+      ],
+      "related_cwe": [
+        "CWE-330",
+        "CWE-326",
+        "CWE-521"
+      ]
+    },
+    "CAPEC-113": {
+      "abstraction": "meta",
+      "name": "Interface Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1192"
+      ]
+    },
+    "CAPEC-114": {
+      "abstraction": "meta",
+      "name": "Authentication Abuse",
+      "related_attack": [
+        "T1548"
+      ],
+      "related_cwe": [
+        "CWE-287",
+        "CWE-1244"
+      ]
+    },
+    "CAPEC-115": {
+      "abstraction": "meta",
+      "name": "Authentication Bypass",
+      "related_attack": [
+        "T1548"
+      ],
+      "related_cwe": [
+        "CWE-287"
+      ]
+    },
+    "CAPEC-116": {
+      "abstraction": "meta",
+      "name": "Excavation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200",
+        "CWE-1243"
+      ]
+    },
+    "CAPEC-117": {
+      "abstraction": "meta",
+      "name": "Interception",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-319"
+      ]
+    },
+    "CAPEC-12": {
+      "abstraction": "standard",
+      "name": "Choosing Message Identifier",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201",
+        "CWE-306"
+      ]
+    },
+    "CAPEC-120": {
+      "abstraction": "detailed",
+      "name": "Double Encoding",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-172",
+        "CWE-177",
+        "CWE-181",
+        "CWE-183",
+        "CWE-184",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-692"
+      ]
+    },
+    "CAPEC-121": {
+      "abstraction": "standard",
+      "name": "Exploit Non-Production Interfaces",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-489",
+        "CWE-1209",
+        "CWE-1259",
+        "CWE-1267",
+        "CWE-1270",
+        "CWE-1294",
+        "CWE-1295",
+        "CWE-1296",
+        "CWE-1302",
+        "CWE-1313"
+      ]
+    },
+    "CAPEC-122": {
+      "abstraction": "meta",
+      "name": "Privilege Abuse",
+      "related_attack": [
+        "T1548"
+      ],
+      "related_cwe": [
+        "CWE-269",
+        "CWE-732",
+        "CWE-1317"
+      ]
+    },
+    "CAPEC-123": {
+      "abstraction": "meta",
+      "name": "Buffer Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-119"
+      ]
+    },
+    "CAPEC-124": {
+      "abstraction": "meta",
+      "name": "Shared Resource Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1189",
+        "CWE-1331"
+      ]
+    },
+    "CAPEC-125": {
+      "abstraction": "meta",
+      "name": "Flooding",
+      "related_attack": [
+        "T1498.001",
+        "T1499"
+      ],
+      "related_cwe": [
+        "CWE-404",
+        "CWE-770"
+      ]
+    },
+    "CAPEC-126": {
+      "abstraction": "standard",
+      "name": "Path Traversal",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-22"
+      ]
+    },
+    "CAPEC-127": {
+      "abstraction": "detailed",
+      "name": "Directory Indexing",
+      "related_attack": [
+        "T1083"
+      ],
+      "related_cwe": [
+        "CWE-424",
+        "CWE-425",
+        "CWE-288",
+        "CWE-285",
+        "CWE-732",
+        "CWE-276",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-128": {
+      "abstraction": "standard",
+      "name": "Integer Attacks",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-682"
+      ]
+    },
+    "CAPEC-129": {
+      "abstraction": "meta",
+      "name": "Pointer Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-682",
+        "CWE-822",
+        "CWE-823"
+      ]
+    },
+    "CAPEC-13": {
+      "abstraction": "detailed",
+      "name": "Subverting Environment Variable Values",
+      "related_attack": [
+        "T1562.003",
+        "T1574.006",
+        "T1574.007"
+      ],
+      "related_cwe": [
+        "CWE-353",
+        "CWE-285",
+        "CWE-302",
+        "CWE-74",
+        "CWE-15",
+        "CWE-73",
+        "CWE-20",
+        "CWE-200"
+      ]
+    },
+    "CAPEC-130": {
+      "abstraction": "meta",
+      "name": "Excessive Allocation",
+      "related_attack": [
+        "T1499.003"
+      ],
+      "related_cwe": [
+        "CWE-404",
+        "CWE-770",
+        "CWE-1325"
+      ]
+    },
+    "CAPEC-131": {
+      "abstraction": "meta",
+      "name": "Resource Leak Exposure",
+      "related_attack": [
+        "T1499"
+      ],
+      "related_cwe": [
+        "CWE-404"
+      ]
+    },
+    "CAPEC-132": {
+      "abstraction": "detailed",
+      "name": "Symlink Attack",
+      "related_attack": [
+        "T1547.009"
+      ],
+      "related_cwe": [
+        "CWE-59"
+      ]
+    },
+    "CAPEC-133": {
+      "abstraction": "standard",
+      "name": "Try All Common Switches",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-912"
+      ]
+    },
+    "CAPEC-134": {
+      "abstraction": "standard",
+      "name": "Email Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-150"
+      ]
+    },
+    "CAPEC-135": {
+      "abstraction": "standard",
+      "name": "Format String Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-134",
+        "CWE-20",
+        "CWE-74"
+      ]
+    },
+    "CAPEC-136": {
+      "abstraction": "standard",
+      "name": "LDAP Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-77",
+        "CWE-90",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-137": {
+      "abstraction": "meta",
+      "name": "Parameter Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-88"
+      ]
+    },
+    "CAPEC-138": {
+      "abstraction": "standard",
+      "name": "Reflection Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-470"
+      ]
+    },
+    "CAPEC-139": {
+      "abstraction": "detailed",
+      "name": "Relative Path Traversal",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-23"
+      ]
+    },
+    "CAPEC-14": {
+      "abstraction": "detailed",
+      "name": "Client-side Injection-induced Buffer Overflow",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-353",
+        "CWE-118",
+        "CWE-119",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-140": {
+      "abstraction": "standard",
+      "name": "Bypassing of Intermediate Forms in Multiple-Form Sets",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-372"
+      ]
+    },
+    "CAPEC-141": {
+      "abstraction": "standard",
+      "name": "Cache Poisoning",
+      "related_attack": [
+        "T1557.002"
+      ],
+      "related_cwe": [
+        "CWE-348",
+        "CWE-345",
+        "CWE-349",
+        "CWE-346"
+      ]
+    },
+    "CAPEC-142": {
+      "abstraction": "detailed",
+      "name": "DNS Cache Poisoning",
+      "related_attack": [
+        "T1584.002"
+      ],
+      "related_cwe": [
+        "CWE-348",
+        "CWE-345",
+        "CWE-349",
+        "CWE-346",
+        "CWE-350"
+      ]
+    },
+    "CAPEC-143": {
+      "abstraction": "detailed",
+      "name": "Detect Unpublicized Web Pages",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-425"
+      ]
+    },
+    "CAPEC-144": {
+      "abstraction": "detailed",
+      "name": "Detect Unpublicized Web Services",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-425"
+      ]
+    },
+    "CAPEC-145": {
+      "abstraction": "detailed",
+      "name": "Checksum Spoofing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-354"
+      ]
+    },
+    "CAPEC-146": {
+      "abstraction": "detailed",
+      "name": "XML Schema Poisoning",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-15",
+        "CWE-472"
+      ]
+    },
+    "CAPEC-147": {
+      "abstraction": "detailed",
+      "name": "XML Ping of the Death",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-400",
+        "CWE-770"
+      ]
+    },
+    "CAPEC-148": {
+      "abstraction": "meta",
+      "name": "Content Spoofing",
+      "related_attack": [
+        "T1491"
+      ],
+      "related_cwe": [
+        "CWE-345"
+      ]
+    },
+    "CAPEC-149": {
+      "abstraction": "detailed",
+      "name": "Explore for Predictable Temporary File Names",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-377"
+      ]
+    },
+    "CAPEC-15": {
+      "abstraction": "standard",
+      "name": "Command Delimiters",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-146",
+        "CWE-77",
+        "CWE-184",
+        "CWE-78",
+        "CWE-185",
+        "CWE-93",
+        "CWE-140",
+        "CWE-157",
+        "CWE-138",
+        "CWE-154",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-150": {
+      "abstraction": "standard",
+      "name": "Collect Data from Common Resource Locations",
+      "related_attack": [
+        "T1003",
+        "T1119",
+        "T1213",
+        "T1530",
+        "T1555",
+        "T1602"
+      ],
+      "related_cwe": [
+        "CWE-552",
+        "CWE-1239",
+        "CWE-1258",
+        "CWE-1266",
+        "CWE-1272",
+        "CWE-1323",
+        "CWE-1330"
+      ]
+    },
+    "CAPEC-151": {
+      "abstraction": "meta",
+      "name": "Identity Spoofing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-287"
+      ]
+    },
+    "CAPEC-153": {
+      "abstraction": "meta",
+      "name": "Input Data Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20"
+      ]
+    },
+    "CAPEC-154": {
+      "abstraction": "meta",
+      "name": "Resource Location Spoofing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-451"
+      ]
+    },
+    "CAPEC-155": {
+      "abstraction": "detailed",
+      "name": "Screen Temporary Files for Sensitive Information",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-377"
+      ]
+    },
+    "CAPEC-157": {
+      "abstraction": "standard",
+      "name": "Sniffing Attacks",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-311"
+      ]
+    },
+    "CAPEC-158": {
+      "abstraction": "detailed",
+      "name": "Sniffing Network Traffic",
+      "related_attack": [
+        "T1040",
+        "T1111"
+      ],
+      "related_cwe": [
+        "CWE-311"
+      ]
+    },
+    "CAPEC-159": {
+      "abstraction": "standard",
+      "name": "Redirect Access to Libraries",
+      "related_attack": [
+        "T1574.008"
+      ],
+      "related_cwe": [
+        "CWE-706"
+      ]
+    },
+    "CAPEC-16": {
+      "abstraction": "detailed",
+      "name": "Dictionary-based Password Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-521",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309"
+      ]
+    },
+    "CAPEC-160": {
+      "abstraction": "standard",
+      "name": "Exploit Script-Based APIs",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-346"
+      ]
+    },
+    "CAPEC-161": {
+      "abstraction": "meta",
+      "name": "Infrastructure Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-923"
+      ]
+    },
+    "CAPEC-162": {
+      "abstraction": "detailed",
+      "name": "Manipulating Hidden Fields",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-602"
+      ]
+    },
+    "CAPEC-163": {
+      "abstraction": "detailed",
+      "name": "Spear Phishing",
+      "related_attack": [
+        "T1534",
+        "T1566.001",
+        "T1566.002",
+        "T1566.003",
+        "T1598.001",
+        "T1598.002",
+        "T1598.003"
+      ],
+      "related_cwe": [
+        "CWE-451"
+      ]
+    },
+    "CAPEC-164": {
+      "abstraction": "detailed",
+      "name": "Mobile Phishing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-451"
+      ]
+    },
+    "CAPEC-165": {
+      "abstraction": "meta",
+      "name": "File Manipulation",
+      "related_attack": [
+        "T1036.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-166": {
+      "abstraction": "standard",
+      "name": "Force the System to Reset Values",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-306",
+        "CWE-1221",
+        "CWE-1232"
+      ]
+    },
+    "CAPEC-167": {
+      "abstraction": "standard",
+      "name": "White Box Reverse Engineering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1323"
+      ]
+    },
+    "CAPEC-168": {
+      "abstraction": "detailed",
+      "name": "Windows ::DATA Alternate Data Stream",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-212",
+        "CWE-69"
+      ]
+    },
+    "CAPEC-169": {
+      "abstraction": "meta",
+      "name": "Footprinting",
+      "related_attack": [
+        "T1217",
+        "T1592",
+        "T1595"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-17": {
+      "abstraction": "standard",
+      "name": "Using Malicious Files",
+      "related_attack": [
+        "T1574.005",
+        "T1574.010"
+      ],
+      "related_cwe": [
+        "CWE-732",
+        "CWE-285",
+        "CWE-272",
+        "CWE-59",
+        "CWE-282",
+        "CWE-270",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-170": {
+      "abstraction": "detailed",
+      "name": "Web Application Fingerprinting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-497"
+      ]
+    },
+    "CAPEC-173": {
+      "abstraction": "meta",
+      "name": "Action Spoofing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-451"
+      ]
+    },
+    "CAPEC-174": {
+      "abstraction": "detailed",
+      "name": "Flash Parameter Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-88"
+      ]
+    },
+    "CAPEC-175": {
+      "abstraction": "meta",
+      "name": "Code Inclusion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-176": {
+      "abstraction": "meta",
+      "name": "Configuration/Environment Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-15",
+        "CWE-1233",
+        "CWE-1234",
+        "CWE-1304",
+        "CWE-1328"
+      ]
+    },
+    "CAPEC-177": {
+      "abstraction": "detailed",
+      "name": "Create files with the same name as files protected with a higher classification",
+      "related_attack": [
+        "T1036"
+      ],
+      "related_cwe": [
+        "CWE-706"
+      ]
+    },
+    "CAPEC-178": {
+      "abstraction": "detailed",
+      "name": "Cross-Site Flashing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-601"
+      ]
+    },
+    "CAPEC-179": {
+      "abstraction": "standard",
+      "name": "Calling Micro-Services Directly",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-18": {
+      "abstraction": "detailed",
+      "name": "XSS Targeting Non-Script Elements",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-80"
+      ]
+    },
+    "CAPEC-180": {
+      "abstraction": "standard",
+      "name": "Exploiting Incorrectly Configured Access Control Security Levels",
+      "related_attack": [
+        "T1574.010"
+      ],
+      "related_cwe": [
+        "CWE-732",
+        "CWE-1190",
+        "CWE-1191",
+        "CWE-1193",
+        "CWE-1220",
+        "CWE-1268",
+        "CWE-1280",
+        "CWE-1297",
+        "CWE-1311",
+        "CWE-1315",
+        "CWE-1318",
+        "CWE-1320",
+        "CWE-1321"
+      ]
+    },
+    "CAPEC-181": {
+      "abstraction": "detailed",
+      "name": "Flash File Overlay",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-182": {
+      "abstraction": "standard",
+      "name": "Flash Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20",
+        "CWE-184",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-183": {
+      "abstraction": "standard",
+      "name": "IMAP/SMTP Command Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-77"
+      ]
+    },
+    "CAPEC-184": {
+      "abstraction": "meta",
+      "name": "Software Integrity Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-185": {
+      "abstraction": "standard",
+      "name": "Malicious Software Download",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-186": {
+      "abstraction": "standard",
+      "name": "Malicious Software Update",
+      "related_attack": [
+        "T1195.002"
+      ],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-187": {
+      "abstraction": "detailed",
+      "name": "Malicious Automated Software Update via Redirection",
+      "related_attack": [
+        "T1072"
+      ],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-188": {
+      "abstraction": "meta",
+      "name": "Reverse Engineering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1278"
+      ]
+    },
+    "CAPEC-189": {
+      "abstraction": "standard",
+      "name": "Black Box Reverse Engineering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-203",
+        "CWE-1255",
+        "CWE-1300"
+      ]
+    },
+    "CAPEC-19": {
+      "abstraction": "standard",
+      "name": "Embedding Scripts within Scripts",
+      "related_attack": [
+        "T1027.009",
+        "T1546.004",
+        "T1546.016"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-190": {
+      "abstraction": "detailed",
+      "name": "Reverse Engineer an Executable to Expose Assumed Hidden Functionality",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-912"
+      ]
+    },
+    "CAPEC-191": {
+      "abstraction": "detailed",
+      "name": "Read Sensitive Constants Within an Executable",
+      "related_attack": [
+        "T1552.001"
+      ],
+      "related_cwe": [
+        "CWE-798"
+      ]
+    },
+    "CAPEC-192": {
+      "abstraction": "meta",
+      "name": "Protocol Analysis",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-326"
+      ]
+    },
+    "CAPEC-193": {
+      "abstraction": "detailed",
+      "name": "PHP Remote File Inclusion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-98",
+        "CWE-80"
+      ]
+    },
+    "CAPEC-194": {
+      "abstraction": "standard",
+      "name": "Fake the Source of Data",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-287"
+      ]
+    },
+    "CAPEC-195": {
+      "abstraction": "standard",
+      "name": "Principal Spoof",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-196": {
+      "abstraction": "standard",
+      "name": "Session Credential Falsification through Forging",
+      "related_attack": [
+        "T1134.002",
+        "T1134.003",
+        "T1606"
+      ],
+      "related_cwe": [
+        "CWE-384",
+        "CWE-664"
+      ]
+    },
+    "CAPEC-197": {
+      "abstraction": "detailed",
+      "name": "Exponential Data Expansion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770",
+        "CWE-776"
+      ]
+    },
+    "CAPEC-198": {
+      "abstraction": "detailed",
+      "name": "XSS Targeting Error Pages",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-81"
+      ]
+    },
+    "CAPEC-199": {
+      "abstraction": "detailed",
+      "name": "XSS Using Alternate Syntax",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-87"
+      ]
+    },
+    "CAPEC-2": {
+      "abstraction": "standard",
+      "name": "Inducing Account Lockout",
+      "related_attack": [
+        "T1531"
+      ],
+      "related_cwe": [
+        "CWE-645"
+      ]
+    },
+    "CAPEC-20": {
+      "abstraction": "standard",
+      "name": "Encryption Brute Forcing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-326",
+        "CWE-327",
+        "CWE-693",
+        "CWE-1204"
+      ]
+    },
+    "CAPEC-200": {
+      "abstraction": "detailed",
+      "name": "Removal of filters: Input filters, output filters, data masking",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-201": {
+      "abstraction": "detailed",
+      "name": "Serialized Data External Linking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-202": {
+      "abstraction": "standard",
+      "name": "Create Malicious Client",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-602"
+      ]
+    },
+    "CAPEC-203": {
+      "abstraction": "standard",
+      "name": "Manipulate Registry Information",
+      "related_attack": [
+        "T1112",
+        "T1647"
+      ],
+      "related_cwe": [
+        "CWE-15"
+      ]
+    },
+    "CAPEC-204": {
+      "abstraction": "detailed",
+      "name": "Lifting Sensitive Data Embedded in Cache",
+      "related_attack": [
+        "T1005"
+      ],
+      "related_cwe": [
+        "CWE-524",
+        "CWE-311",
+        "CWE-1239",
+        "CWE-1258"
+      ]
+    },
+    "CAPEC-206": {
+      "abstraction": "detailed",
+      "name": "Signing Malicious Code",
+      "related_attack": [
+        "T1553.002"
+      ],
+      "related_cwe": [
+        "CWE-732"
+      ]
+    },
+    "CAPEC-207": {
+      "abstraction": "standard",
+      "name": "Removing Important Client Functionality",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-602"
+      ]
+    },
+    "CAPEC-208": {
+      "abstraction": "detailed",
+      "name": "Removing/short-circuiting 'Purse' logic: removing/mutating 'cash' decrements",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-602"
+      ]
+    },
+    "CAPEC-209": {
+      "abstraction": "detailed",
+      "name": "XSS Using MIME Type Mismatch",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79",
+        "CWE-20",
+        "CWE-646"
+      ]
+    },
+    "CAPEC-21": {
+      "abstraction": "meta",
+      "name": "Exploitation of Trusted Identifiers",
+      "related_attack": [
+        "T1134",
+        "T1528",
+        "T1539"
+      ],
+      "related_cwe": [
+        "CWE-290",
+        "CWE-302",
+        "CWE-346",
+        "CWE-539",
+        "CWE-6",
+        "CWE-384",
+        "CWE-664",
+        "CWE-602",
+        "CWE-642"
+      ]
+    },
+    "CAPEC-212": {
+      "abstraction": "meta",
+      "name": "Functionality Misuse",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1242",
+        "CWE-1246",
+        "CWE-1281"
+      ]
+    },
+    "CAPEC-215": {
+      "abstraction": "detailed",
+      "name": "Fuzzing for application mapping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-209",
+        "CWE-532"
+      ]
+    },
+    "CAPEC-216": {
+      "abstraction": "meta",
+      "name": "Communication Channel Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-306"
+      ]
+    },
+    "CAPEC-217": {
+      "abstraction": "standard",
+      "name": "Exploiting Incorrectly Configured SSL/TLS",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-218": {
+      "abstraction": "detailed",
+      "name": "Spoofing of UDDI/ebXML Messages",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-345"
+      ]
+    },
+    "CAPEC-219": {
+      "abstraction": "standard",
+      "name": "XML Routing Detour Attacks",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-441",
+        "CWE-610"
+      ]
+    },
+    "CAPEC-22": {
+      "abstraction": "meta",
+      "name": "Exploiting Trust in Client",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-290",
+        "CWE-287",
+        "CWE-20",
+        "CWE-200",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-220": {
+      "abstraction": "standard",
+      "name": "Client-Server Protocol Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-757"
+      ]
+    },
+    "CAPEC-221": {
+      "abstraction": "detailed",
+      "name": "Data Serialization External Entities Blowup",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-611"
+      ]
+    },
+    "CAPEC-222": {
+      "abstraction": "detailed",
+      "name": "iFrame Overlay",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-224": {
+      "abstraction": "meta",
+      "name": "Fingerprinting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-226": {
+      "abstraction": "detailed",
+      "name": "Session Credential Falsification through Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-565",
+        "CWE-472"
+      ]
+    },
+    "CAPEC-227": {
+      "abstraction": "meta",
+      "name": "Sustained Client Engagement",
+      "related_attack": [
+        "T1499"
+      ],
+      "related_cwe": [
+        "CWE-400"
+      ]
+    },
+    "CAPEC-228": {
+      "abstraction": "detailed",
+      "name": "DTD Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-229": {
+      "abstraction": "detailed",
+      "name": "Serialized Data Parameter Blowup",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-23": {
+      "abstraction": "standard",
+      "name": "File Content Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20"
+      ]
+    },
+    "CAPEC-230": {
+      "abstraction": "standard",
+      "name": "Serialized Data with Nested Payloads",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-112",
+        "CWE-20",
+        "CWE-674",
+        "CWE-770"
+      ]
+    },
+    "CAPEC-231": {
+      "abstraction": "standard",
+      "name": "Oversized Serialized Data Payloads",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-112",
+        "CWE-20",
+        "CWE-674",
+        "CWE-770"
+      ]
+    },
+    "CAPEC-233": {
+      "abstraction": "meta",
+      "name": "Privilege Escalation",
+      "related_attack": [
+        "T1548"
+      ],
+      "related_cwe": [
+        "CWE-269",
+        "CWE-1264",
+        "CWE-1311"
+      ]
+    },
+    "CAPEC-234": {
+      "abstraction": "standard",
+      "name": "Hijacking a privileged process",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-732",
+        "CWE-648"
+      ]
+    },
+    "CAPEC-237": {
+      "abstraction": "detailed",
+      "name": "Escaping a Sandbox by Calling Code in Another Language",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-693"
+      ]
+    },
+    "CAPEC-24": {
+      "abstraction": "detailed",
+      "name": "Filter Failure through Buffer Overflow",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-118",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-733",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-240": {
+      "abstraction": "meta",
+      "name": "Resource Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-99"
+      ]
+    },
+    "CAPEC-242": {
+      "abstraction": "meta",
+      "name": "Code Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-94"
+      ]
+    },
+    "CAPEC-243": {
+      "abstraction": "detailed",
+      "name": "XSS Targeting HTML Attributes",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-83"
+      ]
+    },
+    "CAPEC-244": {
+      "abstraction": "detailed",
+      "name": "XSS Targeting URI Placeholders",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-83"
+      ]
+    },
+    "CAPEC-245": {
+      "abstraction": "detailed",
+      "name": "XSS Using Doubled Characters",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-85"
+      ]
+    },
+    "CAPEC-247": {
+      "abstraction": "detailed",
+      "name": "XSS Using Invalid Characters",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-86"
+      ]
+    },
+    "CAPEC-248": {
+      "abstraction": "meta",
+      "name": "Command Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-77"
+      ]
+    },
+    "CAPEC-25": {
+      "abstraction": "meta",
+      "name": "Forced Deadlock",
+      "related_attack": [
+        "T1499.004"
+      ],
+      "related_cwe": [
+        "CWE-412",
+        "CWE-567",
+        "CWE-662",
+        "CWE-667",
+        "CWE-833",
+        "CWE-1322"
+      ]
+    },
+    "CAPEC-250": {
+      "abstraction": "standard",
+      "name": "XML Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-91",
+        "CWE-74",
+        "CWE-20",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-251": {
+      "abstraction": "standard",
+      "name": "Local Code Inclusion",
+      "related_attack": [
+        "T1055"
+      ],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-252": {
+      "abstraction": "detailed",
+      "name": "PHP Local File Inclusion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-253": {
+      "abstraction": "standard",
+      "name": "Remote Code Inclusion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-256": {
+      "abstraction": "detailed",
+      "name": "SOAP Array Overflow",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-805"
+      ]
+    },
+    "CAPEC-26": {
+      "abstraction": "meta",
+      "name": "Leveraging Race Conditions",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-368",
+        "CWE-363",
+        "CWE-366",
+        "CWE-370",
+        "CWE-362",
+        "CWE-662",
+        "CWE-689",
+        "CWE-667",
+        "CWE-665",
+        "CWE-1223",
+        "CWE-1254",
+        "CWE-1298"
+      ]
+    },
+    "CAPEC-261": {
+      "abstraction": "detailed",
+      "name": "Fuzzing for garnering other adjacent user/sensitive data",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20"
+      ]
+    },
+    "CAPEC-263": {
+      "abstraction": "detailed",
+      "name": "Force Use of Corrupted Files",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-267": {
+      "abstraction": "standard",
+      "name": "Leverage Alternate Encoding",
+      "related_attack": [
+        "T1027"
+      ],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-172",
+        "CWE-180",
+        "CWE-181",
+        "CWE-73",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-692"
+      ]
+    },
+    "CAPEC-268": {
+      "abstraction": "standard",
+      "name": "Audit Log Manipulation",
+      "related_attack": [
+        "T1070",
+        "T1562.002",
+        "T1562.003",
+        "T1562.008"
+      ],
+      "related_cwe": [
+        "CWE-117"
+      ]
+    },
+    "CAPEC-27": {
+      "abstraction": "detailed",
+      "name": "Leveraging Race Conditions via Symbolic Links",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-367",
+        "CWE-61",
+        "CWE-662",
+        "CWE-689",
+        "CWE-667"
+      ]
+    },
+    "CAPEC-270": {
+      "abstraction": "detailed",
+      "name": "Modification of Registry Run Keys",
+      "related_attack": [
+        "T1547.001",
+        "T1547.014"
+      ],
+      "related_cwe": [
+        "CWE-15"
+      ]
+    },
+    "CAPEC-271": {
+      "abstraction": "standard",
+      "name": "Schema Poisoning",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-15"
+      ]
+    },
+    "CAPEC-272": {
+      "abstraction": "meta",
+      "name": "Protocol Manipulation",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-273": {
+      "abstraction": "detailed",
+      "name": "HTTP Response Smuggling",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-436",
+        "CWE-444"
+      ]
+    },
+    "CAPEC-274": {
+      "abstraction": "detailed",
+      "name": "HTTP Verb Tampering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-302",
+        "CWE-654"
+      ]
+    },
+    "CAPEC-275": {
+      "abstraction": "detailed",
+      "name": "DNS Rebinding",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-350"
+      ]
+    },
+    "CAPEC-276": {
+      "abstraction": "standard",
+      "name": "Inter-component Protocol Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-707"
+      ]
+    },
+    "CAPEC-277": {
+      "abstraction": "standard",
+      "name": "Data Interchange Protocol Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-707"
+      ]
+    },
+    "CAPEC-278": {
+      "abstraction": "standard",
+      "name": "Web Services Protocol Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-707"
+      ]
+    },
+    "CAPEC-279": {
+      "abstraction": "detailed",
+      "name": "SOAP Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-707"
+      ]
+    },
+    "CAPEC-28": {
+      "abstraction": "meta",
+      "name": "Fuzzing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-285": {
+      "abstraction": "detailed",
+      "name": "ICMP Echo Request Ping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-287": {
+      "abstraction": "detailed",
+      "name": "TCP SYN Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-29": {
+      "abstraction": "standard",
+      "name": "Leveraging Time-of-Check and Time-of-Use (TOCTOU) Race Conditions",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-367",
+        "CWE-368",
+        "CWE-366",
+        "CWE-370",
+        "CWE-362",
+        "CWE-662",
+        "CWE-691",
+        "CWE-663",
+        "CWE-665"
+      ]
+    },
+    "CAPEC-290": {
+      "abstraction": "detailed",
+      "name": "Enumerate Mail Exchange (MX) Records",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-291": {
+      "abstraction": "detailed",
+      "name": "DNS Zone Transfers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-292": {
+      "abstraction": "standard",
+      "name": "Host Discovery",
+      "related_attack": [
+        "T1018"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-293": {
+      "abstraction": "detailed",
+      "name": "Traceroute Route Enumeration",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-294": {
+      "abstraction": "detailed",
+      "name": "ICMP Address Mask Request",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-295": {
+      "abstraction": "detailed",
+      "name": "Timestamp Request",
+      "related_attack": [
+        "T1124"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-296": {
+      "abstraction": "detailed",
+      "name": "ICMP Information Request",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-297": {
+      "abstraction": "detailed",
+      "name": "TCP ACK Ping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-298": {
+      "abstraction": "detailed",
+      "name": "UDP Ping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-299": {
+      "abstraction": "detailed",
+      "name": "TCP SYN Ping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-3": {
+      "abstraction": "detailed",
+      "name": "Using Leading 'Ghost' Character Sequences to Bypass Input Filters",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-41",
+        "CWE-172",
+        "CWE-179",
+        "CWE-180",
+        "CWE-181",
+        "CWE-183",
+        "CWE-184",
+        "CWE-20",
+        "CWE-74",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-30": {
+      "abstraction": "standard",
+      "name": "Hijacking a Privileged Thread of Execution",
+      "related_attack": [
+        "T1055.003"
+      ],
+      "related_cwe": [
+        "CWE-270"
+      ]
+    },
+    "CAPEC-300": {
+      "abstraction": "standard",
+      "name": "Port Scanning",
+      "related_attack": [
+        "T1046"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-301": {
+      "abstraction": "detailed",
+      "name": "TCP Connect Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-302": {
+      "abstraction": "detailed",
+      "name": "TCP FIN Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-303": {
+      "abstraction": "detailed",
+      "name": "TCP Xmas Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-304": {
+      "abstraction": "detailed",
+      "name": "TCP Null Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-305": {
+      "abstraction": "detailed",
+      "name": "TCP ACK Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-306": {
+      "abstraction": "detailed",
+      "name": "TCP Window Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-307": {
+      "abstraction": "detailed",
+      "name": "TCP RPC Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-308": {
+      "abstraction": "detailed",
+      "name": "UDP Scan",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-309": {
+      "abstraction": "standard",
+      "name": "Network Topology Mapping",
+      "related_attack": [
+        "T1016",
+        "T1049",
+        "T1590"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-31": {
+      "abstraction": "detailed",
+      "name": "Accessing/Intercepting/Modifying HTTP Cookies",
+      "related_attack": [
+        "T1539"
+      ],
+      "related_cwe": [
+        "CWE-565",
+        "CWE-302",
+        "CWE-311",
+        "CWE-113",
+        "CWE-539",
+        "CWE-20",
+        "CWE-315",
+        "CWE-384",
+        "CWE-472",
+        "CWE-602",
+        "CWE-642"
+      ]
+    },
+    "CAPEC-310": {
+      "abstraction": "detailed",
+      "name": "Scanning for Vulnerable Software",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-312": {
+      "abstraction": "standard",
+      "name": "Active OS Fingerprinting",
+      "related_attack": [
+        "T1082"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-313": {
+      "abstraction": "standard",
+      "name": "Passive OS Fingerprinting",
+      "related_attack": [
+        "T1082"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-317": {
+      "abstraction": "detailed",
+      "name": "IP ID Sequencing Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-318": {
+      "abstraction": "detailed",
+      "name": "IP 'ID' Echoed Byte-Order Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-319": {
+      "abstraction": "detailed",
+      "name": "IP (DF) 'Don't Fragment Bit' Echoing Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-32": {
+      "abstraction": "detailed",
+      "name": "XSS Through HTTP Query Strings",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-80"
+      ]
+    },
+    "CAPEC-320": {
+      "abstraction": "detailed",
+      "name": "TCP Timestamp Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-321": {
+      "abstraction": "detailed",
+      "name": "TCP Sequence Number Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-322": {
+      "abstraction": "detailed",
+      "name": "TCP (ISN) Greatest Common Divisor Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-323": {
+      "abstraction": "detailed",
+      "name": "TCP (ISN) Counter Rate Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-324": {
+      "abstraction": "detailed",
+      "name": "TCP (ISN) Sequence Predictability Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-325": {
+      "abstraction": "detailed",
+      "name": "TCP Congestion Control Flag (ECN) Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-326": {
+      "abstraction": "detailed",
+      "name": "TCP Initial Window Size Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-327": {
+      "abstraction": "detailed",
+      "name": "TCP Options Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-328": {
+      "abstraction": "detailed",
+      "name": "TCP 'RST' Flag Checksum Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-329": {
+      "abstraction": "detailed",
+      "name": "ICMP Error Message Quoting Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-33": {
+      "abstraction": "detailed",
+      "name": "HTTP Request Smuggling",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-444"
+      ]
+    },
+    "CAPEC-330": {
+      "abstraction": "detailed",
+      "name": "ICMP Error Message Echoing Integrity Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-331": {
+      "abstraction": "detailed",
+      "name": "ICMP IP Total Length Field Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-204"
+      ]
+    },
+    "CAPEC-332": {
+      "abstraction": "detailed",
+      "name": "ICMP IP 'ID' Field Error Message Probe",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-204"
+      ]
+    },
+    "CAPEC-34": {
+      "abstraction": "detailed",
+      "name": "HTTP Response Splitting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-113",
+        "CWE-138",
+        "CWE-436"
+      ]
+    },
+    "CAPEC-35": {
+      "abstraction": "detailed",
+      "name": "Leverage Executable Code in Non-Executable Files",
+      "related_attack": [
+        "T1027.006",
+        "T1027.009",
+        "T1564.009"
+      ],
+      "related_cwe": [
+        "CWE-94",
+        "CWE-96",
+        "CWE-95",
+        "CWE-97",
+        "CWE-272",
+        "CWE-59",
+        "CWE-282",
+        "CWE-270"
+      ]
+    },
+    "CAPEC-36": {
+      "abstraction": "standard",
+      "name": "Using Unpublished Interfaces or Functionality",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-306",
+        "CWE-693",
+        "CWE-695",
+        "CWE-1242"
+      ]
+    },
+    "CAPEC-37": {
+      "abstraction": "detailed",
+      "name": "Retrieve Embedded Sensitive Data",
+      "related_attack": [
+        "T1005",
+        "T1552.004"
+      ],
+      "related_cwe": [
+        "CWE-226",
+        "CWE-311",
+        "CWE-525",
+        "CWE-312",
+        "CWE-314",
+        "CWE-315",
+        "CWE-318",
+        "CWE-1239",
+        "CWE-1258",
+        "CWE-1266",
+        "CWE-1272",
+        "CWE-1278",
+        "CWE-1301",
+        "CWE-1330"
+      ]
+    },
+    "CAPEC-38": {
+      "abstraction": "detailed",
+      "name": "Leveraging/Manipulating Configuration File Search Paths",
+      "related_attack": [
+        "T1574.007",
+        "T1574.009"
+      ],
+      "related_cwe": [
+        "CWE-426",
+        "CWE-427"
+      ]
+    },
+    "CAPEC-383": {
+      "abstraction": "detailed",
+      "name": "Harvesting Information via API Event Monitoring",
+      "related_attack": [
+        "T1056.004"
+      ],
+      "related_cwe": [
+        "CWE-311",
+        "CWE-319",
+        "CWE-419",
+        "CWE-602"
+      ]
+    },
+    "CAPEC-384": {
+      "abstraction": "standard",
+      "name": "Application API Message Manipulation via Man-in-the-Middle",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-471",
+        "CWE-345",
+        "CWE-346",
+        "CWE-602",
+        "CWE-311"
+      ]
+    },
+    "CAPEC-385": {
+      "abstraction": "detailed",
+      "name": "Transaction or Event Tampering via Application API Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-471",
+        "CWE-345",
+        "CWE-346",
+        "CWE-602",
+        "CWE-311"
+      ]
+    },
+    "CAPEC-386": {
+      "abstraction": "standard",
+      "name": "Application API Navigation Remapping",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-471",
+        "CWE-345",
+        "CWE-346",
+        "CWE-602",
+        "CWE-311"
+      ]
+    },
+    "CAPEC-387": {
+      "abstraction": "detailed",
+      "name": "Navigation Remapping To Propagate Malicious Content",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-471",
+        "CWE-345",
+        "CWE-346",
+        "CWE-602",
+        "CWE-311"
+      ]
+    },
+    "CAPEC-388": {
+      "abstraction": "detailed",
+      "name": "Application API Button Hijacking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-471",
+        "CWE-345",
+        "CWE-346",
+        "CWE-602",
+        "CWE-311"
+      ]
+    },
+    "CAPEC-389": {
+      "abstraction": "detailed",
+      "name": "Content Spoofing Via Application API Manipulation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-353"
+      ]
+    },
+    "CAPEC-39": {
+      "abstraction": "standard",
+      "name": "Manipulating Opaque Client-based Data Tokens",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-353",
+        "CWE-285",
+        "CWE-302",
+        "CWE-472",
+        "CWE-565",
+        "CWE-315",
+        "CWE-539",
+        "CWE-384",
+        "CWE-233"
+      ]
+    },
+    "CAPEC-390": {
+      "abstraction": "meta",
+      "name": "Bypassing Physical Security",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-391": {
+      "abstraction": "standard",
+      "name": "Bypassing Physical Locks",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-392": {
+      "abstraction": "detailed",
+      "name": "Lock Bumping",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-393": {
+      "abstraction": "detailed",
+      "name": "Lock Picking",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-394": {
+      "abstraction": "detailed",
+      "name": "Using a Snap Gun Lock to Force a Lock",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-395": {
+      "abstraction": "standard",
+      "name": "Bypassing Electronic Locks and Access Controls",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-397": {
+      "abstraction": "detailed",
+      "name": "Cloning Magnetic Strip Cards",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-398": {
+      "abstraction": "detailed",
+      "name": "Magnetic Strip Card Brute Force Attacks",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-399": {
+      "abstraction": "detailed",
+      "name": "Cloning RFID Cards or Chips",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-4": {
+      "abstraction": "detailed",
+      "name": "Using Alternative IP Address Encodings",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-291",
+        "CWE-173"
+      ]
+    },
+    "CAPEC-40": {
+      "abstraction": "standard",
+      "name": "Manipulating Writeable Terminal Devices",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-77"
+      ]
+    },
+    "CAPEC-400": {
+      "abstraction": "detailed",
+      "name": "RFID Chip Deactivation or Destruction",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-401": {
+      "abstraction": "standard",
+      "name": "Physically Hacking Hardware",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1263"
+      ]
+    },
+    "CAPEC-402": {
+      "abstraction": "detailed",
+      "name": "Bypassing ATA Password Security",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-285"
+      ]
+    },
+    "CAPEC-406": {
+      "abstraction": "detailed",
+      "name": "Dumpster Diving",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-407": {
+      "abstraction": "standard",
+      "name": "Pretexting",
+      "related_attack": [
+        "T1589"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-41": {
+      "abstraction": "detailed",
+      "name": "Using Meta-characters in E-mail Headers to Inject Malicious Payloads",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-150",
+        "CWE-88",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-410": {
+      "abstraction": "meta",
+      "name": "Information Elicitation",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-412": {
+      "abstraction": "detailed",
+      "name": "Pretexting via Customer Service",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-413": {
+      "abstraction": "detailed",
+      "name": "Pretexting via Tech Support",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-414": {
+      "abstraction": "detailed",
+      "name": "Pretexting via Delivery Person",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-415": {
+      "abstraction": "detailed",
+      "name": "Pretexting via Phone",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-416": {
+      "abstraction": "meta",
+      "name": "Manipulate Human Behavior",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-417": {
+      "abstraction": "standard",
+      "name": "Influence Perception",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-418": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Reciprocation",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-42": {
+      "abstraction": "detailed",
+      "name": "MIME Conversion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-74",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-420": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Scarcity",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-421": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Authority",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-422": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Commitment and Consistency",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-423": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Liking",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-424": {
+      "abstraction": "detailed",
+      "name": "Influence Perception of Consensus or Social Proof",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-425": {
+      "abstraction": "standard",
+      "name": "Target Influence via Framing",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-426": {
+      "abstraction": "standard",
+      "name": "Influence via Incentives",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-427": {
+      "abstraction": "standard",
+      "name": "Influence via Psychological Principles",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-428": {
+      "abstraction": "detailed",
+      "name": "Influence via Modes of Thinking",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-429": {
+      "abstraction": "detailed",
+      "name": "Target Influence via Eye Cues",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-43": {
+      "abstraction": "detailed",
+      "name": "Exploiting Multiple Input Interpretation Layers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-179",
+        "CWE-181",
+        "CWE-184",
+        "CWE-183",
+        "CWE-77",
+        "CWE-78",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-433": {
+      "abstraction": "detailed",
+      "name": "Target Influence via The Human Buffer Overflow",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-434": {
+      "abstraction": "detailed",
+      "name": "Target Influence via Interview and Interrogation",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-435": {
+      "abstraction": "detailed",
+      "name": "Target Influence via Instant Rapport",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-438": {
+      "abstraction": "meta",
+      "name": "Modification During Manufacture",
+      "related_attack": [
+        "T1195"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-439": {
+      "abstraction": "meta",
+      "name": "Manipulation During Distribution",
+      "related_attack": [
+        "T1195"
+      ],
+      "related_cwe": [
+        "CWE-1269"
+      ]
+    },
+    "CAPEC-44": {
+      "abstraction": "detailed",
+      "name": "Overflow Binary Resource File",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-440": {
+      "abstraction": "meta",
+      "name": "Hardware Integrity Attack",
+      "related_attack": [
+        "T1195.003",
+        "T1200"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-441": {
+      "abstraction": "meta",
+      "name": "Malicious Logic Insertion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-442": {
+      "abstraction": "standard",
+      "name": "Infected Software",
+      "related_attack": [
+        "T1195.001",
+        "T1195.002"
+      ],
+      "related_cwe": [
+        "CWE-506"
+      ]
+    },
+    "CAPEC-443": {
+      "abstraction": "detailed",
+      "name": "Malicious Logic Inserted Into Product by Authorized Developer",
+      "related_attack": [
+        "T1195.002",
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-444": {
+      "abstraction": "standard",
+      "name": "Development Alteration",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-445": {
+      "abstraction": "detailed",
+      "name": "Malicious Logic Insertion into Product Software via Configuration Management Manipulation",
+      "related_attack": [
+        "T1195.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-446": {
+      "abstraction": "detailed",
+      "name": "Malicious Logic Insertion into Product via Inclusion of Third-Party Component",
+      "related_attack": [
+        "T1195"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-447": {
+      "abstraction": "standard",
+      "name": "Design Alteration",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-448": {
+      "abstraction": "detailed",
+      "name": "Embed Virus into DLL",
+      "related_attack": [
+        "T1027.009"
+      ],
+      "related_cwe": [
+        "CWE-506"
+      ]
+    },
+    "CAPEC-45": {
+      "abstraction": "detailed",
+      "name": "Buffer Overflow via Symbolic Links",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-285",
+        "CWE-302",
+        "CWE-118",
+        "CWE-119",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-452": {
+      "abstraction": "standard",
+      "name": "Infected Hardware",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-456": {
+      "abstraction": "standard",
+      "name": "Infected Memory",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1257",
+        "CWE-1260",
+        "CWE-1274",
+        "CWE-1312",
+        "CWE-1316"
+      ]
+    },
+    "CAPEC-457": {
+      "abstraction": "detailed",
+      "name": "USB Memory Attacks",
+      "related_attack": [
+        "T1091",
+        "T1092"
+      ],
+      "related_cwe": [
+        "CWE-1299"
+      ]
+    },
+    "CAPEC-458": {
+      "abstraction": "detailed",
+      "name": "Flash Memory Attacks",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1282"
+      ]
+    },
+    "CAPEC-459": {
+      "abstraction": "detailed",
+      "name": "Creating a Rogue Certification Authority Certificate",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-327",
+        "CWE-295",
+        "CWE-290"
+      ]
+    },
+    "CAPEC-46": {
+      "abstraction": "detailed",
+      "name": "Overflow Variables and Tags",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-118",
+        "CWE-119",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-733",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-460": {
+      "abstraction": "detailed",
+      "name": "HTTP Parameter Pollution (HPP)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-88",
+        "CWE-147",
+        "CWE-235"
+      ]
+    },
+    "CAPEC-461": {
+      "abstraction": "standard",
+      "name": "Web Services API Signature Forgery Leveraging Hash Function Extension Weakness",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-328",
+        "CWE-290"
+      ]
+    },
+    "CAPEC-462": {
+      "abstraction": "detailed",
+      "name": "Cross-Domain Search Timing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-385",
+        "CWE-352",
+        "CWE-208"
+      ]
+    },
+    "CAPEC-463": {
+      "abstraction": "detailed",
+      "name": "Padding Oracle Crypto Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-209",
+        "CWE-514",
+        "CWE-649",
+        "CWE-347",
+        "CWE-354",
+        "CWE-696"
+      ]
+    },
+    "CAPEC-464": {
+      "abstraction": "standard",
+      "name": "Evercookie",
+      "related_attack": [
+        "T1606.001"
+      ],
+      "related_cwe": [
+        "CWE-359"
+      ]
+    },
+    "CAPEC-465": {
+      "abstraction": "standard",
+      "name": "Transparent Proxy Abuse",
+      "related_attack": [
+        "T1090.001"
+      ],
+      "related_cwe": [
+        "CWE-441"
+      ]
+    },
+    "CAPEC-466": {
+      "abstraction": "standard",
+      "name": "Leveraging Active Adversary in the Middle Attacks to Bypass Same Origin Policy",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-300"
+      ]
+    },
+    "CAPEC-467": {
+      "abstraction": "detailed",
+      "name": "Cross Site Identification",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-352",
+        "CWE-359"
+      ]
+    },
+    "CAPEC-468": {
+      "abstraction": "standard",
+      "name": "Generic Cross-Browser Cross-Domain Theft",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-707",
+        "CWE-149",
+        "CWE-177",
+        "CWE-838"
+      ]
+    },
+    "CAPEC-469": {
+      "abstraction": "standard",
+      "name": "HTTP DoS",
+      "related_attack": [
+        "T1499.002"
+      ],
+      "related_cwe": [
+        "CWE-770",
+        "CWE-772"
+      ]
+    },
+    "CAPEC-47": {
+      "abstraction": "detailed",
+      "name": "Buffer Overflow via Parameter Expansion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-118",
+        "CWE-130",
+        "CWE-131",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-470": {
+      "abstraction": "detailed",
+      "name": "Expanding Control over the Operating System from the Database",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-250",
+        "CWE-89"
+      ]
+    },
+    "CAPEC-471": {
+      "abstraction": "detailed",
+      "name": "Search Order Hijacking",
+      "related_attack": [
+        "T1574.001",
+        "T1574.004",
+        "T1574.008"
+      ],
+      "related_cwe": [
+        "CWE-427"
+      ]
+    },
+    "CAPEC-472": {
+      "abstraction": "detailed",
+      "name": "Browser Fingerprinting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-473": {
+      "abstraction": "standard",
+      "name": "Signature Spoof",
+      "related_attack": [
+        "T1036.001",
+        "T1553.002"
+      ],
+      "related_cwe": [
+        "CWE-20",
+        "CWE-327",
+        "CWE-290"
+      ]
+    },
+    "CAPEC-474": {
+      "abstraction": "detailed",
+      "name": "Signature Spoofing by Key Theft",
+      "related_attack": [
+        "T1552.004"
+      ],
+      "related_cwe": [
+        "CWE-522"
+      ]
+    },
+    "CAPEC-475": {
+      "abstraction": "detailed",
+      "name": "Signature Spoofing by Improper Validation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-347",
+        "CWE-327",
+        "CWE-295"
+      ]
+    },
+    "CAPEC-476": {
+      "abstraction": "detailed",
+      "name": "Signature Spoofing by Misrepresentation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-290"
+      ]
+    },
+    "CAPEC-477": {
+      "abstraction": "detailed",
+      "name": "Signature Spoofing by Mixing Signed and Unsigned Content",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-693",
+        "CWE-311",
+        "CWE-319"
+      ]
+    },
+    "CAPEC-478": {
+      "abstraction": "detailed",
+      "name": "Modification of Windows Service Configuration",
+      "related_attack": [
+        "T1574.011",
+        "T1543.003"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-479": {
+      "abstraction": "detailed",
+      "name": "Malicious Root Certificate",
+      "related_attack": [
+        "T1553.004"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-48": {
+      "abstraction": "standard",
+      "name": "Passing Local Filenames to Functions That Expect a URL",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-241",
+        "CWE-706"
+      ]
+    },
+    "CAPEC-480": {
+      "abstraction": "standard",
+      "name": "Escaping Virtualization",
+      "related_attack": [
+        "T1611"
+      ],
+      "related_cwe": [
+        "CWE-693"
+      ]
+    },
+    "CAPEC-481": {
+      "abstraction": "standard",
+      "name": "Contradictory Destinations in Traffic Routing Schemes",
+      "related_attack": [
+        "T1090.004"
+      ],
+      "related_cwe": [
+        "CWE-923"
+      ]
+    },
+    "CAPEC-482": {
+      "abstraction": "standard",
+      "name": "TCP Flood",
+      "related_attack": [
+        "T1498.001",
+        "T1499.001",
+        "T1499.002"
+      ],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-485": {
+      "abstraction": "detailed",
+      "name": "Signature Spoofing by Key Recreation",
+      "related_attack": [
+        "T1552.004"
+      ],
+      "related_cwe": [
+        "CWE-330"
+      ]
+    },
+    "CAPEC-486": {
+      "abstraction": "standard",
+      "name": "UDP Flood",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-487": {
+      "abstraction": "standard",
+      "name": "ICMP Flood",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-488": {
+      "abstraction": "standard",
+      "name": "HTTP Flood",
+      "related_attack": [
+        "T1499.002"
+      ],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-489": {
+      "abstraction": "standard",
+      "name": "SSL Flood",
+      "related_attack": [
+        "T1499.002"
+      ],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-49": {
+      "abstraction": "standard",
+      "name": "Password Brute Forcing",
+      "related_attack": [
+        "T1110.001"
+      ],
+      "related_cwe": [
+        "CWE-521",
+        "CWE-262",
+        "CWE-263",
+        "CWE-257",
+        "CWE-654",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309"
+      ]
+    },
+    "CAPEC-490": {
+      "abstraction": "standard",
+      "name": "Amplification",
+      "related_attack": [
+        "T1498.002"
+      ],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-491": {
+      "abstraction": "detailed",
+      "name": "Quadratic Data Expansion",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-492": {
+      "abstraction": "standard",
+      "name": "Regular Expression Exponential Blowup",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-400",
+        "CWE-1333"
+      ]
+    },
+    "CAPEC-493": {
+      "abstraction": "standard",
+      "name": "SOAP Array Blowup",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-494": {
+      "abstraction": "standard",
+      "name": "TCP Fragmentation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770",
+        "CWE-404"
+      ]
+    },
+    "CAPEC-495": {
+      "abstraction": "standard",
+      "name": "UDP Fragmentation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770",
+        "CWE-404"
+      ]
+    },
+    "CAPEC-496": {
+      "abstraction": "standard",
+      "name": "ICMP Fragmentation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-770",
+        "CWE-404"
+      ]
+    },
+    "CAPEC-497": {
+      "abstraction": "standard",
+      "name": "File Discovery",
+      "related_attack": [
+        "T1083"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-498": {
+      "abstraction": "detailed",
+      "name": "Probe iOS Screenshots",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-359"
+      ]
+    },
+    "CAPEC-499": {
+      "abstraction": "standard",
+      "name": "Android Intent Intercept",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-925"
+      ]
+    },
+    "CAPEC-50": {
+      "abstraction": "standard",
+      "name": "Password Recovery Exploitation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-640"
+      ]
+    },
+    "CAPEC-500": {
+      "abstraction": "detailed",
+      "name": "WebView Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-749",
+        "CWE-940"
+      ]
+    },
+    "CAPEC-501": {
+      "abstraction": "detailed",
+      "name": "Android Activity Hijack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-923"
+      ]
+    },
+    "CAPEC-502": {
+      "abstraction": "standard",
+      "name": "Intent Spoof",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-503": {
+      "abstraction": "standard",
+      "name": "WebView Exposure",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-504": {
+      "abstraction": "standard",
+      "name": "Task Impersonation",
+      "related_attack": [
+        "T1036.004"
+      ],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-505": {
+      "abstraction": "detailed",
+      "name": "Scheme Squatting",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-506": {
+      "abstraction": "standard",
+      "name": "Tapjacking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-507": {
+      "abstraction": "meta",
+      "name": "Physical Theft",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-508": {
+      "abstraction": "detailed",
+      "name": "Shoulder Surfing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-200",
+        "CWE-359"
+      ]
+    },
+    "CAPEC-509": {
+      "abstraction": "detailed",
+      "name": "Kerberoasting",
+      "related_attack": [
+        "T1558.003"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-308",
+        "CWE-309",
+        "CWE-294",
+        "CWE-263",
+        "CWE-262",
+        "CWE-521"
+      ]
+    },
+    "CAPEC-51": {
+      "abstraction": "detailed",
+      "name": "Poison Web Service Registry",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-285",
+        "CWE-74",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-510": {
+      "abstraction": "standard",
+      "name": "SaaS User Request Forgery",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-346"
+      ]
+    },
+    "CAPEC-511": {
+      "abstraction": "detailed",
+      "name": "Infiltration of Software Development Environment",
+      "related_attack": [
+        "T1195.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-516": {
+      "abstraction": "detailed",
+      "name": "Hardware Component Substitution During Baselining",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-517": {
+      "abstraction": "detailed",
+      "name": "Documentation Alteration to Circumvent Dial-down",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-518": {
+      "abstraction": "detailed",
+      "name": "Documentation Alteration to Produce Under-performing Systems",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-519": {
+      "abstraction": "detailed",
+      "name": "Documentation Alteration to Cause Errors in System Design",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-52": {
+      "abstraction": "detailed",
+      "name": "Embedding NULL Bytes",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-158",
+        "CWE-172",
+        "CWE-173",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-520": {
+      "abstraction": "detailed",
+      "name": "Counterfeit Hardware Component Inserted During Product Assembly",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-521": {
+      "abstraction": "detailed",
+      "name": "Hardware Design Specifications Are Altered",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-522": {
+      "abstraction": "standard",
+      "name": "Malicious Hardware Component Replacement",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-523": {
+      "abstraction": "standard",
+      "name": "Malicious Software Implanted",
+      "related_attack": [
+        "T1195.002"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-524": {
+      "abstraction": "standard",
+      "name": "Rogue Integration Procedures",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-528": {
+      "abstraction": "standard",
+      "name": "XML Flood",
+      "related_attack": [
+        "T1499.002",
+        "T1498.001"
+      ],
+      "related_cwe": [
+        "CWE-770"
+      ]
+    },
+    "CAPEC-529": {
+      "abstraction": "standard",
+      "name": "Malware-Directed Internal Reconnaissance",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-53": {
+      "abstraction": "detailed",
+      "name": "Postfix, Null Terminate, and Backslash",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-158",
+        "CWE-172",
+        "CWE-173",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-530": {
+      "abstraction": "detailed",
+      "name": "Provide Counterfeit Component",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-531": {
+      "abstraction": "detailed",
+      "name": "Hardware Component Substitution",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-532": {
+      "abstraction": "detailed",
+      "name": "Altered Installed BIOS",
+      "related_attack": [
+        "T1495",
+        "T1542.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-533": {
+      "abstraction": "detailed",
+      "name": "Malicious Manual Software Update",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-534": {
+      "abstraction": "standard",
+      "name": "Malicious Hardware Update",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-535": {
+      "abstraction": "detailed",
+      "name": "Malicious Gray Market Hardware",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-536": {
+      "abstraction": "standard",
+      "name": "Data Injected During Configuration",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-537": {
+      "abstraction": "detailed",
+      "name": "Infiltration of Hardware Development Environment",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-538": {
+      "abstraction": "detailed",
+      "name": "Open-Source Library Manipulation",
+      "related_attack": [
+        "T1195.001"
+      ],
+      "related_cwe": [
+        "CWE-494",
+        "CWE-829"
+      ]
+    },
+    "CAPEC-539": {
+      "abstraction": "detailed",
+      "name": "ASIC With Malicious Functionality",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-54": {
+      "abstraction": "standard",
+      "name": "Query System for Information",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-209"
+      ]
+    },
+    "CAPEC-540": {
+      "abstraction": "standard",
+      "name": "Overread Buffers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-125"
+      ]
+    },
+    "CAPEC-541": {
+      "abstraction": "standard",
+      "name": "Application Fingerprinting",
+      "related_attack": [
+        "T1592.002"
+      ],
+      "related_cwe": [
+        "CWE-204",
+        "CWE-205",
+        "CWE-208"
+      ]
+    },
+    "CAPEC-542": {
+      "abstraction": "standard",
+      "name": "Targeted Malware",
+      "related_attack": [
+        "T1587.001",
+        "T1027"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-543": {
+      "abstraction": "detailed",
+      "name": "Counterfeit Websites",
+      "related_attack": [
+        "T1036.005"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-544": {
+      "abstraction": "detailed",
+      "name": "Counterfeit Organizations",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-545": {
+      "abstraction": "standard",
+      "name": "Pull Data from System Resources",
+      "related_attack": [
+        "T1005",
+        "T1555.001"
+      ],
+      "related_cwe": [
+        "CWE-1239",
+        "CWE-1243",
+        "CWE-1258",
+        "CWE-1266",
+        "CWE-1272",
+        "CWE-1278",
+        "CWE-1323",
+        "CWE-1330"
+      ]
+    },
+    "CAPEC-546": {
+      "abstraction": "detailed",
+      "name": "Incomplete Data Deletion in a Multi-Tenant Environment",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284",
+        "CWE-1266",
+        "CWE-1272"
+      ]
+    },
+    "CAPEC-547": {
+      "abstraction": "standard",
+      "name": "Physical Destruction of Device or Component",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-548": {
+      "abstraction": "meta",
+      "name": "Contaminate Resource",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-549": {
+      "abstraction": "meta",
+      "name": "Local Execution of Code",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-55": {
+      "abstraction": "detailed",
+      "name": "Rainbow Table Password Cracking",
+      "related_attack": [
+        "T1110.002"
+      ],
+      "related_cwe": [
+        "CWE-261",
+        "CWE-521",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654",
+        "CWE-916",
+        "CWE-308",
+        "CWE-309"
+      ]
+    },
+    "CAPEC-550": {
+      "abstraction": "detailed",
+      "name": "Install New Service",
+      "related_attack": [
+        "T1543"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-551": {
+      "abstraction": "detailed",
+      "name": "Modify Existing Service",
+      "related_attack": [
+        "T1543"
+      ],
+      "related_cwe": [
+        "CWE-284",
+        "CWE-522"
+      ]
+    },
+    "CAPEC-552": {
+      "abstraction": "detailed",
+      "name": "Install Rootkit ",
+      "related_attack": [
+        "T1014",
+        "T1542.003",
+        "T1547.006"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-554": {
+      "abstraction": "meta",
+      "name": "Functionality Bypass",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-424",
+        "CWE-1299"
+      ]
+    },
+    "CAPEC-555": {
+      "abstraction": "standard",
+      "name": "Remote Services with Stolen Credentials",
+      "related_attack": [
+        "T1021",
+        "T1114.002",
+        "T1133"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-308",
+        "CWE-309",
+        "CWE-294",
+        "CWE-263",
+        "CWE-262",
+        "CWE-521"
+      ]
+    },
+    "CAPEC-556": {
+      "abstraction": "detailed",
+      "name": "Replace File Extension Handlers",
+      "related_attack": [
+        "T1546.001"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-558": {
+      "abstraction": "detailed",
+      "name": "Replace Trusted Executable",
+      "related_attack": [
+        "T1505.005",
+        "T1546.008"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-559": {
+      "abstraction": "detailed",
+      "name": "Orbital Jamming",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-560": {
+      "abstraction": "meta",
+      "name": "Use of Known Domain Credentials",
+      "related_attack": [
+        "T1078"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654",
+        "CWE-1273"
+      ]
+    },
+    "CAPEC-561": {
+      "abstraction": "detailed",
+      "name": "Windows Admin Shares with Stolen Credentials",
+      "related_attack": [
+        "T1021.002"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-308",
+        "CWE-309",
+        "CWE-294",
+        "CWE-263",
+        "CWE-262",
+        "CWE-521"
+      ]
+    },
+    "CAPEC-562": {
+      "abstraction": "detailed",
+      "name": "Modify Shared File",
+      "related_attack": [
+        "T1080"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-563": {
+      "abstraction": "detailed",
+      "name": "Add Malicious File to Shared Webroot",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-564": {
+      "abstraction": "detailed",
+      "name": "Run Software at Logon",
+      "related_attack": [
+        "T1037",
+        "T1543.001",
+        "T1543.004",
+        "T1547"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-565": {
+      "abstraction": "detailed",
+      "name": "Password Spraying",
+      "related_attack": [
+        "T1110.003"
+      ],
+      "related_cwe": [
+        "CWE-521",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309"
+      ]
+    },
+    "CAPEC-568": {
+      "abstraction": "detailed",
+      "name": "Capture Credentials via Keylogger",
+      "related_attack": [
+        "T1056.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-569": {
+      "abstraction": "standard",
+      "name": "Collect Data as Provided by Users",
+      "related_attack": [
+        "T1056"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-57": {
+      "abstraction": "detailed",
+      "name": "Utilizing REST's Trust in the System Resource to Obtain Sensitive Data",
+      "related_attack": [
+        "T1040"
+      ],
+      "related_cwe": [
+        "CWE-300",
+        "CWE-287",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-571": {
+      "abstraction": "standard",
+      "name": "Block Logging to Central Repository",
+      "related_attack": [
+        "T1562.002",
+        "T1562.006",
+        "T1562.008"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-572": {
+      "abstraction": "standard",
+      "name": "Artificially Inflate File Sizes",
+      "related_attack": [
+        "T1027.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-573": {
+      "abstraction": "standard",
+      "name": "Process Footprinting",
+      "related_attack": [
+        "T1057"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-574": {
+      "abstraction": "standard",
+      "name": "Services Footprinting",
+      "related_attack": [
+        "T1007"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-575": {
+      "abstraction": "standard",
+      "name": "Account Footprinting",
+      "related_attack": [
+        "T1087"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-576": {
+      "abstraction": "standard",
+      "name": "Group Permission Footprinting",
+      "related_attack": [
+        "T1069",
+        "T1615"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-577": {
+      "abstraction": "standard",
+      "name": "Owner Footprinting",
+      "related_attack": [
+        "T1033"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-578": {
+      "abstraction": "standard",
+      "name": "Disable Security Software",
+      "related_attack": [
+        "T1556.006",
+        "T1562.001",
+        "T1562.002",
+        "T1562.004",
+        "T1562.007",
+        "T1562.008",
+        "T1562.009"
+      ],
+      "related_cwe": [
+        "CWE-284"
+      ]
+    },
+    "CAPEC-579": {
+      "abstraction": "detailed",
+      "name": "Replace Winlogon Helper DLL",
+      "related_attack": [
+        "T1547.004"
+      ],
+      "related_cwe": [
+        "CWE-15"
+      ]
+    },
+    "CAPEC-58": {
+      "abstraction": "detailed",
+      "name": "Restful Privilege Elevation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-267",
+        "CWE-269"
+      ]
+    },
+    "CAPEC-580": {
+      "abstraction": "standard",
+      "name": "System Footprinting",
+      "related_attack": [
+        "T1082"
+      ],
+      "related_cwe": [
+        "CWE-204",
+        "CWE-205",
+        "CWE-208"
+      ]
+    },
+    "CAPEC-581": {
+      "abstraction": "detailed",
+      "name": "Security Software Footprinting",
+      "related_attack": [
+        "T1518.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-582": {
+      "abstraction": "standard",
+      "name": "Route Disabling",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-583": {
+      "abstraction": "detailed",
+      "name": "Disabling Network Hardware",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-584": {
+      "abstraction": "detailed",
+      "name": "BGP Route Disabling",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-585": {
+      "abstraction": "detailed",
+      "name": "DNS Domain Seizure",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-586": {
+      "abstraction": "meta",
+      "name": "Object Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-502"
+      ]
+    },
+    "CAPEC-587": {
+      "abstraction": "detailed",
+      "name": "Cross Frame Scripting (XFS)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-588": {
+      "abstraction": "detailed",
+      "name": "DOM-Based XSS",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79",
+        "CWE-20",
+        "CWE-83"
+      ]
+    },
+    "CAPEC-589": {
+      "abstraction": "detailed",
+      "name": "DNS Blocking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-300"
+      ]
+    },
+    "CAPEC-59": {
+      "abstraction": "detailed",
+      "name": "Session Credential Falsification through Prediction",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-290",
+        "CWE-330",
+        "CWE-331",
+        "CWE-346",
+        "CWE-488",
+        "CWE-539",
+        "CWE-200",
+        "CWE-6",
+        "CWE-285",
+        "CWE-384",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-590": {
+      "abstraction": "detailed",
+      "name": "IP Address Blocking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-300"
+      ]
+    },
+    "CAPEC-591": {
+      "abstraction": "detailed",
+      "name": "Reflected XSS",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79"
+      ]
+    },
+    "CAPEC-592": {
+      "abstraction": "detailed",
+      "name": "Stored XSS",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79"
+      ]
+    },
+    "CAPEC-593": {
+      "abstraction": "standard",
+      "name": "Session Hijacking",
+      "related_attack": [
+        "T1185",
+        "T1550.001",
+        "T1563"
+      ],
+      "related_cwe": [
+        "CWE-287"
+      ]
+    },
+    "CAPEC-594": {
+      "abstraction": "meta",
+      "name": "Traffic Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-940"
+      ]
+    },
+    "CAPEC-595": {
+      "abstraction": "standard",
+      "name": "Connection Reset",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-940"
+      ]
+    },
+    "CAPEC-596": {
+      "abstraction": "detailed",
+      "name": "TCP RST Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-940"
+      ]
+    },
+    "CAPEC-597": {
+      "abstraction": "detailed",
+      "name": "Absolute Path Traversal",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-36"
+      ]
+    },
+    "CAPEC-598": {
+      "abstraction": "detailed",
+      "name": "DNS Spoofing",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-599": {
+      "abstraction": "detailed",
+      "name": "Terrestrial Jamming",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-6": {
+      "abstraction": "standard",
+      "name": "Argument Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-146",
+        "CWE-184",
+        "CWE-78",
+        "CWE-185",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-60": {
+      "abstraction": "detailed",
+      "name": "Reusing Session IDs (aka Session Replay)",
+      "related_attack": [
+        "T1134.001",
+        "T1550.004"
+      ],
+      "related_cwe": [
+        "CWE-294",
+        "CWE-290",
+        "CWE-346",
+        "CWE-384",
+        "CWE-488",
+        "CWE-539",
+        "CWE-200",
+        "CWE-285",
+        "CWE-664",
+        "CWE-732"
+      ]
+    },
+    "CAPEC-600": {
+      "abstraction": "standard",
+      "name": "Credential Stuffing",
+      "related_attack": [
+        "T1110.004"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654"
+      ]
+    },
+    "CAPEC-601": {
+      "abstraction": "standard",
+      "name": "Jamming",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-603": {
+      "abstraction": "standard",
+      "name": "Blockage",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-604": {
+      "abstraction": "detailed",
+      "name": "Wi-Fi Jamming",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-605": {
+      "abstraction": "detailed",
+      "name": "Cellular Jamming",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-606": {
+      "abstraction": "detailed",
+      "name": "Weakening of Cellular Encryption",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-757"
+      ]
+    },
+    "CAPEC-607": {
+      "abstraction": "meta",
+      "name": "Obstruction",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-608": {
+      "abstraction": "detailed",
+      "name": "Cryptanalysis of Cellular Encryption",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-327"
+      ]
+    },
+    "CAPEC-609": {
+      "abstraction": "detailed",
+      "name": "Cellular Traffic Intercept",
+      "related_attack": [
+        "T1111"
+      ],
+      "related_cwe": [
+        "CWE-311"
+      ]
+    },
+    "CAPEC-61": {
+      "abstraction": "detailed",
+      "name": "Session Fixation",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-384",
+        "CWE-664",
+        "CWE-732"
+      ]
+    },
+    "CAPEC-610": {
+      "abstraction": "standard",
+      "name": "Cellular Data Injection",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-611": {
+      "abstraction": "detailed",
+      "name": "BitSquatting",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-612": {
+      "abstraction": "detailed",
+      "name": "WiFi MAC Address Tracking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201",
+        "CWE-300"
+      ]
+    },
+    "CAPEC-613": {
+      "abstraction": "detailed",
+      "name": "WiFi SSID Tracking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201",
+        "CWE-300"
+      ]
+    },
+    "CAPEC-614": {
+      "abstraction": "detailed",
+      "name": "Rooting SIM Cards",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-327"
+      ]
+    },
+    "CAPEC-615": {
+      "abstraction": "detailed",
+      "name": "Evil Twin Wi-Fi Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-300"
+      ]
+    },
+    "CAPEC-616": {
+      "abstraction": "standard",
+      "name": "Establish Rogue Location",
+      "related_attack": [
+        "T1036.005"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-617": {
+      "abstraction": "detailed",
+      "name": "Cellular Rogue Base Station",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-618": {
+      "abstraction": "detailed",
+      "name": "Cellular Broadcast Message Request",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-619": {
+      "abstraction": "detailed",
+      "name": "Signal Strength Tracking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-62": {
+      "abstraction": "standard",
+      "name": "Cross Site Request Forgery",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-352",
+        "CWE-306",
+        "CWE-664",
+        "CWE-732",
+        "CWE-1275"
+      ]
+    },
+    "CAPEC-620": {
+      "abstraction": "standard",
+      "name": "Drop Encryption Level",
+      "related_attack": [
+        "T1600"
+      ],
+      "related_cwe": [
+        "CWE-757"
+      ]
+    },
+    "CAPEC-621": {
+      "abstraction": "detailed",
+      "name": "Analysis of Packet Timing and Sizes",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-622": {
+      "abstraction": "detailed",
+      "name": "Electromagnetic Side-Channel Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-623": {
+      "abstraction": "detailed",
+      "name": "Compromising Emanations Attack",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-201"
+      ]
+    },
+    "CAPEC-624": {
+      "abstraction": "meta",
+      "name": "Hardware Fault Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1247",
+        "CWE-1248",
+        "CWE-1256",
+        "CWE-1319",
+        "CWE-1332",
+        "CWE-1334",
+        "CWE-1338",
+        "CWE-1351"
+      ]
+    },
+    "CAPEC-625": {
+      "abstraction": "standard",
+      "name": "Mobile Device Fault Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1247",
+        "CWE-1248",
+        "CWE-1256",
+        "CWE-1319",
+        "CWE-1332",
+        "CWE-1334",
+        "CWE-1338",
+        "CWE-1351"
+      ]
+    },
+    "CAPEC-626": {
+      "abstraction": "detailed",
+      "name": "Smudge Attack",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-627": {
+      "abstraction": "standard",
+      "name": "Counterfeit GPS Signals",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-628": {
+      "abstraction": "detailed",
+      "name": "Carry-Off GPS Attack",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-63": {
+      "abstraction": "standard",
+      "name": "Cross-Site Scripting (XSS)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-630": {
+      "abstraction": "detailed",
+      "name": "TypoSquatting",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-631": {
+      "abstraction": "detailed",
+      "name": "SoundSquatting",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-632": {
+      "abstraction": "detailed",
+      "name": "Homograph Attack via Homoglyphs",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1007"
+      ]
+    },
+    "CAPEC-633": {
+      "abstraction": "detailed",
+      "name": "Token Impersonation",
+      "related_attack": [
+        "T1134"
+      ],
+      "related_cwe": [
+        "CWE-287",
+        "CWE-1270"
+      ]
+    },
+    "CAPEC-634": {
+      "abstraction": "detailed",
+      "name": "Probe Audio and Video Peripherals",
+      "related_attack": [
+        "T1123",
+        "T1125"
+      ],
+      "related_cwe": [
+        "CWE-267"
+      ]
+    },
+    "CAPEC-635": {
+      "abstraction": "standard",
+      "name": "Alternative Execution Due to Deceptive Filenames",
+      "related_attack": [
+        "T1036.007"
+      ],
+      "related_cwe": [
+        "CWE-162"
+      ]
+    },
+    "CAPEC-636": {
+      "abstraction": "standard",
+      "name": "Hiding Malicious Data or Code within Files",
+      "related_attack": [
+        "T1001.002",
+        "T1027.003",
+        "T1027.004",
+        "T1218.001",
+        "T1221"
+      ],
+      "related_cwe": [
+        "CWE-506"
+      ]
+    },
+    "CAPEC-637": {
+      "abstraction": "detailed",
+      "name": "Collect Data from Clipboard",
+      "related_attack": [
+        "T1115"
+      ],
+      "related_cwe": [
+        "CWE-267"
+      ]
+    },
+    "CAPEC-638": {
+      "abstraction": "detailed",
+      "name": "Altered Component Firmware",
+      "related_attack": [
+        "T1542.002"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-639": {
+      "abstraction": "detailed",
+      "name": "Probe System Files",
+      "related_attack": [
+        "T1039",
+        "T1552.001",
+        "T1552.003",
+        "T1552.004",
+        "T1552.006"
+      ],
+      "related_cwe": [
+        "CWE-552"
+      ]
+    },
+    "CAPEC-64": {
+      "abstraction": "detailed",
+      "name": "Using Slashes and URL Encoding Combined to Bypass Validation Logic",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-177",
+        "CWE-173",
+        "CWE-172",
+        "CWE-73",
+        "CWE-22",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-640": {
+      "abstraction": "detailed",
+      "name": "Inclusion of Code in Existing Process",
+      "related_attack": [
+        "T1505.005",
+        "T1574.006",
+        "T1574.013",
+        "T1620"
+      ],
+      "related_cwe": [
+        "CWE-114",
+        "CWE-829"
+      ]
+    },
+    "CAPEC-641": {
+      "abstraction": "detailed",
+      "name": "DLL Side-Loading",
+      "related_attack": [
+        "T1574.002"
+      ],
+      "related_cwe": [
+        "CWE-706"
+      ]
+    },
+    "CAPEC-642": {
+      "abstraction": "detailed",
+      "name": "Replace Binaries",
+      "related_attack": [
+        "T1505.005",
+        "T1554",
+        "T1574.005"
+      ],
+      "related_cwe": [
+        "CWE-732"
+      ]
+    },
+    "CAPEC-643": {
+      "abstraction": "detailed",
+      "name": "Identify Shared Files/Directories on System",
+      "related_attack": [
+        "T1135"
+      ],
+      "related_cwe": [
+        "CWE-267",
+        "CWE-200"
+      ]
+    },
+    "CAPEC-644": {
+      "abstraction": "detailed",
+      "name": "Use of Captured Hashes (Pass The Hash)",
+      "related_attack": [
+        "T1550.002"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-836",
+        "CWE-308",
+        "CWE-294"
+      ]
+    },
+    "CAPEC-645": {
+      "abstraction": "detailed",
+      "name": "Use of Captured Tickets (Pass The Ticket)",
+      "related_attack": [
+        "T1550.003"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-294",
+        "CWE-308"
+      ]
+    },
+    "CAPEC-646": {
+      "abstraction": "standard",
+      "name": "Peripheral Footprinting",
+      "related_attack": [
+        "T1120"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-647": {
+      "abstraction": "detailed",
+      "name": "Collect Data from Registries",
+      "related_attack": [
+        "T1005",
+        "T1012",
+        "T1552.002"
+      ],
+      "related_cwe": [
+        "CWE-285"
+      ]
+    },
+    "CAPEC-648": {
+      "abstraction": "detailed",
+      "name": "Collect Data from Screen Capture",
+      "related_attack": [
+        "T1113",
+        "T1513"
+      ],
+      "related_cwe": [
+        "CWE-267"
+      ]
+    },
+    "CAPEC-649": {
+      "abstraction": "detailed",
+      "name": "Adding a Space to a File Extension",
+      "related_attack": [
+        "T1036.006"
+      ],
+      "related_cwe": [
+        "CWE-46"
+      ]
+    },
+    "CAPEC-65": {
+      "abstraction": "detailed",
+      "name": "Sniff Application Code",
+      "related_attack": [
+        "T1040"
+      ],
+      "related_cwe": [
+        "CWE-319",
+        "CWE-311",
+        "CWE-318",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-650": {
+      "abstraction": "detailed",
+      "name": "Upload a Web Shell to a Web Server",
+      "related_attack": [
+        "T1505.003"
+      ],
+      "related_cwe": [
+        "CWE-287",
+        "CWE-553"
+      ]
+    },
+    "CAPEC-651": {
+      "abstraction": "standard",
+      "name": "Eavesdropping",
+      "related_attack": [
+        "T1111"
+      ],
+      "related_cwe": [
+        "CWE-200"
+      ]
+    },
+    "CAPEC-652": {
+      "abstraction": "standard",
+      "name": "Use of Known Kerberos Credentials",
+      "related_attack": [
+        "T1558"
+      ],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654",
+        "CWE-294",
+        "CWE-836"
+      ]
+    },
+    "CAPEC-653": {
+      "abstraction": "standard",
+      "name": "Use of Known Operating System Credentials",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-522",
+        "CWE-307",
+        "CWE-308",
+        "CWE-309",
+        "CWE-262",
+        "CWE-263",
+        "CWE-654"
+      ]
+    },
+    "CAPEC-654": {
+      "abstraction": "detailed",
+      "name": "Credential Prompt Impersonation",
+      "related_attack": [
+        "T1056",
+        "T1548.004"
+      ],
+      "related_cwe": [
+        "CWE-1021"
+      ]
+    },
+    "CAPEC-655": {
+      "abstraction": "detailed",
+      "name": "Avoid Security Tool Identification by Adding Data",
+      "related_attack": [
+        "T1027.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-656": {
+      "abstraction": "detailed",
+      "name": "Voice Phishing",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-657": {
+      "abstraction": "detailed",
+      "name": "Malicious Automated Software Update via Spoofing",
+      "related_attack": [
+        "T1072"
+      ],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-66": {
+      "abstraction": "standard",
+      "name": "SQL Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-89",
+        "CWE-1286"
+      ]
+    },
+    "CAPEC-660": {
+      "abstraction": "detailed",
+      "name": "Root/Jailbreak Detection Evasion via Hooking",
+      "related_attack": [
+        "T1055"
+      ],
+      "related_cwe": [
+        "CWE-829"
+      ]
+    },
+    "CAPEC-661": {
+      "abstraction": "detailed",
+      "name": "Root/Jailbreak Detection Evasion via Debugging",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-489"
+      ]
+    },
+    "CAPEC-662": {
+      "abstraction": "standard",
+      "name": "Adversary in the Browser (AiTB)",
+      "related_attack": [
+        "T1185"
+      ],
+      "related_cwe": [
+        "CWE-300",
+        "CWE-494"
+      ]
+    },
+    "CAPEC-663": {
+      "abstraction": "standard",
+      "name": "Exploitation of Transient Instruction Execution",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1037",
+        "CWE-1303",
+        "CWE-1264"
+      ]
+    },
+    "CAPEC-664": {
+      "abstraction": "standard",
+      "name": "Server Side Request Forgery",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-918",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-665": {
+      "abstraction": "detailed",
+      "name": "Exploitation of Thunderbolt Protection Flaws",
+      "related_attack": [
+        "T1211",
+        "T1542.002",
+        "T1556"
+      ],
+      "related_cwe": [
+        "CWE-345",
+        "CWE-353",
+        "CWE-288",
+        "CWE-1188",
+        "CWE-862"
+      ]
+    },
+    "CAPEC-666": {
+      "abstraction": "standard",
+      "name": "BlueSmacking",
+      "related_attack": [
+        "T1498.001",
+        "T1499.001"
+      ],
+      "related_cwe": [
+        "CWE-404"
+      ]
+    },
+    "CAPEC-667": {
+      "abstraction": "detailed",
+      "name": "Bluetooth Impersonation AttackS (BIAS)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-290"
+      ]
+    },
+    "CAPEC-668": {
+      "abstraction": "standard",
+      "name": "Key Negotiation of Bluetooth Attack (KNOB)",
+      "related_attack": [
+        "T1565.002"
+      ],
+      "related_cwe": [
+        "CWE-425",
+        "CWE-285",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-669": {
+      "abstraction": "standard",
+      "name": "Alteration of a Software Update",
+      "related_attack": [
+        "T1195.002"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-67": {
+      "abstraction": "detailed",
+      "name": "String Format Overflow in syslog()",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-134",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-670": {
+      "abstraction": "detailed",
+      "name": "Software Development Tools Maliciously Altered",
+      "related_attack": [
+        "T1127",
+        "T1195.001"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-671": {
+      "abstraction": "detailed",
+      "name": "Requirements for ASIC Functionality Maliciously Altered",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-672": {
+      "abstraction": "detailed",
+      "name": "Malicious Code Implanted During Chip Programming",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-673": {
+      "abstraction": "detailed",
+      "name": "Developer Signing Maliciously Altered Software",
+      "related_attack": [
+        "T1195.002"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-674": {
+      "abstraction": "detailed",
+      "name": "Design for FPGA Maliciously Altered",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-675": {
+      "abstraction": "standard",
+      "name": "Retrieve Data from Decommissioned Devices",
+      "related_attack": [
+        "T1052"
+      ],
+      "related_cwe": [
+        "CWE-1266"
+      ]
+    },
+    "CAPEC-676": {
+      "abstraction": "standard",
+      "name": "NoSQL Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-943",
+        "CWE-1286"
+      ]
+    },
+    "CAPEC-677": {
+      "abstraction": "detailed",
+      "name": "Server Motherboard Compromise",
+      "related_attack": [
+        "T1195.003"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-678": {
+      "abstraction": "detailed",
+      "name": "System Build Data Maliciously Altered",
+      "related_attack": [
+        "T1195.002"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-679": {
+      "abstraction": "detailed",
+      "name": "Exploitation of Improperly Configured or Implemented Memory Protections",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1222",
+        "CWE-1252",
+        "CWE-1257",
+        "CWE-1260",
+        "CWE-1274",
+        "CWE-1282",
+        "CWE-1312",
+        "CWE-1316",
+        "CWE-1326"
+      ]
+    },
+    "CAPEC-68": {
+      "abstraction": "standard",
+      "name": "Subvert Code-signing Facilities",
+      "related_attack": [
+        "T1553.002"
+      ],
+      "related_cwe": [
+        "CWE-325",
+        "CWE-328",
+        "CWE-1326"
+      ]
+    },
+    "CAPEC-680": {
+      "abstraction": "detailed",
+      "name": "Exploitation of Improperly Controlled Registers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1224",
+        "CWE-1231",
+        "CWE-1233",
+        "CWE-1262",
+        "CWE-1283"
+      ]
+    },
+    "CAPEC-681": {
+      "abstraction": "detailed",
+      "name": "Exploitation of Improperly Controlled Hardware Security Identifiers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1259",
+        "CWE-1267",
+        "CWE-1270",
+        "CWE-1294",
+        "CWE-1302"
+      ]
+    },
+    "CAPEC-682": {
+      "abstraction": "standard",
+      "name": "Exploitation of Firmware or ROM Code with Unpatchable Vulnerabilities",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1277",
+        "CWE-1310"
+      ]
+    },
+    "CAPEC-69": {
+      "abstraction": "standard",
+      "name": "Target Programs with Elevated Privileges",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-250",
+        "CWE-15"
+      ]
+    },
+    "CAPEC-690": {
+      "abstraction": "meta",
+      "name": "Metadata Spoofing",
+      "related_attack": [],
+      "related_cwe": []
+    },
+    "CAPEC-691": {
+      "abstraction": "standard",
+      "name": "Spoof Open-Source Software Metadata",
+      "related_attack": [
+        "T1195.001",
+        "T1195.002"
+      ],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-692": {
+      "abstraction": "detailed",
+      "name": "Spoof Version Control System Commit Metadata",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-693": {
+      "abstraction": "detailed",
+      "name": "StarJacking",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-494"
+      ]
+    },
+    "CAPEC-694": {
+      "abstraction": "standard",
+      "name": "System Location Discovery",
+      "related_attack": [
+        "T1614"
+      ],
+      "related_cwe": [
+        "CWE-497"
+      ]
+    },
+    "CAPEC-695": {
+      "abstraction": "detailed",
+      "name": "Repo Jacking",
+      "related_attack": [
+        "T1195.001"
+      ],
+      "related_cwe": [
+        "CWE-494",
+        "CWE-829"
+      ]
+    },
+    "CAPEC-696": {
+      "abstraction": "detailed",
+      "name": "Load Value Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1342"
+      ]
+    },
+    "CAPEC-697": {
+      "abstraction": "standard",
+      "name": "DHCP Spoofing",
+      "related_attack": [
+        "T1557.003"
+      ],
+      "related_cwe": [
+        "CWE-923"
+      ]
+    },
+    "CAPEC-698": {
+      "abstraction": "detailed",
+      "name": "Install Malicious Extension",
+      "related_attack": [
+        "T1176",
+        "T1505.004"
+      ],
+      "related_cwe": [
+        "CWE-507",
+        "CWE-829"
+      ]
+    },
+    "CAPEC-699": {
+      "abstraction": "meta",
+      "name": "Eavesdropping on a Monitor",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1300"
+      ]
+    },
+    "CAPEC-7": {
+      "abstraction": "detailed",
+      "name": "Blind SQL Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-89",
+        "CWE-209",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-70": {
+      "abstraction": "detailed",
+      "name": "Try Common or Default Usernames and Passwords",
+      "related_attack": [
+        "T1078.001"
+      ],
+      "related_cwe": [
+        "CWE-521",
+        "CWE-262",
+        "CWE-263",
+        "CWE-798",
+        "CWE-654",
+        "CWE-308",
+        "CWE-309"
+      ]
+    },
+    "CAPEC-700": {
+      "abstraction": "standard",
+      "name": "Network Boundary Bridging",
+      "related_attack": [
+        "T1599"
+      ],
+      "related_cwe": []
+    },
+    "CAPEC-701": {
+      "abstraction": "standard",
+      "name": "Browser in the Middle (BiTM)",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-294",
+        "CWE-345"
+      ]
+    },
+    "CAPEC-702": {
+      "abstraction": "detailed",
+      "name": "Exploiting Incorrect Chaining or Granularity of Hardware Debug Components",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-1296"
+      ]
+    },
+    "CAPEC-71": {
+      "abstraction": "detailed",
+      "name": "Using Unicode Encoding to Bypass Validation Logic",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-176",
+        "CWE-179",
+        "CWE-180",
+        "CWE-173",
+        "CWE-172",
+        "CWE-184",
+        "CWE-183",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-692"
+      ]
+    },
+    "CAPEC-72": {
+      "abstraction": "detailed",
+      "name": "URL Encoding",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-177",
+        "CWE-172",
+        "CWE-73",
+        "CWE-74",
+        "CWE-20"
+      ]
+    },
+    "CAPEC-73": {
+      "abstraction": "standard",
+      "name": "User-Controlled Filename",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-20",
+        "CWE-184",
+        "CWE-96",
+        "CWE-348",
+        "CWE-116",
+        "CWE-350",
+        "CWE-86",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-74": {
+      "abstraction": "meta",
+      "name": "Manipulating State",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-372",
+        "CWE-315",
+        "CWE-353",
+        "CWE-693",
+        "CWE-1245",
+        "CWE-1253",
+        "CWE-1265",
+        "CWE-1271"
+      ]
+    },
+    "CAPEC-75": {
+      "abstraction": "standard",
+      "name": "Manipulating Writeable Configuration Files",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-349",
+        "CWE-99",
+        "CWE-77",
+        "CWE-346",
+        "CWE-353",
+        "CWE-354"
+      ]
+    },
+    "CAPEC-76": {
+      "abstraction": "detailed",
+      "name": "Manipulating Web Input to File System Calls",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-23",
+        "CWE-22",
+        "CWE-73",
+        "CWE-77",
+        "CWE-346",
+        "CWE-348",
+        "CWE-285",
+        "CWE-272",
+        "CWE-59",
+        "CWE-74",
+        "CWE-15"
+      ]
+    },
+    "CAPEC-77": {
+      "abstraction": "standard",
+      "name": "Manipulating User-Controlled Variables",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-15",
+        "CWE-94",
+        "CWE-96",
+        "CWE-285",
+        "CWE-302",
+        "CWE-473",
+        "CWE-1321"
+      ]
+    },
+    "CAPEC-78": {
+      "abstraction": "detailed",
+      "name": "Using Escaped Slashes in Alternate Encoding",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-180",
+        "CWE-181",
+        "CWE-173",
+        "CWE-172",
+        "CWE-73",
+        "CWE-22",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-79": {
+      "abstraction": "detailed",
+      "name": "Using Slashes in Alternate Encoding",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-180",
+        "CWE-181",
+        "CWE-20",
+        "CWE-74",
+        "CWE-73",
+        "CWE-22",
+        "CWE-185",
+        "CWE-200",
+        "CWE-697",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-8": {
+      "abstraction": "detailed",
+      "name": "Buffer Overflow in an API Call",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-119",
+        "CWE-118",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-733",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-80": {
+      "abstraction": "detailed",
+      "name": "Using UTF-8 Encoding to Bypass Validation Logic",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-173",
+        "CWE-172",
+        "CWE-180",
+        "CWE-181",
+        "CWE-73",
+        "CWE-74",
+        "CWE-20",
+        "CWE-697",
+        "CWE-692"
+      ]
+    },
+    "CAPEC-81": {
+      "abstraction": "detailed",
+      "name": "Web Server Logs Tampering",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-117",
+        "CWE-93",
+        "CWE-75",
+        "CWE-221",
+        "CWE-96",
+        "CWE-20",
+        "CWE-150",
+        "CWE-276",
+        "CWE-279",
+        "CWE-116"
+      ]
+    },
+    "CAPEC-83": {
+      "abstraction": "detailed",
+      "name": "XPath Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-91",
+        "CWE-74",
+        "CWE-20",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-84": {
+      "abstraction": "detailed",
+      "name": "XQuery Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-74",
+        "CWE-707"
+      ]
+    },
+    "CAPEC-85": {
+      "abstraction": "detailed",
+      "name": "AJAX Footprinting",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-79",
+        "CWE-113",
+        "CWE-348",
+        "CWE-96",
+        "CWE-20",
+        "CWE-116",
+        "CWE-184",
+        "CWE-86",
+        "CWE-692"
+      ]
+    },
+    "CAPEC-86": {
+      "abstraction": "detailed",
+      "name": "XSS Through HTTP Headers",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-80"
+      ]
+    },
+    "CAPEC-87": {
+      "abstraction": "standard",
+      "name": "Forceful Browsing",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-425",
+        "CWE-285",
+        "CWE-693"
+      ]
+    },
+    "CAPEC-88": {
+      "abstraction": "standard",
+      "name": "OS Command Injection",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-78",
+        "CWE-88",
+        "CWE-20",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-89": {
+      "abstraction": "standard",
+      "name": "Pharming",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-346",
+        "CWE-350"
+      ]
+    },
+    "CAPEC-9": {
+      "abstraction": "detailed",
+      "name": "Buffer Overflow in Local Command-Line Utilities",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-120",
+        "CWE-118",
+        "CWE-119",
+        "CWE-74",
+        "CWE-20",
+        "CWE-680",
+        "CWE-733",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-90": {
+      "abstraction": "standard",
+      "name": "Reflection Attack in Authentication Protocol",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-301",
+        "CWE-303"
+      ]
+    },
+    "CAPEC-92": {
+      "abstraction": "detailed",
+      "name": "Forced Integer Overflow",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-190",
+        "CWE-128",
+        "CWE-120",
+        "CWE-122",
+        "CWE-196",
+        "CWE-680",
+        "CWE-697"
+      ]
+    },
+    "CAPEC-93": {
+      "abstraction": "detailed",
+      "name": "Log Injection-Tampering-Forging",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-117",
+        "CWE-75",
+        "CWE-150"
+      ]
+    },
+    "CAPEC-94": {
+      "abstraction": "meta",
+      "name": "Adversary in the Middle (AiTM)",
+      "related_attack": [
+        "T1557"
+      ],
+      "related_cwe": [
+        "CWE-300",
+        "CWE-290",
+        "CWE-593",
+        "CWE-287",
+        "CWE-294"
+      ]
+    },
+    "CAPEC-95": {
+      "abstraction": "detailed",
+      "name": "WSDL Scanning",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-538"
+      ]
+    },
+    "CAPEC-96": {
+      "abstraction": "detailed",
+      "name": "Block Access to Libraries",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-589"
+      ]
+    },
+    "CAPEC-97": {
+      "abstraction": "standard",
+      "name": "Cryptanalysis",
+      "related_attack": [],
+      "related_cwe": [
+        "CWE-327",
+        "CWE-1204",
+        "CWE-1240",
+        "CWE-1241",
+        "CWE-1279"
+      ]
+    },
+    "CAPEC-98": {
+      "abstraction": "standard",
+      "name": "Phishing",
+      "related_attack": [
+        "T1566",
+        "T1598"
+      ],
+      "related_cwe": [
+        "CWE-451"
+      ]
+    }
+  },
+  "fetched_at": "2026-06-15T00:37:23.163619+00:00",
+  "source_sha256": "70279a2dff0cb0ad79e546adb07828335a704ad5210e047e09e986172fc9e34d",
+  "source_url": "https://capec.mitre.org/data/xml/capec_latest.xml"
+}

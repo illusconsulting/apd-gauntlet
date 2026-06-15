@@ -57,7 +57,7 @@ Changes to any of these surfaces require a version bump. Internal refactors of `
 The release workflow publishes to PyPI via trusted publishing. This requires a one-time setup:
 
 1. Create the `apd-gauntlet` project on PyPI (manual; reserved by initial release).
-2. In PyPI's "Publishing" tab, add a trusted publisher entry for the GitHub repo `shoveleejoe/apd-gauntlet`, workflow `release.yml`, environment unset.
+2. In PyPI's "Publishing" tab, add a trusted publisher entry for the GitHub repo `user/apd-gauntlet`, workflow `release.yml`, environment unset.
 3. Tag a release (`git tag v1.0.0 && git push origin v1.0.0`). The release workflow publishes automatically.
 
 If trusted publishing isn't set up, the workflow's PyPI step fails; the GitHub Release still succeeds. Set up trusted publishing before the first tag.

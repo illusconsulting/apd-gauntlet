@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/attack-exposure.schema.json",
   "title": "APD Gauntlet ATT&CK Technique Exposure Row",
   "type": "object",
   "required": ["id", "sub_technique", "tactic", "name", "exposure_finding_count", "exposure_finding_ids", "mitigated_by_capabilities"],

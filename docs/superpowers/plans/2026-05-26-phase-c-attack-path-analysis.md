@@ -412,7 +412,7 @@ If any of the above fail, stop and investigate before starting the plan.
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/asset-inventory.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/asset-inventory.schema.json",
      "title": "APD Gauntlet Asset Inventory",
      "type": "object",
      "required": ["schema_version", "generated_by", "assets", "identities", "trust_boundaries"],
@@ -529,7 +529,7 @@ If any of the above fail, stop and investigate before starting the plan.
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/asset-graph.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/asset-graph.schema.json",
      "title": "APD Gauntlet Asset Graph",
      "type": "object",
      "required": ["schema_version", "generated_by", "nodes", "edges"],
@@ -637,7 +637,7 @@ If any of the above fail, stop and investigate before starting the plan.
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-path.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/attack-path.schema.json",
      "title": "APD Gauntlet Attack Paths",
      "type": "object",
      "required": ["schema_version", "generated_by", "enumeration_parameters", "paths", "summary"],
@@ -719,7 +719,7 @@ If any of the above fail, stop and investigate before starting the plan.
    ```json
    {
      "$schema": "https://json-schema.org/draft/2020-12/schema",
-     "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/defense-graph.schema.json",
+     "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/defense-graph.schema.json",
      "title": "APD Gauntlet Defense Graph",
      "type": "object",
      "required": ["schema_version", "generated_by", "bottleneck_overlays", "summary"],

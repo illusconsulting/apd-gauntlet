@@ -240,6 +240,14 @@ SYNTHESIS_ROLLUPS: dict[str, str] = {
     # cwe-coverage (no -doc wrapper); registered directly here.
     "masvs-coverage.yaml":         "masvs-coverage.schema.json",
     "maswe-coverage.yaml":         "maswe-coverage.schema.json",
+    # ADR-0022 — derived CAPEC CWE<->ATT&CK bridge. Single-file convention like
+    # cwe-coverage (no -doc wrapper); not an emission taxonomy.
+    "capec-bridge.yaml":           "capec-bridge.schema.json",
+    # ADR-0022 — derived ATT&CK detection overlay (technique -> required telemetry).
+    "detection-coverage.yaml":     "detection-coverage.schema.json",
+    # ADR-0022 — derived compliance projections (800-53r5 -> HIPAA / CSF 2.0).
+    "hipaa-coverage.yaml":         "framework-coverage.schema.json",
+    "csf2-coverage.yaml":          "framework-coverage.schema.json",
     "threat-model-coverage.yaml":  "threat-model-coverage.schema.json",
     # C-21: Phase C synthesis artifacts
     "asset-graph.yaml":            "asset-graph.schema.json",

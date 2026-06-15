@@ -472,7 +472,7 @@ git commit -m "refactor(synthesis): extract coverage_logic leaf helpers; transfo
 
 ## Task 3: New whole-document + wrapper schemas (+ validate wiring)
 
-Author the four new-artifact schemas and the five thin `$ref` wrappers, and wire all nine filenames into `validate.SYNTHESIS_ROLLUPS` so the workflow `phaseDone` guard (`validate --schema-only --errors-only`) catches malformed rollup/cluster output. The `$id` convention is `https://github.com/shoveleejoe/apd-gauntlet/schemas/<name>.schema.json` (matches every existing schema). The wrappers `$ref` the EXISTING per-row schemas (recon option b — minimal new logic; the `build_registry()` registry resolves cross-schema `$ref` by `$id`). The two NEW annex wrappers (`severity-disagreements-doc`, `contradictions-doc`) close the I5 gap: `apply-clusters` emits `severity-disagreements.yaml` (`{severity_disagreements: [...]}`) and `contradictions.yaml` (`{contradictions: [...]}`), but neither filename was schema-wired — so a malformed annex slipped past `validate --schema-only`. They `$ref` the EXISTING `severity-disagreement.schema.json` / `contradiction.schema.json` per-row schemas.
+Author the four new-artifact schemas and the five thin `$ref` wrappers, and wire all nine filenames into `validate.SYNTHESIS_ROLLUPS` so the workflow `phaseDone` guard (`validate --schema-only --errors-only`) catches malformed rollup/cluster output. The `$id` convention is `https://github.com/illusconsulting/apd-gauntlet/schemas/<name>.schema.json` (matches every existing schema). The wrappers `$ref` the EXISTING per-row schemas (recon option b — minimal new logic; the `build_registry()` registry resolves cross-schema `$ref` by `$id`). The two NEW annex wrappers (`severity-disagreements-doc`, `contradictions-doc`) close the I5 gap: `apply-clusters` emits `severity-disagreements.yaml` (`{severity_disagreements: [...]}`) and `contradictions.yaml` (`{contradictions: [...]}`), but neither filename was schema-wired — so a malformed annex slipped past `validate --schema-only`. They `$ref` the EXISTING `severity-disagreement.schema.json` / `contradiction.schema.json` per-row schemas.
 
 **Files:**
 - Create: `schemas/cluster-candidates.schema.json`, `schemas/cluster-decisions.schema.json`, `schemas/rejected-records.schema.json`, `schemas/report-audit.schema.json`, `schemas/nist-coverage-doc.schema.json`, `schemas/attack-exposure-doc.schema.json`, `schemas/coverage-matrix-doc.schema.json`, `schemas/severity-disagreements-doc.schema.json`, `schemas/contradictions-doc.schema.json`
@@ -772,7 +772,7 @@ Create `schemas/cluster-candidates.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-candidates.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/cluster-candidates.schema.json",
   "title": "APD Gauntlet Cluster Candidates",
   "description": "Mechanical candidate groups emitted by the cluster-candidates command (5a). Read by the apd-cluster-adjudicator.",
   "type": "object",
@@ -844,7 +844,7 @@ Create `schemas/cluster-decisions.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-decisions.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/cluster-decisions.schema.json",
   "title": "APD Gauntlet Cluster Decisions",
   "description": "Disposition + merged prose emitted by the apd-cluster-adjudicator (5b). Consumed by apply-clusters.",
   "type": "object",
@@ -942,7 +942,7 @@ Create `schemas/rejected-records.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/rejected-records.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/rejected-records.schema.json",
   "title": "APD Gauntlet Rejected Records",
   "description": "Records excluded from clustering (validation failures) and stale-capability maturity downgrades, with a reason per record.",
   "type": "object",
@@ -975,7 +975,7 @@ Create `schemas/report-audit.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/report-audit.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/report-audit.schema.json",
   "title": "APD Gauntlet Report Audit",
   "description": "Compact structural audit emitted by the audit-report command (5g). Read by the apd-report-auditor (never data.js itself).",
   "type": "object",
@@ -1036,7 +1036,7 @@ Create `schemas/nist-coverage-doc.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/nist-coverage-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/nist-coverage-doc.schema.json",
   "title": "APD Gauntlet NIST Coverage Document",
   "type": "object",
   "required": ["controls"],
@@ -1044,7 +1044,7 @@ Create `schemas/nist-coverage-doc.schema.json`:
   "properties": {
     "controls": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/nist-coverage.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/nist-coverage.schema.json" }
     }
   }
 }
@@ -1055,7 +1055,7 @@ Create `schemas/attack-exposure-doc.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/attack-exposure-doc.schema.json",
   "title": "APD Gauntlet ATT&CK Exposure Document",
   "type": "object",
   "required": ["techniques"],
@@ -1063,7 +1063,7 @@ Create `schemas/attack-exposure-doc.schema.json`:
   "properties": {
     "techniques": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/attack-exposure.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/attack-exposure.schema.json" }
     }
   }
 }
@@ -1074,7 +1074,7 @@ Create `schemas/coverage-matrix-doc.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/coverage-matrix-doc.schema.json",
   "title": "APD Gauntlet Coverage Matrix Document",
   "type": "object",
   "required": ["components"],
@@ -1082,7 +1082,7 @@ Create `schemas/coverage-matrix-doc.schema.json`:
   "properties": {
     "components": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/coverage-matrix.schema.json" }
     }
   }
 }
@@ -1093,7 +1093,7 @@ Create `schemas/severity-disagreements-doc.schema.json` (I5 — wraps the EXISTI
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreements-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/severity-disagreements-doc.schema.json",
   "title": "APD Gauntlet Severity Disagreements Document",
   "type": "object",
   "required": ["severity_disagreements"],
@@ -1101,7 +1101,7 @@ Create `schemas/severity-disagreements-doc.schema.json` (I5 — wraps the EXISTI
   "properties": {
     "severity_disagreements": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreement.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/severity-disagreement.schema.json" }
     }
   }
 }
@@ -1112,7 +1112,7 @@ Create `schemas/contradictions-doc.schema.json` (I5/C5 — wraps the EXISTING pe
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradictions-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/contradictions-doc.schema.json",
   "title": "APD Gauntlet Contradictions Document",
   "type": "object",
   "required": ["contradictions"],
@@ -1120,7 +1120,7 @@ Create `schemas/contradictions-doc.schema.json` (I5/C5 — wraps the EXISTING pe
   "properties": {
     "contradictions": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradiction.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/contradiction.schema.json" }
     }
   }
 }
@@ -3596,6 +3596,6 @@ git commit -m "test: token-resilience Plan 2 regression + lint/type/markdown gat
 - Root keys match the example golden + loader expectations exactly: `finding:` / `capability:` (singular), `controls:` / `techniques:` / `components:`, `contradictions:` / `severity_disagreements:` (plural), `rejected:`. `generated_by`: `apd-gauntlet` (cluster-candidates, report-audit), `apd-cluster-adjudicator` (cluster-decisions), `synthesizer` (rejected/cwe/owasp/d3fend — satisfies the hardcoded enums in `cwe/owasp/d3fend-coverage.schema.json`). Deduped findings/caps emit NO `generated_by` and NO `generated_at` (bare list, reproducible).
 - Merged-id rule `merged-<sha8(title + "|" + first_evidence_locator)>` matches the `apd-finding-schema` skill. The exact golden id `merged-4dd83f6a` is reproduced only when `first_evidence_locator == "§5.2 paragraph 2"` (nonrep's locator, by member order) — the synthesizer's member-ORDER-dependent evidence concatenation; the Task 8 equivalence test therefore pins merge SEMANTICS (merged_from/severity/NIST-union/lens keys), NOT the literal id (verified: id-sorted first-locator yields a different sha8). Evidence field key is `artifact` (NOT `file`), per `finding.schema.json`.
 - The on-disk `contradictions.yaml` row (`contra-<sha8(finding_id|capability_id)>` + the 6 prose fields, NO `classification`) matches the EXISTING `schemas/contradiction.schema.json` (required `id` pattern `^contra-[0-9a-f]{8}$`; assertion min-lengths supplied by the adjudicator) and passes `validate.run_cross_file_pass`'s contradiction cross-ref. `severity-disagreements.yaml` `rationale` satisfies the existing minLength-30; `agent_severities` carries the 2 merge-lens goals (minProperties 2).
-- Schema `$id`s follow `https://github.com/shoveleejoe/apd-gauntlet/schemas/<name>.schema.json` (every existing schema uses this; wrappers `$ref` the per-row schemas by full `$id`). All nine new schemas (4 new-artifact + 5 wrappers) are auto-meta-validated by `tests/test_meta_schemas.py`'s glob.
+- Schema `$id`s follow `https://github.com/illusconsulting/apd-gauntlet/schemas/<name>.schema.json` (every existing schema uses this; wrappers `$ref` the per-row schemas by full `$id`). All nine new schemas (4 new-artifact + 5 wrappers) are auto-meta-validated by `tests/test_meta_schemas.py`'s glob.
 - All three new agent `.md` files contain the exact `## Final message (receipt only)` heading the Plan-1 lint rule (`RECEIPT_MARKER = "## Final message"`) requires, reference `schemas/agent-receipt.schema.json`, and end with one trailing newline (MD047). `apd-synthesizer` stays in `RECEIPT_EXEMPT`; the three new agents are NOT in `SPECIALIST_NAMES` (no bounding section required). `lint-agents` count goes 16 → 19.
 - `contradictions.yaml` is PRODUCED by `apply-clusters` (C5/I3), wired into `validate.SYNTHESIS_ROLLUPS` via `contradictions-doc.schema.json` (I5), listed as an input by `apd-report-writer`, and cross-ref-validated by `validate.run_cross_file_pass` — no dangling reference remains. The on-disk `cluster-decisions.yaml` carries a first-class top-level `_members` map (C3/C6) so it passes `validate --schema-only`. (Cross-ref scope: `contradictions.yaml` `finding_id`/`capability_id` resolve against the per-tier `*.findings.yaml`/`*.capabilities.yaml` source records, which match the validator globs; a `merged-*` record lives only in `deduped-findings.yaml` — which does NOT match `*.findings.yaml` — so cross-ref resolution of a `merged-*` id against deduped output is deferred to Plan 3 alongside the deduped-glob wiring.)

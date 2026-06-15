@@ -8,63 +8,63 @@ generated_by: code_recon
 containers:
   - name: "Core"
     kind: service
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-core"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §1 Surface inventory (REST /api, WS /api/websocket, mobile_app webhook)"
     analysis_state: analyzed
   - name: "Supervisor"
     kind: service
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-supervisor"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §1 Supervisor privileged API + ingress; §3 SecurityMiddleware.token_validation"
     analysis_state: analyzed
   - name: "os-agent"
     kind: compute
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-os-agent"
     provenance:
       source: "code_evidence"
       locator: "code-evidence-index.yaml#cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitives)"
     analysis_state: analyzed
   - name: "ha CLI"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-cli"
     provenance:
       source: "code_evidence"
       locator: "code-evidence-index.yaml#cev-0a000001 (ha CLI -> Supervisor API)"
     analysis_state: analyzed
   - name: "iOS Companion"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-iOS"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §2 ServerManagerKeychain (default Keychain accessibility class)"
     analysis_state: analyzed
   - name: "Android Companion"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-android"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §2 DatabaseModule.provideAppDatabase (unencrypted Room); §1 LaunchActivity"
     analysis_state: analyzed
   - name: "Frontend"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-frontend"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §5 Mobile WebView -> Core REST/WS external-auth bridge"
     analysis_state: analyzed
   - name: "FCM push relay"
     kind: external_system
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
     provenance:
       source: "code_evidence"
       locator: "code-evidence-index.yaml#cev-08000001 (Firebase Cloud Function POST /api/sendPushNotification)"
     analysis_state: analyzed
   - name: "Operating System"
     kind: compute
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-operating-system"
     provenance:
       source: "artifact"
       locator: "code-architecture-brief.md §7 indexed + reachable but intentionally not deep-read (thin build shell)"

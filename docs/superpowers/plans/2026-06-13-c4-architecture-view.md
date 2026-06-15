@@ -250,21 +250,21 @@ GOOD = {
         {
             "name": "core",
             "kind": "service",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-core",
             "provenance": {"source": "code_evidence", "locator": "code-evidence-index.yaml#core"},
             "analysis_state": "analyzed",
         },
         {
             "name": "os-agent",
             "kind": "compute",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-os-agent",
             "provenance": {"source": "code_evidence", "locator": "code-evidence-index.yaml#os-agent"},
             "analysis_state": "analyzed",
         },
         {
             "name": "plugin-dns",
             "kind": "service",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-dns",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-plugin-dns",
             "provenance": {"source": "artifact", "locator": "code-architecture-brief.md#repos"},
             "analysis_state": "not_analyzed",
         },
@@ -352,7 +352,7 @@ Expected: all seven tests error at collection/first assertion with
 // schemas/c4-recon.schema.json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-recon.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/c4-recon.schema.json",
   "title": "APD C4 Recon (agent-authored, content-only)",
   "type": "object",
   "required": ["schema_version", "generated_by", "containers", "components", "uses_edges"],
@@ -598,7 +598,7 @@ Expected: every test errors with `FileNotFoundError: .../schemas/c4-model.schema
 // schemas/c4-model.schema.json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-model.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/c4-model.schema.json",
   "title": "APD Gauntlet C4 Model (assembler-minted)",
   "type": "object",
   "required": ["schema_version", "generated_by", "nodes", "edges", "build_summary"],
@@ -2713,7 +2713,7 @@ Expected: `AttributeError: module 'apd_gauntlet.assemble_c4' has no attribute 'a
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-model.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/c4-model.schema.json",
   "title": "APD Gauntlet C4 Architecture Model",
   "type": "object",
   "required": ["schema_version", "generated_by", "nodes", "edges"],
@@ -3420,63 +3420,63 @@ generated_by: code_recon
 containers:
   - name: "Core"
     kind: service
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-core"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§1 Surface inventory (REST /api, WS /api/websocket, mobile_app webhook)"
     analysis_state: analyzed
   - name: "Supervisor"
     kind: service
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-supervisor"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-supervisor"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§1 Supervisor privileged API + ingress; §3 SecurityMiddleware.token_validation"
     analysis_state: analyzed
   - name: "os-agent"
     kind: compute
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-os-agent"
     provenance:
       source: "code-evidence-index.yaml"
       locator: "cev-c3000001 (system.system.AddSSHAuthKey — D-Bus host primitives)"
     analysis_state: analyzed
   - name: "ha CLI"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-cli"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-cli"
     provenance:
       source: "code-evidence-index.yaml"
       locator: "cev-0a000001 (ha CLI -> Supervisor API)"
     analysis_state: analyzed
   - name: "iOS Companion"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-iOS"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-iOS"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§2 ServerManagerKeychain (default Keychain accessibility class)"
     analysis_state: analyzed
   - name: "Android Companion"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-android"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-android"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§2 DatabaseModule.provideAppDatabase (unencrypted Room); §1 LaunchActivity"
     analysis_state: analyzed
   - name: "Frontend"
     kind: app
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-frontend"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-frontend"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§5 Mobile WebView -> Core REST/WS external-auth bridge"
     analysis_state: analyzed
   - name: "FCM push relay"
     kind: external_system
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-mobile-apps-fcm-push"
     provenance:
       source: "code-evidence-index.yaml"
       locator: "cev-08000001 (Firebase Cloud Function POST /api/sendPushNotification)"
     analysis_state: analyzed
   - name: "Operating System"
     kind: compute
-    repo: "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-operating-system"
+    repo: "Users-user-Documents-GitHub-home-assistant-repos-operating-system"
     provenance:
       source: "code-architecture-brief.md"
       locator: "§7 indexed + reachable but intentionally not deep-read (thin build shell)"
@@ -8709,10 +8709,10 @@ Expected: full suite green; freshness gate green (rebuilt `.source-hash` matches
 ---
 
 **Source-path notes for the implementer (relevant absolute paths):**
-- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/screens/C4.jsx` — rewrite target (current: GraphView render at lines 383-394; `graph` useMemo 134-187; `overlayHighlight` 122-132; `onNodeTap` reducer 194-201; overlay-resolution useMemo to KEEP at 91-120; overlay `<select>` + strip to KEEP at 330-381; `_c4KindLabel` dead-code at 19-30).
-- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/components.jsx` — `GraphView` at line 294 (UNTOUCHED); add `C4TierGraph`/`C4EdgeLayer` highlight here (Task 8 3a/3b); window export via the existing `Object.assign(window,{...})` near line 504.
-- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/report-template/screens.css` — existing `.c4-overlay*`/`.c4-overlay-strip*` at 1382-1430 (REUSED); append `.nb--dim`/`.edge-layer__path--live` (Task 8 4).
-- `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/docs/superpowers/design_handoff_c4_architecture_view/README.md` — overlay highlight spec at lines 310-314 (dim non-members + induced live edges + kept strip); router VERBATIM at 202-263.
+- `/Users/user/Documents/GitHub/APD-sec-arch-framework/report-template/screens/C4.jsx` — rewrite target (current: GraphView render at lines 383-394; `graph` useMemo 134-187; `overlayHighlight` 122-132; `onNodeTap` reducer 194-201; overlay-resolution useMemo to KEEP at 91-120; overlay `<select>` + strip to KEEP at 330-381; `_c4KindLabel` dead-code at 19-30).
+- `/Users/user/Documents/GitHub/APD-sec-arch-framework/report-template/components.jsx` — `GraphView` at line 294 (UNTOUCHED); add `C4TierGraph`/`C4EdgeLayer` highlight here (Task 8 3a/3b); window export via the existing `Object.assign(window,{...})` near line 504.
+- `/Users/user/Documents/GitHub/APD-sec-arch-framework/report-template/screens.css` — existing `.c4-overlay*`/`.c4-overlay-strip*` at 1382-1430 (REUSED); append `.nb--dim`/`.edge-layer__path--live` (Task 8 4).
+- `/Users/user/Documents/GitHub/APD-sec-arch-framework/docs/superpowers/design_handoff_c4_architecture_view/README.md` — overlay highlight spec at lines 310-314 (dim non-members + induced live edges + kept strip); router VERBATIM at 202-263.
 
 ### Task 9: Bundle rebuild + freshness/audit gates green + the Milestone-7 ACCEPTANCE CHECKLIST
 

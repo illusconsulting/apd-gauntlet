@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/detection-coverage.schema.json",
+  "title": "APD Gauntlet ATT&CK Detection Overlay (derived telemetry view)",
+  "description": "Synthesizer-authored derived view (ADR-0022). For each ATT&CK technique a finding exposes, the data components ATT&CK says are required to detect it. v1 surfaces detection requirements; absence of detection data is silent.",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_by":   { "type": "string", "enum": ["synthesizer"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["technique", "technique_name", "exposure_finding_count",
+                     "exposure_finding_ids", "required_data_components", "telemetry"],
+        "additionalProperties": false,
+        "properties": {
+          "technique":      { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
+          "technique_name": { "type": "string", "minLength": 1 },
+          "exposure_finding_count": { "type": "integer", "minimum": 0 },
+          "exposure_finding_ids":   { "type": "array", "items": { "type": "string" } },
+          "required_data_components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["data_component_id", "data_component_name"],
+              "additionalProperties": false,
+              "properties": {
+                "data_component_id":   { "type": "string" },
+                "data_component_name": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "telemetry": { "type": "string", "enum": ["required"] }
+        }
+      }
+    }
+  }
+}

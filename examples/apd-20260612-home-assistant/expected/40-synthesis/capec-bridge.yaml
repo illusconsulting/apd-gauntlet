@@ -1,0 +1,321 @@
+schema_version: 1
+generated_by: synthesizer
+bridges:
+- finding_id: auth-23048c0c
+  capec_id: CAPEC-141
+  capec_name: Cache Poisoning
+  cwe:
+  - CWE-345
+  attack:
+  - T1557
+- finding_id: auth-7162fd48
+  capec_id: CAPEC-70
+  capec_name: Try Common or Default Usernames and Passwords
+  cwe:
+  - CWE-308
+  attack:
+  - T1078
+- finding_id: auth-7162fd48
+  capec_id: CAPEC-560
+  capec_name: Use of Known Domain Credentials
+  cwe:
+  - CWE-308
+  attack:
+  - T1078
+- finding_id: auth-8f0d8172
+  capec_id: CAPEC-186
+  capec_name: Malicious Software Update
+  cwe:
+  - CWE-494
+  attack:
+  - T1195
+- finding_id: auth-8f0d8172
+  capec_id: CAPEC-538
+  capec_name: Open-Source Library Manipulation
+  cwe:
+  - CWE-494
+  attack:
+  - T1195
+- finding_id: auth-8f0d8172
+  capec_id: CAPEC-691
+  capec_name: Spoof Open-Source Software Metadata
+  cwe:
+  - CWE-494
+  attack:
+  - T1195
+- finding_id: auth-8f0d8172
+  capec_id: CAPEC-695
+  capec_name: Repo Jacking
+  cwe:
+  - CWE-494
+  attack:
+  - T1195
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-125
+  capec_name: Flooding
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-130
+  capec_name: Excessive Allocation
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-469
+  capec_name: HTTP DoS
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-482
+  capec_name: TCP Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-488
+  capec_name: HTTP Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-489
+  capec_name: SSL Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-4be2dd70
+  capec_id: CAPEC-528
+  capec_name: XML Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-125
+  capec_name: Flooding
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-130
+  capec_name: Excessive Allocation
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-469
+  capec_name: HTTP DoS
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-482
+  capec_name: TCP Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-488
+  capec_name: HTTP Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-489
+  capec_name: SSL Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+- finding_id: avail-a292763c
+  capec_id: CAPEC-528
+  capec_name: XML Flood
+  cwe:
+  - CWE-770
+  attack:
+  - T1499
+suggestions:
+- finding_id: auth-4e7d1059
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-21
+  - CAPEC-60
+  - CAPEC-94
+  - CAPEC-473
+  suggested:
+  - T1036.001
+  - T1134
+  - T1134.001
+  - T1528
+  - T1539
+  - T1550.004
+  - T1553.002
+  - T1557
+- finding_id: avail-235dacf0
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-227
+  suggested:
+  - T1499
+- finding_id: avail-5af6fee5
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-125
+  - CAPEC-130
+  - CAPEC-131
+  - CAPEC-666
+  suggested:
+  - T1498.001
+  - T1499
+  - T1499.001
+  - T1499.003
+- finding_id: avail-754cfc01
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-125
+  - CAPEC-130
+  - CAPEC-469
+  - CAPEC-482
+  - CAPEC-488
+  - CAPEC-489
+  - CAPEC-490
+  - CAPEC-528
+  suggested:
+  - T1498.001
+  - T1498.002
+  - T1499
+  - T1499.001
+  - T1499.002
+  - T1499.003
+- finding_id: dist-66e3e208
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-665
+  suggested:
+  - T1211
+  - T1542.002
+  - T1556
+- finding_id: dist-69bbaf5c
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-665
+  suggested:
+  - T1211
+  - T1542.002
+  - T1556
+- finding_id: ephem-a879a34b
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-122
+  - CAPEC-233
+  suggested:
+  - T1548
+- finding_id: intg-2b80f92e
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-13
+  - CAPEC-31
+  - CAPEC-267
+  - CAPEC-473
+  suggested:
+  - T1027
+  - T1036.001
+  - T1539
+  - T1553.002
+  - T1562.003
+  - T1574.006
+  - T1574.007
+- finding_id: intg-8b158cfe
+  direction: cwe_to_attack
+  via_capec:
+  - CAPEC-13
+  - CAPEC-31
+  - CAPEC-141
+  - CAPEC-142
+  - CAPEC-148
+  - CAPEC-267
+  - CAPEC-473
+  - CAPEC-665
+  suggested:
+  - T1027
+  - T1036.001
+  - T1211
+  - T1491
+  - T1539
+  - T1542.002
+  - T1553.002
+  - T1556
+  - T1557.002
+  - T1562.003
+  - T1574.006
+  - T1574.007
+  - T1584.002
+- finding_id: merged-1119b0be
+  direction: attack_to_cwe
+  via_capec:
+  - CAPEC-196
+  - CAPEC-268
+  - CAPEC-464
+  - CAPEC-668
+  suggested:
+  - CWE-117
+  - CWE-285
+  - CWE-359
+  - CWE-384
+  - CWE-425
+  - CWE-664
+  - CWE-693
+- finding_id: merged-a49cb674
+  direction: attack_to_cwe
+  via_capec:
+  - CAPEC-37
+  - CAPEC-150
+  - CAPEC-191
+  - CAPEC-196
+  - CAPEC-204
+  - CAPEC-464
+  - CAPEC-474
+  - CAPEC-485
+  - CAPEC-545
+  - CAPEC-639
+  - CAPEC-647
+  suggested:
+  - CWE-1239
+  - CWE-1243
+  - CWE-1258
+  - CWE-1266
+  - CWE-1272
+  - CWE-1278
+  - CWE-1301
+  - CWE-1323
+  - CWE-1330
+  - CWE-226
+  - CWE-285
+  - CWE-311
+  - CWE-312
+  - CWE-314
+  - CWE-315
+  - CWE-318
+  - CWE-330
+  - CWE-359
+  - CWE-384
+  - CWE-522
+  - CWE-524
+  - CWE-525
+  - CWE-552
+  - CWE-664
+  - CWE-798

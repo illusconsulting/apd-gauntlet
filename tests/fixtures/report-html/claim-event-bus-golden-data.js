@@ -12,7 +12,7 @@ window.APD_DATA = {
     ],
     "subject": "apd-20260601-claim-event-bus",
     "subject_tagline": "",
-    "date": "2026-06-13",
+    "date": "2026-06-14",
     "artifact_count": 0,
     "artifact_types": [],
     "crown_jewels": [
@@ -60,6 +60,11 @@ window.APD_DATA = {
         "fetched_at": "2026-06-09",
         "source": "https://github.com/OWASP/maswe",
         "count": 118
+      },
+      "capec": {
+        "fetched_at": null,
+        "source": null,
+        "count": 558
       }
     },
     "active_taxonomies": [
@@ -857,8 +862,16 @@ window.APD_DATA = {
         "maswe": []
       },
       "lens_perspectives": [
-        null,
-        null
+        {
+          "lens": "non_repudiation",
+          "summary": "Unsigned audit entries cannot prove non-tampering.",
+          "detail": "Without HMAC or digital signatures on audit entries, there is no cryptographic proof that a log record has not been modified after the fact. An insider can alter records to cover unauthorized PHI access."
+        },
+        {
+          "lens": "immutability",
+          "summary": "No storage-layer write-once protection prevents record deletion.",
+          "detail": "Application-level append-only discipline can be bypassed by any user with direct database access. WORM enforcement at the storage layer would prevent even DBAs from altering audit records."
+        }
       ],
       "prerequisite_evidence": [],
       "headline": true,
@@ -1155,6 +1168,15 @@ window.APD_DATA = {
   ],
   "masvs_coverage": [],
   "maswe_coverage": [],
+  "capec_bridge": {
+    "bridges": [],
+    "suggestions": []
+  },
+  "detection_coverage": [],
+  "compliance_projection": {
+    "hipaa": [],
+    "csf2": []
+  },
   "apd_matrix": {
     "goals": [
       "conf",

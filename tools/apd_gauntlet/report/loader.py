@@ -142,6 +142,18 @@ class RunArtifacts:
     # the taxonomy dict so MASVS/MASWE ids resolve clickable titles + URLs.
     masvs_coverage: dict[str, Any] | None = None
     maswe_coverage: dict[str, Any] | None = None
+    # Derived CAPEC bridge (ADR-0022): the synthesizer's CWE<->ATT&CK view from
+    # 40-synthesis/capec-bridge.yaml. Optional — None unless both cwe + mitre_attack
+    # were declared and a bridge/suggestion exists. Consumed by the transform's
+    # capec_bridge scene and harvested into the taxonomy dict so CAPEC ids resolve.
+    capec_bridge: dict[str, Any] | None = None
+    # Derived ATT&CK detection overlay + compliance projections (ADR-0022). All
+    # optional — present only when the relevant anchor was declared (mitre_attack
+    # for detection; the run-config `projections` list for hipaa/csf2). Consumed
+    # by the transform's detection / compliance Coverage scenes.
+    detection_coverage: dict[str, Any] | None = None
+    hipaa_coverage: dict[str, Any] | None = None
+    csf2_coverage: dict[str, Any] | None = None
     # The run-config ``taxonomies`` list, lifted verbatim so the transform can
     # emit data.meta.active_taxonomies (drives which taxonomy chips the report
     # advertises). Empty when the run declared no taxonomies key.
@@ -613,6 +625,12 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
     # omits the MAS scenes/meta gracefully.
     masvs_coverage = _yaml_optional(synth / "masvs-coverage.yaml")
     maswe_coverage = _yaml_optional(synth / "maswe-coverage.yaml")
+    # Derived CAPEC bridge (ADR-0022); absent on most runs -> None, transform omits.
+    capec_bridge = _yaml_optional(synth / "capec-bridge.yaml")
+    # Derived ATT&CK detection overlay + compliance projections (ADR-0022).
+    detection_coverage = _yaml_optional(synth / "detection-coverage.yaml")
+    hipaa_coverage = _yaml_optional(synth / "hipaa-coverage.yaml")
+    csf2_coverage = _yaml_optional(synth / "csf2-coverage.yaml")
     # M4 / ADR-0021: grounded C4 architecture inputs. The code-evidence-index is
     # the L4/code-tier source; c4-model.yaml is the assembled (id-minted) model.
     # Both optional — None on runs without code_recon / without assemble-c4.
@@ -637,6 +655,14 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         source_hashes["masvs-coverage.yaml"] = _hash(synth / "masvs-coverage.yaml")
     if maswe_coverage is not None:
         source_hashes["maswe-coverage.yaml"] = _hash(synth / "maswe-coverage.yaml")
+    if capec_bridge is not None:
+        source_hashes["capec-bridge.yaml"] = _hash(synth / "capec-bridge.yaml")
+    if detection_coverage is not None:
+        source_hashes["detection-coverage.yaml"] = _hash(synth / "detection-coverage.yaml")
+    if hipaa_coverage is not None:
+        source_hashes["hipaa-coverage.yaml"] = _hash(synth / "hipaa-coverage.yaml")
+    if csf2_coverage is not None:
+        source_hashes["csf2-coverage.yaml"] = _hash(synth / "csf2-coverage.yaml")
     if code_evidence_index is not None:
         source_hashes["code-evidence-index.yaml"] = _hash(
             context / "code-evidence-index.yaml"
@@ -683,6 +709,10 @@ def load_run(run_dir: pathlib.Path) -> RunArtifacts:
         threat_model_findings=tm_findings,
         masvs_coverage=masvs_coverage,
         maswe_coverage=maswe_coverage,
+        capec_bridge=capec_bridge,
+        detection_coverage=detection_coverage,
+        hipaa_coverage=hipaa_coverage,
+        csf2_coverage=csf2_coverage,
         active_taxonomies=_extract_str_list(run_cfg, "taxonomies"),
         code_evidence_index=code_evidence_index,
         c4_model=c4_model,

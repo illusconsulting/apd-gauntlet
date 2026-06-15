@@ -58,9 +58,11 @@ def test_is_empty_run_flag_false_with_attack_path_findings():
     assert meta["is_empty_run"] is False
 
 
-def test_reference_db_versions_returns_7_families():
+def test_reference_db_versions_returns_8_families():
     versions = reference_db_versions()
-    assert set(versions.keys()) == {"nist", "attack", "cwe", "d3fend", "atlas", "masvs", "maswe"}
+    assert set(versions.keys()) == {
+        "nist", "attack", "cwe", "d3fend", "atlas", "masvs", "maswe", "capec",
+    }
 
 
 def test_reference_db_versions_carries_fetched_at_and_count():
@@ -94,7 +96,7 @@ def test_meta_block_carries_reference_db_versions():
     meta = meta_block(artifacts)
     assert "reference_db_versions" in meta
     assert set(meta["reference_db_versions"].keys()) == {
-        "nist", "attack", "cwe", "d3fend", "atlas", "masvs", "maswe",
+        "nist", "attack", "cwe", "d3fend", "atlas", "masvs", "maswe", "capec",
     }
 
 

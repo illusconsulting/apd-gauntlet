@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradiction.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/contradiction.schema.json",
   "title": "APD Gauntlet Contradiction",
   "type": "object",
   "required": ["id", "finding_id", "capability_id", "finding_assertion", "capability_assertion", "evidence_comparison", "recommended_resolution"],

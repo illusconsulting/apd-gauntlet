@@ -349,7 +349,7 @@ Create `schemas/agent-receipt.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/agent-receipt.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/agent-receipt.schema.json",
   "title": "APD agent receipt",
   "description": "Compact structured value a dispatched APD agent emits as its FINAL MESSAGE instead of prose. The run driver retains only this — never finding/capability content.",
   "type": "object",
@@ -679,4 +679,4 @@ git commit -m "test: token-resilience Plan 1 regression gate green"
 
 **Placeholder scan:** No "TBD/TODO/handle edge cases". Task 5 Step 5 is explicitly marked optional, not a placeholder. The `--errors-only`/`--json` "unchanged" references point at concrete existing code shown in the design doc and the task; the full final function is given in Task 2 Step 3.
 
-**Type/name consistency:** `RECEIPT_MARKER` (`## Final message`) is identical in lint_agents.py (Task 4 Step 3) and the test (Task 4 Step 1) and the appended agent block (Task 4 Step 4). `BOUNDING_MARKER` (`## Output bounding`) is identical across Task 5 Steps 1/3/5. `RECEIPT_EXEMPT` = {orchestrator, synthesizer} matches the dispatched-agent set (14) and the exemption test. `ValidationReport` / `Violation.render()` / `run_schema_pass` / `run_semantic_pass` / `run_cross_file_pass` signatures match the real `validate.py`. Schema `$id` matches the repo convention (`https://github.com/shoveleejoe/apd-gauntlet/schemas/<name>.schema.json`).
+**Type/name consistency:** `RECEIPT_MARKER` (`## Final message`) is identical in lint_agents.py (Task 4 Step 3) and the test (Task 4 Step 1) and the appended agent block (Task 4 Step 4). `BOUNDING_MARKER` (`## Output bounding`) is identical across Task 5 Steps 1/3/5. `RECEIPT_EXEMPT` = {orchestrator, synthesizer} matches the dispatched-agent set (14) and the exemption test. `ValidationReport` / `Violation.render()` / `run_schema_pass` / `run_semantic_pass` / `run_cross_file_pass` signatures match the real `validate.py`. Schema `$id` matches the repo convention (`https://github.com/illusconsulting/apd-gauntlet/schemas/<name>.schema.json`).

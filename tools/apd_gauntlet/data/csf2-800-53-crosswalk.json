@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "source": "NIST CSF 2.0 CPRT export (cprt_CSF_2_0_0_06-14-2026.json)",
+    "source_sha256": "28ba53c5ea2f57fd7fcb56d7f512ab8b28c19516af411dffac6c782debc6c7e1",
+    "fetched_at": "2026-06-15T02:44:15.550898+00:00",
+    "note": "Control selections validated against the CSF 2.0 CPRT family-level 800-53 references (each control's family is within NIST's stated refs); titles from the export. Relationship intersects_with -> partial fidelity."
+  },
+  "mappings": [
+    {
+      "target_id": "DE.CM-09",
+      "target_title": "Computing hardware and software, runtime environments, and their data are monitored to find potentially adverse events",
+      "nist": "SI-7",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.AA-01",
+      "target_title": "Identities and credentials for authorized users, services, and hardware are managed by the organization",
+      "nist": "IA-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.AA-03",
+      "target_title": "Users, services, and hardware are authenticated",
+      "nist": "IA-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.AA-05",
+      "target_title": "Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege and separation of duties",
+      "nist": "AC-3",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.AA-05",
+      "target_title": "Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege and separation of duties",
+      "nist": "AC-6",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.DS-01",
+      "target_title": "The confidentiality, integrity, and availability of data-at-rest are protected",
+      "nist": "SC-28",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.DS-01",
+      "target_title": "The confidentiality, integrity, and availability of data-at-rest are protected",
+      "nist": "SC-13",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.DS-02",
+      "target_title": "The confidentiality, integrity, and availability of data-in-transit are protected",
+      "nist": "SC-8",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.DS-11",
+      "target_title": "Backups of data are created, protected, maintained, and tested",
+      "nist": "CP-9",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.PS-04",
+      "target_title": "Log records are generated and made available for continuous monitoring",
+      "nist": "AU-2",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.PS-04",
+      "target_title": "Log records are generated and made available for continuous monitoring",
+      "nist": "AU-3",
+      "relationship": "intersects_with"
+    },
+    {
+      "target_id": "PR.PS-04",
+      "target_title": "Log records are generated and made available for continuous monitoring",
+      "nist": "AU-12",
+      "relationship": "intersects_with"
+    }
+  ]
+}

@@ -941,7 +941,7 @@ git commit -m "feat(taxonomy): register MASVS/MASWE in reference_db_versions + c
 
 Notes for the assembler: all five `taxonomy.py` edits land in the same module; if executed in one session the second/third/fourth tasks' insertion anchors (`atlas_titles` end at line 275, `d3fend_url` end at line 241) shift as earlier inserts land — re-grep for the anchor strings (`def reference_db_versions`, `return f"https://d3fend.mitre.org/technique/d3f:{local}/"`) before each Edit rather than trusting the line numbers above. The `maswe_categories` loader is introduced in the URL-builder task and referenced again in the invalidation-map task (`maswe.json: (maswe_titles, maswe_categories)`), so the URL-builder task must land before the registration task.
 
-Relevant real files quoted: `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/refresh_atlas.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/refresh_d3fend.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/report/taxonomy.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/cli.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tests/test_refresh_atlas.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tests/unit/report/test_tier2_taxonomy.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tests/unit/report/test_tier4_taxonomy_cache.py`, `/Users/shoveleejoe/Documents/GitHub/APD-sec-arch-framework/tests/test_cli.py`.
+Relevant real files quoted: `/Users/user/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/refresh_atlas.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/refresh_d3fend.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/report/taxonomy.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tools/apd_gauntlet/cli.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tests/test_refresh_atlas.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tests/unit/report/test_tier2_taxonomy.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tests/unit/report/test_tier4_taxonomy_cache.py`, `/Users/user/Documents/GitHub/APD-sec-arch-framework/tests/test_cli.py`.
 
 ---
 
@@ -1491,7 +1491,7 @@ Create `schemas/masvs-coverage.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/masvs-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/masvs-coverage.schema.json",
   "title": "APD Gauntlet OWASP MASVS Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "controls"],
@@ -1618,7 +1618,7 @@ Create `schemas/maswe-coverage.schema.json`. `parent_masvs` items are `masvs_con
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/maswe-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/maswe-coverage.schema.json",
   "title": "APD Gauntlet OWASP MASWE Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "entries"],
@@ -2301,7 +2301,7 @@ Expected: FAIL with `FileNotFoundError: ... schemas/masvs-coverage.schema.json` 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/masvs-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/masvs-coverage.schema.json",
   "title": "APD Gauntlet OWASP MASVS Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "controls"],
@@ -2337,7 +2337,7 @@ Expected: FAIL with `FileNotFoundError: ... schemas/masvs-coverage.schema.json` 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/maswe-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/maswe-coverage.schema.json",
   "title": "APD Gauntlet OWASP MASWE Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "entries"],

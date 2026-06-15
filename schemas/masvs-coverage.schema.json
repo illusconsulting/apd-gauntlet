@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/masvs-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/masvs-coverage.schema.json",
   "title": "APD Gauntlet OWASP MASVS Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "controls"],

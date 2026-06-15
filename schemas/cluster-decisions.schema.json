@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cluster-decisions.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/cluster-decisions.schema.json",
   "title": "APD Gauntlet Cluster Decisions",
   "description": "Disposition + merged prose emitted by the apd-cluster-adjudicator (5b). Consumed by apply-clusters.",
   "type": "object",

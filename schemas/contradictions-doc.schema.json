@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradictions-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/contradictions-doc.schema.json",
   "title": "APD Gauntlet Contradictions Document",
   "type": "object",
   "required": ["contradictions"],
@@ -8,7 +8,7 @@
   "properties": {
     "contradictions": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/contradiction.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/contradiction.schema.json" }
     },
     "notes": { "type": "string" }
   }

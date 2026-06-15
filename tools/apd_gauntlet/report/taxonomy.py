@@ -108,6 +108,31 @@ def cwe_abstractions() -> dict[str, str]:
 
 @_register_cached
 @lru_cache(maxsize=1)
+def capec_titles() -> dict[str, str]:
+    """Return {CAPEC-NNN: name} from the bundled capec.json attack_patterns map.
+
+    Backs the derived CAPEC bridge (ADR-0022) title resolution in the report.
+    Defensive: returns {} when the catalog is missing or unparseable so the
+    bridge view degrades to bare ids rather than raising.
+    """
+    path = _PKG_DATA / "capec.json"
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    patterns = raw.get("attack_patterns") if isinstance(raw, dict) else None
+    out: dict[str, str] = {}
+    if isinstance(patterns, dict):
+        for cid, rec in patterns.items():
+            if isinstance(rec, dict):
+                out[str(cid)] = str(rec.get("name") or cid)
+    return out
+
+
+@_register_cached
+@lru_cache(maxsize=1)
 def maswe_masvs_parents() -> dict[str, list[str]]:
     """Return {MASWE-NNNN: [MASVS-...]} from the bundled maswe.json.
 
@@ -299,6 +324,21 @@ def maswe_url(weakness_id: str) -> str | None:
     return f"https://mas.owasp.org/MASWE/{category}/{weakness_id}/"
 
 
+_CAPEC_ID_RE = re.compile(r"^CAPEC-([0-9]+)$")
+
+
+def capec_url(capec_id: str) -> str | None:
+    """Authoritative capec.mitre.org URL for a CAPEC id.
+
+    Pure regex (no catalog lookup): CAPEC-66 ->
+    https://capec.mitre.org/data/definitions/66.html. Returns None for anything
+    that is not a CAPEC id (CWE/ATT&CK ids, free text)."""
+    m = _CAPEC_ID_RE.match(capec_id or "")
+    if not m:
+        return None
+    return f"https://capec.mitre.org/data/definitions/{m.group(1)}.html"
+
+
 @_register_cached
 @lru_cache(maxsize=1)
 def atlas_titles() -> dict[str, str]:
@@ -422,6 +462,7 @@ def reference_db_versions() -> dict[str, dict[str, Any]]:
         ("atlas",  atlas_titles,            "atlas-techniques.json"),
         ("masvs",  masvs_titles,            "masvs.json"),
         ("maswe",  maswe_titles,            "maswe.json"),
+        ("capec",  capec_titles,            "capec.json"),
     ):
         path = _DATA / path_name
         meta: dict[str, Any] = {}
@@ -476,6 +517,7 @@ def invalidate_if_modified(
         "atlas-techniques.json":         (atlas_titles,),
         "masvs.json":                    (masvs_titles,),
         "maswe.json":                    (maswe_titles, maswe_categories, maswe_masvs_parents),
+        "capec.json":                    (capec_titles,),
     }
     for filename, loaders in catalog_to_loaders.items():
         path = target / filename

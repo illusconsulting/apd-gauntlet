@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/c4-model.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/c4-model.schema.json",
   "title": "APD Gauntlet C4 Architecture Model",
   "type": "object",
   "required": ["schema_version", "generated_by", "nodes", "edges"],

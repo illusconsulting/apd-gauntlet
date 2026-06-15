@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreements-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/severity-disagreements-doc.schema.json",
   "title": "APD Gauntlet Severity Disagreements Document",
   "type": "object",
   "required": ["severity_disagreements"],
@@ -8,7 +8,7 @@
   "properties": {
     "severity_disagreements": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/severity-disagreement.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/severity-disagreement.schema.json" }
     },
     "notes": { "type": "string" }
   }

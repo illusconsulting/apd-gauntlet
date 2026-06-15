@@ -432,7 +432,7 @@ Create `schemas/cwe-coverage.schema.json`:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/cwe-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/cwe-coverage.schema.json",
   "title": "APD Gauntlet CWE Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "entries"],
@@ -545,7 +545,7 @@ Expected: FAIL.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/owasp-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/owasp-coverage.schema.json",
   "title": "APD Gauntlet OWASP Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "entries"],
@@ -662,7 +662,7 @@ Expected: FAIL.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/d3fend-coverage.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/d3fend-coverage.schema.json",
   "title": "APD Gauntlet D3FEND Coverage Rollup",
   "type": "object",
   "required": ["schema_version", "generated_by", "defensive_entries", "counter_coverage"],

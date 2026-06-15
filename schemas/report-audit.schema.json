@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/report-audit.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/report-audit.schema.json",
   "title": "APD Gauntlet Report Audit",
   "description": "Compact structural audit emitted by the audit-report command (5g). Read by the apd-report-auditor (never data.js itself).",
   "type": "object",

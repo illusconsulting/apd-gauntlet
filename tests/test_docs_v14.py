@@ -55,5 +55,9 @@ def test_extending_agents_doc_describes_phase_c_pattern() -> None:
 
 
 def test_readme_features_v14() -> None:
-    text = (REPO_ROOT / "README.md").read_text()
-    assert "1.4" in text or "v1.4" in text
+    # After the concise 3-section rewrite the README no longer pins a version
+    # string; the doc-guard now asserts the attack-path capability (v1.4+) is
+    # still documented by feature rather than by version number.
+    text = (REPO_ROOT / "README.md").read_text().lower()
+    assert "attack-path" in text or "attack path" in text
+    assert "crown jewel" in text

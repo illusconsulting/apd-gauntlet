@@ -33,14 +33,14 @@ GOOD = {
         {
             "name": "core",
             "kind": "service",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-core",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-core",
             "provenance": {"source": "code_evidence", "locator": "code-evidence-index.yaml#core"},
             "analysis_state": "analyzed",
         },
         {
             "name": "os-agent",
             "kind": "compute",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-os-agent",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-os-agent",
             "provenance": {
                 "source": "code_evidence",
                 "locator": "code-evidence-index.yaml#os-agent",
@@ -50,7 +50,7 @@ GOOD = {
         {
             "name": "plugin-dns",
             "kind": "service",
-            "repo": "Users-shoveleejoe-Documents-GitHub-home-assistant-repos-plugin-dns",
+            "repo": "Users-user-Documents-GitHub-home-assistant-repos-plugin-dns",
             "provenance": {"source": "artifact", "locator": "code-architecture-brief.md#repos"},
             "analysis_state": "not_analyzed",
         },

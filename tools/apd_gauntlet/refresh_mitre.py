@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+from datetime import datetime, timezone
 from typing import Any
 
 from .kb_fetch import fetch_pinned
@@ -96,6 +97,67 @@ def _attack_external_id(obj: dict[str, Any]) -> str | None:
             if isinstance(external_id, str) and external_id:
                 return external_id
     return None
+
+
+def project_detection(bundle: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
+    """Project a STIX ATT&CK bundle to ``{technique_id: [data component]}``.
+
+    ATT&CK v17+ detection model: a ``detects`` relationship links an
+    ``x-mitre-detection-strategy`` to a technique; the strategy's
+    ``x_mitre_analytic_refs`` point at ``x-mitre-analytic`` objects whose
+    ``x_mitre_log_source_references`` cite the ``x-mitre-data-component``
+    (``DC####``) telemetry. This walks technique <- strategy -> analytic ->
+    data-component to the sorted, de-duplicated list of
+    ``{data_component_id, data_component_name}`` ATT&CK says is required to detect
+    the technique (the detection overlay, ADR-0022). Pinned to data components,
+    which are stable across the v17 detection-strategy restructure.
+    """
+    by_id = {obj.get("id"): obj for obj in bundle.get("objects", []) if obj.get("id")}
+    out: dict[str, list[dict[str, str]]] = {}
+    seen: dict[str, set[str]] = {}
+    for obj in bundle.get("objects", []):
+        if obj.get("type") != "relationship" or obj.get("relationship_type") != "detects":
+            continue
+        strat = by_id.get(obj.get("source_ref")) or {}
+        tech = by_id.get(obj.get("target_ref")) or {}
+        if strat.get("type") != "x-mitre-detection-strategy":
+            continue
+        tid = _attack_external_id(tech)
+        if not tid:
+            continue
+        for aref in strat.get("x_mitre_analytic_refs", []) or []:
+            analytic = by_id.get(aref) or {}
+            for lsr in analytic.get("x_mitre_log_source_references", []) or []:
+                dc = by_id.get(lsr.get("x_mitre_data_component_ref")) or {}
+                dc_name = dc.get("name")
+                if not dc_name:
+                    continue
+                dc_id = _attack_external_id(dc) or ""
+                key = dc_id or dc_name
+                if key in seen.setdefault(tid, set()):
+                    continue
+                seen[tid].add(key)
+                out.setdefault(tid, []).append(
+                    {"data_component_id": dc_id, "data_component_name": dc_name}
+                )
+    for tid in out:
+        out[tid].sort(key=lambda c: c["data_component_name"])
+    return out
+
+
+def fetch_and_project_detection(out_path: pathlib.Path) -> None:
+    """Fetch the enterprise bundle and write the detection overlay catalog."""
+    raw = fetch_mitre_bundle()
+    bundle = json.loads(raw.decode("utf-8"))
+    payload = {
+        "source_url": MITRE_URL,
+        "source_sha256": hashlib.sha256(raw).hexdigest(),
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "attack_version": bundle.get("created", "unknown"),
+        "detection": project_detection(bundle),
+    }
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
 def project_technique_titles(bundle: dict[str, Any]) -> dict[str, str]:

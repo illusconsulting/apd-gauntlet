@@ -323,16 +323,32 @@ def _algorithmic_headline_ranks(findings: list[dict[str, Any]]) -> dict[str, int
     return {f["id"]: idx + 1 for idx, f in enumerate(top) if "id" in f}
 
 
-def _lens_perspective_source_ids(raw: Any) -> list[Any]:
-    """Extract source_id values from lens_perspectives — tolerates list or dict shape.
+def _lens_perspectives_view(raw: Any) -> list[dict[str, str]]:
+    """Project a merged finding's lens_perspectives to a render-ready list.
 
-    List shape (standard):  [{source_id: "x", ...}, ...]  → ["x", ...]
-    Dict shape (legacy runs): {lens_name: {source_id: "x", ...}, ...} → ["x", ...]
+    The current finding schema is a dict keyed by lens name with a {summary,
+    detail} body — ``{lens_name: {summary, detail}, ...}`` — so this emits
+    ``[{lens, summary, detail}, ...]`` preserving the per-lens reasoning the
+    report shows under "Lens perspectives merged".
+
+    (The previous helper extracted a ``source_id`` field that the schema does not
+    define, yielding ``[None, ...]`` that rendered as empty pills and dropped the
+    content entirely.) The legacy list shape — ``[{source_id|lens, ...}, ...]`` —
+    is still tolerated so older runs render, falling back to ``source_id`` for the
+    lens label when no explicit ``lens`` key is present.
     """
+    def _row(lens: Any, v: dict[str, Any]) -> dict[str, str]:
+        return {
+            "lens":    str(lens or ""),
+            "summary": str(v.get("summary") or ""),
+            "detail":  str(v.get("detail") or ""),
+        }
+
     if isinstance(raw, dict):
-        return [v.get("source_id") for v in raw.values() if isinstance(v, dict)]
+        return [_row(lens, v) for lens, v in raw.items() if isinstance(v, dict)]
     if isinstance(raw, list):
-        return [lp.get("source_id") for lp in raw if isinstance(lp, dict)]
+        return [_row(v.get("lens") or v.get("source_id"), v)
+                for v in raw if isinstance(v, dict)]
     return []
 
 
@@ -419,7 +435,7 @@ def findings_array(
                     warnings=warnings,
                 ),
             },
-            "lens_perspectives": _lens_perspective_source_ids(f.get("lens_perspectives")),
+            "lens_perspectives": _lens_perspectives_view(f.get("lens_perspectives")),
             "prerequisite_evidence": f.get("prerequisite_evidence", []),
         }
         if fid in headline_ranks:
@@ -773,6 +789,53 @@ def maswe_coverage_rows(artifacts: RunArtifacts) -> list[dict[str, Any]]:
         })
     rows.sort(key=lambda r: (-r["finding_count"], r["maswe_id"]))
     return rows
+
+
+def capec_bridge_view(artifacts: RunArtifacts) -> dict[str, Any]:
+    """Return the derived CAPEC bridge view (ADR-0022) for ``data.capec_bridge``.
+
+    Tolerant passthrough of ``40-synthesis/capec-bridge.yaml``: the synthesizer's
+    ``_capec_bridge_rollup`` already computed the corroborating bridges (a finding's
+    co-tagged CWE + ATT&CK technique grounded in a CAPEC attack pattern) and the
+    advisory suggestions. Returns empty lists when the artifact is absent (the
+    common case) so the Coverage tab omits the CAPEC panel gracefully.
+    """
+    cb = artifacts.capec_bridge or {}
+    bridges = [b for b in (cb.get("bridges") or []) if isinstance(b, dict)]
+    suggestions = [s for s in (cb.get("suggestions") or []) if isinstance(s, dict)]
+    return {"bridges": bridges, "suggestions": suggestions}
+
+
+def detection_coverage_view(artifacts: RunArtifacts) -> list[dict[str, Any]]:
+    """Rows for the derived ATT&CK detection overlay (ADR-0022) — one per exposed
+    technique with the data components ATT&CK says are required to detect it.
+    Tolerant passthrough of ``40-synthesis/detection-coverage.yaml``; ``[]`` when
+    absent (the overlay was not produced) so the Coverage tab omits the scene.
+    """
+    entries = (artifacts.detection_coverage or {}).get("entries") or []
+    rows: list[dict[str, Any]] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        rows.append({
+            "technique": e.get("technique", ""),
+            "technique_name": e.get("technique_name", ""),
+            "exposure_finding_count": e.get("exposure_finding_count", 0),
+            "required_data_components": list(e.get("required_data_components") or []),
+            "telemetry": e.get("telemetry", "required"),
+        })
+    return rows
+
+
+def compliance_projection_view(artifacts: RunArtifacts) -> dict[str, Any]:
+    """The derived compliance projections (ADR-0022): the run's NIST 800-53r5
+    coverage projected into HIPAA Security Rule + NIST CSF 2.0 via a published
+    crosswalk. A coverage view in another vocabulary — never an attestation.
+    Tolerant; empty lists when a projection was not requested/produced.
+    """
+    def _rows(doc: dict[str, Any] | None) -> list[dict[str, Any]]:
+        return [e for e in ((doc or {}).get("entries") or []) if isinstance(e, dict)]
+    return {"hipaa": _rows(artifacts.hipaa_coverage), "csf2": _rows(artifacts.csf2_coverage)}
 
 
 def _attack_coverage_label(mits: list[str], findings: int) -> str:
@@ -2235,6 +2298,15 @@ def build_apd_data(
         ("maswe_coverage",
          lambda: maswe_coverage_rows(artifacts),
          []),
+        ("capec_bridge",
+         lambda: capec_bridge_view(artifacts),
+         {"bridges": [], "suggestions": []}),
+        ("detection_coverage",
+         lambda: detection_coverage_view(artifacts),
+         []),
+        ("compliance_projection",
+         lambda: compliance_projection_view(artifacts),
+         {"hipaa": [], "csf2": []}),
         ("apd_matrix",
          lambda: apd_matrix(artifacts, warnings=warnings),
          {"goals": [], "goalLabels": {}, "rows": []}),
@@ -2329,6 +2401,7 @@ _D3FEND_FAMILY_DISPLAY = "MITRE D3FEND"
 _ATLAS_FAMILY_DISPLAY = "MITRE ATLAS"
 _MASVS_FAMILY_DISPLAY = "OWASP MASVS"
 _MASWE_FAMILY_DISPLAY = "OWASP MASWE"
+_CAPEC_FAMILY_DISPLAY = "MITRE CAPEC"
 
 
 def _extract_ids_from_mapping(
@@ -2413,7 +2486,7 @@ def _collect_referenced_ids(
     """
     out: dict[str, set[str]] = {
         "nist": set(), "attack": set(), "cwe": set(), "d3fend": set(), "atlas": set(),
-        "masvs": set(), "maswe": set(),
+        "masvs": set(), "maswe": set(), "capec": set(),
     }
     for rec in _report_finding_set(artifacts):
         cm = rec.get("control_mappings") or {}
@@ -2552,6 +2625,33 @@ def _collect_referenced_ids(
             wid = e.get("maswe_id")
             if isinstance(wid, str) and wid:
                 out["maswe"].add(wid)
+    # Derived CAPEC bridge (40-synthesis/capec-bridge.yaml). CAPEC ids appear
+    # nowhere in control_mappings, so harvest them from the bridge artifact, along
+    # with the CWE/ATT&CK ids the rows reference (incl. one-sided suggestions) so
+    # every chip the CAPEC panel renders resolves to a title.
+    cb = artifacts.capec_bridge or {}
+    for b in (cb.get("bridges") or []):
+        if not isinstance(b, dict):
+            continue
+        cap = b.get("capec_id")
+        if isinstance(cap, str) and cap:
+            out["capec"].add(cap)
+        for w in (b.get("cwe") or []):
+            if isinstance(w, str) and w:
+                out["cwe"].add(w)
+        for t in (b.get("attack") or []):
+            if isinstance(t, str) and t:
+                out["attack"].add(t)
+    for s in (cb.get("suggestions") or []):
+        if not isinstance(s, dict):
+            continue
+        for cap in (s.get("via_capec") or []):
+            if isinstance(cap, str) and cap:
+                out["capec"].add(cap)
+        bucket = "attack" if s.get("direction") == "cwe_to_attack" else "cwe"
+        for sid in (s.get("suggested") or []):
+            if isinstance(sid, str) and sid:
+                out[bucket].add(sid)
     return out
 
 
@@ -2642,5 +2742,16 @@ def taxonomy_dict(artifacts: RunArtifacts) -> dict[str, dict[str, str]]:
         _url = _taxonomy.maswe_url(wid)
         if _url:
             out[wid]["url"] = _url
+
+    # MITRE CAPEC (derived bridge): titles from the bundled capec.json catalog;
+    # URL is pure-regex (capec.mitre.org/data/definitions/<n>.html).
+    capec = _taxonomy.capec_titles()
+    for cid in sorted(refs["capec"]):
+        if not cid:
+            continue
+        out[cid] = {"family": _CAPEC_FAMILY_DISPLAY, "title": capec.get(cid, cid)}
+        _url = _taxonomy.capec_url(cid)
+        if _url:
+            out[cid]["url"] = _url
 
     return out

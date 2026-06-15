@@ -55,6 +55,10 @@ class RollupResult:
     atlas: dict[str, Any] | None = None
     masvs: dict[str, Any] | None = None
     maswe: dict[str, Any] | None = None
+    capec: dict[str, Any] | None = None
+    detection: dict[str, Any] | None = None
+    hipaa: dict[str, Any] | None = None
+    csf2: dict[str, Any] | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
 
 
@@ -234,6 +238,89 @@ def _declared_taxonomies(run_cfg: dict[str, Any]) -> set[str]:
     return {str(t).strip() for t in raw} if isinstance(raw, list) else set()
 
 
+def _declared_projections(run_cfg: dict[str, Any]) -> set[str]:
+    """Compliance projections (ADR-0022) the run opted into, e.g. {hipaa, csf2}."""
+    raw = run_cfg.get("projections") or []
+    return {str(p).strip() for p in raw} if isinstance(raw, list) else set()
+
+
+def _crosswalk_catalog(name: str) -> list[dict[str, Any]]:
+    """Return the {nist <-> target} mapping rows from data/<name>-800-53-crosswalk.json."""
+    path = _PKG_DATA / f"{name}-800-53-crosswalk.json"
+    if not path.is_file():
+        return []
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    mappings = raw.get("mappings", [])
+    return mappings if isinstance(mappings, list) else []
+
+
+def _base_control(control_id: str) -> str:
+    """Strip a NIST enhancement suffix ('SC-8(1)' -> 'SC-8') for crosswalk matching."""
+    return control_id.split("(", 1)[0]
+
+
+def _framework_projection_rollup(
+    nist_rows: list[dict[str, Any]],
+    mappings: list[dict[str, Any]],
+    target: str,
+) -> dict[str, Any]:
+    """Derived compliance projection (ADR-0022; see the projection-layer spec).
+
+    Projects the existing NIST 800-53r5 coverage (``nist_rows``) into an auditor
+    framework via a published crosswalk: each cited control fans its posture +
+    finding/capability provenance out to every target it maps to. A control
+    enhancement (SC-8(1)) folds to its base (SC-8) for matching. Each target row
+    carries the contributing controls' STRM relationship and a ``fidelity`` flag
+    (``exact`` only when every contributor is equal_to/superset_of, else
+    ``partial``) — a coverage view in another vocabulary, never an attestation.
+    """
+    _EXACT = {"equal_to", "superset_of"}
+    by_control: dict[str, list[tuple[str, str, str]]] = {}
+    for m in mappings:
+        nc = m.get("nist")
+        if not nc:
+            continue
+        by_control.setdefault(_base_control(nc), []).append(
+            (m.get("target_id", ""), m.get("target_title", ""),
+             m.get("relationship", "unspecified"))
+        )
+    agg: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for row in nist_rows:
+        cid = row.get("id", "")
+        for tid, ttitle, rel in by_control.get(_base_control(cid), []):
+            if tid not in agg:
+                agg[tid] = {"title": ttitle, "finding_ids": set(),
+                            "capability_ids": set(), "sources": {}, "rels": []}
+                order.append(tid)
+            a = agg[tid]
+            a["finding_ids"].update(row.get("finding_ids") or [])
+            a["capability_ids"].update(row.get("capability_ids") or [])
+            a["sources"].setdefault(cid, rel)
+            a["rels"].append(rel)
+    entries: list[dict[str, Any]] = []
+    for tid in order:
+        a = agg[tid]
+        fids = sorted(a["finding_ids"])
+        cids = sorted(a["capability_ids"])
+        fidelity = "exact" if a["rels"] and all(r in _EXACT for r in a["rels"]) else "partial"
+        sources = sorted(
+            ({"id": c, "relationship": r} for c, r in a["sources"].items()),
+            key=lambda s: s["id"],
+        )
+        entries.append({
+            "target_id": tid, "target_title": a["title"],
+            "source_controls": sources,
+            "finding_count": len(fids), "finding_ids": fids,
+            "capability_count": len(cids), "capability_ids": cids,
+            "posture": cl.posture(has_findings=bool(fids), has_caps=bool(cids)),
+            "fidelity": fidelity,
+        })
+    entries.sort(key=lambda e: (-(e["finding_count"] + e["capability_count"]), e["target_id"]))
+    return {"schema_version": 1, "generated_by": "synthesizer",
+            "target": target, "entries": entries}
+
+
 def _read_records(path: Path, *keys: str) -> list[dict[str, Any]]:
     """Key-tolerant record reader matching loader.load_run's fallbacks so the
     metrics counts equal the transform's view of the same files."""
@@ -294,6 +381,32 @@ def build_rollups(run_dir: Path) -> RollupResult:
         result.masvs = _masvs_rollup(findings, caps)
     if "maswe" in declared:
         result.maswe = _maswe_rollup(findings)
+    # Derived CAPEC bridge (ADR-0022): a synthesizer-authored view, not an
+    # emission taxonomy — gated on its two input anchors (cwe + mitre_attack),
+    # never added to the taxonomies enum. Emitted only when a bridge or a
+    # suggestion exists (silence-on-empty: no point shipping an empty bridge).
+    if "cwe" in declared and "mitre_attack" in declared:
+        capec = _capec_bridge_rollup(findings)
+        if capec["bridges"] or capec["suggestions"]:
+            result.capec = capec
+    # Derived ATT&CK detection overlay (ADR-0022): gated on the mitre_attack
+    # anchor; emitted only when an exposed technique has ATT&CK detection data.
+    if "mitre_attack" in declared:
+        detection = _detection_rollup(findings)
+        if detection["entries"]:
+            result.detection = detection
+    # Derived compliance projections (ADR-0022): project the NIST coverage into
+    # auditor frameworks the run opted into. Gated on the run-config `projections`
+    # list (opt-in), not the taxonomies enum. Emitted only when a target is touched.
+    projections = _declared_projections(run_cfg)
+    if "hipaa" in projections:
+        hipaa = _framework_projection_rollup(result.nist, _crosswalk_catalog("hipaa"), "hipaa")
+        if hipaa["entries"]:
+            result.hipaa = hipaa
+    if "csf2" in projections:
+        csf2 = _framework_projection_rollup(result.nist, _crosswalk_catalog("csf2"), "csf2")
+        if csf2["entries"]:
+            result.csf2 = csf2
 
     synth = run_dir / "40-synthesis"
     contradictions = _read_records(
@@ -343,6 +456,155 @@ def _cwe_rollup(findings: list[dict[str, Any]]) -> dict[str, Any]:
             "finding_ids": sorted(grouped[cid]["finding_ids"]),
             "surfaces": sorted(grouped[cid]["surfaces"]),
         })
+    return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
+
+
+def _capec_catalog() -> dict[str, dict[str, Any]]:
+    """Return {capec_id: {name, related_cwe[], related_attack[]}} from data/capec.json."""
+    path = _PKG_DATA / "capec.json"
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    pats = raw.get("attack_patterns", {})
+    return pats if isinstance(pats, dict) else {}
+
+
+def _capec_num(capec_id: str) -> int:
+    """Numeric sort key for a CAPEC id ('CAPEC-66' -> 66)."""
+    try:
+        return int(capec_id.split("-", 1)[1])
+    except (IndexError, ValueError):
+        return 1_000_000
+
+
+def _attack_parent(tid: str) -> str:
+    """Fold a (sub-)technique id to its parent ('T1059.007' -> 'T1059')."""
+    return tid.split(".", 1)[0]
+
+
+def _capec_bridge_rollup(
+    findings: list[dict[str, Any]],
+    catalog: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Derived CWE<->ATT&CK bridge (ADR-0022; see the capec-bridge design spec).
+
+    For each finding: CORROBORATE a co-tagged CWE + ATT&CK technique when a CAPEC
+    attack pattern relates both, and SUGGEST the missing side when only one is
+    tagged. Sub-techniques fold to their parent for matching (T1059.007 matches a
+    CAPEC mapped to T1059), mirroring the D3FEND counters_attack parent rule.
+    Absence of a linking CAPEC is SILENCE — never a bridge, suggestion, or
+    mismatch. ``catalog`` defaults to the bundled data/capec.json (the
+    attack_patterns map); tests pass a synthetic one to stay decoupled.
+    """
+    if catalog is None:
+        catalog = _capec_catalog()
+    # Pre-index the catalog once: (capec_id, name, cwe set, technique-parent set).
+    cat_items: list[tuple[str, str, set[str], set[str]]] = []
+    for cid, rec in catalog.items():
+        ccwe = set(rec.get("related_cwe") or [])
+        cparents = {_attack_parent(a) for a in (rec.get("related_attack") or [])}
+        cat_items.append((cid, rec.get("name") or cid, ccwe, cparents))
+
+    bridges: list[dict[str, Any]] = []
+    suggestions: list[dict[str, Any]] = []
+    for f in findings:
+        cm = f.get("control_mappings") or {}
+        fcwe = set(cl.extract_ids_from_mapping(cm.get("cwe")))
+        fatt = set(cl.extract_ids_from_mapping(cm.get("mitre_attack"), "technique"))
+        fatt_parents = {_attack_parent(t) for t in fatt}
+        fid = f.get("id", "")
+
+        if fcwe and fatt:
+            for cid, name, ccwe, cparents in cat_items:
+                cwe_overlap = sorted(fcwe & ccwe)
+                att_overlap = sorted(t for t in fatt if _attack_parent(t) in cparents)
+                if cwe_overlap and att_overlap:
+                    bridges.append({
+                        "finding_id": fid, "capec_id": cid, "capec_name": name,
+                        "cwe": cwe_overlap, "attack": att_overlap,
+                    })
+        elif fcwe:  # CWE tagged, no technique -> suggest techniques
+            via: list[str] = []
+            suggested: set[str] = set()
+            for cid, _name, ccwe, _cparents in cat_items:
+                atts = catalog[cid].get("related_attack") or []
+                if (fcwe & ccwe) and atts:
+                    via.append(cid)
+                    suggested.update(atts)
+            if via:
+                suggestions.append({
+                    "finding_id": fid, "direction": "cwe_to_attack",
+                    "via_capec": sorted(via, key=_capec_num), "suggested": sorted(suggested),
+                })
+        elif fatt:  # technique tagged, no CWE -> suggest CWEs
+            via = []
+            suggested = set()
+            for cid, _name, ccwe, cparents in cat_items:
+                if (fatt_parents & cparents) and ccwe:
+                    via.append(cid)
+                    suggested.update(ccwe)
+            if via:
+                suggestions.append({
+                    "finding_id": fid, "direction": "attack_to_cwe",
+                    "via_capec": sorted(via, key=_capec_num), "suggested": sorted(suggested),
+                })
+
+    bridges.sort(key=lambda b: (b["finding_id"], _capec_num(b["capec_id"])))
+    suggestions.sort(key=lambda s: s["finding_id"])
+    return {"schema_version": 1, "generated_by": "synthesizer",
+            "bridges": bridges, "suggestions": suggestions}
+
+
+def _detection_catalog() -> dict[str, list[dict[str, str]]]:
+    """Return {technique_id: [data component]} from data/mitre-attack-detection.json."""
+    path = _PKG_DATA / "mitre-attack-detection.json"
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    det = raw.get("detection", {})
+    return det if isinstance(det, dict) else {}
+
+
+def _detection_rollup(
+    findings: list[dict[str, Any]],
+    catalog: dict[str, list[dict[str, str]]] | None = None,
+) -> dict[str, Any]:
+    """Derived ATT&CK detection overlay (ADR-0022; see the detection-overlay spec).
+
+    For each technique a finding exposes, attach the data components ATT&CK says
+    are required to detect it (a sub-technique falls back to its parent's data).
+    v1 reports detection *requirements* (``telemetry: required``); a technique
+    ATT&CK lists no detection data for produces no row (silence-on-absence).
+    ``catalog`` defaults to the bundled detection map; tests pass a synthetic one.
+    """
+    if catalog is None:
+        catalog = _detection_catalog()
+    titles = attack_technique_titles()
+    order: list[str] = []
+    exposed: dict[str, list[str]] = {}
+    for f in findings:
+        for m in (f.get("control_mappings") or {}).get("mitre_attack") or []:
+            tid = m.get("technique") if isinstance(m, dict) else None
+            if not tid:
+                continue
+            if tid not in exposed:
+                exposed[tid] = []
+                order.append(tid)
+            if f["id"] not in exposed[tid]:
+                exposed[tid].append(f["id"])
+    entries: list[dict[str, Any]] = []
+    for tid in order:
+        comps = catalog.get(tid) or catalog.get(_attack_parent(tid))
+        if not comps:
+            continue  # silence-on-absence: ATT&CK lists no detection telemetry
+        fids = sorted(exposed[tid])
+        entries.append({
+            "technique": tid, "technique_name": titles.get(tid, tid),
+            "exposure_finding_count": len(fids), "exposure_finding_ids": fids,
+            "required_data_components": [dict(c) for c in comps],
+            "telemetry": "required",
+        })
+    entries.sort(key=lambda e: (-e["exposure_finding_count"], e["technique"]))
     return {"schema_version": 1, "generated_by": "synthesizer", "entries": entries}
 
 
@@ -609,3 +871,15 @@ def _write(run_dir: Path, result: RollupResult) -> None:
     if result.maswe is not None:
         (synth / "maswe-coverage.yaml").write_text(
             yaml.safe_dump(result.maswe, sort_keys=False), encoding="utf-8")
+    if result.capec is not None:
+        (synth / "capec-bridge.yaml").write_text(
+            yaml.safe_dump(result.capec, sort_keys=False), encoding="utf-8")
+    if result.detection is not None:
+        (synth / "detection-coverage.yaml").write_text(
+            yaml.safe_dump(result.detection, sort_keys=False), encoding="utf-8")
+    if result.hipaa is not None:
+        (synth / "hipaa-coverage.yaml").write_text(
+            yaml.safe_dump(result.hipaa, sort_keys=False), encoding="utf-8")
+    if result.csf2 is not None:
+        (synth / "csf2-coverage.yaml").write_text(
+            yaml.safe_dump(result.csf2, sort_keys=False), encoding="utf-8")

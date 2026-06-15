@@ -91,7 +91,7 @@ checks:
   klass: structural
 - name: taxonomy_titles_resolve
   status: pass
-  detail: taxonomy_entries=172 bare_id=0 sample=[]
+  detail: taxonomy_entries=264 bare_id=0 sample=[]
   klass: structural
 - name: threat_model_scene_coherent
   status: pass

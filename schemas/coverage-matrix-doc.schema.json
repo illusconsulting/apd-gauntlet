@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix-doc.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/coverage-matrix-doc.schema.json",
   "title": "APD Gauntlet Coverage Matrix Document",
   "type": "object",
   "required": ["components"],
@@ -8,7 +8,7 @@
   "properties": {
     "components": {
       "type": "array",
-      "items": { "$ref": "https://github.com/shoveleejoe/apd-gauntlet/schemas/coverage-matrix.schema.json" }
+      "items": { "$ref": "https://github.com/illusconsulting/apd-gauntlet/schemas/coverage-matrix.schema.json" }
     }
   }
 }

@@ -1,0 +1,343 @@
+schema_version: 1
+generated_by: synthesizer
+entries:
+- technique: T1078
+  technique_name: Valid Accounts
+  exposure_finding_count: 4
+  exposure_finding_ids:
+  - auth-3f2314a4
+  - auth-7162fd48
+  - ephem-053957f3
+  - ephem-9915ab91
+  required_data_components:
+  - data_component_id: DC0067
+    data_component_name: Logon Session Creation
+  - data_component_id: DC0088
+    data_component_name: Logon Session Metadata
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0002
+    data_component_name: User Account Authentication
+  telemetry: required
+- technique: T1557
+  technique_name: Adversary-in-the-Middle
+  exposure_finding_count: 3
+  exposure_finding_ids:
+  - auth-1787eae1
+  - auth-23048c0c
+  - conf-2029ce78
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0082
+    data_component_name: Network Connection Creation
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0078
+    data_component_name: Network Traffic Flow
+  - data_component_id: DC0063
+    data_component_name: Windows Registry Key Modification
+  telemetry: required
+- technique: T1098
+  technique_name: Account Manipulation
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - merged-1119b0be
+  - merged-66801b1b
+  required_data_components:
+  - data_component_id: DC0066
+    data_component_name: Active Directory Object Modification
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0010
+    data_component_name: User Account Modification
+  telemetry: required
+- technique: T1499
+  technique_name: Endpoint Denial of Service
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - avail-4be2dd70
+  - avail-a292763c
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0018
+    data_component_name: Host Status
+  - data_component_id: DC0080
+    data_component_name: Instance Start
+  - data_component_id: DC0078
+    data_component_name: Network Traffic Flow
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  telemetry: required
+- technique: T1606
+  technique_name: Forge Web Credentials
+  exposure_finding_count: 2
+  exposure_finding_ids:
+  - merged-1119b0be
+  - merged-a49cb674
+  required_data_components:
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0067
+    data_component_name: Logon Session Creation
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0035
+    data_component_name: Process Access
+  - data_component_id: DC0006
+    data_component_name: Web Credential Creation
+  - data_component_id: DC0007
+    data_component_name: Web Credential Usage
+  telemetry: required
+- technique: T1005
+  technique_name: Data from Local System
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  required_data_components:
+  - data_component_id: DC0064
+    data_component_name: Command Execution
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0039
+    data_component_name: File Creation
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  telemetry: required
+- technique: T1070
+  technique_name: Indicator Removal
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0040
+    data_component_name: File Deletion
+  - data_component_id: DC0059
+    data_component_name: File Metadata
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0012
+    data_component_name: Scheduled Job Modification
+  - data_component_id: DC0063
+    data_component_name: Windows Registry Key Modification
+  telemetry: required
+- technique: T1190
+  technique_name: Exploit Public-Facing Application
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0016
+    data_component_name: Module Load
+  - data_component_id: DC0082
+    data_component_name: Network Connection Creation
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0078
+    data_component_name: Network Traffic Flow
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  telemetry: required
+- technique: T1195
+  technique_name: Supply Chain Compromise
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-8f0d8172
+  required_data_components:
+  - data_component_id: DC0039
+    data_component_name: File Creation
+  - data_component_id: DC0059
+    data_component_name: File Metadata
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0016
+    data_component_name: Module Load
+  - data_component_id: DC0078
+    data_component_name: Network Traffic Flow
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0020
+    data_component_name: Process Modification
+  telemetry: required
+- technique: T1213
+  technique_name: Data from Information Repositories
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - conf-ef49b4b0
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0069
+    data_component_name: Cloud Service Modification
+  - data_component_id: DC0025
+    data_component_name: Cloud Storage Access
+  - data_component_id: DC0064
+    data_component_name: Command Execution
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0082
+    data_component_name: Network Connection Creation
+  - data_component_id: DC0102
+    data_component_name: Network Share Access
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  telemetry: required
+- technique: T1490
+  technique_name: Inhibit System Recovery
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  required_data_components:
+  - data_component_id: DC0022
+    data_component_name: Cloud Storage Deletion
+  - data_component_id: DC0064
+    data_component_name: Command Execution
+  - data_component_id: DC0040
+    data_component_name: File Deletion
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0041
+    data_component_name: Service Metadata
+  - data_component_id: DC0049
+    data_component_name: Snapshot Deletion
+  - data_component_id: DC0063
+    data_component_name: Windows Registry Key Modification
+  telemetry: required
+- technique: T1525
+  technique_name: Implant Internal Image
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - immut-5a5ef5bd
+  required_data_components:
+  - data_component_id: DC0015
+    data_component_name: Image Creation
+  - data_component_id: DC0036
+    data_component_name: Image Modification
+  - data_component_id: DC0080
+    data_component_name: Instance Start
+  telemetry: required
+- technique: T1528
+  technique_name: Steal Application Access Token
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-3dbf15e7
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0083
+    data_component_name: Cloud Service Enumeration
+  - data_component_id: DC0069
+    data_component_name: Cloud Service Modification
+  - data_component_id: DC0025
+    data_component_name: Cloud Storage Access
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0002
+    data_component_name: User Account Authentication
+  telemetry: required
+- technique: T1530
+  technique_name: Data from Cloud Storage
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  required_data_components:
+  - data_component_id: DC0025
+    data_component_name: Cloud Storage Access
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0002
+    data_component_name: User Account Authentication
+  - data_component_id: DC0013
+    data_component_name: User Account Metadata
+  telemetry: required
+- technique: T1543
+  technique_name: Create or Modify System Process
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - auth-6924f467
+  required_data_components:
+  - data_component_id: DC0064
+    data_component_name: Command Execution
+  - data_component_id: DC0072
+    data_component_name: Container Creation
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0060
+    data_component_name: Service Creation
+  - data_component_id: DC0063
+    data_component_name: Windows Registry Key Modification
+  telemetry: required
+- technique: T1550
+  technique_name: Use Alternate Authentication Material
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - ephem-f19f24f9
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0067
+    data_component_name: Logon Session Creation
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0002
+    data_component_name: User Account Authentication
+  - data_component_id: DC0013
+    data_component_name: User Account Metadata
+  - data_component_id: DC0007
+    data_component_name: Web Credential Usage
+  telemetry: required
+- technique: T1552
+  technique_name: Unsecured Credentials
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-a49cb674
+  required_data_components:
+  - data_component_id: DC0038
+    data_component_name: Application Log Content
+  - data_component_id: DC0070
+    data_component_name: Cloud Service Metadata
+  - data_component_id: DC0064
+    data_component_name: Command Execution
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0039
+    data_component_name: File Creation
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0032
+    data_component_name: Process Creation
+  - data_component_id: DC0002
+    data_component_name: User Account Authentication
+  - data_component_id: DC0063
+    data_component_name: Windows Registry Key Modification
+  telemetry: required
+- technique: T1565
+  technique_name: Data Manipulation
+  exposure_finding_count: 1
+  exposure_finding_ids:
+  - merged-1119b0be
+  required_data_components:
+  - data_component_id: DC0055
+    data_component_name: File Access
+  - data_component_id: DC0039
+    data_component_name: File Creation
+  - data_component_id: DC0059
+    data_component_name: File Metadata
+  - data_component_id: DC0061
+    data_component_name: File Modification
+  - data_component_id: DC0085
+    data_component_name: Network Traffic Content
+  - data_component_id: DC0021
+    data_component_name: OS API Execution
+  telemetry: required

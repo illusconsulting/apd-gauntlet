@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Attack_Pattern_Catalog xmlns="http://capec.mitre.org/capec-3" Name="CAPEC" Version="3.9-test">
+  <Attack_Patterns>
+    <Attack_Pattern ID="66" Name="SQL Injection" Abstraction="Standard" Status="Stable">
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="89"/>
+        <Related_Weakness CWE_ID="1286"/>
+        <Related_Weakness CWE_ID="89"/>
+      </Related_Weaknesses>
+      <Taxonomy_Mappings>
+        <Taxonomy_Mapping Taxonomy_Name="ATTACK">
+          <Entry_ID>1190</Entry_ID>
+          <Entry_Name>Exploit Public-Facing Application</Entry_Name>
+        </Taxonomy_Mapping>
+        <Taxonomy_Mapping Taxonomy_Name="WASC">
+          <Entry_ID>19</Entry_ID>
+          <Entry_Name>SQL Injection</Entry_Name>
+        </Taxonomy_Mapping>
+      </Taxonomy_Mappings>
+    </Attack_Pattern>
+    <Attack_Pattern ID="63" Name="Cross-Site Scripting (XSS)" Abstraction="Standard" Status="Stable">
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="79"/>
+      </Related_Weaknesses>
+      <Taxonomy_Mappings>
+        <Taxonomy_Mapping Taxonomy_Name="ATTACK">
+          <Entry_ID>1059.007</Entry_ID>
+          <Entry_Name>Command and Scripting Interpreter: JavaScript</Entry_Name>
+        </Taxonomy_Mapping>
+      </Taxonomy_Mappings>
+    </Attack_Pattern>
+    <Attack_Pattern ID="200" Name="Information Elicitation" Abstraction="Meta" Status="Draft">
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="200"/>
+      </Related_Weaknesses>
+    </Attack_Pattern>
+    <Attack_Pattern ID="999" Name="Deprecated Example" Abstraction="Standard" Status="Deprecated">
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="1"/>
+      </Related_Weaknesses>
+      <Taxonomy_Mappings>
+        <Taxonomy_Mapping Taxonomy_Name="ATTACK">
+          <Entry_ID>1000</Entry_ID>
+          <Entry_Name>Deprecated Technique</Entry_Name>
+        </Taxonomy_Mapping>
+      </Taxonomy_Mappings>
+    </Attack_Pattern>
+  </Attack_Patterns>
+</Attack_Pattern_Catalog>

@@ -425,6 +425,14 @@ def refresh_mitre_cmd(out, dry_run) -> None:  # type: ignore[no-untyped-def]
     click.echo("Fetching MITRE ATT&CK bundle...")
     fetch_and_project(out)
     click.echo(f"Wrote {out}")
+    # ADR-0022 — also refresh the derived detection overlay catalog from the same
+    # bundle (technique -> required data components). Written alongside the
+    # mitigations crosswalk so a single refresh-mitre keeps both current.
+    from .refresh_mitre import fetch_and_project_detection
+
+    detection_out = out.parent / "mitre-attack-detection.json"
+    fetch_and_project_detection(detection_out)
+    click.echo(f"Wrote {detection_out}")
 
 
 @main.command("refresh-mitre-mobile")
@@ -631,6 +639,35 @@ def refresh_mas_cmd() -> None:
 
     click.echo(f"Wrote {refresh_masvs()}")
     click.echo(f"Wrote {refresh_maswe()}")
+
+
+@main.command("refresh-capec")
+def refresh_capec_cmd() -> None:
+    """Refresh MITRE CAPEC reference data (the derived CWE<->ATT&CK bridge catalog)."""
+    from .refresh_capec import refresh_capec
+
+    path = refresh_capec()
+    click.echo(f"Wrote {path}")
+
+
+@main.command("refresh-crosswalks")
+@click.option("--csf2-json", required=True,
+              type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path),
+              help="NIST CSF 2.0 CPRT JSON export (download from csrc.nist.gov/projects/cprt).")
+@click.option("--hipaa-json", required=True,
+              type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path),
+              help="NIST SP 800-66r2 CPRT JSON export.")
+def refresh_crosswalks_cmd(csf2_json, hipaa_json) -> None:  # type: ignore[no-untyped-def]
+    """Ground the HIPAA + CSF 2.0 compliance crosswalks against NIST CPRT exports."""
+    from .refresh_crosswalks import refresh_crosswalks
+
+    report = refresh_crosswalks(csf2_json, hipaa_json)
+    click.echo(f"CSF2: {report['csf2']['kept']} mappings grounded "
+               f"({len(report['csf2']['dropped'])} dropped as out-of-scope)")
+    for d in report["csf2"]["dropped"]:
+        click.echo(f"  DROPPED {d['target_id']} -> {d['nist']}: {d['reason']}")
+    click.echo(f"HIPAA: {report['hipaa']['kept']} mappings; "
+               f"unmatched ids (curated title kept): {report['hipaa']['unmatched']}")
 
 
 @main.command("parse-threat-model")

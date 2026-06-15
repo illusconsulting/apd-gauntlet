@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/shoveleejoe/apd-gauntlet/schemas/_defs.schema.json",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/_defs.schema.json",
   "title": "APD Gauntlet shared schema definitions",
   "description": "Reusable $defs for patterns referenced across multiple record schemas. Edit here; other schemas $ref into this file rather than duplicating the regex.",
   "type": "object",
