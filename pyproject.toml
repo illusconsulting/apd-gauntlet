@@ -46,6 +46,9 @@ apd-gauntlet = "apd_gauntlet.cli:main"
 Repository = "https://github.com/illusconsulting/apd-gauntlet"
 Issues     = "https://github.com/illusconsulting/apd-gauntlet/issues"
 
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE"]
+
 [tool.setuptools.packages.find]
 where = ["tools"]
 include = ["apd_gauntlet*"]

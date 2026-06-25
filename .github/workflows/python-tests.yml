@@ -27,6 +27,8 @@ jobs:
         run: python tools/check_report_template_freshness.py
       - name: Check KB cache provenance freshness
         run: python tools/check_kb_cache_freshness.py
+      - name: Check NOTICE attributions present
+        run: python tools/check_notice_present.py
 
   wheel-smoke:
     runs-on: ubuntu-latest
