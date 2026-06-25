@@ -172,7 +172,8 @@ def _finalize(text: str) -> str:
     joins yield a single blank line. The only places that can produce 3+ newlines
     are the frontmatter→first-section seam and the trailing surfaces seam — collapse
     them to a single blank line (markdownlint MD012) and trim to one EOF newline
-    (MD047). Pack bodies are already MD012-clean (linted via ``domains/**/*.md``),
+    (MD047). Pack bodies are already MD012-clean (linted via
+    ``tools/apd_gauntlet/data/domains/**/*.md``),
     so collapsing never disturbs intended in-body spacing.
     """
     return re.sub(r"\n{3,}", "\n\n", text).rstrip() + "\n"
