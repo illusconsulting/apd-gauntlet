@@ -54,6 +54,8 @@ include = ["apd_gauntlet*"]
 apd_gauntlet = [
   "data/*.json",
   "data/report-template/**/*",
+  "data/schemas/*.json",
+  "data/domains/**/*",
 ]
 
 [tool.pytest.ini_options]
