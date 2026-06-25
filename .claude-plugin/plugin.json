@@ -1,0 +1,43 @@
+{
+  "name": "apd-gauntlet",
+  "version": "1.7.0",
+  "description": "APD security architecture review framework — 9 specialist agents plus intake, the apd-gauntlet workflow runner, and a synthesizer fallback. Requires the apd-gauntlet PyPI package on PATH.",
+  "author": { "name": "APD Gauntlet contributors", "url": "https://github.com/illusconsulting/apd-gauntlet" },
+  "homepage": "https://github.com/illusconsulting/apd-gauntlet",
+  "repository": "https://github.com/illusconsulting/apd-gauntlet",
+  "license": "Apache-2.0",
+  "keywords": ["security", "architecture", "review", "threat-model", "apd"],
+  "agents": [
+    "./.claude/agents/apd-attack-path-analyzer.md",
+    "./.claude/agents/apd-authenticity.md",
+    "./.claude/agents/apd-availability.md",
+    "./.claude/agents/apd-cluster-adjudicator.md",
+    "./.claude/agents/apd-code-recon.md",
+    "./.claude/agents/apd-confidentiality.md",
+    "./.claude/agents/apd-distributed.md",
+    "./.claude/agents/apd-domain-auditor.md",
+    "./.claude/agents/apd-ephemeral.md",
+    "./.claude/agents/apd-immutability.md",
+    "./.claude/agents/apd-intake.md",
+    "./.claude/agents/apd-integrity.md",
+    "./.claude/agents/apd-non-repudiation.md",
+    "./.claude/agents/apd-orchestrator.md",
+    "./.claude/agents/apd-report-auditor.md",
+    "./.claude/agents/apd-report-writer.md",
+    "./.claude/agents/apd-resilient.md",
+    "./.claude/agents/apd-synthesizer.md",
+    "./.claude/agents/apd-threat-model-author.md",
+    "./.claude/agents/apd-threat-model-evaluator.md",
+    "./.claude/agents/apd-threat-model-recon.md"
+  ],
+  "skills": [
+    "./.claude/skills/apd-attack-path-discipline/SKILL.md",
+    "./.claude/skills/apd-c4-discipline/SKILL.md",
+    "./.claude/skills/apd-control-mappings/SKILL.md",
+    "./.claude/skills/apd-domain/SKILL.md",
+    "./.claude/skills/apd-evidence-discipline/SKILL.md",
+    "./.claude/skills/apd-finding-schema/SKILL.md",
+    "./.claude/skills/apd-framework/SKILL.md",
+    "./.claude/skills/apd-threat-model-methodologies/SKILL.md"
+  ]
+}

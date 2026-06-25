@@ -229,7 +229,7 @@ def test_skip_sentinel_convention_documented() -> None:
 # plugin.json manifest contract (Task 7)
 # ---------------------------------------------------------------------------
 
-PLUGIN_MANIFEST = REPO / "plugin.json"
+PLUGIN_MANIFEST = REPO / ".claude-plugin" / "plugin.json"
 
 
 def test_plugin_manifest_version_matches_pyproject() -> None:
