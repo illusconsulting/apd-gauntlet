@@ -4,6 +4,8 @@
 
 The output is **structured advisory input for an architect — not a gate.** It doesn't approve or block changes; it makes the human review better-informed and harder to bypass.
 
+> **New here?** Start with the **[Quickstart](docs/QUICKSTART.md)** — install in a minute, then drive a review by simply chatting with Claude (includes example prompts).
+
 ## 1. What it does
 
 The review is organized around the **APD framework — three tiers, nine goals:**
