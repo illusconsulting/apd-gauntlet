@@ -40,6 +40,19 @@ pip install apd-gauntlet      # installs the apd-gauntlet CLI + the Claude Code 
 apd-gauntlet --version        # confirms the CLI is on your PATH
 ```
 
+**Install the Claude Code plugin (optional — loads agents and skills automatically):**
+
+```text
+/plugin marketplace add illusconsulting/apd-gauntlet
+/plugin install apd-gauntlet@apd-security
+```
+
+The `apd-gauntlet` PyPI package (step above) must be on your PATH first — the plugin ships agents and skills; the workflow runner shells out to the CLI for deterministic passes. Once installed, the gauntlet runs via `/apd-gauntlet:run` (foreground, interactive — same discipline as the natural-language invocation).
+
+**Optional: code_recon via codebase-memory-mcp (CBM)**
+
+`codebase-memory-mcp` is an **optional** external MCP server. With `code_recon: auto` (the default) the gauntlet degrades gracefully to prose-only analysis when CBM is absent; `code_recon: enabled` requires it and hard-fails if unreachable. See the code-grounding note below and the [full guide](docs/running-the-gauntlet.md).
+
 **2 — (Optional) See a finished report first.** A complete synthetic example ships in the repo — validate it and open its HTML, no Claude Code session required:
 
 ```bash
