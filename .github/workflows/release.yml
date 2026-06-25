@@ -16,9 +16,17 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.12" }
       - run: pip install -e ".[dev]" build
-      - run: pytest
+      - run: pytest --cov --cov-report=term-missing
       - run: apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
       - run: python -m build
+      - name: Smoke-test the built wheel in a clean venv
+        run: |
+          python -m venv /tmp/whlenv
+          /tmp/whlenv/bin/pip install dist/*.whl
+          cd /tmp && /tmp/whlenv/bin/apd-gauntlet --version
+          /tmp/whlenv/bin/apd-gauntlet validate-domain pbm
+      - name: Validate plugin + marketplace manifests
+        run: pytest tests/test_plugin_manifest.py -v
       - name: Generate SLSA build-provenance attestations
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
         with:
