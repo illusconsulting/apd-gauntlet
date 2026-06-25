@@ -59,6 +59,9 @@ apd_gauntlet = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+markers = [
+  "wheel: builds and installs the wheel into an isolated venv (slow; needs uv or pip+build)",
+]
 
 [tool.coverage.run]
 source = ["tools/apd_gauntlet"]
