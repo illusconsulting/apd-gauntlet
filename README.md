@@ -51,7 +51,7 @@ The `apd-gauntlet` PyPI package (step above) must be on your PATH first — the 
 
 **Optional: code_recon via codebase-memory-mcp (CBM)**
 
-`codebase-memory-mcp` is an **optional** external MCP server. With `code_recon: auto` (the default) the gauntlet degrades gracefully to prose-only analysis when CBM is absent; `code_recon: enabled` requires it and hard-fails if unreachable. See the code-grounding note below and the [full guide](docs/running-the-gauntlet.md).
+`codebase-memory-mcp` is an **optional** external MCP server. With `code_recon: auto` (the default) the gauntlet degrades gracefully to prose-only analysis when CBM is absent; `code_recon: enabled` requires it and hard-fails if unreachable. See the code-grounding note below and the [full guide](https://github.com/illusconsulting/apd-gauntlet/blob/main/docs/running-the-gauntlet.md).
 
 **2 — (Optional) See a finished report first.** A complete synthetic example ships in the repo — validate it and open its HTML, no Claude Code session required:
 
@@ -83,7 +83,7 @@ This creates `runs/apd-YYYYMMDD-my-feature/` (gitignored, so a real report is ne
 > cbm_project: <project-name>  # the indexed CBM project (or repos: [{cbm_project: …}] for multi-repo systems)
 > ```
 >
-> The agent emits `00-context/code-evidence-index.yaml` (cited by every lens) and a code-architecture brief. Full guide: **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)**.
+> The agent emits `00-context/code-evidence-index.yaml` (cited by every lens) and a code-architecture brief. Full guide: **[docs/running-the-gauntlet.md](https://github.com/illusconsulting/apd-gauntlet/blob/main/docs/running-the-gauntlet.md)**.
 
 **4 — Run the gauntlet in Claude Code.** From the repo root, in a live session, drive the runner against your run directory:
 
@@ -91,7 +91,7 @@ This creates `runs/apd-YYYYMMDD-my-feature/` (gitignored, so a real report is ne
 Run the apd-gauntlet workflow on runs/apd-YYYYMMDD-my-feature/
 ```
 
-> **Run it in the foreground** — the nine specialists run as subagents of your live session. Don't run it in the background or headlessly, which can interrupt the dispatches and leave an empty run directory. See **[docs/running-the-gauntlet.md](docs/running-the-gauntlet.md)** for the full operator guide (preflight, code recon, threat-model and attack-path passes).
+> **Run it in the foreground** — the nine specialists run as subagents of your live session. Don't run it in the background or headlessly, which can interrupt the dispatches and leave an empty run directory. See **[docs/running-the-gauntlet.md](https://github.com/illusconsulting/apd-gauntlet/blob/main/docs/running-the-gauntlet.md)** for the full operator guide (preflight, code recon, threat-model and attack-path passes).
 
 The runner builds the domain skill, runs intake, dispatches the nine lens agents by tier, then synthesizes and runs a report-completeness audit that **blocks rather than ships a degraded report**. It finishes in ~10–30 minutes depending on artifact volume.
 
