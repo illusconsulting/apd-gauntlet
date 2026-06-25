@@ -46,6 +46,9 @@ apd-gauntlet = "apd_gauntlet.cli:main"
 Repository = "https://github.com/illusconsulting/apd-gauntlet"
 Issues     = "https://github.com/illusconsulting/apd-gauntlet/issues"
 
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE"]
+
 [tool.setuptools.packages.find]
 where = ["tools"]
 include = ["apd_gauntlet*"]
@@ -54,11 +57,16 @@ include = ["apd_gauntlet*"]
 apd_gauntlet = [
   "data/*.json",
   "data/report-template/**/*",
+  "data/schemas/*.json",
+  "data/domains/**/*",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+markers = [
+  "wheel: builds and installs the wheel into an isolated venv (slow; needs uv or pip+build)",
+]
 
 [tool.coverage.run]
 source = ["tools/apd_gauntlet"]

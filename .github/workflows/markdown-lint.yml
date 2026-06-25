@@ -17,7 +17,7 @@ jobs:
             docs/**/*.md
             !docs/superpowers/plans/**
             .claude/**/*.md
-            domains/**/*.md
+            tools/apd_gauntlet/data/domains/**/*.md
             README.md
             CONTRIBUTING.md
             CHANGELOG.md
@@ -30,3 +30,5 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -e ".[dev]"
       - run: apd-gauntlet lint-agents --agent-dir .claude/agents/
+      - name: Validate plugin + marketplace manifests
+        run: pytest tests/test_plugin_manifest.py -v

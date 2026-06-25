@@ -57,7 +57,8 @@ def scaffold_run(
 ) -> pathlib.Path:
     _validate_run_id(run_id)
     if domains_dir is None:
-        domains_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "domains"
+        from . import resources as _resources
+        domains_dir = _resources.domains_dir()
     run_dir = root / run_id
     for sub in SUBDIRS:
         (run_dir / sub).mkdir(parents=True, exist_ok=True)

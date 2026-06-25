@@ -1,0 +1,27 @@
+APD Gauntlet
+Copyright 2026 APD Gauntlet contributors
+
+This product bundles third-party knowledge bases under tools/apd_gauntlet/data/.
+Their content remains under the upstream licenses/terms below.
+
+MITRE (https://www.mitre.org) — used under the MITRE Terms of Use; ATT&CK, CAPEC,
+CWE, and D3FEND are trademarks of The MITRE Corporation.
+  - ATT&CK (Enterprise + Mobile): data/mitre-attack-techniques.json,
+    data/mitre-attack-detection.json, data/mitre-mitigations.json
+  - CAPEC: data/capec.json
+  - CWE: data/cwe.json
+  - D3FEND: data/d3fend.json
+  - ATLAS (mitre-atlas/atlas-data, Apache-2.0): data/atlas-techniques.json
+
+OWASP (https://owasp.org) — Creative Commons Attribution-ShareAlike 4.0
+(CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/):
+  - MASVS: data/masvs.json
+  - MASWE: data/maswe.json
+  - Top 10 (Web / API / LLM): data/owasp_top10.json, data/owasp_api_top10.json,
+    data/owasp_llm_top10.json
+
+NIST (https://www.nist.gov) — U.S. Government works, public domain
+(17 U.S.C. 105); attribution provided as a courtesy:
+  - SP 800-53r5 (OSCAL): data/nist-controls.json, data/nist-families.json
+  - CSF 2.0 crosswalk: data/csf2-800-53-crosswalk.json
+  - SP 800-66 (HIPAA) crosswalk: data/hipaa-800-53-crosswalk.json

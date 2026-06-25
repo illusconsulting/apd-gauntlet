@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from .. import resources as _resources
+
 # Reserved builder markers a .md snippet must NOT introduce (build_domain_skill).
 _RESERVED_MARKERS = (
     "## Domain: ",
@@ -112,12 +114,9 @@ def _resolve_target_file(imp: dict[str, Any]) -> str:
 
 def _validate_domain(pack: str, domains_dir: Path) -> tuple[bool, str]:
     """Run the same schema + include-resolution check validate_domain_cmd runs."""
-    import json
-
     from jsonschema import Draft202012Validator
 
-    repo = Path(__file__).resolve().parent.parent.parent.parent
-    schema = json.loads((repo / "schemas" / "domain.schema.json").read_text(encoding="utf-8"))
+    schema = _resources.read_schema("domain.schema.json")
     pack_dir = domains_dir / pack
     meta_path = pack_dir / "domain.yaml"
     if not meta_path.exists():

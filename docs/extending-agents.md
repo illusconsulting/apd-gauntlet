@@ -99,7 +99,7 @@ Don't grow the validator into a "lint everything" tool. The bar for a new lint: 
 
 ## When to add a new CLI command
 
-The CLI surface is intentionally narrow (8 commands). Add a new command only if:
+The CLI surface is intentionally narrow (roughly two dozen operator-facing commands plus the `refresh-*` KB-maintenance family). Add a new command only if:
 
 - It serves a workflow that the existing commands can't cover.
 - It's small enough to fit on one screen of help output.

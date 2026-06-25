@@ -136,6 +136,14 @@ The available flags are `--id` (a `dimpr-` id), `--type` (an `improvement_type`)
 `runs/<id>/40-synthesis/domain-improvements.patch`) and `--domains-dir` (the packs
 directory, default `domains`).
 
+> **Note — canonical pack home.** The canonical home for the JSON Schemas and
+> domain packs is `tools/apd_gauntlet/data/{schemas,domains}` (read via
+> `apd_gauntlet.resources`); the repo-root `schemas/` and `domains/` are
+> convenience symlinks. The `--domains-dir` default now resolves through
+> `apd_gauntlet.resources` to that packaged data dir rather than the literal
+> `domains` path, so no command in this guide changes — the repo-root paths below
+> still resolve via the symlinks.
+
 The command copies `domains/` to a temp directory, inserts each chosen `draft_snippet`
 there, and gates it: `domain.yaml` snippets are checked with `validate-domain`, all
 snippets are proven to rebuild via `build-domain-skill`, and `.md` snippets get a

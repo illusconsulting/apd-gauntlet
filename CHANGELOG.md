@@ -6,6 +6,30 @@ All notable changes to this project will be documented in this file. Format base
 
 ### Added
 
+- **Two-channel distribution** ([ADR-0023](docs/adrs/0023-two-channel-distribution.md)) —
+  additive packaging work that will ship under **1.7.0** (currently held); the
+  gauntlet now distributes via two lockstep channels:
+  - **PyPI engine** (`pip install apd-gauntlet`): fixed a wheel-crash-on-import
+    bug where `schemas/` and `domains/` were resolved from the repo root (absent
+    in a wheel). Both trees are now relocated into the package at
+    `tools/apd_gauntlet/data/{schemas,domains}` (single source of truth), with
+    **repo-root symlinks** for dev/test/CI back-compat. All package reads route
+    through a new `tools/apd_gauntlet/resources.py` locator
+    (`importlib.resources`, wheel-safe).
+  - **Claude Code plugin** (`/plugin marketplace add illusconsulting/apd-gauntlet`
+    then `/plugin install apd-gauntlet@apd-security`): manifest relocated to
+    `.claude-plugin/plugin.json`; new `.claude-plugin/marketplace.json` registers
+    the `apd-security` marketplace namespace; new `commands/run.md` adds the
+    `/apd-gauntlet:run` slash command bridging the workflow runner (foreground,
+    via `${CLAUDE_PLUGIN_ROOT}`). **Requires the `apd-gauntlet` PyPI package on
+    PATH** — the plugin ships agents/skills; the workflow runner shells out to the
+    CLI for deterministic passes.
+  - **`NOTICE` file** at repo root attributes bundled, redistributed knowledge
+    bases (MITRE ATT&CK, CAPEC, D3FEND, CWE, OWASP, NIST) to their respective
+    authorities and licenses.
+  - **Clean-wheel-install CI smoke gate** — the `release` workflow builds the
+    sdist+wheel, installs it in a fresh venv, and confirms `apd-gauntlet
+    --version` exits cleanly before PyPI publish.
 - **Derived cross-framework views** ([ADR-0022](docs/adrs/0022-derived-cross-framework-views.md)) —
   a second class of taxonomy artifact authored by the synthesizer (not specialists)
   from existing anchors + an authoritative crosswalk catalog. First instance: the

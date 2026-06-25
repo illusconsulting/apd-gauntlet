@@ -85,7 +85,9 @@ The runner is **interactive**: every specialist it dispatches runs as a subagent
 - apd-attack-path-analyzer (optional, v1.4+)
 - apd-domain-auditor (optional, v1.5+)
 
-## The five skills
+## The skills
+
+The five cross-cutting skills every specialist may load:
 
 | Skill | Purpose |
 |---|---|
@@ -95,12 +97,15 @@ The runner is **interactive**: every specialist it dispatches runs as a subagent
 | `apd-control-mappings` | NIST 800-53r5 mapping families per goal; MITRE ATT&CK mapping discipline; MITRE ATLAS adversarial-ML technique IDs (`AML.T####`) for AI/ML surfaces |
 | `apd-domain` | **Generated** at runtime from the active domain pack — contains the severity rubric, consequential actions, common patterns |
 
-The first four ship under [.claude/skills/](../.claude/skills/). `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0). In addition to the full cross-goal `SKILL.md`, the build step emits nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md` — one per lens agent. Each sidecar contains only that goal's common-patterns section, which bounds context on multi-domain runs. The full `SKILL.md` is still loaded by the cross-goal consumers: `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`.
+Eight skills ship under [.claude/skills/](../.claude/skills/): the first four of the table above (`apd-framework`, `apd-finding-schema`, `apd-evidence-discipline`, `apd-control-mappings`), plus three agent-specific discipline skills — `apd-attack-path-discipline` (required reading for `apd-attack-path-analyzer`), `apd-threat-model-methodologies` (required reading for `apd-threat-model-recon` and `apd-threat-model-evaluator`), and `apd-c4-discipline` (required reading for `apd-code-recon` when it authors the grounded C4 architecture view) — and an empty `apd-domain` directory that the build step fills. `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0). In addition to the full cross-goal `SKILL.md`, the build step emits nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md` — one per lens agent. Each sidecar contains only that goal's common-patterns section, which bounds context on multi-domain runs. The full `SKILL.md` is still loaded by the cross-goal consumers: `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`.
+
+> The canonical home for the JSON Schemas and domain packs is `tools/apd_gauntlet/data/{schemas,domains}` (read via `apd_gauntlet.resources`); the repo-root `schemas/` and `domains/` are convenience symlinks.
 
 ## Run lifecycle
 
 ```
-Phase 0  Setup       → runner creates runs/<id>/{00-context,10-trust,20-scale,30-audit,40-synth}
+Phase 0  Setup       → runner creates runs/<id>/{inputs,00-context,10-trustworthiness,20-scalability,30-auditability,40-synthesis}
+                       (40-threat-model is created later by the evaluator)
                        and runs `apd-gauntlet build-domain-skill <pack...>`
 Phase 1  Intake      → apd-intake produces context-brief.md (frontmatter + typed artifact index + PHI inventory)
 Phase 2  Tier 1 (∥)  → confidentiality / integrity / availability emit findings.yaml + capabilities.yaml
@@ -175,14 +180,14 @@ runs/<run-id>/
 │   ├── threat-model-normalized.yaml     (v1.6+, always — authored baseline, generated_by: threat_model_author)
 │   ├── threat-model-authored.md         (v1.6+, always — human-readable render of the baseline)
 │   └── threat-model-supplied-normalized.yaml  (v1.6+, optional — recon's parse of a supplied TM)
-├── 20-findings/
-│   ├── 10-trustworthiness/
-│   │   ├── confidentiality.findings.yaml     confidentiality.capabilities.yaml
-│   │   ├── integrity.findings.yaml           integrity.capabilities.yaml
-│   │   └── availability.findings.yaml        availability.capabilities.yaml
-│   ├── 20-scalability/               # six files, same shape
-│   ├── 30-auditability/              # six files, same shape
-│   └── 40-threat-model/                 (v1.3+; always since v1.6 — tmeval-*.yaml, evaluator always runs)
+├── 10-trustworthiness/
+│   ├── confidentiality.findings.yaml     confidentiality.capabilities.yaml
+│   ├── integrity.findings.yaml           integrity.capabilities.yaml
+│   └── availability.findings.yaml        availability.capabilities.yaml
+├── 20-scalability/                   # six files, same shape
+├── 30-auditability/                  # six files, same shape
+├── 40-threat-model/
+│   └── threat-model.findings.yaml        (v1.3+; always since v1.6 — records carry tmeval-* ids, evaluator always runs)
 └── 40-synthesis/
     ├── deduped-findings.yaml             deduped-capabilities.yaml
     ├── contradictions.yaml               severity-disagreements.yaml
@@ -205,7 +210,7 @@ The activation-gated rollups (`cwe-coverage.yaml`, `owasp-coverage.yaml`, `d3fen
 
 ## Output schemas
 
-The validator uses the following JSON Schema files (`schemas/*.schema.json`):
+The validator uses the following JSON Schema files (`schemas/*.schema.json`). The canonical home is `tools/apd_gauntlet/data/schemas` (read via `apd_gauntlet.resources`); the repo-root `schemas/` is a convenience symlink.
 
 - `schemas/finding.schema.json` — YAML contract for findings (all agents).
 - `schemas/capability.schema.json` — YAML contract for capabilities (all agents).

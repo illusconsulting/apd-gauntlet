@@ -3,1028 +3,1285 @@ name: apd-domain
 description: Active domain pack content — severity rubric, consequential actions, common patterns. Generated from one or more domain packs at build time; do not edit by hand.
 metadata:
   packs:
-    - name: identity-security
+    - name: pbm
       version: 1.0.0
-  framework_version: 1.6.0
-  generated: 2026-06-03T00:30:08Z
+  framework_version: 1.7.0
+  generated: 2026-06-25T02:15:55Z
 ---
 
-## Domain: identity-security — Source: `severity-rubric.md`
+## Domain: pbm — Source: `severity-rubric.md`
 
-# Identity Security Severity Rubric (impact-to-identity-service-and-its-relying-parties)
+# PBM Severity Rubric (impact-to-PBM)
 
-Calibrated against impact-to-the-identity-provider-and-every-application-that-federates-with-it, not against generic CVSS. The specialist agent cites the matching clause in finding `detail` fields. Cited examples in each tier are illustrative, not exhaustive. NIST SP 800-63B Authenticator Assurance Levels (AAL1/AAL2/AAL3), NIST SP 800-63C Federation Assurance Levels (FAL1/FAL2/FAL3), the OAuth 2.0 Security BCP (RFC 9700), OIDC Core 1.0 §16, and the SAML 2.0 Security Considerations profile are referenced inline.
+Calibrated against impact-to-PBM, not against generic CVSS. The specialist agent cites the matching clause in finding `detail` fields. Cited examples in each tier are illustrative, not exhaustive.
+
+PBM severities have a **second dimension** beyond classic HIPAA-data-confidentiality and CMS-data-integrity: the **clinical patient-harm dimension**. A finding that exposes PHI or corrupts PDE submission is scored on the data-and-regulatory axis; a finding that affects a clinical-decision pathway — drug-utilization review, prior-authorization decision, formulary-substitution logic, dispense-as-written enforcement, dosage calculation — is scored on the patient-harm axis. Many findings score on both axes; severity is the higher of the two. The PBM-specific implication: a DUR-rule edit that produces a missed drug-interaction alert can be Critical on the patient-harm axis even if the affected member-population is below the 500-member HIPAA breach threshold on the data-and-regulatory axis.
+
+References inline: HIPAA Privacy Rule (45 CFR 164 Subpart E), HIPAA Security Rule (45 CFR 164 Subpart C), NIST SP 800-53r5 control families, NIST SP 800-63B authenticator assurance levels (AAL2/AAL3), MITRE ATT&CK Enterprise techniques, MITRE D3FEND countermeasures, NCPDP Telecommunication Standard D.0, CMS Part D PDE Submission (42 CFR 423.322), HITRUST CSF (healthcare accreditation framework).
 
 ## Critical
 
 Any of the following:
 
-- **Token signing key compromise** — attacker can mint arbitrary access tokens, refresh tokens, ID tokens, or SAML assertions for any subject in any audience. Yields universal authentication bypass across every relying party that trusts the issuer. Recovery requires JWKS rotation, mass session invalidation, and (for asymmetric SAML signing keys) re-establishment of trust at every SP. Maps to NIST SP 800-63C §4.7 (assertion signing keys must be protected at the highest assurance level used).
-- **Authentication bypass on the primary login** — no credential required: JWT `alg:none` accepted, signature verification skipped, SAML signature wrapping (XSW) yielding identity substitution, OIDC ID-token accepted without signature check, password-grant accepting empty password against legacy backends, or LDAP anonymous-bind producing authenticated session. The defining critical case under NIST SP 800-63B §4.
-- **Mass credential exfiltration** — password hash dump from the credential store, MFA seed table export, WebAuthn credential record dump, or recovery-code table exfil. Triggers GDPR Article 33 72-hour notification, mass password-reset enforcement, mandatory MFA re-enrollment, and downstream credential-stuffing exposure across every external service the user population shares passwords with.
-- **MFA bypass for high-AAL surface** — any path that silently downgrades a NIST 800-63B AAL3-required surface to AAL1 (password only) or AAL2 (SMS, knowledge-based) without policy decision, alert, or audit. Includes WebAuthn-enrollment endpoints reachable without re-authentication, MFA-disable through profile-edit injection, and recovery flows that bypass possession factors entirely.
-- **Audit trail loss for authentication or authorization events** — destroys the forensic fact base for credential-compromise reconstruction, renders GDPR Article 33 breach scoping un-meetable, renders SOC 2 CC7.2 un-attestable, and produces the regulatory presumption-of-breach default. Includes audit pipeline silent-loss, audit-shipping fire-and-forget under broker outage, and audit-store deletion-by-single-credential.
-- **Total IdP outage exceeding contractual SLA** — sustained inability to authenticate any user; every dependent application loses auth simultaneously. Cascading total platform outage with contractual SLA breach across every customer organization. Severity is critical regardless of cause (region outage, signing-key unavailability, database failure, session-store wipe).
-- **OAuth confused deputy / relying-party impersonation** — relying party can act as another user via token misuse: unbound assertion accepted across audiences, OAuth client_id mix-up attack (RFC 9700 §4.4.2), missing audience claim validation, or token exchange (RFC 8693) without authorization-server-side scope reduction. The compromise unit is "any user of any RP via any RP."
-- **SAML signature wrapping (XSW) accepted** — an SAML SP/IdP that processes assertions without canonicalizing the signed region and re-validating against the parsed assertion: attacker can substitute a forged inner assertion while preserving the outer signature. Yields arbitrary subject impersonation. Maps to SAML 2.0 Security Considerations §6.3 and the foundational SAML implementation flaw class.
-- **JWT algorithm confusion at the issuer** — `alg:none` accepted, asymmetric public key used as HMAC secret (RS256 verified as HS256), key-ID confusion via JWKS URL injection, or kid-header path traversal yielding key substitution. Yields forgeable tokens at platform scope.
+- **PHI exfiltration capability affecting >500 members** in a single realistic attack scenario. Triggers HIPAA breach notification per 45 CFR §164.408 (federal, state, and media notification). The 500-member threshold is the legal pivot point for required public disclosure. Maps to T1213 (Data from Information Repositories) for bulk reads against the PHI store, plus T1041 (Exfiltration Over C2 Channel) or T1567 (Exfiltration Over Web Service) depending on the channel the attacker can reach; note that NCPDP D.0 transactional egress (claim-response payloads returned to switches and pharmacy chains) is itself a PHI-carrying channel and must be in scope for the same egress controls. D3FEND counter is D3-OTF (Outbound Traffic Filtering — DLP at the egress boundary) and D3-NTA (Network Traffic Analysis on outbound flows from the PHI tier). NIST 800-53r5 anchor: AC family — AC-3 (Access Enforcement), AC-4 (Information Flow Enforcement), AC-6 (Least Privilege) — plus SI-4 (System Monitoring) and SC-7 (Boundary Protection) on the egress surface.
+- **Claim adjudication corruption affecting therapeutic decisions** — wrong drug dispensed, wrong dose, missed Drug Utilization Review (DUR) alert, formulary bypass that exposes patients to harmful drug interactions, missed prior authorization on safety-gated drugs. Direct patient harm risk. Maps to T1565.001 (Stored Data Manipulation) for tampering of the formulary, DUR, or PA-criteria configuration stores that drive the adjudication decision, and T1565.002 (Transmitted Data Manipulation) for in-flight tampering of the NCPDP claim request or response between switch and adjudication engine; D3FEND counter is D3-MAN (Message Authentication) on signed NCPDP D.0 transactions, paired with operational safeguards on the clinical-decision-logic configuration surface (no clean D3FEND ID exists for decision-path runtime validation; rely on the NIST 800-53r5 SI-7 / CM-3 / CM-5 anchors below). NIST 800-53r5 anchor: SI family — SI-7 (Software, Firmware, and Information Integrity) and SI-10 (Information Input Validation) — plus CM-3 (Configuration Change Control) and CM-5 (Access Restrictions for Change) on the clinical-decision-logic configuration surface.
+- **Authentication bypass to PHI surfaces or admin functions** — no factor required, or trivially circumventable factor, against any surface that returns claims data, member PHI, prescriber records, or adjudication-engine admin controls. Includes JWT `alg:none` accepted, signature verification skipped, or RS256-verified-as-HS256 key-confusion on pharmacist-portal or prescriber-portal tokens; SAML XML Signature Wrapping (XSW) on pharmacist/prescriber SSO yielding subject substitution into another NPI's session; password-reset bypass via predictable reset tokens, unauthenticated reset endpoints, or reset flows that do not require the prior credential or a possession factor; MFA enrollment endpoints reachable without re-authentication so an attacker with a stolen single-factor session enrolls their own second factor; and session fixation that survives the PHI-access transition so a pre-authentication session ID remains valid after the member, pharmacist, or call-center agent logs in. Maps to T1078 (Valid Accounts) for credential-and-session reuse paths and T1556 (Modify Authentication Process) for the JWT, SAML XSW, and reset-flow primitives that subvert the verification logic itself; D3FEND counter is D3-MFA (Multi-factor Authentication) on the PHI and admin surfaces; reset-flow and MFA-enrollment endpoints additionally require step-up authentication (NIST 800-53r5 IA-2 reauthentication anchor below). NIST 800-53r5 anchor: IA family — IA-2 (Identification and Authentication of Organizational Users) including IA-2(1) and IA-2(2) for MFA, IA-5 (Authenticator Management), IA-8 (Identification and Authentication of Non-Organizational Users) for member and prescriber portals — plus AC-7 (Unsuccessful Logon Attempts) and AC-12 (Session Termination). NIST SP 800-63B anchor: PHI and admin surfaces should be evaluated at AAL2 minimum, with AAL3 (hardware-bound, phishing-resistant authenticator with verifier-impersonation resistance) for adjudication-engine admin and any surface returning bulk PHI.
+- **Audit trail loss covering PHI access** — renders breach detection and notification obligations un-meetable; regulatory non-compliance independent of breach occurrence. Includes silent log disable, retention shortened below the HIPAA 6-year floor (45 CFR §164.316(b)(2)(i)), or log-shipping pipeline interrupted without separately-attested record on a forensically isolated channel. Maps to T1070 (Indicator Removal), with T1070.002 (Clear Linux or Mac System Logs) where the underlying audit substrate is OS-level; D3FEND counter is immutable substrate (S3 Object Lock Compliance Mode, Azure Blob immutable storage with legal hold, HSM-anchored hash-chained store) plus D3-LFAM (Local File Access Mediation) on the log substrate. NIST 800-53r5 anchor: AU family — AU-9 (Protection of Audit Information), AU-11 (Audit Record Retention), AU-12 (Audit Record Generation).
+- **Total adjudication outage exceeding contractual SLA** — sustained inability to adjudicate claims affecting all plan sponsors simultaneously.
+- **Loss of CMS Part D submission integrity / PDE corruption** — PDE (Prescription Drug Event) data submission failures or corruption that exposes the PBM to CMS enforcement action under 42 CFR §423.322, including payment-determination reopening, plan-payment recovery, and potential False Claims Act exposure (31 U.S.C. §3729) when a submission is knowingly false. Maps to T1565 (Data Manipulation), with T1565.002 (Transmitted Data Manipulation) for in-flight PDE tampering between the PBM and CMS and T1565.001 (Stored Data Manipulation) for at-rest corruption of the PDE staging or archive store; D3FEND counter is D3-MAN (Message Authentication) on signed PDE submission batches (per-batch signature verification at CMS ingest is the load-bearing control). NIST 800-53r5 anchor: SI family — SI-7 (Software, Firmware, and Information Integrity) including SI-7(6) for cryptographic protection — plus AU-10 (Non-repudiation) on the submission record and SC-8 (Transmission Confidentiality and Integrity) on the outbound channel to CMS.
 
 ## High
 
 Any of the following:
 
-- **AAL downgrade** — high-AAL surface accepts low-AAL evidence: WebAuthn-required admin surface accepts password-only via a back-door endpoint, AAL3-target tenant accepts AAL2 SMS-fallback on a subset of flows, or step-up authentication is offered but bypassable. Maps to NIST SP 800-63B §4.4 (AAL boundary discipline) and §5.1 (authenticator types per AAL).
-- **Open redirect on OAuth callback** — `redirect_uri` allowlist permissive (suffix match, wildcard, missing path check), permitting authorization-code or token leak via redirect manipulation. Includes covert-redirect / parameter-pollution variants (RFC 9700 §4.1).
-- **CSRF on OAuth authorization flow** — `state` parameter not validated, not bound to session, or omitted entirely; permits authorization-code injection / session fixation in OAuth (RFC 9700 §4.7).
-- **PKCE bypass or absence** — confidential clients accepting authorization codes without PKCE verification when configured, or public clients (native, SPA) onboarded without PKCE requirement. Authorization-code interception on public clients is the canonical OAuth 2.1 hardening.
-- **Session fixation in interactive login** — the IdP issues a session identifier before authentication that survives the authentication step, permitting the attacker to plant a session ID the victim later authenticates into. Maps to OWASP ASVS V3.2.
-- **SAML signature wrapping (XSW) partially mitigated** — the SP validates signatures but the canonical-region resolution is library-default and known to be bypassable (e.g., XML namespace tricks, Comment injection in subject NameID). High rather than critical when exploitation requires non-trivial wrapping variants.
-- **JWT alg confusion on a downstream RP** — relying party rather than IdP accepts `alg:none` or HMAC-with-public-key; severity tracks the RP's blast radius. Cross-cutting RP-hardening guidance, not the IdP's exclusive concern, but the IdP-issued tooling and SDK posture drives the outcome.
-- **Brute force / password spray without rate-limit + lockout** — credential-stuffing surface open. The OWASP API Top 10 calls this out as API4 (Unrestricted Resource Consumption) on the most-abused identity surface. NIST SP 800-63B §5.2.2 requires throttling.
-- **Refresh token replay without proof-of-possession or rotation** — refresh tokens long-lived, bearer-only, no rotation-with-reuse-detection, no DPoP/mTLS binding. A stolen refresh token grants the attacker the lifetime of the token plus all subsequent rotations.
-- **Privilege escalation via group/role mapping bug** — federation attribute mapping, JIT-provisioning logic, or claim-transformation expression permits a user to declare or influence their own group membership (self-attestable `groups` claim accepted, mapping expression with operator precedence flaw, attribute-collision yielding admin-group membership).
-- **OAuth dynamic client registration without rate-limit or identity proofing** — open or weakly-gated client registration permits attacker-registered clients with attacker-controlled redirect_uri, enabling malicious-RP attacks against any user who can be lured to /authorize for the attacker's client_id.
-- **Mass-assignment on user profile / consent surface** — self-service profile-edit accepts writes to `is_admin`, `groups`, `roles`, `email_verified`, or `mfa_enrolled` fields that should be server-managed. The mass-assignment class on the IdP itself is high-trending-critical.
-- **Audit gap on token issuance, MFA enrollment, or consent grant** — partial loss of the consequential-action fact base. The merged finding with any Non-Repudiation gap on the same event class commonly escalates to critical.
-- **Cross-tenant token bleed** — multi-tenant IdP issues a token with one tenant's scope that decodes against another tenant's audience, or a session cookie scoped too broadly (parent-domain Cookie with tenant subdomains).
-- **Service account token long-lived and unrotated** — non-human identities authenticating to the IdP backend via static credentials (LDAP bind, SMTP, database, vendor APIs). The IdP's own backend-credential hygiene is in scope because IdP-tier compromise pivots outward.
+- **PHI exposure beyond minimum-necessary internal audience** — violates 45 CFR §164.502(b). Includes overbroad role assignments, missing field-level controls on PHI elements, or admin tooling that exposes more PHI than the operator's role requires. Maps to T1213 (Data from Information Repositories) for over-broad authenticated reads against PHI stores; NIST 800-53r5 anchor AC-6 (Least Privilege) and AC-4 (Information Flow Enforcement).
+- **Claim adjudication errors bounded to a subset** — single plan sponsor, single drug class, single channel (mail order vs retail), or single member population. Erroneous adjudication but blast radius is contained.
+- **Authentication weakness short of bypass** — MFA bypass requiring adjacent factor, credential reuse window exceeding policy, session lifetime exceeding policy, weak password requirements on a PHI surface. Maps to T1621 (Multi-Factor Authentication Request Generation) for MFA-fatigue/push-bombing paths and T1078 (Valid Accounts) for credential-reuse paths; NIST 800-53r5 anchor IA-2(1) and IA-2(2) for MFA, IA-5 (Authenticator Management).
+- **Partial audit gap on PHI-adjacent surfaces** — admin actions logged but lacking actor attribution, audit logs shipped without integrity protection, audit retention shorter than 6 years (HIPAA minimum). Maps to T1070 (Indicator Removal) where retention or integrity gaps would let an attacker erase or alter their trace; NIST 800-53r5 anchor AU-9 (Protection of Audit Information), AU-11 (Audit Record Retention), AU-12 (Audit Record Generation).
+- **Adjudication degradation with manual workaround required** — system functional but requires operator intervention to complete claims, sustained.
+- **CMS Part D compliance gap not affecting member dispensing** — formulary update lag, prior authorization workflow gap, transition fill logic gap, that does not currently affect a dispensing decision but is required by CMS-4201-F or equivalent.
+- **URAC accreditation-relevant gap** — control absence in a domain URAC evaluates, where the absence would be findable in an accreditation audit.
 
 ## Medium
 
 Any of the following:
 
-- **Missing rate-limit on credential-recovery endpoints** — password-reset request, MFA recovery, recovery-code regeneration, email-change-confirmation. Severity escalates to high if combined with weak email-channel trust or absent re-authentication on the receiving end.
-- **Session lifetime exceeds policy without justification** — absolute session > 24h without step-up, refresh-token lifetime > 30 days without rotation discipline, OAuth `offline_access` grants with no expiry.
-- **OAuth client registration without strong identity proofing** — manual review present but human-only, no domain-control validation for redirect_uri host, no contact attestation. The compensating control exists but is human-velocity.
-- **Misconfigured CORS on token endpoint** — token endpoint should generally not need CORS at all (browser-to-token is not the OAuth contract for public clients in OAuth 2.1); permissive ACAO on /token is a finding even if not directly exploitable.
-- **Missing audit on OAuth client registration changes** — administrative-tier audit gap on the federation-trust surface; cross-references Non-Repudiation and Immutability findings on the consent/grant table.
-- **Recovery flow weaker than primary login** — primary login enforces AAL2 with WebAuthn, recovery flow accepts email-only knowledge factor. The attacker takes the weakest path; recovery weakness silently downgrades the primary AAL claim.
-- **Verbose error messages on /authorize or /token** — error responses differentiate "unknown client_id" vs. "invalid redirect_uri" vs. "unknown user," enabling enumeration.
-- **Anonymous LDAP bind permitted by upstream directory** — IdP-to-directory boundary accepts unauthenticated reads; medium because typically the IdP itself enforces bind, but the latent posture is a finding.
-- **Defense-in-depth gap on signing-key access** — signing key in HSM/KMS but the wrapping-key access is broad (every IdP pod can decrypt); the inner layer is strong but the outer layer is single-credential.
-- **Weak password policy on non-admin surfaces** — minimum length below NIST SP 800-63B §5.1.1.2 guidance (8 chars min, 64 max permitted), no breached-password check via HIBP-style API, password complexity rules instead of length-and-uniqueness.
-- **SAML metadata mutable without re-attestation** — federation-trust metadata can be edited inline by tenant admins without an approval workflow or re-attestation of the SP's identity.
+- **Defense-in-depth gap where a compensating control exists** but is the only barrier — single point of control failure. Encryption at rest absent because TLS terminates inside the trust boundary is the canonical example.
+- **Recoverable adjudication delay within SLA** — performance regression that the SLO budget absorbs but consumes headroom.
+- **Logging gap on non-PHI surfaces** — operational visibility loss that does not affect breach detection.
+- **Hardening weakness exploitable only after adjacent compromise** — requires the attacker to already have a foothold elsewhere. Useful to fix; not catastrophic if deferred.
+- **Configuration drift detection gap** on systems where compensating attestation exists.
+- **Documentation gap with security-relevant content missing** — architecture decision records, runbooks, or threat models absent in ways that impair operations or future review.
 
 ## Low
 
 Any of the following:
 
-- **Hygiene issue with no realistic exploit path** — deprecated TLS cipher with no client population that requires it, redundant audit redaction overlapping a stronger upstream filter, verbose Server header on the IdP edge.
-- **Documentation deficiency** — SAML metadata XML drift from federation-partner contract on a non-security-critical attribute, OAuth scope documentation lag, runbook formatting drift.
-- **Defense-in-depth gap fully compensated by upstream controls** — useful to know but architecturally non-urgent.
-- **Configuration drift on non-production realms** — sandbox tenants, ephemeral test realms, dev IdP instances without production credential mirror.
+- **Hygiene issue with no realistic exploit path** — deprecated cipher with no client support, redundant control with overlapping coverage, configuration verbosity.
+- **Documentation deficiency** — non-security-critical content missing, formatting inconsistency, naming convention drift.
+- **Defense-in-depth gap fully compensated** by upstream controls — useful to know but architecturally non-urgent.
+- **Configuration drift on non-critical path** — dev environment, ephemeral test infrastructure.
 
 ## Informational
 
-Observations that do not rise to remediation but are worth surfacing for the architecture record. Used sparingly. Examples: notable architectural choices with security implications worth documenting (chosen JWT library and its alg-pinning posture, chosen OAuth library and its PKCE default, chosen federation topology — hub-and-spoke vs. mesh), parity gaps with industry peers that are not actually risks, NIST 800-63 / OAuth 2.1 capabilities the system meaningfully addresses that the specialist should record as a confirmed capability rather than a finding.
+Observations that do not rise to remediation but are worth surfacing for the architecture record. Used sparingly. Examples: notable architectural choices with security implications worth documenting, parity gaps with industry peers that are not actually risks.
+
+---
+
+## Clinical patient-harm axis
+
+The PBM severity ladder above scores findings on the data-and-regulatory axis (PHI confidentiality, PDE integrity, audit defensibility). The second axis below scores findings on the clinical patient-harm dimension. Assign the severity that is the MAX of the two axes.
+
+### Critical (clinical patient-harm)
+
+- **Wrong drug dispensed at the pharmacy counter** — finding makes it plausible that the PBM's pricing or adjudication response produced a substitution that the prescriber did not approve and that the patient would not have received but for the PBM error. Maps to T1565.002 (Transmitted Data Manipulation) when the corruption is in-flight; T1565.001 when in the formulary store.
+- **Missed drug-utilization-review alert leading to harmful drug interaction** — finding makes it plausible that the DUR engine suppressed, did not raise, or routed away a clinically-significant interaction alert (drug-drug, drug-disease, drug-allergy, drug-age, therapeutic duplication). Includes DUR-rule configuration that excludes a class of patient (e.g., pediatric, geriatric, pregnant) from alerts they should receive.
+- **Missed prior-authorization on safety-gated drug** — finding makes it plausible that the PA-criteria engine approved or auto-routed-around a request that the PA criteria were explicitly designed to gate for clinical safety reasons (REMS-enrolled drugs, controlled substances above MED thresholds, specialty oncology agents with monitoring requirements). Maps to T1565.001 (Stored Data Manipulation) against the PA-criteria configuration store.
+- **Formulary bypass exposing patient to clinically harmful substitution** — finding makes it plausible that a formulary-tier reassignment, generic-substitution rule, or step-therapy-bypass produced a dispense decision that the formulary committee explicitly excluded for clinical-safety reasons. Maps to T1565.001 (Stored Data Manipulation) against the formulary configuration store.
+- **Dose calculation error** — finding makes it plausible that the days-supply calculation, the weight-based-dosing logic, or the pediatric/geriatric dosing rule produced an unsafe dose. Particularly load-bearing for opioids (MED calculation), insulin, anticoagulants, and pediatric formulations. Maps to T1565.002 (Transmitted Data Manipulation) on the adjudication response when the dose is computed in-flight; NIST 800-53r5 anchor SI-10 (Information Input Validation) on dose-calculation inputs.
+
+### High (clinical patient-harm)
+
+- **DUR-rule or PA-criteria edit without dual approval** — the editing surface for clinical-decision logic accepts single-operator changes; finding scores High because it creates the capability for any of the Critical-tier clinical-harm scenarios above without an enforcement gate.
+- **Formulary tier change applying retroactively** — finding makes it plausible that a tier reassignment alters claims that were already adjudicated, retroactively shifting cost or coverage in ways that destabilize patient adherence or trigger member-confusion-driven non-compliance.
+- **DUR alert silently suppressed by operator without attestation** — operator UI permits DUR-alert suppression without recording a clinical-justification field, supervisor attestation, or pharmacist review. Creates a hidden patient-harm capability.
+- **PA appeal-decision routing failure** — Medicare Part D requires redetermination decisions within tight timelines (42 CFR §423.590 — 7 calendar days standard, 72 hours expedited); finding makes it plausible that the appeal-routing logic produces missed timelines that convert to coverage denials by default.
+
+### Medium (clinical patient-harm)
+
+- **DUR alert displayed but easily dismissed** — clinically-significant alerts can be dismissed with a single click and no justification; clinical-decision quality depends on operator habit rather than enforcement. Worth raising; not catastrophic.
+- **Formulary-update lag affecting non-safety drugs** — formulary changes propagate with a delay that affects copay or coverage but does not affect drug safety.
+- **PA criteria documentation drift** — the configured criteria differ from the published formulary documentation in ways that affect member expectations but not safety.
+
+### Low (clinical patient-harm)
+
+- **Clinical-context surface with no realistic harm path** — UI labels for clinical fields use unclear or inconsistent language; no error in computation or routing.
+- **Documentation gap on a clinical-decision surface** — operator-facing help text incomplete; clinical logic itself is correct.
 
 ---
 
 ## Severity calibration discipline
 
-- **Cite the rubric clause in `detail`.** "This is high severity because it falls under 'Privilege escalation via group/role mapping bug' per the identity security rubric, specifically because the `attributes.groups` claim from the upstream IdP is mapped through an expression that uses string concatenation with a user-controllable `email_domain` field."
-- **Cite the matching NIST 800-63B AAL / 800-63C FAL clause** when the finding turns on assurance-level mismatch. Multiple anchors may apply — cite the OAuth/OIDC Security BCP section and the NIST clause together when an OAuth flow weakens an AAL claim.
-- **Cite the SAML XSW class explicitly when applicable.** "This matches SAML 2.0 Security Considerations §6.3 (signature wrapping); the assertion is signed but the signature-validation library returns the parsed inner assertion after validating an outer envelope."
-- **Do not average across multiple impacts.** A finding that yields signing-key exposure AND has a partial-rotation runbook is critical (signing-key exposure dominates).
-- **Do not inflate to signal importance.** The synthesizer escalates and reconciles severity disagreements between agents; over-claiming on one agent degrades cross-agent reconciliation signal.
-- **When in doubt, drop one level.** A high-confidence medium is more useful than a low-confidence high. The synthesizer can escalate based on cross-lens corroboration; it cannot reliably de-escalate a confidently-asserted critical.
-- **Distinguish capability from exploited.** The rubric scores realistic attack capability, not whether exploitation has been observed. An undisclosed authentication bypass and an actively-exploited one are both critical.
-- **AAL/FAL downgrade is the dominant high-severity pattern.** Anchor every authentication-related finding to the AAL/FAL claim the surface is meant to meet; the gap between target AAL/FAL and effective AAL/FAL is the severity dial.
+- **Cite the rubric clause in `detail`.** "This is high severity because it falls under 'PHI exposure beyond minimum-necessary internal audience' per the impact-to-PBM rubric, specifically [reasoning]."
+- **Do not average across multiple impacts.** A finding that has critical PHI exposure AND medium operational risk is critical.
+- **Do not inflate to signal importance.** The synthesizer escalates and reconciles severity disagreements between agents; over-claiming on one agent degrades the cross-agent reconciliation signal.
+- **When in doubt, drop one level.** A high-confidence medium is more useful than a low-confidence high.
+- **Asymmetric escalation rule.** When a finding sits between two tiers, escalate to the higher tier only if at least one of the following holds: (a) regulator action is plausible given the cited rubric clause — HHS OCR enforcement under 45 CFR §164.408, CMS Part D sponsor compliance action, or state pharmacy-board action against the dispensing channel; (a2) an accreditation-relevant adverse finding is plausible — URAC PBM accreditation, HITRUST CSF certification (the dominant healthcare accreditation framework for which PBMs are commonly certified), or SOC 2 Type II for the service-organization controls relied upon by plan-sponsor customers; (b) the finding affects a clinical-decision pathway — Drug Utilization Review (DUR), formulary determination, prior authorization, or dispensing instruction generation; (c) the blast radius covers more than one plan sponsor, or more than 500 members in a single sponsor. If none of these holds, drop to the lower tier. The default direction at the boundary is down, not up.
+- **Capability-vs-exploited equivalence rule.** The rubric scores realistic attack capability, not whether exploitation has been observed. An UNDISCLOSED adjudication-corruption capability — a path through which an attacker could cause wrong-drug-dispensed, missed DUR, or formulary bypass — and an OBSERVED wrong-drug-dispensed event are both Critical when the latent capability would meet the Critical clause if exercised. The rubric basis is the HIPAA Security Rule risk-management standard at 45 CFR §164.308(a)(1)(ii)(B), which obligates the covered entity to address reasonably anticipated risks — not only realized harms — to PHI confidentiality, integrity, and availability.
 
-## Domain: identity-security — Source: `consequential-actions.md`
+## Domain: pbm — Source: `consequential-actions.md`
 
-# Identity security consequential-action surface
+# PBM consequential-action surface
 
-For an identity provider issuing tokens, assertions, and session credentials to downstream relying parties, the following actions are consequential and must be auditable. Non-Repudiation findings evaluate logging coverage against this list; gaps become findings against AU-2 (Auditable Events) and against NIST SP 800-63B §5.2.2 on event recording.
+For a PBM, the following actions are consequential and must be auditable. Non-Repudiation findings evaluate logging coverage against this list.
 
-## Authentication events
+- Any PHI access (read, export, print)
+- Any adjudication decision (approve, deny, soft-deny)
+- Any administrative configuration change (formulary, plan rules, prior authorization criteria, user role)
+- Any authentication event (successful, failed, MFA challenge result)
+- Any authorization decision that grants access to PHI or admin functions
+- Any data export or report generation containing PHI
+- Any vendor or partner API call carrying PHI
+- Any change to system configuration affecting security posture
+- Any break-glass or emergency override
 
-- Authentication success (interactive, machine-to-machine via client_credentials, federated via upstream IdP, device-flow user approval)
-- Authentication failure with reason categorization (bad password, unknown user, locked, expired, MFA required, MFA failed, AAL-policy denial)
-- MFA challenge issued, MFA succeeded, MFA failed, MFA bypass via recovery code (the bypass event is the high-value audit anchor)
-- WebAuthn assertion issued, WebAuthn signature counter incremented (counter-reset is a finding signal)
-- Account lockout, lockout-reset, lockout-override (admin override is distinct event)
-- Step-up authentication (re-authentication for sensitive operations; AAL elevation events distinct from initial auth)
-- Account-recovery initiation and completion (separately — token-issuance event linked to completion event)
-- Anomalous authentication (impossible travel, new-device, new-geography, after-hours) when risk-scoring is in path
+This list is not exhaustive. Specialists should treat actions outside this list as candidates for inclusion — flagging them as evidence gaps until the operator confirms.
 
-## Authorization decisions
+## Audit-of-audit surface
 
-- Allow and deny decisions on consequential operations (every decision, not just denials)
-- Privilege escalation (role assignment, role removal, group-membership change — including JIT-provisioning-driven mutations from upstream IdP attributes)
-- Session privilege elevation (step-up to admin scope, sudo-equivalent, break-glass)
-- Policy evaluation outcomes when the policy engine is the trust anchor (e.g., OPA, Cedar, or the IdP's native rule engine)
-- Scope evaluation on token issuance (which scopes were requested, which were granted, which were denied)
+The audit-event store is itself a consequential-action surface. A breach investigation that begins at the audit log is worthless if the log was silently truncated, retention shortened, or shipping redirected by the same insider whose actions are under investigation. Every operation on the audit substrate must be logged in a forensically isolated channel that the operators of the primary log cannot reach with their primary credentials.
 
-## Token lifecycle
+The following actions on the audit substrate must produce a distinct, separately-attested audit record on an independent sink (separate credential store, separate retention policy, separate alerting path):
 
-- Access-token issuance (with the token identifier — jti when JWT, opaque token ID otherwise — and the client_id, audience, scope set, AAL claim, and FAL claim captured)
-- Refresh-token issuance (token-family identifier captured; refresh-token rotation chain trackable)
-- ID-token issuance (with subject identifier, audience, nonce, and the claims released)
-- Token refresh (linking the inbound refresh-token identifier to the outbound new access-token identifier)
-- Token revocation (user-initiated logout, administrative revocation, automatic revocation on credential change, refresh-token reuse-detected family revocation)
-- Token introspection request (per RFC 7662; the introspection event itself is consequential)
-- Token expiry (idle timeout, absolute timeout, scope-driven expiry)
-- DPoP / mTLS-bound token issuance (the binding metadata is auditable)
+- Administrative read of the audit log (any query that retrieves audit records for reasons other than the live event-review workflow — bulk export, ad-hoc search, regulator-disclosure pull)
+- Any change to the audit retention policy (shortening retention, changing the cold-storage tier, altering the legal-hold flag on existing records)
+- Any change to log-shipping configuration (sink endpoint, transport credential, batching window, schema-translation rule, redaction policy)
+- Any access to the integrity-control mechanism (read or rotation of the hash-chain head, read or rotation of the audit-signing key, any operation on the WORM seal)
+- Disable or pause of the audit pipeline (whether explicit, via feature flag, or via dependency-failure short-circuit)
+- Any restore from audit backup, replay of audit records, or re-ingest from a secondary substrate
 
-## OAuth and OIDC events
+This requirement anchors to HIPAA Security Rule §164.308(a)(1)(ii)(D) (Information System Activity Review — the covered entity must regularly review records of information system activity, which presumes those records are intact) and §164.312(b) (Audit Controls — implementation of hardware, software, and procedural mechanisms that record and examine activity in information systems containing ePHI). The control-family anchor is NIST SP 800-53r5 AU-9 (Protection of Audit Information — protect audit information and audit logging tools from unauthorized access, modification, and deletion) and AU-12 (Audit Record Generation — define audit-record-generation capabilities for events, with appropriate selection of auditable events at organizational discretion).
 
-- User consent grant (with the scope set, the relying-party identifier, the user identifier, and the lifetime)
-- Consent revocation (separate event from grant)
-- Authorization-code issuance and exchange (linkable; the code's identifier captured at both events)
-- Scope change on existing grant (incremental authorization)
-- OAuth client registration (whether dynamic per RFC 7591 or administrative)
-- OAuth client modification (any change to redirect_uri allowlist, scope allowlist, client authentication method, or grant-type allowlist — the federation-trust surface)
-- OAuth client deletion
-- Client-credentials grant issuance (machine-to-machine token issuance)
-- Device-authorization grant initiation and user-approval (RFC 8628)
-- Backchannel authentication request (CIBA, RFC 9126)
-- Token-exchange request (RFC 8693 — including the actor/subject claim relationship)
+The practical test: **if the audit log can be silently disabled or its retention shortened by a single operator credential without a separately-attested record landing on the isolated channel, the Non-Repudiation finding should escalate to Critical per the severity rubric.** The same operator who adjudicates claims, configures formularies, or services member calls must not also hold the credential that can erase the evidence of those actions; if the dual-control boundary is not enforced, the entire downstream audit story is suspect.
 
-## SAML events
+## Break-glass discipline
 
-- SAML assertion issuance (with assertion_id, audience SP entity ID, subject NameID, attribute set released, signing-key kid)
-- SAML attribute-release event (per-SP attribute disclosure — privacy-relevant audit)
-- IdP-initiated SSO event (unsolicited response to SP)
-- SP-initiated SSO event (AuthnRequest received, validated, responded)
-- Single Logout (SLO) initiation and completion across all federated SPs
-- SAML assertion-ID reuse rejection (replay-prevention store hit — itself a high-value security event)
+Emergency PHI access is a legitimate operational reality for PBMs — a pharmacist needs eligibility data during a network outage, a clinical reviewer needs full member history during a suspected adverse-drug-event investigation, a regulator subpoena demands disclosure outside the normal disclosure path, an after-hours on-call engineer needs raw access to debug an adjudication failure that is blocking time-critical fills. HIPAA §164.510(b)(3) (Emergency Circumstances) provides the lawful basis for use and disclosure outside the routine consent path when the disclosure is in the individual's best interest and cannot reasonably be obtained otherwise. That lawful basis is conditional on a complete, second-party-attested audit trail; an unaudited break-glass invocation is a HIPAA violation regardless of how legitimate the underlying need was.
 
-## Account lifecycle
+Every break-glass invocation must produce a high-severity audit event that captures, at minimum:
 
-- Account creation (with the provisioning channel: self-service, admin-created, JIT from upstream IdP, SCIM-provisioned)
-- Account deletion (with the deletion channel and the retention policy applied to associated audit/consent records)
-- Account suspension, reactivation
-- Identity-proofing upgrade (NIST SP 800-63A IAL elevation event — e.g., from IAL1 self-assertion to IAL2 with verified attributes)
-- Email-change and email-verification events (separately; the verification event is the trust-elevation anchor)
-- Phone-change and phone-verification events
+- The credential used (user identifier, the role held at the moment of invocation, the authentication factor satisfied, the session identifier)
+- The patient(s) subject of the access (member identifier or — where the invocation grants pattern-of-access rather than single-record-access — the bounded query that selected the records)
+- The clinical or operational justification entered at invocation, in free-text form, attested by the invoker (not a pre-canned dropdown — the text record is the evidence of intent and is itself reviewable)
+- The duration of the elevated session (start timestamp, end timestamp, the mechanism that closed the elevation — voluntary termination, idle timeout, absolute timeout, supervisor revocation)
+- The supervisor or on-call manager who attested to the access (either pre-attestation at invocation or post-attestation within the review SLA — the role and identity of the second party is part of the record)
+- The downstream actions taken within the elevated session (every PHI read, every export, every configuration change made under break-glass scope is itself audited, and those child events are linked back to the parent break-glass event so the full blast radius is reconstructable)
 
-## Credential lifecycle
+Every break-glass event must be reviewed by the privacy office and signed off **within 24 hours** of invocation. An unreviewed break-glass event past that SLA is itself a Non-Repudiation finding — the lawful-basis posture under §164.510(b)(3) depends on demonstrable oversight, and an aging unreviewed queue is evidence that the oversight is performative rather than real. Specialists should treat a backlog of >5 unreviewed break-glass events older than 24 hours as a High-severity finding on Non-Repudiation; a backlog older than 72 hours escalates to Critical.
 
-- Password change (by user, by admin, via password-reset flow — three distinct actor classes)
-- Password-reset request and password-reset completion (separately, linkable)
-- MFA enrollment (per-factor; new factor added)
-- MFA removal (per-factor; factor de-registered)
-- WebAuthn credential registration and deregistration
-- Recovery-code regeneration (the old set invalidated event distinct from new set issued)
-- TOTP seed rotation
+The dominant failure mode in early PBM deployments — and the one specialists should look for first — is **self-attested justification with no second-party review**. In this anti-pattern the invoker types their own justification, clicks "I acknowledge this is for emergency care," and the system grants elevated PHI access with no human in the loop and no asynchronous review queue feeding a privacy officer. This is a Critical finding because it allows an insider to manufacture lawful-basis cover for arbitrary PHI access — the §164.510(b)(3) defense collapses the moment a regulator asks "who, other than the accessor, attested that this was an emergency," and the record shows only the accessor's own keystrokes. A break-glass mechanism without a real second party is not a break-glass mechanism; it is an audit-launderer.
 
-## Federation events
+## Actor-class differentiation
 
-- IdP-to-SP trust establishment (federation onboarding — admin-tier action, high-blast-radius)
-- IdP-to-SP trust modification (signing-key rotation, encryption-key rotation, attribute-release-policy change, NameID format change)
-- IdP-to-SP trust deletion (federation offboarding)
-- Upstream-IdP registration (this IdP acting as SP to a peer)
-- Attribute-mapping rule change (JIT-provisioning expression edit)
-- SCIM-target binding change
+A PBM's consequential-action surface is not uniform — it is partitioned by actor class, and each class touches a different subset of the surfaces above, under different lawful-basis pillars, with different downstream-effect profiles. Non-Repudiation findings should be evaluated per-actor-class, because the same logging gap (e.g., "the member identifier of the access target is not captured") has radically different severity depending on whether the actor is a member viewing their own data or a vendor pushing eligibility files for a roster of 4 million lives. Specialists should map every consequential action they evaluate to the actor classes below and confirm that the audit record captures actor identity, the role held at the time of action, the target (member-id, claim-id, pricing-record-id, configuration-record-id), the inputs that produced the action, and the downstream effect.
 
-## Administrative actions
+- **Member self-service** (member portal, mobile app) — formulary lookup, prior-authorization status check, claim-history pull, address and payment-method update, member-of-record consent revocation, communication-preference change. Audit must capture: member identifier (self), the session credential used, the operation, the record(s) returned, and the disposition (success, denied, partial). Member self-service is the only actor class where the subject of the access and the actor are the same; a missing self-vs-other distinction in the audit record is a finding because it allows operator views of subject data to be masked as legitimate self-service traffic.
+- **Pharmacist and prescriber** (NCPDP-D.0 ingress and provider portal) — claim submission, prior-authorization appeal, eligibility query, drug-utilization-review (DUR) override claim, formulary-exception request, refill-too-soon override, COB carrier identification. Audit must capture: NPI of the prescribing/dispensing provider, NCPDP service provider ID for the pharmacy, the patient member-id, the NDC and quantity/days-supply, the adjudication response code, and any DUR conflict codes returned or overridden. The override surface is the high-value audit anchor — every DUR-conflict override is a clinical decision being made over a safety signal.
+- **Call center and member services representative** (internal CSR console) — member impersonation for support workflows, prior-authorization status communication, address change executed on the member's behalf, claim-status lookup, PHI export for member-record-request fulfillment, payment-method update on behalf of member, complaint and grievance intake. Audit must capture: CSR identifier, CSR role, the member-id of the impersonated/served party, the operation, the verification step that confirmed the caller's identity (voice-biometric match, knowledge-based verification questions answered, callback to phone-on-record), and any PHI fields exported. PHI exports by this actor class must additionally produce a HIPAA Accounting-of-Disclosures record per 45 CFR §164.528 whenever the disclosure falls outside the routine treatment-payment-operations exception.
+- **Adjudication operator** (internal benefit-configuration console) — formulary configuration change (tier assignment, NDC add/remove, step-therapy rule edit), maximum allowable cost (MAC) pricing update, prior-authorization criteria configuration, drug-utilization-review rule edit, manual claim override, retro-active rate adjustment, copay-accumulator configuration. Audit must capture: operator identifier, role, the configuration record changed (with before/after value), the effective-date window, the plan(s) affected, and the change-control ticket reference. The adjudication operator surface is the highest blast-radius surface in the PBM after vendor credentials — a single MAC pricing update can shift millions of dollars across a plan-year.
+- **PDE-submission operator** (internal CMS-reporting console) — prescription drug event (PDE) batch initiation, PDE error-record correction, CMS resubmission, retro-claim adjustment with PDE implications, deletion-record generation, late-enrollment-penalty data transmission, quarterly DIR (direct and indirect remuneration) submission. Audit must capture: operator identifier, the PDE batch identifier, the CMS submission identifier, the count and dollar value of records in the batch, the disposition response from CMS, and any error-records resubmitted. PDE submissions are regulator-facing financial records under Part D — every edit to a previously-accepted PDE is a financial-restatement event and must be auditable as such.
+- **Plan sponsor administrator** (external partner portal) — formulary tier review, eligibility roster sync acknowledgment, benefit-design change request, copay-structure review, performance-report retrieval, rebate-statement review, network-pharmacy review. Audit must capture: sponsor entity identifier, the administrator's identifier within that entity, the federation credential or portal credential used, the operation, the records or reports retrieved, and any change-requests submitted. Plan sponsor actions are partner-tier — the audit record must support post-hoc reconstruction of which sponsor employee saw which member-population aggregate.
+- **Vendor integration credential** (third-party machine-to-machine) — SCIM-style eligibility push from sponsor HRIS, rebate-aggregator file drop, COB carrier data exchange, mail-order pharmacy fulfillment hand-off, specialty-pharmacy hub data sync, clinical-data-exchange (CCD/CCDA) ingress and egress, manufacturer-rebate utilization-data egress. Audit must capture: vendor entity identifier, credential identifier (mTLS certificate fingerprint, API-key identifier, OAuth client_id), the operation, the record-count and field set transferred, the source-or-destination endpoint identifier, and the schema version of the exchange. Vendor PHI exports must additionally produce a HIPAA Accounting-of-Disclosures record per 45 CFR §164.528; specialists should specifically validate that machine-credentialed disclosures are captured in the accounting just as human-credentialed disclosures are — vendor exports are the most common gap in Accounting-of-Disclosures coverage because operators conflate "covered under the BAA" with "exempt from accounting," which the rule does not support.
 
-- Role definition change (role created, permission added/removed, role deleted)
-- Policy modification (RBAC policy, ABAC policy, OPA bundle push, the IdP's native expression-language policy)
-- Signing-key rotation (the rotation event itself plus the JWKS-publication event)
-- Signing-key revocation (with the affected window for after-the-fact verification)
-- Audit-pipeline configuration change (sink, retention, schema, redaction policy)
-- Rate-limit policy change
-- Feature flag toggle on any security-relevant flag (alg allowlist, MFA enforcement, AAL policy, consent UX)
-- TLS configuration change (cipher suite, version floor, certificate)
-- Email/SMS provider change (the recovery-channel substrate)
+Specialists evaluating Non-Repudiation should walk every actor class above against the audit-event store and confirm coverage rather than presuming coverage from a single well-instrumented surface. A PBM that logs member-portal traffic perfectly but cannot reconstruct which CSR pulled which member's claim history three weeks ago does not have an audit story — it has an audit hole the size of its largest internal actor class.
 
-## Data-subject rights events (GDPR Articles 15–22)
+## Claims-adjudication lifecycle events
 
-- Access request (Article 15) — receipt, response, and the data provided
-- Erasure request (Article 17 "right to be forgotten") — receipt, response, retention-conflict resolution, the records affected including audit trail of the deletion
-- Portability request (Article 20) — receipt, response, the export delivered (token-history, consent-history, identity-attribute set)
-- Restriction of processing (Article 18), objection (Article 21), automated-decision objection (Article 22)
-- Consent withdrawal (cross-cuts the OAuth consent-revocation event above; the GDPR-anchored audit record may be a distinct view)
+The claim-adjudication path comprises distinct events, each a consequential action with its own audit requirement. The events below are anchored to NCPDP Telecommunication Standard D.0 transaction codes where applicable.
 
-## Break-glass and emergency actions
+### Inbound claim submission (NCPDP D.0 B1)
 
-- Break-glass authentication (with justification captured; routes to a distinguishable audit stream)
-- Emergency policy override (the policy bundle change captured)
-- Emergency credential rotation (mass signing-key rotation, mass session invalidation, mass MFA reset)
-- Disaster-recovery failover initiation
-- Audit-pipeline emergency reroute (failover to backup sink)
+The pharmacy submitter transmits a B1 claim-billing request. Audit content: submitter NCPDP pharmacy ID, submitter NPI, transmitting switch (RelayHealth / Change Healthcare / Surescripts), inbound message digest (for replay-detection), member identifier and group_id, claim_reference_number, RX_number, prescriber NPI, and the NCPDP message body retained for the audit-event retention floor (HIPAA §164.316(b)(2)(i) 6-year). <!-- SME-review: confirm whether the audit needs to retain the raw NCPDP message or whether a normalized projection is sufficient under the PBM's pharmacy-network contract terms. -->
 
-This list is not exhaustive. Specialists should treat actions outside this list as candidates for inclusion — flagging them as evidence gaps until the operator confirms whether the action is in scope for auditing. The IdP's audit surface is the most evidentiary in the platform: every regulator presumes it works, and every breach investigation starts here.
+### Eligibility lookup (X12 270/271)
 
-## Domain: identity-security — Source: `immutability-classes.md`
+The adjudication engine queries the eligibility surface. Audit content: eligibility-query timestamp, member identifier, group_id, plan_id, the 271 response detail (coverage tier, accumulator state, prior-authorization-required flags), and which downstream decisions were keyed off the lookup. <!-- SME-review: confirm the X12 270/271 use here — some PBMs use NCPDP eligibility transactions (E1) rather than X12; the audit content should follow whichever protocol the PBM actually uses. -->
 
-# Identity security required-immutable data classes
+### DUR/COB pre-check
 
-For an identity provider issuing tokens and assertions to downstream relying parties, the following data classes must not change once written. Immutability findings test storage substrate, retention enforcement, and deletion controls against this list.
+DUR engine evaluates drug-drug, drug-disease, drug-allergy, drug-age, therapeutic-duplication, and refill-too-soon checks; COB engine evaluates primary-vs-secondary insurance and accumulator allocation. Audit content: DUR-rule set version applied, COB tree resolved, the specific alerts raised (or specific reasons no alerts were raised — silence is auditable too), and the pharmacist / operator response if any alert reached the dispensing surface.
 
-- **Authentication event log** — credential-compromise reconstruction depends on a tamper-evident authn record. NIST SP 800-92 retention guidance applies; PCI-DSS Requirement 10.7 (where in scope) requires 1 year online + 1 year archive; SOC 2 typically 1–7 years per service-organization policy; FedRAMP Moderate per agency baseline. Retention floor must match or exceed the longest plausible breach-detection window.
-- **Authorization decision log** — proof of who was permitted what at time T. Required for SOC 2 CC6.3 control attestation and for GDPR Article 5(2) accountability defense. Loss converts every authorization-bug claim into "we cannot verify."
-- **Consent grant records (OAuth/OIDC and SAML attribute-release acknowledgements)** — GDPR Article 6(1)(a) lawful-basis evidence for the processing that occurred during the consent window. Consent withdrawal must be recorded as a new event, never as overwriting the prior grant. The proof-of-prior-consent obligation outlives the grant itself.
-- **Token issuance log** — per-token audit anchor: JWT `jti` deduplication, refresh-token rotation-chain tracking, ID-token nonce recording. Required for after-the-fact "which key signed which token at what time" verification when investigating signing-key compromise. The audit must outlive the longest token lifetime issued during the window.
-- **Cryptographic key lifecycle records** — key creation, rotation, revocation, and destruction events. Required for proving NIST SP 800-63B §5.1.4 key-management discipline, PCI-DSS Requirement 3.6 / 3.7, SOC 2 CC6.7, and FedRAMP SC-12 control attestation. The JWKS rotation history specifically must be queryable for after-the-fact assertion validation.
-- **SAML assertion log and assertion-ID replay store** — replay prevention requires recording every assertion ID seen within the assertion's NotOnOrAfter window. The replay-prevention store is immutable-during-window by design; the audit copy of "this assertion ID was issued at time T" is immutable beyond the window for compromise reconstruction.
-- **Backup snapshots** — ransomware resilience for the credential store, the session store, the consent store, the audit log, and the key-lifecycle records. Immutability via object-lock (compliance mode), WORM media, or write-locked tape. Mutability or deletion-by-single-credential is a critical finding because the IdP backup is the post-breach recovery anchor for every dependent application.
-- **Configuration history** — RBAC policy changes, ABAC policy changes, federation-trust changes (signing-key rotation, attribute-release-policy mutation, redirect_uri allowlist edits), audit-pipeline configuration. Required for root-cause analysis after authorization-bug incidents and for SOC 2 CC8.1 change-management evidence.
-- **Identity-proofing artifacts** — NIST SP 800-63A IAL3 in-person verification records, IAL2 attribute-verification records (driver's-license image, attribute-source attestation). Required for proving the IAL claim that the IdP asserts to downstream RPs.
-- **Federation-trust establishment records** — the human approval trail for SP/IdP onboarding, the metadata-validation evidence, the contact attestation. Required for post-compromise attribution if a federated party turns out to be malicious or compromised.
-- **Account-deletion records** — proof of GDPR Article 17 compliance. The deletion event itself is immutable; the deleted-account audit trail is retained per the longest applicable retention even after the account row is gone (pseudonymized record-of-deletion).
+### Prior-authorization check
 
-Specialists raise Immutability findings against any class on this list that has mutable storage, absent retention controls, deletion-by-single-credential, or unspecified retention. The synthesizer cross-references Non-Repudiation findings on the same data class so the merged record carries both concerns. Audit-tampering plus audit-completeness gaps merge into a critical finding under almost every regulatory anchor.
+PA-criteria engine evaluates the request against the configured criteria for the drug-and-condition combination. Audit content: PA-criteria version applied, drug NDC and member diagnosis (when available), the criteria-evaluation result (auto-approve, auto-deny, route-to-clinical-review), and any operator override of the auto-decision.
 
-## Domain: identity-security — Source: `data-taxonomy.md`
+### Formulary and tier resolution
 
-# Identity security data taxonomy
+Formulary engine resolves drug-to-formulary-tier, applies step-therapy or quantity-limit rules, evaluates formulary exceptions, and computes the tier-anchored copay basis. Audit content: formulary version applied, tier assigned, exception or override applied (if any), and the tier-anchored copay calculation. <!-- SME-review: formulary-version audit is load-bearing for retroactive-claim-reprocessing disputes; confirm the PBM's formulary-version retention is sufficient to support member appeals filed up to N years post-claim. -->
 
-Specialist agents treat the following fields as sensitive when they appear in artifacts. The intake brief's data inventory MUST enumerate every field present; missing fields become evidence gaps surfaced as `blocked-on-evidence` findings against the intake set. The taxonomy is calibrated for identity-provider systems where the IdP both stores credentials and issues assertions about identity to downstream relying parties.
+### Adjudication decision
 
-## Authentication factors
+Adjudication engine emits the response code — paid, rejected with NCPDP reject codes (with reason), captured for audit. The decision is the canonical "consequential action" of the lifecycle; downstream copay-collection, pharmacy-reimbursement, and PDE-submission flows all key off this event.
 
-- password (cleartext — must never persist beyond hashing; in-memory window must be bounded)
-- password_hash (argon2id preferred, bcrypt acceptable, scrypt acceptable; PBKDF2 / SHA-512crypt / MD5-crypt are findings)
-- password_salt (per-user, treat as sensitive only insofar as exposure plus algorithm enables targeted attacks)
-- totp_seed (HMAC shared secret; equivalent to a long-lived possession factor — compromise enables silent OTP generation by the attacker)
-- hotp_counter (paired with totp_seed for counter-based variants; sync state is sensitive)
-- webauthn_credential_id (per-credential identifier; treat as sensitive — exposure enables credential enumeration)
-- webauthn_public_key (less sensitive — designed to be public-half, but listing per-user enables targeting)
-- webauthn_signature_counter (replay-prevention state; mutation enables replay)
-- fido2_attestation_certificate (per-authenticator attestation; treat as sensitive metadata)
-- recovery_code (single-use bypass — equivalent to a knowledge-factor reset of the authenticator; high-sensitivity)
-- backup_codes (set of single-use codes; same sensitivity as recovery codes)
-- security_question_answer (often weak entropy; treat as low-entropy credential and prefer to deprecate)
-- biometric_template (face print, fingerprint template, voice print) — special-category personal data under GDPR Article 9
+Audit content: decision code, ingredient cost, dispensing fee, copay calculation, gross amount due, basis-of-reimbursement, prescription origin code, and the full attribution chain (which rule version, which formulary version, which DUR result, which PA result).
 
-## Token material
+### DUR alert raised + operator/pharmacist response
 
-- access_token (OAuth 2.0 bearer; JWT or opaque; treat as session-equivalent for the token lifetime)
-- refresh_token (OAuth 2.0; longer-lived; storage MUST be hashed when at rest on the IdP side; bearer-by-default unless DPoP/mTLS bound)
-- id_token (OIDC; signed JWT; contains identity claims about the subject)
-- authorization_code (OAuth 2.0; short-lived pre-exchange; sensitive within the seconds-window before exchange)
-- device_code, user_code (RFC 8628 device-authorization grant; sensitive within the polling window)
-- pkce_code_verifier (per-flow secret; sensitive within the OAuth flow window)
-- pkce_code_challenge (server-side stored; sensitive insofar as it binds the verifier)
-- oauth_state (CSRF binding; per-flow nonce)
-- oauth_nonce, oidc_nonce, c_hash, at_hash (OIDC binding values; sensitive only insofar as they bind tokens)
-- session_cookie (browser session identifier; equivalent to bearer token for the session window)
-- saml_assertion (signed XML document containing identity claims; sensitive in transit and at rest; assertion_id must be unique to prevent replay)
-- saml_request_id, saml_in_response_to (correlation values; replay-prevention binding)
-- jwe_encrypted_payload (when sensitive claims warrant encryption beyond signature)
-- ciba_auth_req_id (RFC 9126 backchannel authentication state)
+When a DUR alert reaches the dispensing surface, the pharmacist either acknowledges or overrides. Audit content: alert type and severity, the specific clinical issue, the pharmacist NPI overriding, the clinical justification entered (free-text or coded), and whether a supervising-pharmacist attestation was required and recorded.
 
-## Identity attributes
+### Claim reversal (NCPDP D.0 B2)
 
-- username (sensitive when not pseudonymous — username = email reveals personal data)
-- email (primary, recovery, verified state)
-- phone (SMS-MFA target, recovery)
-- display_name (often legal name)
-- given_name, family_name
-- preferred_username
-- locale, zoneinfo
-- organizational_unit (org membership reveals affiliation)
-- group_memberships (set; combinable for re-identification)
-- role_assignments (set; authorization-relevant)
-- custom_claims (per-tenant attribute extensions; sensitivity depends on contents)
-- subject_identifier (sub claim; per-issuer-per-audience pairwise where supported by OIDC `pairwise` subject type — flag findings on `public` subject type when re-identification risk is in scope)
+Pharmacy submits a reversal of a previously-paid claim. Audit content: the original claim_reference_number being reversed, the reversal reason, the reversal timestamp, and the impact on accumulator state. Maps to T1565.001 when the reversal is initiated by an unauthorized actor against an already-paid claim.
 
-## Federation metadata
+### Claim rebill (NCPDP D.0 B3)
 
-- saml_metadata_xml (per-SP/IdP; contains signing/encryption certs, ACS URLs, entity IDs)
-- saml_signing_certificate (public-half, but rotation history is sensitive)
-- saml_encryption_certificate (public-half; encryption target)
-- oidc_discovery_document (per-issuer; contains JWKS URI, supported flows)
-- jwks (JSON Web Key Set; public-half by design; rotation cadence is the sensitive aspect)
-- jwks_rotation_history (which kid was active at what time — required for after-the-fact assertion validation)
-- federation_trust_record (per-SP trust establishment, including the human approval trail)
-- attribute_release_policy (per-SP which attributes are released — privacy-relevant)
-- jit_provisioning_rule (per-upstream-IdP mapping expression — authorization-relevant)
+Pharmacy submits a rebill of a previously-reversed claim. Audit content: the original claim_reference_number, the rebill's updated fields (typically NDC or quantity), and the linkage between the original, the reversal, and the rebill.
 
-## Consent records
+### Mail-order or specialty pathway split
 
-- oauth_consent_grant (per-user-per-RP-per-scope; GDPR Article 6(1)(a) lawful-basis evidence)
-- oauth_grant_revocation_event (separate event; consent withdrawal does not eliminate the proof-of-prior-consent obligation)
-- saml_attribute_release_acknowledgement (analogous for SAML federation flows)
-- oidc_offline_access_grant (long-lived authorization for refresh-token issuance)
-- device_authorization_user_approval (RFC 8628 device-flow consent action)
+When the formulary or PA criteria route a claim to mail-order or specialty fulfillment, a distinct fulfillment-side audit chain begins. Audit content: which fulfillment partner, the order-routing decision rationale, the shipping address and delivery method, and the partner-side dispensing-event linkage back to the original claim.
 
-## Audit content
+## HIPAA patient-rights events (§§164.522–164.528)
 
-- authn_event (success, failure with reason, MFA challenge, MFA success, MFA failure, lockout, recovery)
-- authz_event (allow/deny on consequential operation, role-based decision, scope-based decision)
-- token_lifecycle_event (issue, refresh, revoke, expire, reuse-detected)
-- consent_event (grant, revoke, scope change)
-- federation_event (SAML assertion issued, attribute released, IdP-initiated SSO, SLO)
-- admin_event (role change, policy change, signing-key rotation, federation-trust change, audit-config change)
-- credential_lifecycle_event (password change, MFA enrollment, WebAuthn registration, recovery-code regeneration)
-- account_lifecycle_event (creation, deletion, suspension, reactivation, identity-proofing upgrade)
-- key_lifecycle_event (creation, rotation, revocation, destruction; required for proving 800-63B §5.1.4 key-management discipline)
-- before_state / after_state on attribute mutations (may contain PII; audit storage inherits highest field sensitivity)
-- actor_identifier (user ID, service identity, workload identity, federated subject)
-- request_metadata (IP, user agent, request ID, correlation ID, AAL claim, FAL claim)
+The HIPAA Privacy Rule grants individuals specific rights with respect to their PHI. Each exercise of one of these rights is a consequential action with audit and substantive-response requirements.
 
-## Cryptographic material
+### Right to request restriction (§164.522)
 
-- jwt_signing_private_key (RS256/ES256/EdDSA; the universal-forgery key)
-- jwt_signing_public_key (JWKS public set — public-half by design)
-- saml_signing_private_key (X.509 private; per-IdP-entity)
-- saml_signing_certificate (public-half)
-- saml_encryption_private_key (decryption of inbound encrypted assertions)
-- jwe_content_encryption_key (per-assertion symmetric key, key-wrapped under recipient public key)
-- kms_wrapping_key_handle (the upper-tier KMS/HSM root that protects the above; sensitive even though the IdP holds only a handle)
-- mtls_client_certificate_private_key (for IdP-to-RP outbound or RP-to-IdP inbound client auth)
-- jwks_rotation_history (which signing key was active in which window — required for after-the-fact assertion validation and revocation)
+Member requests restriction on the PBM's use or disclosure of their PHI. Audit content: request, identity verification of the requester, scope of the requested restriction, the PBM's response (granted / partially granted / denied with reasoning), and any downstream propagation of the restriction to vendor partners under §164.504(e) BAA. Note the §164.522(a)(1)(vi) exception: a restriction request related to a service paid for in full by the individual must be granted absent narrow exceptions.
 
-## Personal data (GDPR Article 4(1))
+### Right of access (§164.524)
 
-The IdP frequently stores personal data as identity attributes. The api-security domain pack's taxonomy applies for the secondary classification; this pack adds the identity-specific factors above.
+Member requests a copy of their PHI in a designated record set. Audit content: requester identity, identity-verification artifact (especially load-bearing for portal-initiated requests where the verification depth is sometimes weaker than for paper requests), scope of the records requested, the fee charged if any (must conform to §164.524(c)(4) reasonable-cost-based fee), the delivery method (electronic to member, electronic to designated third party, paper), and the response timeline. The 30-day response window (§164.524(b)(2)) is part of the audit-event content because timeliness is itself a §164.524 compliance question.
 
-- name, email, phone, address, date_of_birth, national_id_equivalent, ip_address, device_identifier, geolocation
-- account_username when not pseudonymous
+### Right to amend (§164.526)
 
-## Special category personal data (GDPR Article 9)
+Member requests amendment to PHI. Audit content: the amendment request, the PBM's decision (accept / deny with permitted-disagreement-statement), the dissemination of the decision to those who received the unamended record per §164.526(c)(3), and the link between the original PHI item and the amendment.
 
-- biometric_data used for unique identification (FIDO2 attestation that conveys biometric class, voice/face/fingerprint templates)
-- health_data, genetic_data, racial_or_ethnic_origin, religious_or_philosophical_belief, political_opinion, trade_union_membership, sexual_orientation_or_sex_life — typically not stored by the IdP, but custom claims and attribute-release policies CAN convey these from upstream sources; flag any case where the IdP is in the path of special-category claim release without an Article 9(2) basis.
+### Right to an accounting of disclosures (§164.528)
+
+Member requests an accounting of disclosures of their PHI for the preceding 6 years. Audit content: the disclosure-event records covering the 6-year window, the requester identity, the response timeline (60-day default; 30-day extension permissible), and any fee charged for additional accountings within a 12-month window. <!-- SME-review: confirm whether PBM-to-CMS PDE submissions count as "disclosures" required under §164.528 — the Treatment/Payment/Operations exception under §164.506 commonly applies but the determination is fact-specific. -->
+
+### Right to receive PHI via electronic delivery to a designated third party (§164.524(c)(4))
+
+Member directs the PBM to deliver PHI to a designated third party in an electronic format. Audit content: identity verification of the designated third party (a common attack surface), the format requested, the delivery confirmation, and the consent chain authorizing the disclosure.
+
+## Prior-authorization lifecycle
+
+Prior authorization is a distinct PBM workflow with its own audit surface, separate from claim-adjudication.
+
+### PA submission
+
+Prescriber or pharmacist initiates a PA request. Audit content: requesting prescriber NPI, member identifier, drug NDC, requested duration, supporting clinical information attached.
+
+### PA criteria evaluation
+
+PA engine evaluates the request against the configured criteria. Audit content: criteria version applied, evaluation result (auto-approve / auto-deny / route-to-clinical-review with reason), the specific criteria clauses that drove the result.
+
+### Clinical review (when applicable)
+
+Pharmacist or medical director reviews routed requests. Audit content: reviewer NPI / DEA, review timestamp, clinical-justification entered, decision (approve / approve-with-conditions / deny), conditions attached if any.
+
+### PA decision communication
+
+PA decision is communicated to the prescriber and the member. Audit content: decision timestamp, communication channel (fax / electronic / phone), recipient confirmation. Medicare Part D timelines are codified at 42 CFR §423.568 (standard coverage determinations — 72 hours) and §423.572 (expedited coverage determinations — 24 hours), within the broader coverage-determination framework at §423.566.
+
+### Appeals processing
+
+Member appeals a denied PA (Part D redetermination). Audit content: appeal initiation, appeal reviewer (must be different from initial decision-maker per 42 CFR §423.590(g)), appeal decision, appeal timeline tracking per §423.590 (7 calendar days standard, 72 hours expedited). <!-- SME-review: confirm whether the PBM operates as a Medicare-only Part D plan, a commercial-and-Medicare blend, or a primarily-commercial book; the appeals discipline shifts substantially between Medicare-Part-D-enforced timelines and ERISA-governed commercial-plan timelines. -->
+
+### Tier exception decisions
+
+Distinct from PA: member requests a formulary tier exception (drug X covered at lower-cost tier). Audit content: exception-request basis (clinical-necessity argument, comparable-effectiveness argument), reviewer NPI, decision, and the duration of the exception if granted.
+
+## DUR / COB lifecycle
+
+### DUR rule-set authoring
+
+Clinical operator authors or edits a DUR rule. Audit content: rule version, drug-trigger criteria, alert text shown to pharmacist, severity classification, operator NPI, dual-approval attestation (required for safety-class rules; absent = High clinical-harm finding per the severity rubric).
+
+### DUR rule deployment
+
+DUR rule moves from authoring to production. Audit content: deployment timestamp, deployment approver (separate from author), rollback availability, the version range of the rule's effective-date window.
+
+### DUR alert raise / response
+
+(See Claims-adjudication lifecycle — DUR alert raised + operator/pharmacist response above; the lifecycle event is the same.)
+
+### COB tree resolution
+
+Adjudication engine resolves the coordination-of-benefits tree across primary / secondary / tertiary coverage. Audit content: the COB version applied, the resolution path (which insurer was determined primary, secondary, tertiary), the accumulator-state inputs, and the apportionment of payment liability across insurers.
+
+## Domain: pbm — Source: `immutability-classes.md`
+
+# PBM required-immutable data classes
+
+For a PBM adjudicating pharmacy claims, submitting CMS Part D PDE records, and operating under HIPAA/HITECH plus state-board-of-pharmacy and DEA constraints, the following data classes must not change once written. Immutability findings test storage substrate, retention enforcement, and deletion controls against this list.
+
+- **Audit log entries** — HIPAA Security Rule §164.312(b) audit-controls obligation and §164.316(b)(2)(i) 6-year documentation retention. SOC 2 typically 1–7 years per service-organization policy. Loss converts every adjudication-integrity claim into "we cannot verify."
+- **Claim adjudication outcomes** — the per-claim accept/reject/reverse decision, the formulary state at adjudication time, the cost-share computation, and the plan-design rules applied. Required for reconcilability against pharmacy submissions, plan-sponsor invoicing, and member appeals under 42 CFR §423.128. Reversal must be recorded as a new event, never as overwriting the prior outcome.
+- **Submitted CMS Part D PDE records** — CMS submission integrity and reconciliation against the Part D Reporting Requirements. CMS retention floor is 10 years per 42 CFR §423.505(d) and the Part D Reporting Requirements. Resubmission must preserve the prior PDE as historical record.
+- **Prior authorization decisions** — approval/denial, clinical criteria applied, prescriber attestations, and member-notification timestamps. Required for CMS coverage-determination compliance under 42 CFR §423.566 and for state external-review proceedings.
+- **Drug formulary historical state at point of adjudication** — the formulary tier, prior-auth requirement, step-therapy gate, and quantity limit live at the moment a claim adjudicated. Required to defend or reconstruct any past adjudication outcome; loss makes every retroactive audit indeterminate.
+- **NCPDP SCRIPT and Telecom transactions** — the inbound pharmacy submission and the outbound PBM response, retained in their wire form with signatures intact. Required for after-the-fact "which message did the pharmacy actually send" reconstruction during dispute resolution and DEA inspection.
+- **DEA controlled-substance prescription records** — for CII–CV dispensings touched by the PBM workflow, 21 CFR §1304.04 requires 2-year retention of prescription records; many states extend to 5 or 7 years. The transmission record, prescriber DEA number validation, and refill history are immutable to the regulatory floor.
+- **Signed agreements and consent records** — pharmacy network contracts, plan-sponsor agreements, business associate agreements under 45 CFR §164.504(e), and member consents for data sharing. Retention floor matches the longest of HIPAA 6-year, contract term plus statute of limitations, and any state-specific obligation.
+- **Member communications and notifications** — explanation-of-benefits delivery, prior-auth determination notices, formulary-change notifications, and breach notifications under 45 CFR §164.404. Proof-of-delivery is the immutable artifact; the notification body and the delivery timestamp must reconcile.
+- **Backup snapshots** — ransomware resilience for the claims store, adjudication-engine state, member-eligibility cache, formulary store, and the audit log itself. Immutability via object-lock (compliance mode), WORM media, or write-locked tape. Mutability or deletion-by-single-credential is a critical finding because the backup is the post-breach recovery anchor for plan-sponsor reporting obligations.
+- **Configuration history** — formulary rule changes, plan-design changes, adjudication-engine version history, RBAC policy changes, and clinical-criteria definitions. Required for root-cause analysis after adjudication-defect incidents and for SOC 2 CC8.1 change-management evidence.
+- **Cryptographic key lifecycle records** — every CMS PDE signing key, NCPDP SCRIPT message-signing key, and key-encrypting key in the PBM's custody. Creation, rotation, suspension, and destruction events, each capturing the operator and the system clock at the event. Required because CMS audit defensibility, NCPDP signed-message non-repudiation, and breach-investigation forensics all depend on proving which key signed which artifact at which time. Retention is pinned to the longest of (a) HIPAA 6-year per 45 CFR §164.316(b)(2)(i), (b) CMS Part D 10-year PDE retention per 42 CFR §423.505(d), and (c) any signed-artifact retention floor that outlives both.
+
+## Elaborated PBM-specific classes
+
+The classes above appear in compact bullet form because each is anchored to a single dominant regulator. The classes below operate at the intersection of multiple regulators, multiple contract surfaces, and multi-year dispute windows, so each is elaborated separately with WHAT / WHY immutable / RETENTION framing.
+
+### Rebate calculation history
+
+WHAT: Manufacturer rebate calculations, plan-sponsor remit allocations, accumulator-state snapshots used to compute rebate eligibility, and the rebate-recovery audit trail. Includes the exact rebate-contract version applied to each claim cohort and the calculation inputs (utilization data, formulary tier at calculation time, manufacturer rebate-contract terms in effect).
+
+WHY immutable: Rebate disputes routinely arise years after a calculation — manufacturer audits, plan-sponsor disputes, and government inquiries (DOJ False Claims Act investigations naming alleged rebate-pass-through fraud have been litigated against PBMs). The defensibility of any rebate calculation depends on being able to reconstruct exactly which contract version, which utilization data, and which formulary state produced the calculation. Mutable rebate calculation history makes plaintiff allegations of rebate manipulation effectively unrebuttable.
+
+RETENTION: Pinned to the longest of (a) 7 years to cover most plan-sponsor MSA audit windows, (b) the term of the underlying manufacturer rebate contract plus 3 years for dispute, (c) any state insurance-department retention requirement for PBM business records. Practical floor is commonly 10 years for major-market plans.
+
+### MAC pricing history
+
+WHAT: Maximum Allowable Cost list versions over time, the source data informing each version (compendia inputs, pharmacy-acquisition cost samples), the publication dates and effective-date windows, the per-pharmacy MAC variants where the PBM operates differentiated networks, and the pharmacy-appeal history (claims appealed under MAC-appeal rights granted by state law).
+
+WHY immutable: State MAC-transparency laws (~40 states have such statutes as of this writing) routinely grant pharmacies the right to appeal MAC-priced claims and require the PBM to retain MAC source data for audit. Pharmacy-network reimbursement disputes turn on which MAC was in effect when a specific claim adjudicated. <!-- SME-review: confirm the current state-by-state retention requirements; this draft uses 7 years as a generic floor but several state statutes specify different retention windows. -->
+
+RETENTION: Pinned to the longest of (a) the underlying contract retention floor, (b) state MAC-transparency law retention (varies by state), (c) any pharmacy-appeal window plus statute-of-limitations grace period.
+
+### Network-pharmacy contract terms at adjudication
+
+WHAT: The actual contract terms in effect at the moment of each claim adjudication — pharmacy-network tier (preferred / standard / out-of-network), dispensing-fee schedule, ingredient-cost basis (AWP-discount, WAC-discount, NADAC-discount), copay-collection rules, generic-substitution rules. Critically: NOT the current contract terms; the historical contract terms at the moment that specific claim was adjudicated.
+
+WHY immutable: Pharmacy networks renegotiate constantly; contract terms drift by quarter. Pharmacy-claim disputes (and the related litigation surface) are routinely scoped to the contract version in effect at adjudication, not the current contract version. Pharmacy-network audit programs require the PBM to demonstrate that each claim was priced under the correct contract version at the correct effective date. Mutable contract-terms-at-adjudication history collapses the PBM's defensibility against systematic-overcharge or systematic-underpayment allegations.
+
+RETENTION: Pinned to (a) the longest pharmacy-network contract retention floor across the PBM's contract base, typically 7+ years, (b) any state insurance-department audit window. Practical floor commonly 10 years.
+
+### DSCSA track-and-trace records
+
+WHAT: Drug Supply Chain Security Act dispensing-event records — the chain-of-custody data for each prescription dispensed, including transaction history (TH), transaction information (TI), and transaction statement (TS) per 21 USC §360eee-1. Includes the manufacturer-of-record, the wholesale-distributor lineage, the lot-and-expiration data, and the dispensing-pharmacy attribution.
+
+WHY immutable: DSCSA §582 requires dispensing entities (which includes mail-order and specialty pharmacies operated by or under contract with the PBM) to retain transaction information for 6 years from the date of the transaction. Mutable TI/TS data destroys the chain-of-custody integrity that DSCSA was enacted to protect; FDA inspections rely on reconstructable DSCSA records to investigate suspect products. <!-- SME-review: confirm whether the PBM's specialty-pharmacy and mail-order operations are themselves §582-regulated dispensing entities or whether DSCSA exposure is limited to the pharmacy partners. -->
+
+RETENTION: 6 years from transaction date per 21 USC §360eee-1(d). State pharmacy-board reporting requirements may extend this floor.
+
+### State pharmacy-board reportable events
+
+WHAT: Events that trigger state pharmacy-board reporting obligations — adverse drug events identified through PBM-side DUR processing, controlled-substance dispensing anomalies surfaced through PMP integration, pharmacy-licensure-relevant findings (counterfeit-drug suspicion, diversion patterns), and any event that the PBM is required to report to a state board under the licensure framework governing its mail-order or specialty operations.
+
+WHY immutable: State pharmacy boards investigate practice complaints with multi-year lookback windows; the PBM's ability to demonstrate timely and accurate reporting depends on having an immutable record of what was reported, when, and to which board. Mutable reportable-events history converts a routine state-board inquiry into a documentation failure independent of the underlying clinical question. <!-- SME-review: state pharmacy-board retention requirements vary substantially; confirm the floor for the PBM's primary operating states. -->
+
+RETENTION: Pinned to the longest applicable state pharmacy-board retention floor across the PBM's operating footprint; typically 5–10 years depending on state.
+
+## Failure-mode triggers
+
+Specialists raise an Immutability finding against any class on this list when any one of the following four conditions is met. Any single trigger is sufficient; multiple triggers compound the severity.
+
+1. **Mutable storage** — the class is held in a substrate that supports in-place update without a tamper-evident audit trail. Default RDBMS rows holding adjudication outcomes, S3 objects holding PDE submissions without object-lock, in-place overwrite of formulary-history files, and any "UPDATE claims SET status = ..." path on a regulated class all qualify.
+2. **Absent retention floor** — no retention period is declared or enforced on the class. Deletion can happen on operator whim before the regulatory floor (HIPAA 6-year, CMS Part D 10-year PDE retention per 42 CFR §423.505(d), DEA 2-year controlled-substance prescription retention per 21 CFR §1304.04). The absence of a documented retention policy is itself the finding; "we just keep everything" without enforcement does not satisfy the trigger.
+3. **Deletion-by-single-credential** — a single operator credential can delete or alter the class without two-party control, dual approval, vault-lock policy, or compliance-mode object-lock. The PBM's database administrator, cloud-account root, or backup-system operator must not be able to single-handedly destroy regulated records.
+4. **Unspecified retention** — the class is declared immutable but the retention duration is not pinned to a regulatory anchor or a contractual obligation. "Retain forever" without policy is itself a finding because the absence of a pinned floor makes the class indistinguishable from a class with no retention at all under audit.
+
+**Cross-reference.** When the failing class is also an audit-event class (operator-action log, audit-of-audit records, adjudication-decision audit), the Non-Repudiation lens should be notified via `related_concerns` on the finding so the synthesizer can merge the records. When the failing class is encrypted-at-rest PHI (member records, claim payloads, PA clinical attachments), the Confidentiality lens should be cross-referenced. Specialists must use the `lens_perspectives` block on the finding so that if both lenses surface the same root cause the synthesizer preserves each lens's framing in the merged record rather than discarding one.
+
+## Substrate enforcement
+
+The four failure-mode triggers above are satisfied by concrete storage substrates. Specialists should name the substrate when emitting an Immutability finding so the remediation pointer is actionable.
+
+- **S3 Object Lock in Compliance Mode** — satisfies HIPAA 6-year audit-log retention, CMS Part D 10-year PDE retention, and SOC 2 retention floors. Makes infeasible: shortening the retention period, deleting the object, or modifying the object — even by the AWS root account. Governance Mode is **not** sufficient because privileged operators can bypass it; Compliance Mode is the required configuration.
+- **Azure Blob immutable storage with legal-hold policy** — satisfies HIPAA, CMS Part D, and customer-contract retention floors. Makes infeasible: blob deletion, content modification, and policy shortening for the duration of the legal hold or time-based retention.
+- **GCS bucket retention policy with locked configuration** — satisfies the same regulatory floors. Makes infeasible: shortening the retention period and deleting objects within the retention window, even by project owners; the locked configuration cannot be reverted once applied.
+- **WORM-mode tape or optical media for offsite archives** — satisfies CMS Part D 10-year retention and disaster-recovery obligations under HIPAA §164.308(a)(7). Makes infeasible: in-place overwrite at the physical-media layer; tampering requires physical destruction, which is detectable through chain-of-custody.
+- **HSM-anchored hash-chained log stores** — for example, AWS QLDB for the adjudication-decision journal, or GCP Cloud Audit Logs with a sink to a separate immutable GCS bucket whose write credentials are not held by the source-account operators. Satisfies the tamper-evidence requirement of HIPAA §164.312(c)(1) integrity controls and the audit-controls obligation of §164.312(b). Makes infeasible: rewriting historical entries without producing a hash-chain discontinuity that subsequent verification will detect.
+
+A substrate that does not appear on this list is not automatically a finding, but the specialist must articulate which of the four triggers it defeats and how. "Encrypted at rest" alone does not satisfy any immutability trigger; encryption protects confidentiality, not against authorized in-place mutation.
+
+## Domain: pbm — Source: `data-taxonomy.md`
+
+# PBM PHI/PII data taxonomy
+
+Specialist agents treat the following fields as PHI when they appear in artifacts. The intake brief's PHI/PII inventory MUST enumerate every field; missing fields become evidence gaps.
+
+## PHI identifiers (per 45 CFR §164.514)
+
+- member_id (HICN, MBI, PBM-internal)
+- member_dob
+- member_address (street, city, ZIP — full ZIP+4 is PHI)
+- member_email
+- member_phone
+- SSN
+- account numbers
+- biometric identifiers
+
+## PHI clinical data
+
+- drug_ndc (National Drug Code)
+- prescriber_npi
+- pharmacy_id
+- diagnosis codes (ICD-10)
+- prior authorization criteria responses
+- clinical notes
+
+## PII (non-PHI personally identifying)
+
+- internal user accounts (PBM employee identities)
+- plan sponsor contact information
+
+## Financial
+
+- claim payment instructions
+- copay calculations
+- premium amounts
+
+## Quasi-identifier combinations (Safe Harbor blind spots)
+
+HIPAA Safe Harbor de-identification under 45 CFR §164.514(b)(2)(i) strips the eighteen enumerated identifiers but does NOT account for combinations of residual fields that re-identify in PBM data. The combinations below are recurring re-identification vectors in pharmacy-claims, prior-authorization, and DUR data; their presence in an export pipeline requires Expert Determination per 45 CFR §164.514(b)(1) regardless of whether the export carries a "de-identified" label.
+
+- **(rare_NDC + ZIP3 + age_band)** — for low-prevalence therapeutics (orphan-drug NDCs, specialty oncology regimens, rare-disease biologics, gene therapies), the population dispensed within any 3-digit ZIP and 5-year age band is frequently one individual. Safe Harbor preserves 3-digit ZIP and age in years up to 89; the NDC carries no Safe Harbor restriction, so the combination passes the rule while still uniquely identifying the member.
+- **(prescriber_NPI + small-specialty diagnosis + date_band)** — prescriber NPI is not on the Safe Harbor list, and ICD-10 diagnosis categories are not stripped. For narrow-population specialties (gender-affirming hormone therapy, HIV antiretrovirals, certain psychiatric prescriptions, hemophilia factor products), a single prescriber plus diagnosis category plus a coarse dispensing month typically resolves to one member of that prescriber's panel.
+- **(plan_sponsor_id + drug_class + month)** — for self-funded plan sponsors under approximately 100 covered lives, the combination of plan sponsor identifier, AHFS or USP drug class, and dispensing month collapses to a single member for any uncommon drug class. Plan sponsor identifiers are not Safe Harbor identifiers, so exports retained for sponsor reporting routinely carry this risk.
+- **(pharmacy_NCPDP_id + dispensing_date + drug_class)** — small independent pharmacies and specialty-distribution pharmacies dispense to a handful of patients per day. The NCPDP provider identifier plus exact dispensing date plus drug class produces a candidate set small enough that adversary knowledge of one neighborhood pharmacy and a known dispensing event recovers the member.
+- **(member_demographic_band + DUR_alert_type + month)** — Drug Utilization Review alert types (therapeutic duplication, drug-drug interaction at the major-severity tier, high-dose alert for controlled substances) fire sparsely. Combined with demographic banding (age band, sex, 3-digit ZIP) and month, alert-keyed records frequently re-identify, especially for high-severity alerts on uncommon regimens.
+
+When an export pipeline emits two or more of the column sets above together — including derivatives such as masked-but-correlatable surrogates — the Confidentiality specialist must raise a finding requesting Expert Determination per 45 CFR §164.514(b)(1) even when the export is labeled de-identified, and must block on evidence of the statistical-disclosure-risk assessment if none is supplied. This treatment is analogous to the api-security pack's handling of GDPR pseudonymization edge cases where pseudonym plus key combined remain personal data under Recital 26; here, Safe Harbor plus residual quasi-identifiers combined remain a HIPAA disclosure.
+
+## Audit-content sensitivity inheritance
+
+An audit record's sensitivity is the MAX of the sensitivity of (a) the actor identity captured, (b) the action category, and (c) the target referenced. Example: an audit record stating "operator X executed PHI export for member M for purpose Y" inherits PHI-class sensitivity because the target reference (member M, bound to the disclosed dataset) makes the audit record itself a PHI disclosure under the HIPAA Privacy Rule. Consequently the audit store inherits the strongest storage controls of any data class it logs — its encryption-at-rest, encryption-in-transit, key-management, access-control, and retention-floor obligations are the MAX across every contributing class.
+
+Practical implication: audit stores that log PHI-referencing actions cannot be downgraded to an "operational logs" tier and routed through log-shipping infrastructure (SIEM forwarders, log lakes, observability backends) that lacks PHI-class controls — BAA coverage, encryption at rest with managed keys, role-scoped read access, and a retention floor that satisfies §164.530(j)(2)'s six-year minimum. Specialist agents must verify the audit-shipping path and the audit-storage substrate against the controls applied to the most sensitive data class the audit references. When intake evidence shows audit traffic crossing into infrastructure that does not inherit those controls, the Confidentiality, Non-Repudiation, and Immutability lenses must each emit a finding and cross-link via `lens_perspectives` so the synthesizer preserves the joint view rather than collapsing one perspective.
+
+## Consuming APD lenses
+
+This taxonomy is consulted by the following APD specialist lenses; each consumes a defined slice of the taxonomy and is responsible for the controls listed:
+
+- **Confidentiality** — encryption at rest and in transit, field-level masking, deterministic and non-deterministic tokenization, minimum-necessary export gating, and the Expert Determination escalation for the quasi-identifier combinations enumerated above.
+- **Integrity** — referential integrity between member, claim, prescriber, and pharmacy records; schema validation on inbound NCPDP D.0 and X12 271/278 messages; write-path authorization on adjudication-affecting fields; and detection of out-of-band mutations on retained claim history.
+- **Authenticity** — verification of NCPDP SCRIPT signed-message envelopes for e-prescribing transactions and X12 signed-message verification on inbound enrollment, eligibility, and claims-status traffic, including end-entity certificate trust-chain validation and replay-prevention on signed envelopes.
+- **Non-Repudiation** — audit content inheritance per the rule above, signed adjudication-decision records sufficient to bind operator and clinical-reviewer actions to a verifiable identity, and CMS Part D PDE submission attestations.
+- **Immutability** — retention floors per data class, including the §164.530(j)(2) six-year minimum on Privacy Rule documentation, CMS Part D PDE retention obligations, and DEA controlled-substance dispensing records under 21 CFR §1304.04.
+
+When a specialist agent cannot determine which data class a given field belongs to from the supplied artifacts, the resulting finding must be marked `disposition: blocked` per apd-evidence-discipline rather than guessed; the intake set must be widened before the finding is downgraded.
 
 ## Out of scope
 
-- public_half cryptographic material (JWKS public set, SAML metadata public certs, OIDC discovery document) — public by protocol design
-- well-known issuer URLs, /.well-known/openid-configuration — public by design
-- public OIDC client_id values for registered RPs (the secret is sensitive; the ID itself is not)
-- fully pseudonymous subject identifiers under the OIDC `pairwise` subject type with the pseudonymization mapping held in a separately-accessible trust zone
+- aggregate analytics with k-anonymity ≥ 5 AND no quasi-identifier combination from the section above present in the export schema
+- de-identified per Safe Harbor (45 CFR §164.514(b)(2)) when none of the quasi-identifier combinations above apply; otherwise Expert Determination under §164.514(b)(1) is required
+- **Aggregate research-data exports under 45 CFR §164.512(i)** — when a research IRB has approved the use, PHI may be disclosed for research purposes under the §164.512(i) framework (including the optional Waiver of Authorization at §164.512(i)(2)). Out of scope for this taxonomy when the disclosure is governed by an IRB-approved protocol.
+- **Limited Data Sets under 45 CFR §164.514(e)** — datasets stripped to the §164.514(e)(2) identifier list and shared under a Data Use Agreement satisfying §164.514(e)(4). Out of scope for the quasi-identifier-combination escalation when the LDS recipient is bound by a §164.514(e)(4)-compliant DUA. Reapplies when the LDS leaves the DUA scope.
 
-This taxonomy is consulted by Confidentiality, Integrity, Authenticity, and Non-Repudiation specialists. The intake agent enumerates fields by reading artifacts against this list and surfaces missing-field declarations as `blocked-on-evidence` findings.
+## NCPDP D.0 SCRIPT field reference
 
-## Domain: identity-security — Source: `common-patterns/confidentiality.md`
+The NCPDP Telecommunication Standard D.0 is the dominant pharmacy-claim transaction protocol. Each major segment carries fields with distinct sensitivity classifications, masking rules, and retention requirements.
 
-# Identity security common patterns — Confidentiality
+### Transaction header
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+| Field | Sensitivity | Safe Harbor (§164.514(b)(2)(i)) | Notes |
+|---|---|---|---|
+| BIN (Bank Identification Number) | Operational | Not an identifier | Identifies the PBM as payer |
+| PCN (Processor Control Number) | Operational | Not an identifier | Identifies the PBM's adjudication context |
+| Group ID | Operational | Quasi-identifier in combination | Plan-sponsor identifier; combined with NDC and date can re-identify in small groups |
+| Cardholder ID | PHI direct identifier | Listed in §164.514(b)(2)(i)(I) (health plan beneficiary number) | Cannot be masked without breaking adjudication |
+| Person Code | Quasi-identifier | Combined with Cardholder ID is identifying | Dependent-coverage attribution |
+
+### Claim segment
+
+| Field | Sensitivity | Notes |
+|---|---|---|
+| Claim Reference Number | Operational | Tokenization breaks PDE submission linkage; do not tokenize |
+| RX Number | PHI when combined with member identifier | Cannot be masked for prescriber-attribution audit |
+| Days Supply | PHI quasi-identifier | Combined with NDC + member-demo enables re-identification |
+| Dispense As Written code | Clinical-decision artifact | Audit-load-bearing; never mask |
+
+### Prescriber segment
+
+| Field | Sensitivity | Notes |
+|---|---|---|
+| Prescriber NPI | PII (not PHI per §164.514) | Public registry data; never mask |
+| DEA Number | Operational + regulated | DEA records subject to 21 CFR §1304.04; state pharmacy-board reporting may extend |
+| State License | Public registry data | State-by-state |
+
+### Patient segment
+
+| Field | Sensitivity | Safe Harbor treatment | Notes |
+|---|---|---|---|
+| First / Last Name | PHI direct identifier | §164.514(b)(2)(i)(A) | Required for adjudication; mask in analytics surfaces |
+| Date of Birth | PHI direct identifier | §164.514(b)(2)(i)(C) | Required for DUR age-based rules; year-only safe |
+| Gender | Quasi-identifier | Not in §164.514(b)(2)(i) | Combined with rare diagnosis re-identifies |
+| Address Fields | PHI direct identifier | §164.514(b)(2)(i)(B) | ZIP3 may be retained per §164.514(b)(2)(i)(B) exception |
+| Patient ID Qualifier | Operational | Not an identifier | Specifies the type of patient ID supplied |
+
+### Pharmacy segment
+
+| Field | Sensitivity | Notes |
+|---|---|---|
+| Pharmacy NCPDP ID | Operational | Network-attribution data |
+| Pharmacy NPI | Public registry data | Never mask |
+| Pharmacy Address | Operational + quasi-identifier | Small-pharmacy + dispensing date enables re-identification |
+
+### DUR/PPS segment
+
+DUR/PPS fields carry both clinical-decision artifacts and PHI quasi-identifiers. Reason-for-Service, Professional-Service Code, and Result-of-Service must be retained in the audit chain to defend the clinical-decision pathway. None can be masked in the audit retention.
+
+### Pricing segment
+
+Pricing fields (Ingredient Cost, Dispensing Fee, Copay Amount, Gross Amount Due, Basis of Reimbursement) are commercial-confidentiality data. Encryption-at-rest tier-2 with PBM-internal access scoping; export to plan-sponsor surfaces requires contract-defined data-scope enforcement. <!-- SME-review: PBM-pricing-transparency state laws affect which pricing fields can be exposed to which audiences; the per-state matrix is implementation-specific. -->
+
+## X12 transaction reference
+
+The PBM commonly participates in HIPAA-mandated X12 transactions for plan-sponsor and Medicare workflows. Each transaction has distinct PHI-bearing segments and audit requirements.
+
+### 270/271 — Eligibility inquiry/response
+
+The 270 carries patient demographic + member identifier + subscriber relationship; the 271 response carries coverage tier, accumulator state, and benefit detail. Both are PHI under HIPAA. Audit retention floor: HIPAA §164.316(b)(2)(i) 6-year floor; plan-sponsor MSA may extend.
+
+### 837 — Healthcare Claim
+
+The 837 (institutional and professional variants) carries facility-side claims that may be submitted for institutional pharmacy claims and mail-order facility claims. Encryption-in-transit (TLS) and at-rest required; audit retention floor per HIPAA §164.316(b)(2)(i).
+
+### 835 — Healthcare Claim Payment
+
+The 835 carries payment + adjustment reason codes. Payment data is commercial-confidentiality; member identifiers in the 835 are PHI. Audit retention as above.
+
+### 999 — Implementation Acknowledgment
+
+Transaction-level acknowledgment. Operational; minimal PHI exposure. Audit retention follows the parent transaction.
+
+### 277 — Healthcare Claim Status
+
+Claim-status responses to plan-sponsor inquiries. PHI under HIPAA. Audit retention as above.
+
+<!-- SME-review: confirm which X12 transactions the PBM actually originates or terminates versus which it merely passes through; the audit chain depth differs between origination and pass-through. -->
+
+## CMS Part D PDE submission field reference
+
+The CMS Part D Prescription Drug Event submission carries pharmacy-claim data to CMS for payment-determination and risk-adjustment. Field-level handling is anchored to 42 CFR §423.322 and the CMS Plan Communications User Guide (PCUG).
+
+| Field group | Examples | Sensitivity | Notes |
+|---|---|---|---|
+| Plan attribution | Contract ID, PBP ID | Commercial-confidentiality + CMS-operational | Pinned per CMS Plan Communications User Guide |
+| Beneficiary identifier | HICN (legacy) or MBI (Medicare Beneficiary Identifier) | PHI direct identifier | MBI replaced HICN per 42 CFR §423.120 / MACRA mandate |
+| Prescription service reference | Prescription Service Reference Number | Operational + PHI when combined | Links to NCPDP claim |
+| Date of service | Service date | PHI quasi-identifier (with NDC) | Required for retroactive-claim-reprocessing |
+| Drug identifier | NDC | Operational + clinical | Combined with rare-disease NDC + ZIP3 + age band re-identifies |
+| Quantity / days supply | Quantity Dispensed, Days Supply | PHI quasi-identifier | Audit-load-bearing for DUR defensibility |
+| Brand/generic | Brand-Generic indicator, DAW code | Clinical-decision artifact | Audit-load-bearing |
+| Service provider | Service Provider ID (NPI) | Public registry data | Never mask |
+| Prescriber | Prescriber ID (NPI) | Public registry data | Never mask |
+| Pricing fields | Ingredient Cost, Dispensing Fee, Sales Tax, Gross Drug Cost Below Catastrophic, Gross Drug Cost Above Catastrophic, Patient Liability, Plan-Sponsored Amount, Low-Income Subsidy, Total Amount Paid | CMS-confidential commercial | CMS Data Use Agreement governs |
+| Adjustment | Adjustment indicator | Operational | Tracks corrections and resubmissions |
+| Prescription origin | Prescription Origin Code | Clinical metadata | Required for audit |
+
+Sensitivity treatment: PDE records contain both PHI (MBI is a PHI element) AND CMS-confidential pricing. They cannot be exported to non-HIPAA-covered analytics surfaces without de-identification AND CMS Data Use Agreement compliance. <!-- SME-review: confirm the current MBI implementation status — the legacy HICN identifier has been phased out per MACRA, but field-name retention in legacy ETL may persist. -->
+
+## Per-field masking and tokenization decision tree
+
+For each major field class, the decision of whether to mask, tokenize, redact, or pass-through depends on the downstream consumer and the audit-defensibility requirement.
+
+### Member-identifier handling
+
+- **Token member_id for analytics surface**: preserve referential integrity within a single analytics tenant only; the token must NOT be reusable across analytics tenants (would enable cross-tenant linkage attack on de-identification).
+- **Cannot tokenize for adjudication path**: the live adjudication engine, the PA engine, the DUR engine, and the PDE submission pipeline all need the raw member identifier; tokenization breaks adjudication.
+- **Cannot tokenize for HIPAA Right of Access**: the §164.524 request flow needs to resolve the raw member identifier to produce the designated record set.
+
+### Date-of-birth handling
+
+- **Mask DOB to year-only for population-level analysis**: per §164.514(b)(2)(i)(C) exception, year is permissible while month/day are direct identifiers.
+- **Cannot mask for DUR age-based rules**: pediatric and geriatric dosing rules need the full DOB.
+- **Cannot mask for PA criteria with age gates**: PA criteria referencing pediatric or geriatric thresholds need the full DOB.
+
+### Address handling
+
+- **Retain ZIP3** per §164.514(b)(2)(i)(B) exception when retaining the population covered by that ZIP3 is greater than 20,000 individuals.
+- **Mask street address** for analytics; cannot mask for member-fulfillment delivery.
+
+### Prescriber identifier handling
+
+- **Never mask DEA number**: state pharmacy-board reporting requires full DEA, and DEA records have separate retention obligations under 21 CFR §1304.04.
+- **Never mask NPI**: public-registry data.
+
+### Quasi-identifier combination suppression
+
+- When two or more of the quasi-identifier combinations enumerated in the Quasi-identifier combinations section above appear in the same export, the Confidentiality specialist raises a finding asking for §164.514(b)(1) Expert Determination before export proceeds. <!-- SME-review: the Expert Determination workflow varies by PBM — some operate an internal qualified statistician, others contract out. The data-taxonomy guidance should reflect the PBM's actual process. -->
+
+### Claim-reference and RX-number handling
+
+- **Never tokenize claim reference number**: PDE submission and pharmacy-network audit both need the raw claim_reference_number.
+- **Never mask RX number**: prescriber-attribution audit and pharmacy-attribution audit both need the raw RX number.
+
+### Pricing-field handling
+
+- **Pass-through for plan-sponsor reporting** within the contract-defined scope.
+- **Encrypt-at-rest tier-2** for PBM-internal pricing data; CMS PDE pricing is tier-1 under the CMS DUA.
+- **Mask for non-contractual analytics** export — the rebate-aggregator surface, the COB-carrier surface, and analytics tenants outside the plan-sponsor scope cannot see ingredient cost, MAC (Maximum Allowable Cost), or dispensing fee.
+
+## Domain: pbm — Source: `common-patterns/confidentiality.md`
+
+# PBM common patterns — Confidentiality
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Confidentiality failure in a PBM is the dominant regulatory-enforcement vector: any PHI disclosure affecting 500 or more members triggers HHS, media, and individual notification under 45 CFR §164.408, and the OCR Resolution Agreement floor for PBM-scale breaches is in the seven figures before plan-sponsor indemnity claims arrive. Beyond PHI, CMS Part D PDE data carries its own confidentiality envelope under the Part D Data Use Agreement, and rebate-tier and MAC pricing are commercially-confidential under most manufacturer and plan-sponsor master service agreements. The load-bearing surfaces are PHI-store reads (claim history, eligibility, PA decisions), member-portal export and EOB-download paths, and every vendor-egress channel — COB, accumulator, rebate aggregator, mail-order fulfillment, and specialty pharmacy.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1213** (Data from Information Repositories) — bulk PHI repository reads against claim history, member records, PA decisions, formulary data
+- **T1530** (Data from Cloud Storage) — backup-store and object-store reads against snapshot archives, PDE batch archives, audit-log archives
+- **T1567** (Exfiltration Over Web Service) — PHI export over outbound HTTPS to attacker-controlled endpoints, including legitimate-looking SaaS targets
+- **T1041** (Exfiltration Over C2 Channel) — PHI exfiltration via an established C2 channel after initial compromise
+- **T1078** (Valid Accounts) — credential-driven PHI access using legitimate but misused authentication material
+
+**D3FEND counters:**
+
+- **D3-MFA** (Multi-factor Authentication) — counters T1078 by requiring additional factor beyond compromised credential
+- **D3-OTF** (Outbound Traffic Filtering) — counters T1567 and T1041 by gating outbound flows from the PHI tier
+- **D3-NTA** (Network Traffic Analysis) — counters T1041 and T1567 by detecting anomalous outbound volume or destinations
+- **D3-LFAM** (Local File Access Mediation) — counters T1213 by enforcing read-mediation at the data tier
 
 ## Common finding patterns
 
-**Pattern: Token signing key stored in application configuration (env var, mounted Secret, on-disk PEM) rather than HSM/KMS.**
+**Pattern: Broker-level encryption only on PHI event stream.**
 
-- Severity: critical (signing-key compromise yields universal token forgery — see Critical rubric clause on token signing key compromise)
-- NIST: SC-12, SC-12(1), SC-12(3), SC-13, SC-28, SC-28(1)
-- ATT&CK: T1552.001 (Credentials in Files); T1606.001 (Forge Web Credentials: Web Cookies); T1606.002 (Forge Web Credentials: SAML Tokens)
-- Related concerns: authenticity (the signing key IS the identity assertion trust anchor), ephemeral (key rotation cadence and revocation channel), immutability (key-lifecycle event log)
+- Severity: typically high (PHI exposure beyond minimum-necessary; broker compromise yields plaintext)
+- NIST: SC-8(1), SC-13, SC-28(1)
+- ATT&CK: T1530 (Data from Cloud Storage) with specific rationale
 
-**Pattern: Password hash algorithm weaker than argon2id / bcrypt with appropriate cost (PBKDF2 below 600k iterations, SHA-512crypt, plain SHA-256, MD5).**
+**Pattern: Single KEK protecting heterogeneous data classes.**
 
-- Severity: high to critical depending on the hash strength and the user-population value (critical when the population would be targeted for credential stuffing across high-value external surfaces)
-- NIST: IA-5, IA-5(1)(c), SC-13
-- ATT&CK: T1110.002 (Brute Force: Password Cracking); T1003 (OS Credential Dumping) for the hash-extraction precondition
-- Related concerns: ephemeral (rotation on algorithm change requires forced password reset), non_repudiation (audit completeness on hash-algorithm migrations)
+- Severity: typically medium (defense-in-depth gap; key compromise broader than necessary)
+- NIST: SC-12, SC-12(1)
+- Related concerns: ephemeral (rotation cadence amplification)
 
-**Pattern: Refresh tokens stored as cleartext on the IdP side rather than hashed-at-rest.**
+**Pattern: PHI displayed unmasked by default in admin UI.**
 
-- Severity: high (refresh-token store dump is equivalent to long-lived session impersonation for every active user; hashing-at-rest is the proportional control)
-- NIST: SC-28, SC-28(1), IA-5
-- Related concerns: ephemeral (refresh-token rotation cadence collapses the cleartext-storage window), integrity (hash verification must be constant-time)
+- Severity: high (critical when the admin role can affect >500 members or >1 plan sponsor per the severity rubric Critical clause)
+- NIST: AC-3, AC-6, SC-28
+- Related concerns: non_repudiation (unmask audit), authenticity (admin identity assurance)
 
-**Pattern: SAML assertion encryption absent on attribute-release flows that carry personal data or special-category data.**
+**Pattern: Service-to-service inside cluster relies on network-level trust, payloads contain PHI.**
 
-- Severity: medium to high (assertion contents visible to any TLS-terminating intermediary, MitM with weak validation, or RP-side log aggregator; SAML Security Considerations §6.2 recommends encryption for sensitive attribute release)
-- NIST: SC-8, SC-8(1), SC-12, AC-4
-- Related concerns: authenticity (the assertion signature does not protect confidentiality), integrity (JWE/XML-Encrypt configuration affects parser surface)
+- Severity: high (PHI exposure beyond minimum-necessary via lateral movement)
+- NIST: SC-8(1), SC-23, IA-3
+- ATT&CK: T1557 with specific rationale on in-cluster observer
 
-**Pattern: JWT access tokens or ID tokens carry excessive PII claims — full profile embedded.**
+**Pattern: Tech plan describes encryption-in-transit generically without specifying TLS version or cipher suite policy.**
 
-- Severity: medium to high depending on token lifetime, audience scope, and which claims (a 1-hour bearer token carrying email, full name, DOB, employee ID exposes that PII to every downstream RP, log aggregator, proxy, and APM in the request path)
-- NIST: SC-8, AC-4, SC-28, AU-11
-- Related concerns: ephemeral (token-lifetime amplifies claim exposure), integrity (over-broad claims defeat least-privilege downstream)
-
-**Pattern: Recovery channel (email, SMS) carries the recovery token in cleartext URL parameters.**
-
-- Severity: high (recovery URL appearing in browser history, referer headers, mobile-app interception, mail-server logs, MTA bounce traces; recovery token is single-use-takeover material)
-- NIST: SC-8, IA-5, SI-11 (error handling — URL-in-log behavior)
-- Related concerns: ephemeral (recovery token lifetime), authenticity (recovery-flow identity-proofing strength)
-
-**Pattern: LDAP/AD bind credentials in IdP application config without rotation, audit-on-fetch, or read-only enforcement.**
-
-- Severity: medium to high depending on bind privilege (read-only bind is medium; bind permitting writes is high)
-- NIST: IA-5, IA-5(1), AC-2, SC-12
-- ATT&CK: T1078.002 (Valid Accounts: Domain Accounts); T1552 (Unsecured Credentials)
-- Related concerns: ephemeral (rotation cadence), authenticity (directory-backend trust)
-
-**Pattern: Tech plan describes "encryption at rest" generically without specifying which crown-jewel classes, KMS/HSM topology, key separation between primary store and backups, or DEK/KEK hierarchy.**
-
-- Disposition: blocked or uncertainty
-- prerequisite_evidence: "Encryption-at-rest policy — per-crown-jewel-class encryption posture (signing keys, password hashes, MFA seeds, session store, audit log, backups), KMS/HSM topology, DEK/KEK hierarchy, key-separation discipline between primary store and its backup, rotation cadence per key class, and the audit-on-decrypt control"
+- Disposition: blocked when no artifact establishes the masking discipline; uncertainty when one artifact references it but the implementation discipline is not enumerated
+- Severity: typically medium when blocked, deferred when uncertainty
+- prerequisite_evidence: "TLS configuration policy — (1) minimum TLS version per ingress (pharmacy NCPDP, member portal, admin console, vendor egress, CMS outbound); (2) cipher-suite allowlist per ingress; (3) certificate-pinning configuration for pharmacy-network ingress and outbound CMS submission; (4) HSTS enforcement on member-facing surfaces; (5) certificate rotation cadence and CA-trust policy; (6) certificate-revocation handling (OCSP stapling, CRL refresh interval); (7) configuration source-of-truth pointer (Terraform module, NGINX config, ALB listener) and CD pipeline applying it"
 
 ## Common capability patterns
 
-**Pattern: Token signing keys held in HSM/KMS (PKCS#11 or cloud KMS) with the IdP holding only key handles; sign-operations go to the HSM.** Maturity ladder: `designed` from tech plan; `implemented` requires HSM/KMS provider evidence; `tested` requires evidence of forced rotation; `operationalized` requires alerting on signing-key-access anomalies.
+**Pattern: Field-level envelope encryption on PHI columns.** Maturity ladder depends on evidence — `designed` for tech plan only; `implemented` requires a config or IaC reference; `tested` requires a test report; `operationalized` requires runbook plus monitoring.
 
-**Pattern: Password hashes stored with argon2id at parameter set tuned to the threat model (memory cost, time cost, parallelism documented).** Capability scope must state the parameters and the migration discipline for legacy weaker-hash records (rehash-on-login pattern).
+**Pattern: KMS hierarchy with separated DEK/KEK roles.** Capability scope: "Confirmed for [data stores X, Y]. Not addressed: [data store Z, audit log, backups]." Caveats expected.
 
-**Pattern: Refresh tokens stored as hashes (SHA-256 of token value plus per-token salt) with constant-time comparison on validation.** Higher maturity requires evidence that token-rotation-on-use is paired with reuse-detection.
+**Pattern: mTLS across service mesh.** Maturity higher when evidence includes service mesh configuration; `designed` when tech plan asserts intent.
 
-**Pattern: JWE for sensitive ID-token claims, SAML assertion encryption for personal-data attribute release.** Cross-cuts Authenticity for the encryption-key trust chain.
+## prerequisite_evidence
 
-**Pattern: PII minimization in token claims — tokens carry subject identifier and authorization scope only; full profile resolved via /userinfo on demand.** Capability scope should enumerate which claims are released by issuer policy and which are guarded behind /userinfo.
+When a confidentiality finding is dispositioned `blocked-on-evidence`, the prerequisite_evidence ask must name every sub-element the operator needs to produce to unblock — not a single noun phrase. The seeds below calibrate the depth expected of asks emitted by the Confidentiality specialist. The TLS configuration ask above is the in-line example on the generic-encryption-in-transit pattern; the KMS and field-level seeds below cover the next two most common blocked dispositions.
 
-**Pattern: Recovery channels deliver short-lived single-use tokens via a separate confirmation step (token in email body must be re-entered, not clicked) to avoid URL-leak channels.** Higher maturity requires evidence that recovery completion requires a step-up to AAL2 minimum.
+**KMS hierarchy:** (1) root key location (HSM-backed CMK, customer-managed key, vendor-managed key); (2) KEK (key-encrypting key) hierarchy diagram; (3) DEK (data-encrypting key) rotation cadence per data class; (4) KEK-to-data-class mapping (PHI store, PDE archive, backup store, audit store); (5) key access-control policy (who can use, who can rotate, who can disable); (6) key-material backup and escrow policy.
 
-## Domain: identity-security — Source: `common-patterns/integrity.md`
+**Field-level encryption:** (1) per-PHI-field encryption status at rest, in transit, in use; (2) tokenization map for fields not directly encrypted; (3) field-decryption authorization-decision pipeline (who can decrypt, under what authorization); (4) decryption-event audit chain feeding the Non-Repudiation surface.
 
-# Identity security common patterns — Integrity
+## Domain: pbm — Source: `common-patterns/integrity.md`
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+# PBM common patterns — Integrity
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Integrity in a PBM is the bridge between data and physical dispensing: a corrupted claim-adjudication response can authorize the wrong drug, the wrong quantity, or the wrong copay at the pharmacy counter, and PDE-submission integrity under 42 CFR §423.322 is what CMS audits against for Part D reconciliation, rebate true-up, and risk-adjustment payment accuracy. Formulary configuration is similarly load-bearing — a silent tier or PA-criteria mutation propagates as a clinical-decision defect across the entire dispensing network within the next refresh cycle. The most consequential surfaces are NCPDP D.0 and SCRIPT transaction handlers (request and response), PDE batch files and their reconciliation deltas, and the formulary editor with its publish-and-fanout pipeline.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1565.001** (Stored Data Manipulation) — at-rest tampering of formulary, PA-criteria, DUR-rule, MAC-pricing, or claim history stores
+- **T1565.002** (Transmitted Data Manipulation) — in-flight tampering of NCPDP D.0 messages, X12 transactions, or PDE batch files
+- **T1556** (Modify Authentication Process) — bypassing write-path authorization by altering the auth decision that gates formulary, PA, or claim mutations
+
+**D3FEND counters:**
+
+- **D3-MAN** (Message Authentication) — counters T1565.002 on NCPDP / X12 / PDE signed messages via per-message signature verification
+- **D3-FIM** (File Integrity Monitoring) — counters T1565.001 by monitoring at-rest formulary, PA-criteria, MAC-pricing, and PDE-batch files for unauthorized modification before consumption by adjudication or fanout
 
 ## Common finding patterns
 
-**Pattern: JWT signature verification accepts multiple algorithms by default; algorithm pinning absent (the library's allowlist is the union of all configured signers' algorithms).**
+**Pattern: Event bus messages lack producer signatures; consumers trust payload contents.**
 
-- Severity: critical when `alg:none` is reachable or HS256 verification is permitted against an RS256-issued token using the JWKS public key as the HMAC secret (the canonical RS256/HS256 confusion attack); high when the alg allowlist is broader than the issuing alg.
-- NIST: SI-7, IA-2, IA-5(2), SC-13
-- ATT&CK: T1606.001 (Forge Web Credentials: Web Cookies); T1550.001 (Use Alternate Authentication Material: Application Access Token)
-- Related concerns: authenticity (the alg pin IS the token trust anchor), confidentiality (key-confusion turns a public key into a forgery oracle)
+- Severity: high if PHI or adjudication input is involved; medium otherwise
+- NIST: SI-7, SI-7(1), SC-8(1), SC-16
+- Related concerns: authenticity (producer identity)
 
-**Pattern: SAML signature verification susceptible to signature wrapping (XSW) — the validation library returns the parsed inner element after validating an outer envelope; the SP/IdP processes the inner element without re-verifying it is the signed region.**
+**Pattern: Idempotency claimed at API but key derivation is request-body hash.**
 
-- Severity: critical (arbitrary subject impersonation — see Critical rubric clause on SAML XSW)
-- NIST: SI-7, SI-10, SC-13
-- ATT&CK: T1606.002 (Forge Web Credentials: SAML Tokens)
-- Related concerns: authenticity (the signature is the federation trust anchor), non_repudiation (XSW destroys assertion attribution)
+- Severity: medium (high when the affected dedup path is PDE submission, NCPDP B2 reversal, or formulary fanout — clinical-decision adjudication scope)
+- NIST: SI-10, SI-7
+- Detail must call out the specific risk: client retry under transient network failure produces double-adjudication if the body changed between attempts.
 
-**Pattern: JWKS rotation grace window unspecified — the verifier flips from old kid to new kid without overlap, producing a window during which in-flight tokens fail verification.**
+**Pattern: NCPDP D.0 transactions accepted without field-level validation beyond standard syntax.**
 
-- Severity: medium to high (availability impact during rotation; security risk when operators are tempted to extend old-kid lifetime to recover, defeating revocation discipline)
-- NIST: SC-12, SC-12(2), SI-7, AU-12
-- Related concerns: availability (rotation-window outage), ephemeral (rotation cadence), immutability (JWKS rotation history)
+- Severity: medium (downstream errors, possible adjudication errors)
+- NIST: SI-10
+- Related concerns: availability (malformed input causing cascading failure)
 
-**Pattern: OAuth `state` parameter not validated, not bound to session, or omitted entirely on the authorization-code callback.**
+**Pattern: Formulary configuration is application-managed with no integrity check.**
 
-- Severity: high (CSRF on OAuth authorization flow — RFC 9700 §4.7)
-- NIST: SI-10, IA-2, AC-3
-- ATT&CK: T1606 (Forge Web Credentials)
-- Related concerns: authenticity (state binds the flow to the user agent), availability (CSRF can be used to fixate sessions)
+- Severity: critical to high (corruption affects therapeutic decisions)
+- NIST: SI-7(7), CM-3, CM-5
+- Related concerns: immutability (historical configuration drift), non_repudiation (who changed configuration)
 
-**Pattern: OIDC nonce / c_hash / at_hash validation skipped — the ID token is accepted without binding to the authorization request or the issued access token.**
-
-- Severity: high (token substitution attacks — an attacker-procured ID token from another user can be played to the RP if the nonce is not validated)
-- NIST: SI-10, IA-2, SI-7
-- Related concerns: authenticity (the nonce is the user-agent-to-ID-token binding)
-
-**Pattern: SAML assertion-ID uniqueness store absent or insufficient retention — the SP/IdP cannot detect assertion replay within the NotOnOrAfter window.**
-
-- Severity: high (assertion replay attacks — SAML 2.0 Security Considerations §6.4)
-- NIST: SI-7, IA-2, SC-23, AU-12
-- Related concerns: ephemeral (assertion lifetime tightening reduces the replay window), immutability (the assertion-ID store is itself an immutable-during-window class)
-
-**Pattern: Idempotency missing on token-revocation endpoint — double-submit of revoke produces different observable outcomes (200 vs. 404 differential exposes which tokens were valid).**
-
-- Severity: medium (information leak about token state; primary concern is the differential)
-- NIST: SI-10, SC-5, AU-12
-- Related concerns: availability (retry storms on revocation), non_repudiation (revocation event audit)
-
-**Pattern: Mass-assignment on the user profile / self-service endpoint accepts writes to `is_admin`, `groups`, `roles`, `email_verified`, `mfa_enrolled`, or `email` without server-managed-field enforcement.**
-
-- Severity: high to critical (writing `is_admin` is critical privilege escalation; writing `email` without re-verification enables account-recovery hijack; writing `email_verified=true` bypasses the verification gate)
-- NIST: SI-10, AC-3, AC-6, AU-2
-- ATT&CK: T1078 (Valid Accounts); T1098 (Account Manipulation); T1556 (Modify Authentication Process)
-- Related concerns: authenticity (privilege-relevant fields enabling identity forgery), non_repudiation (mutation audit)
-
-**Pattern: Federation attribute-mapping expression vulnerable to operator-precedence or string-concatenation injection — upstream claim `email_domain` is interpolated into a group-mapping rule string without parsing discipline.**
-
-- Severity: high (privilege escalation via group/role mapping bug — see High rubric clause)
-- NIST: SI-10, AC-3, AC-6
-- ATT&CK: T1098 (Account Manipulation)
-- Related concerns: authenticity (the claim-transformation is the federation trust chain in practice)
-
-**Pattern: Tech plan describes "input validation" generically without specifying which claim/attribute fields, what schema, what error handling, and what behavior on schema-fail in the federation-claim ingestion path.**
+**Pattern: Tech plan describes "data validation" generically without specifying which fields, what rules, or what error handling.**
 
 - Disposition: blocked or uncertainty
-- prerequisite_evidence: "Federation-claim ingestion specification — per-upstream-IdP claim allowlist, transformation expression language and its security posture, behavior on missing required claim, behavior on excess unrecognized claim, behavior on claim-type mismatch, and the audit anchor on transformation rule changes"
+- prerequisite_evidence: "Validation rule specification covering (1) the field-level rules for each cross-boundary message (NCPDP D.0 segments, X12 270/271/837/835 transactions, internal RPC contracts); (2) the enforcement point where validation runs (gateway, service edge, data tier); (3) the failure-handling behavior on rule violation (reject, quarantine, log-and-pass); (4) the dead-letter policy including retention, replay, and alerting; and (5) the schema-version negotiation policy across PBM, switch operator, and CMS"
 
 ## Common capability patterns
 
-**Pattern: JWT verification with explicit algorithm pin per issuer and explicit kid pin per JWKS rotation generation.** Capability scope: enumerate which RPs and which internal verifiers are confirmed; library defaults are typically the failure mode.
+**Pattern: Typed schema (Protobuf or GraphQL) enforced at every service boundary.** Capability scope must enumerate which boundaries are confirmed.
 
-**Pattern: SAML signature validation using XSW-resistant library (e.g., python3-saml, OneLogin SAML toolkits in current versions) with the canonical-region re-verified against the parsed assertion.** Maturity tied to the library version and the explicit re-verification step in code review evidence.
+**Pattern: Idempotent claim adjudication keyed by claim ID and submission sequence.** Maturity tied to whether the idempotency window and key retention are specified.
 
-**Pattern: OAuth state, nonce, c_hash, and at_hash all validated; PKCE enforced on every client class.** Higher maturity requires evidence that the validation is library-default-on rather than opt-in.
+**Pattern: HMAC-signed event payloads on the claim event bus.** Capability scope must specify which topics are confirmed; caveats for any topics not in evidence.
 
-**Pattern: SAML assertion-ID replay store backed by a TTL-keyed cache with TTL ≥ assertion NotOnOrAfter window; replay events audited.** Cross-cuts Non-Repudiation and Immutability.
+**Pattern: Configuration-as-code for plan rules with reviewed PRs gating changes.** Often `designed` from tech plan; `implemented` or higher requires repository or pipeline evidence.
 
-**Pattern: Server-managed-field allowlist on user profile mutations; the framework strips writes to `is_admin`, `groups`, `roles`, `email_verified` regardless of client input.** Capability scope must state whether the allowlist is centralized (framework-level) or per-endpoint (drift risk).
+## prerequisite_evidence
 
-**Pattern: Federation claim-transformation rules expressed in a sandboxed, side-effect-free DSL with explicit allowlist of operations; transformation-rule changes require admin-tier approval and audit.** Higher maturity when changes go through GitOps with signed commits.
+When a tech plan or design document leaves an integrity concern under-specified, the specialist agent should emit a blocked-on-evidence finding whose `prerequisite_evidence` asks for the full multi-clause specification — not a single-line generic ask. The seeds below calibrate the expected depth.
 
-## Domain: identity-security — Source: `common-patterns/availability.md`
+**Schema enforcement:** (1) the canonical schema for each cross-boundary message (NCPDP D.0 segments, X12 270/271/837/835 transactions, internal RPC contracts); (2) the schema-validation enforcement point (gateway, service edge, data tier) for each message class; (3) the schema-validation failure-handling behavior on violation (reject, quarantine, log-and-pass) and the corresponding alerting; and (4) the schema-version negotiation policy across PBM, switch operator, and CMS so version drift cannot silently degrade validation.
 
-# Identity security common patterns — Availability
+**Write-path authorization:** (1) the authorization-decision pipeline for each PHI-writing endpoint (formulary publish, PA-criteria mutation, claim-history backfill, eligibility override); (2) the actor identity and role evaluation at each step in the pipeline; (3) the audit event emitted on grant and on deny, with the fields that allow non-repudiation reconstruction; and (4) the failure mode when the authorization service is unavailable — fail-closed is required for PHI write paths and any fail-open posture must be explicitly justified.
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+**Tamper detection:** (1) the HMAC or signed-payload protection applied to cross-boundary state-changing messages, including the key-management posture for the signing key; (2) the content-hash verification performed on PDE submission batches and the storage location of the expected hash; and (3) the integrity-check failure handling and the corresponding incident-response playbook, including who is paged, what is quarantined, and how downstream adjudication is held until the failure is resolved.
+
+## Domain: pbm — Source: `common-patterns/availability.md`
+
+# PBM common patterns — Availability
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Availability failure in a PBM is felt at the pharmacy counter in real time: claim adjudication is a synchronous transaction with a typical 3-to-5-second budget, and an outage converts directly to dispensing delays, member out-of-pocket exposure when pharmacies fall back to cash-pay, and SLA-penalty exposure under plan-sponsor agreements that commonly stipulate four- or five-nines on the adjudication path. CMS Part D operational standards under 42 CFR §423.505 also tie availability to plan-sponsor downstream-entity oversight, so prolonged outages can escalate into Star Ratings and CMS audit posture, not just contractual penalties. The load-bearing surfaces are pharmacy ingress (NCPDP switch and direct-submit), real-time eligibility and accumulator lookup, and the prior-authorization decision engine — each of which sits on a synchronous dispensing decision.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1499** (Endpoint Denial of Service) — request-volume attacks against pharmacy ingress, member portal, or PA workflow endpoints
+- **T1498** (Network Denial of Service) — network-layer attacks against the PBM's public surface area
+- **T1485** (Data Destruction) — destruction of formulary, PA-criteria, or adjudication-state data to disrupt claims processing — no clean D3FEND counter is mapped for data-destruction recovery; rely on backup-immutability (see common-patterns/immutability.md) and the AU-9 NIST 800-53r5 anchor in the severity rubric.
+
+**D3FEND counters:**
+
+- **D3-NTA** (Network Traffic Analysis) — counters T1498 by detecting volumetric anomalies
+- **D3-RAPA** (Resource Access Pattern Analysis) — counters T1499 by detecting application-level abuse patterns
 
 ## Common finding patterns
 
-**Pattern: No rate limit on /authorize, /token, password-grant, MFA-challenge, MFA-enrollment, or credential-recovery endpoints.**
+**Pattern: Adjudication latency target not stated, but contractual SLA exists.**
 
-- Severity: high (credential stuffing, password spray, MFA fatigue / push bombing, and account-takeover surfaces all open). Escalates to critical when paired with weak password policy, absent breached-password check, or absent CAPTCHA fallback.
-- NIST: SC-5, SC-5(1), SC-5(2), AC-7 (unsuccessful login attempts), IA-5
-- ATT&CK: T1110 (Brute Force) and sub-techniques T1110.001 (Password Guessing), T1110.003 (Password Spraying), T1110.004 (Credential Stuffing); T1621 (Multi-Factor Authentication Request Generation)
-- Related concerns: authenticity (the credential-policy half), non_repudiation (failed-auth audit completeness)
+- Severity: high (cannot verify the system meets contractual obligation)
+- NIST: CP-2, CP-2(3)
+- Detail must enumerate the contracts the SLA appears in, per intake brief.
 
-**Pattern: Session-store backpressure absent — Redis/PostgreSQL session store can be saturated by authentication storm, taking the entire IdP offline.**
+**Pattern: DR RTO stated as 4 hours but no tested failover procedure documented.**
 
-- Severity: high (session-store DoS is the dominant IdP-availability failure mode; saturation cascades to every dependent application losing auth)
-- NIST: SC-5, SC-6 (resource availability), SI-13
-- Related concerns: distributed (session-store topology), resilient (degraded-mode auth)
+- Severity: high (RTO is aspirational without test evidence)
+- NIST: CP-2, CP-4 (contingency plan testing), CP-7
 
-**Pattern: Queue depth unbounded on the authentication-flow pipeline (async event publication on authn events, async session-write, async audit-emit).**
+**Pattern: Single-region deployment with 99.95% availability target.**
 
-- Severity: medium to high (queue saturation produces silent loss of either audit, session state, or downstream provisioning — all three are different findings depending on which queue is saturated)
-- NIST: AU-4, AU-5, SC-5, SI-13
-- Related concerns: non_repudiation (audit queue), distributed (queue topology)
+- Severity: high (target likely undeliverable from single region)
+- NIST: CP-7, SC-36
+- Related concerns: distributed (this finding's recommendation will point to a topology change owned by Distributed)
 
-**Pattern: No degraded-mode authentication specified — if the credential-verification path (LDAP, database, upstream IdP) is unavailable, the IdP returns 500 to every request.**
+**Pattern: Vendor dependency (e.g. eligibility lookup) has no stated SLA in artifacts.**
 
-- Severity: high (cascading total outage; IdP is the topmost availability dependency for every RP — no graceful fallback path defined)
-- NIST: CP-12, CP-13, SI-13, IA-2
-- Related concerns: resilient (this finding's recommendation overlaps the IdP-outage degradation pattern in Resilient), distributed (backend topology)
+- Disposition: blocked or uncertainty
+- prerequisite_evidence: "Vendor SLA for [vendor name] eligibility service — (1) availability target (e.g. 99.95%) with measurement window and exclusion list; (2) per-transaction latency budget at p50 / p95 / p99; (3) error-rate ceiling and what counts as an error vs. a degraded-mode response; (4) credit / remedy schedule when targets are missed; (5) maintenance-window policy and notification SLA; (6) incident-communication SLA (time-to-first-notification, status-page commitment); (7) right-to-audit clause and last vendor SOC 2 / HITRUST attestation date; (8) the PBM-side fallback or degraded-mode plan when the vendor breaches the SLA, including the dispensing-decision policy at the pharmacy counter."
 
-**Pattern: Single-region IdP deployment with a 99.9%+ availability target asserted to downstream RPs.**
+**Pattern: Health checks specified as TCP port checks only.**
 
-- Severity: high (target undeliverable from a single region under typical cloud-provider zone SLA; the IdP becomes the platform's lowest-SLO dependency)
-- NIST: CP-7, SC-36, CP-9
-- Related concerns: distributed (multi-region topology), resilient (failover orchestration)
-
-**Pattern: Signing-key availability vs. latency tradeoff unaddressed — HSM in one region, IdP serves traffic from three; signing-operation latency drives p99 token-issuance latency through the floor.**
-
-- Severity: medium to high depending on token-issuance SLO (high when sub-second p99 is asserted)
-- NIST: SC-12, SC-12(3), CP-7
-- Related concerns: distributed (HSM topology), resilient (caching of recent signatures is rarely safe — the tradeoff is regional HSMs)
-
-**Pattern: Health checks on the IdP are shallow — TCP-port check or basic HTTP 200, not "can sign a test token" / "can verify a test password" / "can reach LDAP backend."**
-
-- Severity: medium (shallow health checks mask backend degradation; load balancer continues routing to instances that cannot complete auth)
+- Severity: medium (shallow health checks mask real degradation)
 - NIST: SI-13, CP-10
-- Related concerns: resilient (health-check is the input to circuit-breaker decisions)
-
-**Pattern: Tech plan describes "rate limiting" generically without specifying per-endpoint thresholds, identity dimension, time window, or behavior on breach.**
-
-- Disposition: blocked or uncertainty
-- prerequisite_evidence: "Rate-limit policy specification — per-endpoint thresholds for /authorize, /token, password-grant, MFA-challenge, recovery endpoints; identity dimension (per-user, per-client_id, per-IP, per-tenant); time window; behavior on breach (reject vs. queue vs. CAPTCHA escalation vs. lockout); retry-after semantics; and any compensating bot-management layer"
 
 ## Common capability patterns
 
-**Pattern: Per-endpoint rate limits with identity-dimensioned thresholds, separate limits per IP and per identity, explicit behavior on breach.** Capability scope must enumerate covered endpoints; all credential-touching surfaces in the consequential-actions list must appear in scope or the capability degrades to a partial-coverage finding.
+**Pattern: Multi-AZ deployment of the adjudication engine with cross-AZ failover.** Scope must specify which components are multi-AZ; caveats for any that are not.
 
-**Pattern: Externalized session store with horizontal scale and backpressure (Redis Cluster with maxmemory-policy noeviction on session keys, plus circuit-breaker on writes).** Higher maturity when chaos-engineering evidence shows the IdP survives session-store partial unavailability.
+**Pattern: Backup encryption with daily verification.** Maturity ladder: `designed` from tech plan, `implemented` requires backup configuration, `operationalized` requires backup test runbook and last-test date.
 
-**Pattern: Degraded-mode authentication: read-only auth using cached session tokens when backend directory is unavailable, with explicit user notification.** Cross-cuts Resilient; mention via `related_concerns`. Maturity ladder requires a documented runbook plus tested failover.
+**Pattern: SLO and error budget framework for the claim adjudication path.** Often `designed` from tech plan; higher maturity requires monitoring dashboard evidence.
 
-**Pattern: Multi-region IdP topology with regional HSMs, regional session stores, and active-active token issuance.** Higher maturity requires evidence of cross-region session replication policy, regional-failover RTO/RPO targets, and audit-pipeline cross-region durability.
+## prerequisite_evidence
 
-**Pattern: SLO and error-budget framework with separate SLOs for /authorize, /token, /userinfo, and SAML SSO endpoints; burn-rate alerting wired to oncall.** `designed` from tech plan; `implemented` requires monitoring configuration; `operationalized` requires evidence of error-budget-driven engineering decisions.
+When an availability concern cannot be resolved from the artifacts in evidence, the specialist agent should mark the finding as blocked rather than speculating, and emit a prerequisite_evidence ask. The asks below are seeds — each one names every sub-element an operator must provide to unblock the finding. Use them verbatim or adapt them to the specific surface area in question, but preserve the multi-clause depth.
 
-## Domain: identity-security — Source: `common-patterns/distributed.md`
+**SLO/SLI definition:** (1) each SLO defined for pharmacy ingress, member portal, PA workflow, PDE submission, and eligibility lookup, with the SLI that operationalizes it (request-success ratio, latency-at-percentile, freshness) and the measurement window; (2) error-budget definition per SLO, including how it is computed and over what rolling window; (3) burn-rate alerting thresholds at both fast-burn and slow-burn windows, and the on-call routing for each; (4) escalation chain when an SLO is at risk, including the decision authority for invoking degraded-mode policy at the pharmacy counter; (5) plan-sponsor contractual SLA mapping — which SLO maps to which contractual obligation, the gap between the internal SLO and the external SLA, and the credit-exposure model when the SLA is breached.
 
-# Identity security common patterns — Distributed
+**Failure-domain analysis:** (1) failure-domain diagram showing which services share which fate (which workloads share a control plane, a database primary, a regional egress, a single vendor dependency, or a single identity provider); (2) blast-radius analysis per AZ, region, and zonal service (managed databases, managed Kafka, managed cache, managed object store), naming which user-facing workflows degrade and which fail closed; (3) DR plan with RTO and RPO stated per data class — PHI store, PDE pipeline, audit / non-repudiation store, formulary and PA-criteria store — and the last DR-test date for each, including a tabletop or live-failover artifact.
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+**Capacity headroom:** (1) headroom posture per critical path (pharmacy ingress, adjudication engine, eligibility lookup, PA decision engine), expressed as the ratio of provisioned capacity to observed peak and the alert threshold for utilization; (2) load-test artifacts that demonstrate the headroom at expected peak load — open-enrollment cutover (Jan 1), flu-season surge, and a mass-vaccination drive — including test methodology, scenario mix, and observed degradation points; (3) auto-scaling configuration with scaling-event audit, including the scale-up and scale-down policy, the cooldown window, the upper bound (so a surge cannot exhaust a regional quota), and the last 30 days of scaling-event logs showing the configuration behaves as expected under real traffic.
+
+## Domain: pbm — Source: `common-patterns/distributed.md`
+
+# PBM common patterns — Distributed
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Distribution in a PBM is not an optimization — it is a contractual SLO and a clinical-safety property. Regional adjudication failures cascade directly to dispensing in the affected pharmacy network, and most plan-sponsor master service agreements require multi-AZ resilience at minimum and multi-region failover for the adjudication path, with CMS Part D §423.505(b) downstream-entity expectations layered on top. The load-bearing surfaces are the claim-router fan-out (pharmacy ingress to adjudication-engine instances), the PDE-submission pipeline (where partition or batch-loss silently breaks CMS reconciliation), and the formulary-update fanout that must reach every adjudication shard before the published effective date.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1485** (Data Destruction) — destruction of a regional adjudication-state store, audit substrate, or formulary replica
+- **T1565.001** (Stored Data Manipulation) — at-rest tampering of cross-region replicated data, including divergent replica states
+- **T1078** (Valid Accounts) — lateral movement across regional zones via legitimate cross-region credentials
+
+**D3FEND counters:**
+
+- **D3-NTA** (Network Traffic Analysis) — counters cross-region anomalies (T1078 lateral movement) by detecting baseline-divergent traffic
+- **D3-LFAM** (Local File Access Mediation) — counters T1485 / T1565.001 by enforcing tenant-and-region scoping at the data tier
 
 ## Common finding patterns
 
-**Pattern: Single-AZ deployment of the IdP application tier, the session store, or the signing-key backend (HSM/KMS).**
+**Pattern: Stateful component (e.g. Valkey, RDS primary) in single AZ.**
 
-- Severity: high (the single AZ is the failure domain for the entire platform's authentication; a zonal incident produces total auth outage for every downstream RP)
+- Severity: high (PBM SLA contracts typically require AZ resilience)
 - NIST: SC-7, CP-7, SC-36
-- Cross-reference: any Availability finding on SLO consistency; the merged finding carries both the topology constraint and the SLA consequence
+- Cross-reference: any Availability finding on SLO consistency
 
-**Pattern: Session-store replication lag affects MFA-challenge consistency — user MFA-enrolls in region A, immediately authenticates in region B, MFA-required flag has not propagated.**
+**Pattern: Hidden SPOF in CI/CD — emergency deployment depends on single pipeline.**
 
-- Severity: medium to high (security-relevant inconsistency; the user can briefly bypass MFA via region race; severity escalates when the inconsistency window exceeds typical authentication latency)
-- NIST: SC-36, SI-7, IA-2(1)
-- Related concerns: authenticity (MFA enforcement consistency), resilient (region-failover behavior)
+- Severity: medium (high when the RTO commitment in the plan-sponsor MSA is ≤4 hours or covers PDE submission)
+- NIST: CM-2(2), CP-2
+- Related concerns: ephemeral (immutable infra readiness for redeployment)
 
-**Pattern: CAP positioning for credential changes unspecified — when network partitions split the IdP topology, the artifacts do not specify whether the system prefers consistency (reject auth on minority partition) or availability (accept auth on minority partition with stale credentials).**
-
-- Disposition: blocked
-- Severity: medium when blocked, high when "availability wins" is documented without compensating controls
-- prerequisite_evidence: "Multi-region consistency policy for credential mutations — behavior of password changes, MFA-enrollment changes, and account-suspension during a partition; replication-conflict resolution policy; tombstone propagation for account deletion under partition"
-
-**Pattern: Data residency for personal data unstated — artifacts describe multi-region capability without specifying which user populations or tenants are bound to which regions.**
+**Pattern: Tech plan claims multi-region but artifacts don't specify topology — active-active versus active-passive versus standby.**
 
 - Disposition: uncertainty or blocked
-- prerequisite_evidence: "Data-residency policy — per-tenant region binding, lawful-basis attestation for any cross-EEA flow (SCCs, adequacy decision, BCRs), residency-enforcement mechanism (application-tier routing, database-level constraints), and the audit-log residency posture (does EU-user audit stay in EU?)"
+- prerequisite_evidence: "Multi-region topology specification — (1) region topology (active-active, active-passive, follow-the-sun) per service; (2) cross-region data-replication strategy and lag SLO; (3) consistency model per data class (strong, eventual, bounded staleness); (4) failover plan including replication-lag tolerance at failover, write conflict policy, and failover trigger"
 
-**Pattern: Multi-region topology asserted but failover behavior unspecified — active-active vs. active-passive vs. standby, write-conflict policy on the credential store, failover trigger, RTO/RPO targets.**
+**Pattern: Cross-region replication for audit logs is asynchronous with unspecified lag.**
 
-- Disposition: uncertainty or blocked
-- Severity: medium when blocked
-- prerequisite_evidence: "Multi-region topology specification — active configuration, write-conflict policy for the credential store and the session store, failover trigger, expected failover RTO/RPO per data class, and which data classes replicate cross-region (audit yes; credentials yes; ephemeral PKCE state typically no)"
-
-**Pattern: Cross-region replication for the audit log is asynchronous with unspecified lag.**
-
-- Severity: medium to high (cross-references Non-Repudiation; audit gap during regional failover is a breach-detection blind spot — and the IdP's audit is the highest-stakes audit on the platform)
+- Severity: medium (escalates to high when the missing audit attribution falls under HIPAA §164.312(b) audit-controls)
 - NIST: AU-9(2), SC-36
 - Related concerns: non_repudiation, immutability
 
-**Pattern: Session affinity / sticky sessions on the IdP load balancer because state is in-process (interactive auth flow state cached in pod memory).**
-
-- Severity: medium to high (impairs horizontal scale, deploy-time rolling restarts produce mid-flow session loss, AZ failover invalidates all in-flight authentications)
-- NIST: SC-7, CP-7, SC-36
-- Related concerns: ephemeral (in-process state undermines the immutable-infra story)
-
-**Pattern: Service mesh topology unspecified — artifacts assert mTLS between IdP components without describing workload-identity issuance, certificate rotation, or trust-domain boundary between the IdP namespace and other namespaces.**
+**Pattern: Adjudication CAP positioning unstated.**
 
 - Disposition: uncertainty
-- prerequisite_evidence: "Service-mesh topology — workload identity issuance (SPIFFE/SPIRE, cloud-native), trust-domain boundary between IdP namespace and adjacent service namespaces, certificate lifetime and rotation cadence, mesh-to-non-mesh edge behavior (legacy LDAP backend not in mesh)"
+- Detail: in pharmacy adjudication, the CAP choice has clinical consequences (continuing to adjudicate with stale formulary versus stopping adjudication). The artifacts must state the choice.
 
 ## Common capability patterns
 
-**Pattern: Multi-region active-active IdP with regional HSMs, regional session stores, and stateless application tier.** Capability scope must specify which dependencies are also multi-region (credential store, audit pipeline, federation-trust store) and which are single-region by design.
+**Pattern: Multi-AZ active-active adjudication engine with automated AZ failover.** Scope must specify which dependencies are also multi-AZ (database, cache, broker) and which are not.
 
-**Pattern: Region-pinned credential storage with explicit cross-region replication policy and per-tenant residency binding.** Higher maturity requires evidence of the policy enforcement mechanism (database-level residency, application-tier routing) plus residency monitoring on egress.
+**Pattern: Read replica topology across AZ with bounded replication lag.** Capability requires specifying the replication-lag bound and what enforces it.
 
-**Pattern: Session-store replication topology documented with replication-lag SLO and MFA-consistency rule (e.g., "MFA-enrollment writes are synchronously replicated to the user's home region before /authorize returns").** Cross-cuts Authenticity.
+**Pattern: Stateless application tier with all state externalized.** Maturity ladder typically `designed` from tech plan; `implemented` requires service configuration or IaC evidence.
 
-**Pattern: Service mesh with SPIFFE workload identity and per-namespace trust-domain isolation around the IdP backend.** Cross-cuts Authenticity for the identity-issuance half; mention via `related_concerns`. The IdP namespace should be a distinct trust domain from RP-tier namespaces.
+## prerequisite_evidence
 
-**Pattern: Cross-region audit replication synchronous with bounded lag SLO; regional failover preserves audit continuity.** Cross-cuts Non-Repudiation; the audit replication is the highest-priority cross-region replicated data class.
+When a finding in this lens is dispositioned blocked or uncertainty for missing distribution evidence, the operator unblock-pack should provide multi-clause specifications, not single-line attestations.
 
-## Domain: identity-security — Source: `common-patterns/resilient.md`
+**Failure-domain isolation:** (1) blast-radius diagram for a single-region failure of each critical service (adjudication, PHI store, PA engine, eligibility); (2) tenant-and-region isolation guarantees if the PBM is multi-tenant; (3) the load-shedding plan when a regional dependency degrades.
 
-# Identity security common patterns — Resilient
+**Cross-region replication and CAP-positioning evidence:** (1) per-data-class replication topology (sync vs async) and lag SLO for PHI store, adjudication-state, audit substrate, formulary cache, PDE staging; (2) consistency model declared per critical operation (strong consistency on claim adjudication and PA decisions; eventual on analytics replicas; bounded staleness on member-portal reads); (3) the explicit CAP-positioning choice when a network partition severs cross-region replication — which operations continue (read-only adjudication against cached formulary, eligibility cache, accumulator deferral) and which fail-closed (PDE submission, PA-criteria configuration changes); (4) the recovery-validation procedure when partition heals (replication-divergence detection, conflict resolution, audit chain reconciliation).
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+## Domain: pbm — Source: `common-patterns/resilient.md`
+
+# PBM common patterns — Resilient
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Resilience in a PBM is sized around predictable demand spikes that hit the pharmacy ingress path: seasonal flu and vaccination surges, COVID and respiratory-virus waves, and the structural Jan-1 / Oct-15 open-enrollment transitions when tens of millions of members move between plans and refill their entire chronic regimen in the first weeks of new coverage. Brittle behavior at the ingress queue, the eligibility cache, or the PA workflow engine under these spikes converts directly to denied or delayed dispensing and to SLA penalties under plan-sponsor agreements aligned with 42 CFR §423.505. The load-bearing surfaces are the pharmacy-submission queue and its backpressure semantics, the eligibility-and-accumulator cache layer (cold-cache behavior on Jan-1 is the canonical failure mode), and the PA workflow engine where retry storms on vendor degradation are the dominant outage shape.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1499** (Endpoint Denial of Service) — backpressure exploitation against pharmacy ingress or PA workflow, where a flood of submission or status-poll requests forces the resilience surface (queue, cache, breaker) into its failure mode
+- **T1499.003** (Application Exhaustion Flood) — adjudication-thread or PA-worker exhaustion via legitimate-shape requests (eligibility lookups, claim submits) that bypass network-layer rate limits and consume application capacity
+- **T1496** (Resource Hijacking) — capacity drain via legitimate-looking traffic from a compromised pharmacy account or partner integration, where the abusive workload is indistinguishable from peak-season load at the network layer
+
+**D3FEND counters:**
+
+- **D3-RAPA** (Resource Access Pattern Analysis) — counters T1496 / T1499 / T1499.003 by detecting abusive request patterns at the application layer (per-pharmacy submission rates, per-member status-poll cadence) that backpressure and circuit-breaker controls then act on
+- **D3-NTA** (Network Traffic Analysis) — counters T1499 at the ingress edge by characterizing the shape of submission and PA-status traffic and feeding rate-limit and shed-load decisions upstream of the application tier
 
 ## Common finding patterns
 
-**Pattern: No circuit breaker on the IdP-to-user-store path (LDAP, AD, upstream IdP for federation chains, user database).**
+**Pattern: No circuit breaker on PHI-containing vendor call (eligibility, drug pricing).**
 
-- Severity: high (user-store degradation cascades to user-facing latency and request-handler exhaustion; without circuit-breaker, a slow LDAP backend takes down every IdP worker by tying up its connection pool)
+- Severity: high (vendor degradation can cascade to total adjudication outage)
 - NIST: SI-13, SC-5, CP-13
-- Cross-reference: any Availability finding on outbound timeout discipline; merged finding carries both concerns
+- Cross-reference: any Availability finding on vendor SLA
 
-**Pattern: Password-reset endpoint retry storm — no rate-limit + no exponential backoff + email-provider degradation produces unbounded retry pressure on the mail-relay credential and SMTP gateway.**
+**Pattern: Retry policy without jitter on the event bus consumer.**
 
-- Severity: medium to high (operational outage of the recovery channel; cascades to user-reported "cannot recover account" support flood)
-- NIST: SI-13(4), SC-5, SC-5(1)
-- Related concerns: availability (mail-relay SLO), integrity (idempotency on reset-token issuance)
-
-**Pattern: No detection of refresh-token reuse — replay of an already-rotated refresh token produces a new access token instead of revoking the entire token family.**
-
-- Severity: high (refresh-token theft is the dominant token-loss vector in mobile and SPA contexts; reuse-detection per OAuth 2.1 §6.1 converts the attack into a detection signal that fully revokes the token family)
-- NIST: IA-5, IA-5(13), SI-4
-- ATT&CK: T1550.001 (Use Alternate Authentication Material: Application Access Token); T1528 (Steal Application Access Token)
-- Related concerns: authenticity (token-issuance trust chain), ephemeral (refresh-token lifetime)
-
-**Pattern: No graceful degradation specified for upstream-IdP outage during federation flows — the artifacts do not describe what happens to in-flight SAML/OIDC federation when the upstream IdP is unreachable.**
-
-- Severity: high (the IdP becomes the failure proxy for every upstream; the user sees an opaque error and has no fallback path)
-- NIST: CP-12, CP-13, IA-2
-- Related concerns: availability (federation-hop SLO), distributed (upstream-IdP redundancy)
-
-**Pattern: Chaos-engineering or game-day evidence on federation flows absent — no documented test of "what happens when SAML metadata refresh fails," "what happens when JWKS endpoint returns stale keys," "what happens when SCIM provisioning lags by 1 hour."**
-
-- Severity: medium (resilience is asserted but not tested; the synthesizer escalates if combined with high-severity findings on availability or distributed)
-- NIST: CP-4, CP-4(1), IR-3 (incident-response testing)
-- Related concerns: availability (SLO under failure), distributed (failover validation)
-
-**Pattern: Retry policy on outbound calls (to upstream IdPs, to SCIM targets, to webhook subscribers) without jitter or budget.**
-
-- Severity: medium (thundering-herd risk on partial failure; webhook-retry storm during subscriber-side incident)
+- Severity: medium (thundering herd risk on partial broker failure)
 - NIST: SI-13(4), SC-5(1)
-- Related concerns: integrity (idempotency on retried operations — federation provisioning duplication risk)
 
-**Pattern: Bulkhead absent between user-facing auth paths and administrative paths — admin bulk-export, audit-log query, or federation-config edit can starve the customer-facing thread pool.**
+**Pattern: Timeout missing on database call in adjudication path.**
 
-- Severity: high (admin operations should not be able to take down user-facing auth; bulkhead-less topology means an admin running a wide audit query during peak login can degrade /authorize latency)
-- NIST: SC-5, SC-6, SI-13
-- Related concerns: availability (bulkhead-less topology amplifies any availability finding), distributed (bulkhead implementation often requires distinct deployment unit)
+- Severity: high (single slow query can hang adjudication threads, cascading to thread pool exhaustion)
+- NIST: SI-13, SC-5
 
-**Pattern: Tech plan describes "retries" without specifying backoff, jitter, budget, or idempotency-key interaction for federation-provisioning calls.**
+**Pattern: No graceful degradation specified for eligibility vendor outage.**
+
+- Severity: high (vendor outage produces total adjudication outage)
+- NIST: CP-12, CP-13, SI-17
+- Detail must specify what would happen today (system errors) and what should happen (cached eligibility, fail-open with downstream verification, or explicit soft-deny with patient communication).
+
+**Pattern: Tech plan describes "retries" without specifying backoff, jitter, or budget.**
 
 - Disposition: uncertainty
-- prerequisite_evidence: "Retry policy specification — backoff curve, jitter strategy, total budget per dependency (per-upstream-IdP, per-SCIM-target, per-webhook-subscriber), idempotency-key interaction, behavior on budget exhaustion (fail-fast vs. queue vs. dead-letter), and any compensating-action on permanent failure"
+- prerequisite_evidence: "Retry-policy specification covering: (1) the retry policy per service-to-service edge (which caller, which callee, which request class); (2) the retry budget per request class (max attempts, max total elapsed, max concurrent in-flight retries); (3) the backoff strategy (fixed, exponential, jittered) and the jitter distribution; (4) idempotency-key handling for retry-safe operations (eligibility re-check, PA-status poll, claim resubmit) and the safe-to-retry classification per operation; (5) the interaction with circuit-breaker state — whether retries are suppressed when the breaker is half-open or open, and how breaker state is observed by the retry layer"
 
 ## Common capability patterns
 
-**Pattern: Circuit breaker on every outbound dependency from the IdP (user-store backend, upstream IdP, SCIM target, webhook subscriber, email/SMS provider) with documented thresholds and half-open recovery.** Capability scope must enumerate covered dependencies; absent dependencies become partial-coverage findings.
+**Pattern: Circuit breaker on every external dependency with documented thresholds.** Capability scope must enumerate which dependencies are covered; caveats for any not in evidence.
 
-**Pattern: Refresh-token rotation with family-revocation on reuse detection per OAuth 2.1 §6.1.** Cross-cuts Authenticity for the token-issuance half and Ephemeral for the rotation cadence; mention via `related_concerns`. Higher maturity requires evidence of the reuse-detection alerting wired into incident response.
+**Pattern: Read-only degraded mode for portal during write-tier outage.** Maturity ladder: `designed` from tech plan, `implemented` requires application code or feature flag evidence, `tested` requires test report or game day evidence.
 
-**Pattern: Graceful degradation for backend-directory unavailability — IdP serves cached authentications with a degraded-mode banner, refuses new credential changes, and notifies the user.** Cross-cuts Availability; mention via `related_concerns`. Maturity requires runbook plus tested degraded-mode behavior.
+**Pattern: Bulkheaded thread pools separating adjudication from reporting.** Often higher confidence when application configuration is in evidence.
 
-**Pattern: Bulkheaded thread pools or deployment-level isolation between user-facing auth, admin console, and federation-provisioning workers.** Higher maturity when deployment topology evidences the bulkhead boundary at the pod/process level.
+## prerequisite_evidence
 
-**Pattern: Chaos-engineering game days exercising signing-key rotation, JWKS-endpoint failure, upstream-IdP outage, and SCIM-target outage on a regular cadence.** `designed` from runbook only; `tested` requires postmortem evidence; `operationalized` requires the cadence to be on the SRE calendar.
+These are the canonical multi-clause asks that unblock blocked-on-evidence findings in the Resilient lens. An operator MUST provide every sub-element listed; partial answers leave the finding blocked.
 
-## Domain: identity-security — Source: `common-patterns/ephemeral.md`
+**Circuit-breaker specification:**
 
-# Identity security common patterns — Ephemeral
+- **prerequisite_evidence:** "Circuit-breaker specification covering: (1) each circuit-breaker location in the topology (inbound at API gateway, outbound at every external-dependency client — eligibility vendor, drug-pricing vendor, PBM-to-PBM coordination, e-prescribing intermediary); (2) the trip threshold (failure rate, latency percentile, consecutive-failure count) and the recovery threshold (success-probe count, half-open admission rate) for each location; (3) the trip-event audit pipeline (which subsystem records the trip, which dashboard surfaces it, which on-call rotation is paged) so that breaker events are observable and not silent; (4) the downstream-failure-isolation behavior when the breaker is open — whether the caller fails fast, falls back to a cached or degraded response, or surfaces an explicit soft-deny to the pharmacy/member"
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+**Graceful-degradation modes:**
+
+- **prerequisite_evidence:** "Graceful-degradation specification covering: (1) the per-feature degradation plan — read-only adjudication mode on write-tier outage, cached-eligibility mode on eligibility-vendor outage with cache-age bound, deferred PA queueing on PA-engine outage with member-facing status messaging, and the equivalent plan for any other ingress-critical surface; (2) the SLO impact of each degraded mode (claim-decision latency, eligibility-staleness bound, PA-decision latency) so plan-sponsor SLA exposure under degradation is quantified; (3) the operator surface that activates and deactivates each mode (feature flag, runbook step, automatic trigger), the authentication/authorization required to flip it, and the audit record produced when it is flipped"
+
+## Domain: pbm — Source: `common-patterns/ephemeral.md`
+
+# PBM common patterns — Ephemeral
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Ephemerality is the single most leveraged control on PBM vendor-integration breach surface: long-lived service-account credentials — SCIM tokens to plan-sponsor IdPs, PDE-submission API keys, COB and accumulator integration credentials, mail-order and specialty fulfillment service accounts — are the dominant root cause in published PBM and healthcare-clearinghouse breach post-mortems, and HIPAA Security Rule §164.308(a)(4) access-management expectations bite hardest on credentials that outlive the personnel and contractual relationships that justified them. Long-lived operator sessions create a parallel problem on the audit side: actor attribution decays as a session ages across shift changes and role transitions. The load-bearing surfaces are vendor SCIM and provisioning tokens, PDE-submission API keys and CMS-side credentials, and the COB and accumulator integration credentials that touch member-level PHI.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1552.001** (Credentials in Files) — long-lived PBM service-account credentials (SCIM tokens, PDE-submission API keys, COB and accumulator integration secrets) materialized in config, env vars, or vault paths exposed to over-broad readership
+- **T1078** (Valid Accounts) — vendor-integration credentials and operator sessions outliving the personnel, contractual, or rotation cadence that justified them, which is the dominant root cause in published PBM and clearinghouse breach post-mortems
+- **T1098** (Account Manipulation) — credential reactivation after intended rotation, or scope expansion on a service account (for example a COB integration credential gaining PDE-submission scope) without re-attestation
+
+**D3FEND counters:**
+
+- **D3-LFAM** (Local File Access Mediation) — counters T1552.001 by mediating filesystem and secret-store access to PBM credential locations so that compromise of an application tier does not yield the underlying long-lived secret
+- **D3-RAPA** (Resource Access Pattern Analysis) — detects long-lived PBM service-account credentials being used at anomalous rates, from anomalous workloads, or against anomalous CMS / plan-sponsor endpoints, which is the operational signal for both T1078 and post-T1098 credential abuse
 
 ## Common finding patterns
 
-**Pattern: Access-token lifetime exceeds 1 hour with no refresh-token rotation and no introspection/revocation channel.**
+**Pattern: Service account credentials are static long-lived secrets in application config.**
 
-- Severity: high (a stolen access token is valid for its full lifetime with no recovery; short-lifetime-plus-rotation is the proportional control)
-- NIST: IA-5, IA-5(13), AC-12 (session termination)
-- ATT&CK: T1550.001 (Application Access Token); T1606 (Forge Web Credentials)
-- Related concerns: authenticity (revocation requires token-introspection or version-claim discipline), resilient (reuse-detection)
+- Severity: high (broad blast radius on credential leak, no automatic invalidation)
+- NIST: IA-5, IA-5(1), IA-5(7), SC-12(1)
+- ATT&CK: T1078 (Valid Accounts) with sub-technique by environment
 
-**Pattern: Refresh-token lifetime extends to weeks or months with no rotation-on-use and no reuse-detection.**
+**Pattern: Database credentials shared across services; no rotation.**
 
-- Severity: high (refresh-token theft is the dominant token-loss vector for mobile/SPA clients; OAuth 2.1 §6.1 requires rotation-with-reuse-detection for public clients)
-- NIST: IA-5, IA-5(13), SI-4, AC-12
-- ATT&CK: T1550.001; T1528 (Steal Application Access Token)
-- Related concerns: confidentiality (refresh-token-at-rest storage), resilient (reuse-detection alerting)
+- Severity: high
+- NIST: IA-5, AC-2(2)
+- Related concerns: confidentiality (key management around the shared credential)
 
-**Pattern: OAuth client_secret unrotated since initial issuance; rotation procedure undocumented.**
+**Pattern: Production access via standing admin role with no JIT.**
 
-- Severity: high (client_secret leak is a recurring incident pattern via repository exposure, CI log leak, mobile-app extraction, vendor compromise; without rotation, leak is permanent)
-- NIST: IA-5, IA-5(1), SC-12
-- ATT&CK: T1552.001 (Credentials in Files); T1078 (Valid Accounts)
-- Related concerns: authenticity (client-authentication strength; private_key_jwt and mTLS client auth eliminate the shared-secret class), non_repudiation (audit of client_secret use vs. rotation)
+- Severity: high (excessive standing privilege, no time-boxing)
+- NIST: AC-6, AC-2(2), AC-2(3)
+- Related concerns: non_repudiation (audit of admin actions), authenticity (admin identity strength)
 
-**Pattern: Session lifetime unspecified — no maximum absolute lifetime, no idle timeout, no behavior on credential change, no behavior on AAL elevation.**
+**Pattern: Container images mutable in production — `:latest` tags, in-place container updates.**
 
-- Disposition: uncertainty or blocked
-- prerequisite_evidence: "Session management policy — maximum absolute lifetime per AAL tier, idle timeout, behavior on password change (revoke all sessions vs. preserve), behavior on MFA enrollment/removal, behavior on AAL elevation (does step-up issue a new session or upgrade the existing one?), explicit logout semantics including SAML SLO and OIDC front-channel/back-channel logout"
+- Severity: medium (high when the mutable surface includes signing keys for NCPDP SCRIPT, PDE submission, or formulary configuration)
+- NIST: CM-2, CM-3, SA-15(7)
+- Related concerns: authenticity (image signing), integrity (configuration drift)
 
-**Pattern: Signing-key rotation cadence absent or longer than the longest token lifetime.**
-
-- Severity: high (the JWKS rotation gives a revocation window for token forgery in the event of key compromise; without rotation, key compromise is permanent)
-- NIST: SC-12, SC-12(2), SC-12(3), SR-11
-- Related concerns: integrity (JWKS rotation grace window discipline), immutability (key-lifecycle audit), distributed (regional HSM rotation coordination)
-
-**Pattern: Recovery-code set static — recovery codes generated at MFA enrollment and never rotated even when the MFA factor itself rotates.**
-
-- Severity: medium to high (a stolen recovery-code set survives every MFA-factor change; rotation-on-MFA-change is the proportional control)
-- NIST: IA-5, IA-5(1)
-- Related concerns: authenticity (recovery-flow AAL claim weakens if codes are old)
-
-**Pattern: Service-account / non-human-identity credentials inside the IdP (LDAP bind credentials, database credentials, SMTP credentials, vendor API keys) are static long-lived secrets with no rotation.**
-
-- Severity: high (broad blast radius on credential leak, no automatic invalidation, no detection signal on use of a leaked credential; the IdP backend credential leak pivots from IdP outward to every system the IdP touches)
-- NIST: IA-5, IA-5(1), IA-5(7), SC-12(1), AC-2
-- ATT&CK: T1078 (Valid Accounts); T1552.001 (Credentials in Files)
-- Related concerns: confidentiality (key management around the credential), authenticity (workload identity as the replacement pattern)
-
-**Pattern: Tech plan mentions "secrets stored in vault" without rotation specifics, audit-on-fetch, break-glass procedure, or secret-zero-trust posture for the vault token itself.**
+**Pattern: Tech plan mentions "secrets stored in vault" without rotation specifics.**
 
 - Disposition: uncertainty or blocked
-- prerequisite_evidence: "Secret-management policy — per-secret-class rotation cadence (signing keys, client secrets, bind credentials, recovery-channel credentials), rotation mechanism (automated vs. manual), audit-on-fetch behavior, break-glass procedure, and secret-zero-trust posture (does the vault auth token itself rotate?)"
+- prerequisite_evidence: "Credential lifecycle specification covering: (1) credential class taxonomy that distinguishes operator session credentials, service-account credentials, vendor integration credentials, and signing keys for NCPDP / PDE submission; (2) per-class lifetime expressed as a maximum age and rotation cadence; (3) per-class rotation automation pointer (Vault dynamic secrets, AWS Secrets Manager rotation lambda, IAM role assumption, SPIFFE/SPIRE workload identity) showing what executes the rotation; (4) per-class revocation pipeline including the emergency revocation path used when a credential is suspected compromised mid-cycle; (5) audit chain recording creation, rotation, suspension, and destruction events sufficient to reconstruct credential provenance during a HIPAA §164.308(a)(4) access-management review or a breach post-mortem"
+
+**Pattern: Member portal session lifetime not specified.**
+
+- Disposition: uncertainty
+- prerequisite_evidence: "Session management policy covering: (1) maximum absolute session lifetime before forced re-authentication; (2) idle timeout that terminates an inactive session independent of absolute lifetime; (3) step-up authentication bounds — which member-portal actions (refill order placement, address change, payment-instrument change, mail-order pharmacy change) require a fresh authentication factor and what the freshness window is; (4) logout behavior including server-side session invalidation, refresh-token revocation, and propagation to downstream PBM systems that cached the session"
 
 ## Common capability patterns
 
-**Pattern: Short-lived access tokens (≤1 hour, ≤15 minutes for high-privilege scopes) paired with refresh-token rotation and reuse detection.** Maturity ladder: `designed` from tech plan; `implemented` requires OAuth-library configuration evidence; `operationalized` requires evidence of family-revocation events fed to detection.
+**Pattern: Dynamic database credentials via vault.** Maturity depends on whether tech plan asserts (designed) or vault configuration is in evidence (implemented).
 
-**Pattern: OAuth client_secret automated rotation with overlap window; private_key_jwt or mTLS client authentication available as the rotation-resilient alternative.** Higher maturity when private_key_jwt or mTLS is the default for new client registrations and client_secret is on a deprecation path.
+**Pattern: Workload identity via SPIFFE for service-to-service authentication.** Caveats expected on which services are confirmed.
 
-**Pattern: Signing-key rotation on a documented cadence with JWKS publication discipline (next-key published in JWKS before becoming active; old key retained in JWKS through the longest token lifetime).** Cross-cuts Integrity for the rotation grace window; mention via `related_concerns`. Operationalized maturity requires monitoring on the rotation cadence itself.
+**Pattern: JIT access for production via approval workflow with time-boxed grants.** Operational maturity requires runbook evidence; designed maturity from tech plan only.
 
-**Pattern: Workload identity (SPIFFE/SPIRE, cloud-native workload identity, Kubernetes ServiceAccount projected tokens) replacing static service credentials for IdP-to-backend calls.** Caveats expected on which backends are confirmed onboard; legacy LDAP/AD backends often remain on bind-credentials.
+**Pattern: Immutable container deployment via signed image references in IaC.** Cross-cuts Authenticity for the signing aspect; Ephemeral confirms the replace-don't-patch posture.
 
-**Pattern: Session lifetime policy declared per AAL tier (AAL3 sessions shorter than AAL1; step-up issues fresh session; credential change revokes all sessions; SLO and front-channel logout work across all federated SPs).** Operational maturity requires evidence the SLO/front-channel logout actually completes for all SPs (the common gap).
+## prerequisite_evidence
 
-**Pattern: JIT human access for the IdP admin console via approval workflow with time-boxed grants and full session recording.** Operational maturity requires runbook evidence plus the recording-retention policy; designed maturity from tech plan only.
+When a finding pattern above is marked blocked-on-evidence rather than emitted as a gap, the operator must supply the multi-clause specifications below. Anything less and the specialist should keep the disposition as blocked rather than downgrade to uncertainty.
 
-## Domain: identity-security — Source: `common-patterns/authenticity.md`
+**Just-in-time access for production:** (1) the JIT access mechanism for human operators (broker name, ticket-driven elevation, ChatOps approval bot, cloud-native PIM) and the workloads it covers; (2) elevation requirements including approver identity (named role, not group), required justification entry, and the maximum time-bounded session length granted per elevation; (3) audit trail of every elevation event sufficient to answer "who approved which operator into which production scope for how long, on which date, against which change ticket"; (4) automatic expiry behavior on session timeout including credential revocation, in-flight session termination, and downstream notification to PBM systems that cached the elevated identity
 
-# Identity security common patterns — Authenticity
+## Domain: pbm — Source: `common-patterns/authenticity.md`
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+# PBM common patterns — Authenticity
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Authenticity in a PBM gates both PHI access and the lawfulness of prescription transmission. Pharmacist credential strength is the upstream control on every PHI surface a clinical user touches — SAML/OIDC federation against the pharmacy or health-system SSO is the dominant authentication path, and HIPAA Security Rule §164.312(d) person-or-entity authentication is the regulatory anchor. Separately, NCPDP SCRIPT digital signatures gate the lawfulness of electronic prescription transmission under DEA EPCS rules at 21 CFR §1311, and PDE submission signing is what CMS uses to bind a Part D claim record to its submitting sponsor. The load-bearing surfaces are the pharmacist-portal SSO path (including step-up for PHI export and PA override), the NCPDP signed-message path for SCRIPT transactions, and the PDE-submission signing chain.
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1621** (Multi-Factor Authentication Request Generation) — push-bombing or MFA fatigue against pharmacist or admin portals
+- **T1556.006** (Modify Authentication Process: Multi-Factor Authentication) — bypassing MFA via fallback channel, recovery flow, or enrollment abuse
+- **T1078** (Valid Accounts) — credentials are valid but the holder is unauthorized to use them
+- **T1110.003** (Brute Force: Password Spraying) — low-volume spraying against pharmacist and member portals
+- **T1110.004** (Brute Force: Credential Stuffing) — reused-credential attempts from breach corpora against member portal
+
+**D3FEND counters:**
+
+- **D3-MFA** (Multi-factor Authentication) — counters T1621 indirectly and T1078 directly via factor requirement
+- **D3-CR** (Credential Revocation) — counters T1078 by permanently revoking compromised credentials on detection so they cannot be reused for further PHI access
+- **D3-MAN** (Message Authentication) — counters NCPDP SCRIPT and X12 signed-message tampering at the protocol layer
 
 ## Common finding patterns
 
-**Pattern: AAL (Authenticator Assurance Level) per surface undeclared — artifacts do not state whether the IdP targets NIST SP 800-63B AAL1, AAL2, or AAL3 for admin, user, and machine surfaces.**
+**Pattern: Service-to-service inside cluster uses shared secret tokens, not mTLS.**
 
-- Severity: medium when blocked (cannot evaluate MFA-strength findings without the target); high when the target is implicit and the implementation falls short (e.g., admin surface implicitly AAL3 but only password+SMS implemented)
-- NIST: IA-2, IA-2(1), IA-2(2), IA-2(6), IA-2(8)
-- Related concerns: ephemeral (authenticator lifetime per AAL), non_repudiation (audit per-AAL-event), distributed (MFA consistency across regions)
+- Severity: high (lateral movement amplification)
+- NIST: SC-8(1), SC-23, IA-3
+- ATT&CK: T1557 with specific in-cluster rationale
+- Related concerns: ephemeral (shared-secret rotation), confidentiality (in-cluster PHI in transit)
 
-**Pattern: MFA optional on administrative surfaces (IdP admin console, federation-trust editor, signing-key-rotation surface).**
+**Pattern: MFA bypass via SMS fallback on PHI surfaces.**
 
-- Severity: critical (admin-tier compromise is the boundary case where Authenticity, Non-Repudiation, and Immutability findings converge — see Critical rubric clause on compromised admin account)
-- NIST: IA-2(1), IA-2(2), AC-6, AC-6(2), AC-6(7)
-- ATT&CK: T1078 (Valid Accounts); T1556 (Modify Authentication Process)
-- Related concerns: non_repudiation (admin actions without MFA produce weaker actor attribution)
+- Severity: high (effective AAL downgrade)
+- NIST: IA-2(1), IA-2(2), IA-2(8)
+- ATT&CK: T1621 (Multi-Factor Authentication Request Generation) with rationale
 
-**Pattern: SMS or voice fallback permitted on phishing-resistant MFA enrollments.**
+**Pattern: Container images deployed without signature verification.**
 
-- Severity: high (effective AAL downgrade; SMS interception via SIM-swap is a documented incident pattern that defeats the WebAuthn/FIDO2 target)
-- NIST: IA-2(1), IA-2(2), IA-2(8) — note 800-63B §5.1.3 specifically deprecates SMS for new AAL3 implementations
-- ATT&CK: T1621 (Multi-Factor Authentication Request Generation); T1556.006 (MFA Bypass)
-- Related concerns: ephemeral (SMS-channel credential lifetime undefined), resilient (SMS-provider outage and the fallback-to-fallback question)
+- Severity: high (supply chain compromise vector)
+- NIST: SI-7, SR-4, SR-11
+- Related concerns: ephemeral (immutable infra requires authentic images)
 
-**Pattern: Service-to-service authentication inside the IdP cluster uses shared bearer tokens, not mTLS or workload identity.**
+**Pattern: Webhook payloads from vendor accepted without signature verification.**
 
-- Severity: high (lateral-movement amplification; no identity binding on the credential; IdP-tier compromise is the gate to credential-store compromise)
-- NIST: SC-8(1), SC-23, IA-3, IA-9 (service identification and authentication)
-- ATT&CK: T1557 (Adversary-in-the-Middle) with in-cluster rationale; T1078
-- Related concerns: ephemeral (shared-token rotation), confidentiality (in-cluster credential material in transit)
+- Severity: high (forged webhook can inject malicious adjudication input)
+- NIST: SC-23, IA-3(1), SI-10
+- Related concerns: integrity (input validation, route to Integrity finding for the malformed-input concern)
 
-**Pattern: OAuth client authentication is `client_secret_basic` or `client_secret_post` for confidential clients; private_key_jwt, client_secret_jwt, and tls_client_auth (mTLS) not offered as alternatives.**
+**Pattern: SBOM not generated; no vulnerability attribution path.**
 
-- Severity: medium to high (shared-secret-only client auth is the rotation-fragile authenticator class; the modern alternatives — RFC 7523 JWT bearer for client auth, RFC 8705 mTLS client auth — eliminate the leak class)
-- NIST: IA-2, IA-5, SC-12, IA-3(1)
-- Related concerns: ephemeral (client_secret rotation pain motivates the migration), integrity (signature-based client auth provides per-request binding)
+- Severity: medium (high when the PBM has a HITRUST CSF or URAC commitment that explicitly requires SBOM)
+- NIST: SR-4, SR-4(3), SR-11
 
-**Pattern: OIDC flow allows implicit grant (`response_type=id_token` or `response_type=token`) for new client registrations.**
-
-- Severity: high (implicit grant is deprecated by OAuth 2.1; credential-leakage exposure via browser history, referer headers, mobile-app interception)
-- NIST: IA-2, IA-5, IA-5(2)
-- ATT&CK: T1550.001 (Application Access Token); T1528 (Steal Application Access Token)
-- Related concerns: integrity (authorization-code-with-PKCE is the only secure flow for public clients), confidentiality (token-in-URL-fragment leak surface)
-
-**Pattern: SAML IdP allows unsigned AuthnRequest or unsigned SP metadata; the trust relies on TLS only.**
-
-- Severity: high (SP impersonation surface, downgrade attack surface; SAML 2.0 Security Considerations §6.1 recommends both transport and message-level signature)
-- NIST: SI-7, IA-3, IA-3(1), SC-23
-- ATT&CK: T1199 (Trusted Relationship)
-- Related concerns: integrity (signature validation discipline on the inbound AuthnRequest), distributed (SP metadata refresh and trust-on-first-use risk)
-
-**Pattern: Audit-log entries on consequential actions are not cryptographically signed; integrity rests on storage-substrate controls only.**
-
-- Severity: medium to high depending on the substrate (high when audit is in a multi-tenant store with elevated read access; medium when audit substrate is WORM-locked)
-- NIST: AU-9, AU-9(3), AU-10 (non-repudiation), SI-7
-- ATT&CK: T1070 (Indicator Removal); T1565 (Data Manipulation)
-- Related concerns: non_repudiation (signed audit closes the attribution-tampering gap), immutability (the substrate-controls half)
-
-**Pattern: Federation trust is established without contact attestation, domain-control validation on the redirect_uri host, or human approval workflow — the SP self-asserts its identity at registration.**
-
-- Severity: high (malicious-RP onboarding surface; the registered SP can request scopes from any user lured to /authorize)
-- NIST: IA-2, IA-3(1), AC-2, SR-3
-- ATT&CK: T1199 (Trusted Relationship); T1078
-- Related concerns: non_repudiation (audit on federation-trust establishment), immutability (federation-trust history)
-
-**Pattern: Tech plan describes "authenticated APIs" generically without specifying mechanism per surface, token lifetime, or validation procedure including signature algorithm and key source.**
+**Pattern: Tech plan describes "authenticated APIs" generically.**
 
 - Disposition: uncertainty or blocked
-- prerequisite_evidence: "Authentication specification per surface — mechanism (OAuth bearer, mTLS, signed JWT, API key, session cookie), token lifetime, signature-algorithm pin, key-source (JWKS endpoint, embedded key, KMS handle), replay-protection mechanism (nonce, jti, timestamp window), and the AAL/FAL claim associated with the surface"
+- prerequisite_evidence: "API authentication specification — (1) mechanism per API surface (OAuth 2.0 client-credentials, OAuth 2.0 authorization-code with PKCE, mTLS with workload identity, signed JWT with named issuer); (2) token lifetime per token class (access, refresh, step-up) with rotation cadence; (3) token-validation procedure (signature algorithm, key-discovery via JWKS endpoint or pinned key, issuer/audience/scope checks, clock-skew tolerance); (4) revocation mechanism on credential compromise (introspection endpoint, deny-list, or short-TTL strategy); (5) audit event emitted on authentication success, failure, and step-up challenge"
 
 ## Common capability patterns
 
-**Pattern: FIDO2/WebAuthn for administrative access plus phishing-resistant MFA for end-user PII surfaces; SMS fallback permitted only as recovery-only step-down, never as primary.** Capability scope must enumerate which surfaces and which user populations; AAL target per surface must be in evidence.
+**Pattern: mTLS across service mesh with SPIFFE identity.** Scope must enumerate which services are confirmed; expect caveats for legacy services not yet onboarded.
 
-**Pattern: mTLS across the IdP service mesh with SPIFFE/SPIRE workload identity; every IdP-internal call carries cryptographic workload identity, not shared tokens.** Scope must enumerate covered services; legacy services not yet onboarded become caveats.
+**Pattern: FIDO2/WebAuthn for internal admin access to PHI surfaces.** Cross-cuts Ephemeral via the credential lifetime; mention via `related_concerns`.
 
-**Pattern: OAuth client authentication via private_key_jwt or tls_client_auth (mTLS) as the default for new clients; client_secret_basic only for legacy.** Higher maturity when the registration UX defaults to private_key_jwt and client_secret is opt-in with a deprecation notice.
+**Pattern: Signed container images with admission control enforcement.** Maturity depends on whether admission policy is in evidence.
 
-**Pattern: SAML signed AuthnRequest and signed SP metadata required for all federation trust relationships; metadata refresh validates the publisher's signing chain.** Cross-cuts Integrity for the signature-validation discipline.
+**Pattern: SLSA Level 2 build provenance for production deployments.** Higher maturity requires CI/CD configuration evidence.
 
-**Pattern: Cryptographically signed audit entries (per-entry signature plus hash-chained per stream, with chain heads anchored externally to a separate trust domain or external timestamp authority).** Cross-cuts Non-Repudiation and Immutability; mention via `related_concerns`. Maturity ladder: `designed` from tech plan; `implemented` requires code/IaC evidence; `operationalized` requires chain-verification at audit-read time.
+## prerequisite_evidence
 
-**Pattern: Federation trust onboarding via approval workflow with domain-control validation, contact attestation, and per-trust audit anchor; trust modifications require re-approval.** Higher maturity when the workflow integrates with security-team review for trusts with high-blast-radius scope.
+When an authenticity concern cannot be confirmed from the available evidence, the specialist agent should mark the finding `blocked-on-evidence` and name the specific artifacts required to unblock. The asks below are multi-clause on purpose — a single-line ask like "tell me about MFA" is not enough to unblock a blocked finding, because the operator will return a partial answer and the cycle repeats.
 
-## Domain: identity-security — Source: `common-patterns/non-repudiation.md`
+**MFA implementation:** (1) factor-mix per actor class (pharmacist, member, admin, vendor-integration); (2) AAL level per actor class per NIST 800-63B (AAL1/2/3) with evidence of the determination; (3) enrollment flow security (re-auth required at enrollment, identity-proofing artifact retained, FIDO2 attestation level where applicable); (4) recovery flow security (rate-limited, supervisor-attested, out-of-band channel distinct from primary factor); (5) MFA-fatigue mitigation (push-rate-limit, number-matching, geographic-anomaly detection); (6) phishing-resistance posture (SMS forbidden as a factor on PHI surfaces, WebAuthn or equivalent as the primary factor for privileged actors); (7) audit event emitted on MFA challenge, response, success, and failure with sufficient context to reconstruct the attempt.
 
-# Identity security common patterns — Non-Repudiation
+**Signed-message verification:** (1) signing-key location per signed-message channel (NCPDP SCRIPT, X12 271/278/837, PDE outbound) including HSM, KMS, or in-process key material; (2) signature-verification implementation pointer (library name and version, with a code or config reference); (3) replay-protection mechanism (nonce, timestamp window, message-ID dedup store, or sequence number); (4) failure handling on signature-verification failure (reject and audit vs. quarantine vs. fail-open) including downstream alerting path.
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+**Federation configuration:** (1) IdP relationship per actor class (pharmacist SSO against pharmacy or health-system IdP, prescriber SSO, member portal IdP) including IdP name and trust establishment artifact; (2) SAML or OIDC configuration with assertion-validation scope (signature algorithm, audience restriction, attribute mapping, NotBefore/NotOnOrAfter enforcement, ID-token claim validation); (3) trust-chain validation including certificate-pinning where applicable to mobile or thick-client federation paths, and the policy for IdP-signing-certificate rotation.
+
+## Domain: pbm — Source: `common-patterns/non-repudiation.md`
+
+# PBM common patterns — Non-Repudiation
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Non-repudiation in a PBM is a direct regulatory obligation, not a defense-in-depth nice-to-have. HIPAA Security Rule §164.312(b) (Audit Controls) requires actor-attributed records of activity on systems containing PHI, and §164.528 (Accounting of Disclosures) requires the PBM to produce defensible disclosure records to members on request — both fail open if the audit chain attributes actions to a shared system account, a sidecar identity, or an unbound session. CMS Part D PDE submission additionally requires auditable provenance for every claim record reconciled against rebate and risk-adjustment payments. The load-bearing surfaces are the PHI-access audit (record-level, not table-level), the PA-decision audit (which clinician, on which member, with what override rationale), and the configuration-change audit (formulary, PA criteria, MAC list, contract pricing).
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1070** (Indicator Removal) — audit-log deletion, retention shortening, or shipping-pipeline disable
+- **T1036** (Masquerading) — audit-attribution falsification, including action attribution to a shared service-account rather than the human operator
+- **T1562.008** (Impair Defenses: Disable or Modify Cloud Logs) — cloud-native audit-pipeline suppression
+
+**D3FEND counters:**
+
+- **D3-LFAM** (Local File Access Mediation) — counters T1070 by enforcing write-deny on the audit substrate
+- **D3-MAN** (Message Authentication) — counters T1036 by binding the audit record to a per-actor signature
 
 ## Common finding patterns
 
-**Pattern: Audit completeness on the IdP's consequential-action surface unverified — the consequential-actions list contains 50+ event classes; the artifacts confirm logging for only a subset (typically the obvious authn success/failure pair).**
+**Pattern: Admin configuration changes logged but actor attribution is system account, not the human operator.**
 
-- Severity: high (the IdP is the highest-stakes audit surface on the platform; partial coverage is the dominant real-world finding pattern, and any unaudited event class can hide breach activity)
-- NIST: AU-2, AU-3, AU-3(1), AU-12
-- Related concerns: authenticity (the actor field is only as strong as the authentication that produced it), immutability (audit storage discipline)
+- Severity: high (configuration corruption is not attributable; URAC and SOC 2 expose)
+- NIST: AU-3, AU-3(1), AU-12, AU-10
+- Related concerns: authenticity (admin identity strength), immutability (configuration history)
 
-**Pattern: Token issuance audit lacks the token identifier (jti, opaque token ID) — log says "user X received a token" but does not link the token back to a later use.**
+**Pattern: PHI access logging present but only at table/service level, not record level.**
 
-- Severity: high (forensic reconstruction of "which token did the attacker use, when did we issue it, and which other tokens were issued in the same session" is impossible without per-token identifiers)
-- NIST: AU-3, AU-3(1), AU-12(1), AU-10
-- Related concerns: integrity (the token identifier IS the lifecycle anchor), ephemeral (revocation requires the identifier)
+- Severity: high (minimum-necessary attestation impaired)
+- NIST: AU-2, AU-3
+- Detail: HIPAA Security Rule and minimum-necessary doctrine require attribution at the level needed to prove appropriate use, not just access.
 
-**Pattern: Refresh-token rotation chain not auditable — the audit records issuance and revocation but does not link refresh-token generations within a token family.**
+**Pattern: Audit shipping is fire-and-forget; consumer-side failure produces silent loss.**
 
-- Severity: medium to high (refresh-token reuse-detection investigations require the chain; without it, "which family was compromised" cannot be answered)
-- NIST: AU-3, AU-12, IA-5
-- Related concerns: resilient (reuse-detection events), ephemeral (rotation cadence)
+- Severity: high
+- NIST: AU-4, AU-5
+- Related concerns: availability (audit pipeline reliability), immutability (durability of the audit)
 
-**Pattern: OAuth consent grants audited at the grant event but not at use — "user X granted scopes S to client C" is logged, but per-use of the granted scope is not.**
+**Pattern: No cryptographic protection on audit entries; mutable database table.**
 
-- Severity: medium (the IdP can prove consent existed; cannot prove which uses occurred within the consent window without the per-use audit)
-- NIST: AU-2, AU-3, AU-12
-- Detail: GDPR Article 5(2) accountability defense for processing under the consent basis benefits from per-use audit when consent disputes arise.
+- Severity: high
+- NIST: AU-9, AU-9(2), AU-9(3)
+- Related concerns: immutability (this finding's recommendation will couple to an immutability finding)
 
-**Pattern: SAML assertion log captures assertion issuance but does not capture the attribute-release set per assertion — privacy attestation for "which attributes were released to which SP at which time" is incomplete.**
+**Pattern: Time source unspecified.**
 
-- Severity: high (GDPR Article 5(1)(c) data-minimization defense requires evidence of what was actually released; this is the equivalent of record-level access logging for federation)
-- NIST: AU-2, AU-3, AU-12, AC-21 (information sharing)
-- Related concerns: confidentiality (attribute-release-policy enforcement), immutability (assertion-log retention)
-
-**Pattern: Audit-read access uncontrolled — any operator role can search audit logs without separate authorization, and audit-of-audit-access (who searched what) is not recorded.**
-
-- Severity: high (audit access is itself a consequential action — an insider with audit read can identify what's been observed and adjust behavior; SoD on audit access is a SOC 2 CC6.1 expectation)
-- NIST: AU-9, AU-9(4), AU-9(6), AC-5 (separation of duties), AC-6
-- Related concerns: authenticity (audit-role definition), confidentiality (audit content sensitivity inheritance — the audit carries credentials' worth of metadata)
-
-**Pattern: Audit pipeline single-point-of-failure — single broker, single sink, no buffer between application and broker; broker outage produces silent audit loss.**
-
-- Severity: high (audit availability is itself a regulatory requirement; broker outage produces a gap covering the very moments operators most need to investigate)
-- NIST: AU-5, AU-5(1), AU-5(2), CP-7
-- Related concerns: availability (audit-pipeline SLO), distributed (audit-broker topology), immutability (durability of the audit)
-
-**Pattern: No time-source policy — audit timestamps are local system clocks with no NTP discipline, no drift bounds, no fallback to a secondary stratum.**
-
-- Disposition: uncertainty or blocked
-- prerequisite_evidence: "Audit time-source specification — NTP topology, time-source authority, drift bounds, behavior on time-source failure, timestamp precision (millisecond required for token-issuance audit, microsecond preferred), and the audit anchor on time-source-availability events themselves"
+- Disposition: uncertainty
+- prerequisite_evidence: "Time-source reliability specification — (1) authoritative time source (NTP server or NTS source), naming the upstream and topology; (2) clock-skew SLO with numeric bound; (3) clock-drift monitoring and remediation procedure (who is paged when drift exceeds SLO, and how the audit pipeline is quarantined); (4) timestamp inclusion in audit records (UTC, monotonic, or both) with the field name and precision"
 
 **Pattern: Break-glass procedure exists but break-glass actions are not specially audited beyond normal logging.**
 
-- Severity: medium to high
-- NIST: AU-3, AU-12(1), AC-6(9), AC-6(10)
-- Detail: break-glass IdP-admin actions (key rotation under incident, mass session invalidation, mass MFA reset) should produce a distinguishable audit stream that automatically routes to security review independent of normal audit consumption.
-
-**Pattern: Audit content sensitivity not classified — the audit log carries credentials, partial PII (request metadata: IP, user agent), and authentication metadata that re-identifies; access controls on the audit do not reflect its highest-sensitivity contents.**
-
-- Severity: medium to high (audit-pipeline egress to SaaS log aggregators is a recurring inadvertent-exposure vector)
-- NIST: AU-9, AC-3, SC-28, AC-21
-- Related concerns: confidentiality (audit egress encryption and access controls), authenticity (audit-role definition)
+- Severity: medium (high when the audit gap covers PHI access — §164.312(b) audit-controls obligation)
+- NIST: AU-3, AU-12(1), AC-6(9)
 
 ## Common capability patterns
 
-**Pattern: Per-action audit on every consequential-action surface (the full consequential-actions list) with actor, resource, action, purpose/justification, AAL/FAL claim, and outcome captured per-event.** Scope must enumerate covered surfaces against the consequential-actions list; caveats for any out-of-evidence — this is the dominant audit-coverage check.
+**Pattern: Per-action PHI access audit with actor, resource, purpose, and outcome captured.** Scope must specify which surfaces are confirmed; caveats for any out-of-evidence.
 
-**Pattern: Cryptographically signed audit entries with per-stream hash-chaining; chain heads anchored daily to an external trust domain (separate KMS, separate cloud account, or external timestamp authority).** Maturity depends on whether the chain is described in tech plan only or implemented in code/IaC; operationalized maturity requires evidence of chain verification at audit-read time and an alert on chain-break.
+**Pattern: Cryptographically signed audit entries hash-chained per stream.** Maturity depends on whether the chain is described in tech plan only or implemented in code/IaC.
 
-**Pattern: Audit-read access gated by a separate role from operational roles, with read events themselves audited (audit-of-audit-access).** Cross-cuts Authenticity for the role definition; mention via `related_concerns`. Higher maturity when audit-read also requires step-up authentication.
+**Pattern: ATNA-conformant audit format for clinical actions.** Often `designed` from tech plan; higher maturity requires implementation evidence.
 
-**Pattern: Time-source policy with NTP topology specified, drift bounds enforced, fallback to a secondary stratum on primary failure, time-source-availability events themselves audited, and millisecond-or-better timestamp precision on token-issuance events.** Higher maturity requires monitoring evidence on drift bounds.
+**Pattern: Audit log read access gated by separate role from operational roles, with read events themselves audited.** Cross-cuts Authenticity for the role definition.
 
-**Pattern: Per-token audit linking issuance, refresh, revocation, and use events through the token identifier (jti for JWT, opaque ID for opaque tokens), with the refresh-token family chain explicit.** Cross-cuts Ephemeral; this is the foundational audit anchor for any token-loss investigation.
+## prerequisite_evidence
 
-## Domain: identity-security — Source: `common-patterns/immutability.md`
+When a non-repudiation finding is blocked-on-evidence, the operator must supply the following multi-clause specifications to unblock. Single-line answers ("we have audit logging") are insufficient; each clause below names a sub-element the synthesizer expects to see resolved before the finding's disposition can move off blocked.
 
-# Identity security common patterns — Immutability
+**Audit-coverage matrix:**
 
-These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the identity security rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+  (1) consequential-action surface mapped to audit-event taxonomy (each consequential action emits at least one audit event of the named class, with the mapping enumerated rather than asserted);
+  (2) actor-attribution policy on each audit event class (which identity claim is captured, and whether it resolves to a human operator versus a shared service principal);
+  (3) signing or hash-chaining mechanism per class (algorithm, key custody, and chain-verification cadence);
+  (4) audit-shipping pipeline (queue, transit, sink) with availability target (numeric SLO and what happens to the action when the pipeline is degraded);
+  (5) audit-of-audit pipeline (audit reads, retention changes, log-shipping disable) on a forensically isolated channel (named substrate, separate IAM, and separate retention floor);
+  (6) retention-floor enforcement substrate per class (the technical control that prevents an operator from shortening retention below the regulatory floor).
+
+**Time-source reliability:**
+
+  (1) authoritative time source (NTP server or NTS source), naming the upstream and topology;
+  (2) clock-skew SLO with numeric bound;
+  (3) clock-drift monitoring and remediation procedure (who is paged when drift exceeds SLO, and how the audit pipeline is quarantined);
+  (4) timestamp inclusion in audit records (UTC, monotonic, or both) with the field name and precision.
+
+**Audit-access segregation:**
+
+  (1) read access policy on the audit substrate (who can query, against which retention window, and with what query-audit obligation);
+  (2) separation of audit-read and audit-write privileges from operator-action privileges (no role that performs consequential actions may also redact, retire, or query its own audit trail);
+  (3) audit-of-audit emitter capturing every administrative read (with actor, query, and result-set fingerprint) on a forensically isolated channel.
+
+## Domain: pbm — Source: `common-patterns/immutability.md`
+
+# PBM common patterns — Immutability
+
+These are illustrative templates, not all-inclusive. Use them to calibrate analytical style, severity assignment per the PBM rubric, and NIST/ATT&CK mapping habits. The specialist agent's analytical checklist still drives the actual analysis — this file calibrates how findings and capabilities should look once written.
+
+Immutability in a PBM is governed by overlapping multi-year retention floors that the architecture must satisfy without depending on operator discipline: HIPAA at 45 CFR §164.316(b)(2) sets a 6-year retention floor on policies, procedures, and audit-relevant records; CMS Part D at 42 CFR §423.505(d) requires PDE and related records to be retained for 10 years; and DEA controlled-substance prescription records under 21 CFR §1304.04 require 2-year retention with chain-of-custody integrity. Object-lock, append-only stores, and tamper-evident hashing are the proportional controls — operator-deletable storage tiers cannot satisfy any of these floors. The load-bearing surfaces are the audit-log store (HIPAA chain), the PDE-submission archive and its CMS-reconciliation deltas (Part D chain), and the claim-adjudication history (which feeds both PDE and DEA chains, plus rebate and member-dispute defense).
+
+## ATT&CK + D3FEND defensive mapping
+
+This goal defends against (or is exploited by) the following MITRE ATT&CK techniques. Each citation is included only where the apd-control-mappings high-confidence-bar discipline is met; we deliberately omit techniques that only adjacently relate to this goal.
+
+**ATT&CK techniques:**
+
+- **T1485** (Data Destruction) — destruction of regulated immutable classes (audit log, PDE archive, formulary history, backup) directly defeats the HIPAA / Part D / DEA retention floors this goal enforces
+- **T1490** (Inhibit System Recovery) — disabling snapshot, backup, or hash-chain mechanisms removes the substrate that makes the retention guarantee load-bearing
+- **T1078** (Valid Accounts) — privileged-credential use to alter retention policy, object-lock setting, or vault-lock is the dominant path by which immutability is silently downgraded without triggering destruction alerts
+
+**D3FEND counters:**
+
+- **D3-LFAM** (Local File Access Mediation) — counters T1485 / T1490 by enforcing substrate-level write-deny on object-locked buckets, WORM tape, and hash-chained stores so that even a credentialed operator cannot mutate or delete protected classes within the retention window
 
 ## Common finding patterns
 
-**Pattern: Authentication event log written to a mutable RDS table or document collection; no append-only enforcement, no WORM substrate, no hash-chain.**
+**Pattern: Audit log written to a mutable RDS table; no append-only enforcement.**
 
-- Severity: high (authn log alteration breaks every regulatory accountability claim; combines with any Non-Repudiation gap into a critical-merged record — the authn log is the first thing an attacker tampers with after gaining IdP-admin)
-- NIST: AU-9, AU-9(2), AU-9(3), AU-11, SI-7
-- ATT&CK: T1070 (Indicator Removal); T1070.001 (Clear Windows Event Logs); T1070.002 (Clear Linux or Mac System Logs); T1565 (Data Manipulation)
-- Cross-reference: any Non-Repudiation finding on audit completeness; merged record carries both concerns
+- Severity: high (audit log alteration breaks HIPAA accountability; combines with any Non-Repudiation gap)
+- NIST: AU-9, AU-9(2), AU-9(3), AU-11
+- Cross-reference: any Non-Repudiation finding on audit completeness; the merged or linked record carries both concerns
 
-**Pattern: OAuth/OIDC consent records mutable — consent revocation overwrites the consent record rather than recording revocation as a new event.**
+**Pattern: Backup retention policy meets minimum but no object lock applied.**
 
-- Severity: high (the proof-of-consent for processing that occurred during the consent window is destroyed; GDPR Article 6(1)(a) defense fails for any processing that occurred during the consent window)
-- NIST: AU-11, AU-9, CM-2(3)
-- Related concerns: non_repudiation (consent-event audit completeness), confidentiality (consent records contain personal data)
-
-**Pattern: SAML assertion-ID replay store retention shorter than the longest NotOnOrAfter window in production — the store cannot guarantee replay detection.**
-
-- Severity: high (SAML assertion replay is a documented attack class; the replay-prevention store IS the immutable-during-window security primitive)
-- NIST: AU-11, SI-7, IA-2, SC-23
-- Related concerns: integrity (the replay store's eviction policy), distributed (cross-region replay-store consistency)
-
-**Pattern: Signing-key rotation history not retained — only the current and previous kid are queryable; older kids are dropped from JWKS-history table.**
-
-- Severity: high (after-the-fact verification of "which kid signed which token at what time" is impossible; post-incident compromise scoping fails)
-- NIST: SC-12, SC-12(2), AU-11, SI-7
-- Related concerns: ephemeral (rotation cadence), non_repudiation (key-lifecycle audit)
-
-**Pattern: Backup snapshots of the credential store, the session store, and the key-lifecycle records meet retention but no object-lock or compliance-mode immutability is applied.**
-
-- Severity: high (backups vulnerable to ransomware deletion; the IdP backup is the post-breach recovery anchor for every dependent application; deletion-by-single-credential is the canonical ransomware target)
+- Severity: high (backups vulnerable to ransomware deletion)
 - NIST: CP-9, CP-9(1), CP-9(8), MP-4
-- ATT&CK: T1485 (Data Destruction); T1490 (Inhibit System Recovery)
-- Related concerns: availability (backup recoverability — can we actually restore?), confidentiality (backup encryption — and the key separation question)
+- Related concerns: availability (backup recoverability)
 
-**Pattern: Federation-trust configuration partly IaC, partly manual via admin console; no drift detection between declared and actual federation-trust state.**
+**Pattern: Configuration is partly IaC, partly manual; no drift detection.**
 
-- Severity: high (federation-trust mutations are admin-tier consequential actions; manual mutation breaks GitOps attribution, evades signed-commit discipline, and produces "where did this SP entry come from?" forensic gaps)
-- NIST: CM-2, CM-2(2), CM-3, CM-6, CM-6(2), CM-8
-- Related concerns: integrity (config correctness), authenticity (the signed-commit posture for the IaC half), non_repudiation (admin-action attribution)
+- Severity: medium (high when the manually-managed retention covers HIPAA §164.316(b)(2)(i) 6-year or CMS §423.505(d) 10-year floors)
+- NIST: CM-2, CM-2(2), CM-3, CM-6
+- Related concerns: integrity (configuration correctness), authenticity (signed-commit posture)
 
-**Pattern: Configuration repository allows history rewrite — no protected branches on the IdP-config repo, no force-push prevention, no signed-commit requirement on RBAC / federation-trust / authorization-policy files.**
+**Pattern: Configuration repository allows history rewrite (no protected branches).**
 
-- Severity: medium to high
-- NIST: CM-3, CM-3(1), SI-7(8), SA-10 (developer configuration management)
-- Related concerns: authenticity (signed commits provide attribution but mutable history defeats it), non_repudiation (commit-attribution loss)
+- Severity: medium (high when the affected retention floor is regulator-mandated rather than contractual)
+- NIST: CM-3, CM-3(1), SI-7(8)
+- Related concerns: authenticity (signed commits provide attribution but mutable history defeats it)
 
-**Pattern: Identity-proofing artifacts (IAL2/IAL3 verification records) stored mutably or with retention shorter than the lifetime of the proofing claim downstream.**
+**Pattern: Formulary configuration history not retained — only current state stored.**
 
-- Severity: high (the IdP asserts an IAL claim to downstream RPs; if the underlying evidence is gone, the IAL claim cannot be re-verified post-incident, and an IAL-fraud claim cannot be disputed)
-- NIST: IA-12 (identity proofing), AU-11, SI-7
-- Related concerns: non_repudiation (proofing-event audit)
+- Severity: high (adjudication decisions cannot be reconstructed against the formulary at decision time; defends regulatory and litigation positions)
+- NIST: CM-2(3), AU-11
+- Related concerns: non_repudiation (linking decisions to their inputs)
 
-**Pattern: Retention duration not specified per audit class — the artifacts assert "audit is retained" without per-class duration, regulatory citation, or enforcement mechanism.**
+**Pattern: Retention duration not specified in artifacts.**
 
 - Disposition: uncertainty or blocked
-- prerequisite_evidence: "Retention policy — per-audit-class duration with regulatory citation (authn events, authz events, token-lifecycle events, consent events, federation events, admin actions, key-lifecycle events, data-subject-rights events), enforcement mechanism (storage-tier lifecycle policy, application-level enforcement), legal-hold override procedure, deletion-verification mechanism, and the per-class storage substrate (WORM vs. append-only vs. mutable)"
+- prerequisite_evidence: "Per-class retention specification — (1) for each immutability class declared (audit log, PDE archive, claim-adjudication history, formulary version history, controlled-substance prescription record, backup), the retention-floor citation (HIPAA §164.316(b)(2)(i), 42 CFR §423.505(d), 21 CFR §1304.04, 21 USC §360eee-1(d), state pharmacy-board floor); (2) the substrate enforcing the floor (S3 Object Lock Compliance Mode, Azure Blob immutable with legal hold, GCS locked retention, WORM tape, HSM-anchored hash-chained store); (3) the operator action that becomes infeasible under that substrate (e.g., root-credentialed delete, retention shortening, legal-hold removal); (4) the drift-detection mechanism that detects substrate misconfiguration (object-lock-disabled bucket, governance-mode downgrade, missing legal hold) and the alert routing for that detection."
+
+**Pattern: Configuration drift between declared and actual immutability posture.**
+
+- Disposition: uncertainty or blocked
+- prerequisite_evidence: "Drift control specification — (1) the declared-state source-of-truth (IaC repository path, GitOps catalog, or policy-as-code bundle) for retention, object-lock, and protected-branch settings; (2) the actual-state observability mechanism (config-management agent, cloud-provider config service, periodic policy-sweep job) and the scope of resources it covers; (3) the drift-detection schedule (continuous, hourly, daily) and the alerting destination (SIEM channel, on-call rotation, ticket queue); (4) the reconciliation policy when drift is detected (auto-revert with audit trail, manual review with named approver, or block-on-drift with named escalation)."
 
 ## Common capability patterns
 
-**Pattern: Append-only authentication and authorization event log with per-stream hash-chaining; chain heads anchored daily to a separate trust domain.** Capability scope must enumerate which event streams are confirmed in scope; cross-cuts Non-Repudiation.
+**Pattern: S3 object lock with compliance mode on backup buckets, retention period set to regulatory minimum.** Scope must specify which buckets are confirmed.
 
-**Pattern: Object-lock with compliance mode on backup buckets for credential store, session store, audit log, and key-lifecycle records; retention period set to the longest applicable regulatory minimum.** Scope must specify which buckets are confirmed and the retention period per bucket.
+**Pattern: Hash-chained audit log with daily chain-head anchored to an external trust domain.** Cross-cuts Non-Repudiation; mention via `related_concerns`.
 
-**Pattern: SAML assertion-ID replay store with TTL ≥ longest NotOnOrAfter window in any active SP relationship; replay events audited as security-relevant.** Cross-cuts Integrity.
+**Pattern: GitOps-driven configuration with signed commits and protected branches.** Maturity ladder: `designed` from tech plan; `implemented` requires repository configuration or pipeline evidence.
 
-**Pattern: Signing-key rotation history immutable and queryable — every kid that has ever been published is retained with its active window, the rotation event, and the revocation event (if any).** Cross-cuts Ephemeral and Non-Repudiation.
-
-**Pattern: GitOps-driven IdP configuration (RBAC, federation-trust, authorization policy, audit-pipeline config) with signed commits, protected branches, force-push prevention, and drift detection against the running configuration.** Maturity ladder: `designed` from tech plan; `implemented` requires repository configuration plus deployment-pipeline evidence; `operationalized` requires evidence of the drift-detection-and-alerting loop closing.
-
-**Pattern: Retention enforcement per audit class via storage-tier lifecycle policy plus application-level legal-hold override; deletion-verification reports on a documented cadence.** Higher maturity when the legal-hold override is itself audited and the retention metrics are dashboarded.
+**Pattern: Formulary versioning with snapshot-at-decision retention on every adjudication.** Higher maturity requires schema or implementation evidence.
 
 ## Domain attack-path defaults (merged across packs)
 
@@ -1034,230 +1291,246 @@ Unioned and deduplicated from the selected packs' `domain.yaml`. Run-config `cro
 
 ```yaml
 crown_jewels:
-- pattern: signing_key_material
-  description: "Token signing keys \u2014 JWT RS256/ES256/EdDSA private keys, SAML\
-    \ 2.0 signing X.509 keys, OIDC ID-token signers, JWE content-encryption keys,\
-    \ and the JWKS rotation history that establishes the trust chain. Compromise yields\
-    \ universal token forgery: the attacker can mint arbitrary access tokens, refresh\
-    \ tokens, ID tokens, and SAML assertions for any subject in any audience, producing\
-    \ a global authentication bypass across every relying party that trusts the issuer."
+- pattern: phi_store
+  description: Member PHI store carrying demographics, claims history, prescriber/diagnosis
+    associations subject to HIPAA breach-notification thresholds.
   domains:
-  - identity-security
-- pattern: password_hash_store
-  description: User credential hashes (argon2id, bcrypt, scrypt; legacy PBKDF2/SHA-512crypt
-    where present) and the per-user salt set. Dumps enable offline password recovery
-    proportional to the hash strength; reused passwords amplify the blast radius to
-    every external service the population shares credentials with. Triggers GDPR Article
-    33 notification and is the highest-frequency real-world IdP incident class.
+  - pbm
+- pattern: pde_submission_pipeline
+  description: "CMS Part D Prescription Drug Event submission pipeline \u2014 submission\
+    \ integrity is regulator-anchored under CMS rules and material to plan revenue."
   domains:
-  - identity-security
-- pattern: mfa_secret_store
-  description: TOTP shared secrets, HOTP counters, WebAuthn credential records (credential
-    ID + public key + signature counter), FIDO2 attestation material, push-MFA enrollment
-    tokens, backup/recovery codes, and stored security-question answers. Compromise
-    of TOTP seeds or recovery codes effectively eliminates the second factor; WebAuthn
-    credential records compromise enables impersonation in flows that do not enforce
-    attestation freshness.
+  - pbm
+- pattern: claim_adjudication_engine
+  description: "Real-time claim adjudication engine \u2014 pricing accuracy and decision\
+    \ integrity drive member out-of-pocket and pharmacy reimbursement."
   domains:
-  - identity-security
-- pattern: oauth_client_secret_registry
-  description: "Confidential-client credentials \u2014 OAuth/OIDC client_secret values,\
-    \ private_key_jwt signing keys, mTLS client certificates registered for client\
-    \ authentication, and the registered redirect_uri allowlist that gates token issuance.\
-    \ Includes PKCE code_verifier values in flight. Leakage permits impersonation\
-    \ of an entire relying-party application and bypass of consent for grants that\
-    \ target the impersonated client."
-  domains:
-  - identity-security
-- pattern: session_token_store
-  description: Active session records (interactive browser sessions, SAML SLO state,
-    OIDC front-channel logout state), refresh tokens (typically stored as hashes with
-    rotation chains), OAuth authorization codes in their short-lived pre-exchange
-    window, device-code/user-code pairs for the device-authorization grant, and CIBA
-    auth_req_id state. Loss enables session hijack at scale; mutation enables silent
-    privilege transfer between subjects.
-  domains:
-  - identity-security
-- pattern: federated_identity_mapping
-  description: 'IdP-to-IdP attribute mappings, upstream-claim transformations, group/role
-    assignment rules, JIT-provisioning policies, SCIM target bindings, and the SAML
-    attribute-release statements per service provider. Corruption produces silent
-    privilege escalation invisible to per-request authentication: the assertion is
-    valid, the mapped attributes are wrong, and the relying party authorizes against
-    the wrong identity.'
-  domains:
-  - identity-security
-- pattern: consent_record_store
-  description: OAuth user-consent grants with scope set and relying-party identity
-    (GDPR Article 6(1)(a) lawful basis evidence), SAML attribute-release acknowledgements,
-    OIDC offline_access grant records, and the per-grant lifetime/revocation history.
-    Destruction or mutation defeats the proof-of-lawful-basis defense for any processing
-    that occurred during the consent window; regulators treat absence as unlawful
-    processing.
-  domains:
-  - identity-security
+  - pbm
 - pattern: audit_log_store
-  description: Authentication event log (success/failure/MFA challenge/lockout), authorization
-    decision log, token-issuance and revocation log, OAuth consent-grant log, SAML
-    assertion log, administrative-action log, and key-rotation event log. The forensic
-    fact base for credential-compromise reconstruction, GDPR Article 33 breach scoping,
-    and SOC 2 CC7.2 anomaly evidence. Tampering destroys the breach-detection substrate.
+  description: "Security and consequential-action event log spanning PHI access, claim-adjudication\
+    \ decisions, prior-authorization decisions, configuration changes, break-glass\
+    \ invocations, and CMS PDE submission events. HIPAA Security Rule \xA7164.312(b)\
+    \ (Audit Controls) treats this store as the breach-detection and breach-notification\
+    \ fact base \u2014 regulators treat absence or alteration as presumption of breach.\
+    \ Compromise enables both attack-concealment (T1070 Indicator Removal) and post-incident\
+    \ liability \u2014 without defensible audit, the PBM cannot satisfy HIPAA breach-notification\
+    \ rules even when an attack is otherwise detected. NIST SP 800-66 Rev 2 provides\
+    \ \xA7164.312(b) implementation guidance for the audit-controls obligation."
   domains:
-  - identity-security
-- pattern: service_account_credential_store
-  description: "Non-human identity credentials \u2014 internal service tokens used\
-    \ by the IdP itself, outbound SCIM provisioning credentials, LDAP/AD bind credentials,\
-    \ database credentials, SMTP credentials for the recovery channel, and any vendor\
-    \ API keys used by enrichment or risk-scoring integrations. Compromise pivots\
-    \ from the IdP outward to every system the IdP provisions or queries."
+  - pbm
+- pattern: backup_artifact_store
+  description: "Database snapshots (adjudication, member, claim history), object-store\
+    \ backups (PDE batch archives, audit-log archives), configuration backups, and\
+    \ key-material escrow copies. Frequently the weakest crown jewel because encryption-at-rest,\
+    \ access controls, and immutability protections are typically weaker than the\
+    \ primary stores they protect against. A successful exfiltration of a backup commonly\
+    \ bypasses the controls applied to live PHI surfaces and produces the same regulatory\
+    \ consequences under 45 CFR \xA7164.408."
   domains:
-  - identity-security
+  - pbm
+- pattern: prescriber_directory
+  description: "Provider attribution surface \u2014 NPI, DEA registration number,\
+    \ state pharmacy/medical license, prescriber specialty, prescriber demographics,\
+    \ controlled-substance authority. Compromise enables both prescription-fraud campaigns\
+    \ (forge prescriptions in a real prescriber's name) and clinical-decision misattribution\
+    \ (DUR alerts routed to wrong prescriber). DEA records are subject to 21 CFR \xA7\
+    1304.04 retention; state-license records are commonly subject to state pharmacy-board\
+    \ reporting requirements separate from HIPAA."
+  domains:
+  - pbm
+- pattern: rebate_formulary_pricing_data
+  description: "Manufacturer rebate calculations, Maximum Allowable Cost (MAC) lists,\
+    \ formulary tier assignments, pharmacy-network reimbursement schedules, and accumulator\
+    \ history. Compromise yields commercial-confidentiality exposure (master-service-agreement\
+    \ breach, manufacturer-rebate-contract breach) and competitive-intelligence harm;\
+    \ tampering yields plan-payment fraud and pharmacy-reimbursement disputes that\
+    \ commonly trigger litigation. Retention requirements typically derive from contract\
+    \ terms rather than statute, but the contract floors are routinely 7\u201310 years\
+    \ to cover audit and statute-of-limitations windows."
+  domains:
+  - pbm
+- pattern: member_authentication_credentials
+  description: "Member portal authentication store \u2014 password hashes, MFA enrollments,\
+    \ recovery email and phone, security questions, account-lockout state. Compromise\
+    \ yields member-account takeover at scale, which converts directly to PHI exposure\
+    \ under HIPAA (every claim record and PA history for the affected member becomes\
+    \ readable). Authentication factor strength and recovery-flow integrity gate both\
+    \ the \xA7164.524 (Right of Access) surface and the \xA7164.502 (Minimum Necessary)\
+    \ surface."
+  domains:
+  - pbm
+- pattern: vendor_integration_secrets
+  description: "Service-account credentials, API tokens, and signing keys used for\
+    \ outbound integrations \u2014 rebate aggregators, COB carriers, eligibility partners,\
+    \ mail-order fulfillment pharmacies, accumulator vendors, and analytics partners.\
+    \ Long-lived service-account credentials are the dominant root cause of vendor-channel\
+    \ PHI exposure incidents; compromise of one integration credential commonly yields\
+    \ lateral PHI access across the entire vendor surface. Each credential's blast\
+    \ radius equals the data scope granted in the underlying Business Associate Agreement."
+  domains:
+  - pbm
 ```
 
 ### Attacker positions
 
 ```yaml
 attacker_positions:
-- position: unauthenticated_attacker_at_login_endpoint
-  description: 'Untrusted external client at the primary login surface: the OAuth
-    /authorize endpoint, the SAML SSO endpoint, the OIDC userinfo endpoint, the password-grant
-    endpoint where supported, and the credential-recovery endpoints. Models credential
-    stuffing, password spraying, account enumeration via timing or error-message differential,
-    and unauthenticated SAML/OIDC discovery abuse.'
+- position: external_internet
+  description: Untrusted external internet client; the default external attacker position
+    for any internet-facing surface.
   domains:
-  - identity-security
-- position: authenticated_user_seeking_horizontal_escalation
-  description: Valid user holding a verified credential and an active session, attempting
-    cross-tenant, cross-organization, or cross-realm reads/writes via group-mapping
-    bugs, scope confusion in OAuth grants, SAML NameID collision, or SCIM-target overlap.
-    The dominant authenticated-attack vector against multi-tenant IdPs.
+  - pbm
+- position: compromised_pharmacy_credential
+  description: An attacker holding a valid pharmacy-submitter credential through phishing,
+    credential stuffing, or insider abuse at a pharmacy partner.
   domains:
-  - identity-security
-- position: authenticated_user_seeking_vertical_escalation
-  description: "Valid user attempting privilege elevation within their own tenant\
-    \ \u2014 admin-role assignment via group-mapping injection, RBAC-policy injection\
-    \ through self-service profile fields, abuse of approval workflows, or OIDC scope\
-    \ upgrade through token exchange (RFC 8693) without authorization-server-side\
-    \ scope reduction."
+  - pbm
+- position: compromised_vendor_integration
+  description: An attacker who has compromised a third-party vendor's integration
+    credentials (e.g., a benefits-management vendor or analytics partner).
   domains:
-  - identity-security
-- position: compromised_user_credential
-  description: Attacker holding a valid password (phishing, breach reuse, infostealer)
-    but no possession factor. Models MFA bypass attempts, MFA fatigue / push-bombing
-    (T1621), SMS-fallback SIM-swap downgrade, recovery-flow abuse to register attacker-controlled
-    factors, and WebAuthn-enrollment bypass via unprotected enrollment endpoints.
+  - pbm
+- position: insider_with_member_service_role
+  description: An insider holding a legitimate member-services role but acting outside
+    their minimum-necessary scope (e.g., bulk PHI export, unauthorized member lookups).
   domains:
-  - identity-security
-- position: compromised_user_session_token
-  description: "Attacker holding a stolen JWT, session cookie, refresh token, or OAuth\
-    \ bearer token \u2014 via XSS on a relying party, malware exfil from the user's\
-    \ device, MitM where TLS validation is weak, or token leak via referer/log/analytics.\
-    \ Models the consequences of session-lifetime, token-binding, sender-constrained\
-    \ tokens (DPoP, mTLS), and revocation latency."
+  - pbm
+- position: compromised_dev_workstation
+  description: An attacker who has compromised a developer or operator workstation
+    with production deployment or break-glass access.
   domains:
-  - identity-security
-- position: compromised_oauth_client_credentials
-  description: Attacker holding a valid OAuth client_id + client_secret (or private_key_jwt
-    key, or mTLS client cert) via repository exposure, CI log leak, mobile-app extraction,
-    or vendor compromise. Permits impersonation of the relying party against the IdP,
-    including silent token issuance for any grant the client is authorized for and
-    consent bypass for previously-granted scopes.
+  - pbm
+- position: unauthenticated_internet_against_member_portal
+  description: "Untrusted external attacker targeting the member-portal authentication\
+    \ surface specifically (distinct from the generic external_internet position,\
+    \ which models any internet-facing surface). Models credential-stuffing campaigns,\
+    \ OWASP API1 (BOLA) on member-id-keyed endpoints, OWASP API5 (BFLA) on tier-distinct\
+    \ endpoints (member vs admin), enumeration of member identifiers via login or\
+    \ password-reset response oracles (T1110.003 Password Spraying, T1110.004 Credential\
+    \ Stuffing), and SAML/OIDC misconfiguration on federated member access. The defining\
+    \ threat: a successful authentication compromise here converts directly to PHI\
+    \ exposure under HIPAA \xA7164.508 (Authorization) without further escalation."
   domains:
-  - identity-security
-- position: compromised_third_party_relying_party
-  description: "A downstream application that consumes our tokens has been compromised.\
-    \ The attacker can now harvest every access token, refresh token, and ID token\
-    \ presented to that RP, exercise any granted scope on the user's behalf, and inject\
-    \ malicious behavior into the consent flow for users who arrive at the compromised\
-    \ RP. Models OAuth 'compromised relying party' threat (RFC 9700 \xA74.2)."
+  - pbm
+- position: authenticated_member_seeking_cross_member_phi
+  description: "A member with valid credentials attempting horizontal escalation to\
+    \ another member's PHI \u2014 typically via IDOR on member-id parameters, predictable\
+    \ claim-reference URLs, parameter tampering on dependent-coverage endpoints, or\
+    \ session re-use across logical member contexts (T1078.004 Cloud Accounts applied\
+    \ to member portal). The most common PBM-specific manifestation is dependent-coverage\
+    \ scope: a primary subscriber attempting to access an adult dependent's PHI. Adult\
+    \ dependents are not within the \xA7164.502(g) personal-representative scope,\
+    \ so the access falls under the \xA7164.502(a) general use-and-disclosure rule\
+    \ and requires \xA7164.508 authorization from the adult dependent before disclosure."
   domains:
-  - identity-security
-- position: compromised_admin_account
-  description: "Attacker holding IdP administrator or superuser credentials \u2014\
-    \ total-compromise scenario. Models the resulting authorization-policy mutation,\
-    \ signing-key exfiltration, MFA-disable for arbitrary users, federation-trust\
-    \ injection, and audit-tampering attempts. The boundary case where Authenticity,\
-    \ Non-Repudiation, and Immutability findings converge into a single critical-merged\
-    \ record."
+  - pbm
+- position: compromised_cms_submission_credential
+  description: "Attacker holding the credential or signing key used to authenticate\
+    \ the PBM's outbound CMS Part D PDE submission channel. Distinct from compromised_pharmacy_credential\
+    \ (which models inbound NCPDP claim submission) and compromised_vendor_integration\
+    \ (which models third-party vendor egress). Maps to T1078 (Valid Accounts) for\
+    \ credential-holding abuse of the held CMS submission credential, T1565.002 (Transmitted\
+    \ Data Manipulation) when the held signing key is used to inject falsified PDE\
+    \ records into the outbound submission channel, and T1565.001 (Stored Data Manipulation)\
+    \ for altering PDE retroactive corrections in the submission staging store. Compromise\
+    \ yields the ability to submit falsified PDE records, suppress legitimate PDE\
+    \ records, or alter PDE retroactive corrections \u2014 each producing 42 CFR \xA7\
+    423.322 PDE-data-integrity consequence (CMS payment-determination reopening, plan-payment\
+    \ recovery, potential False Claims Act exposure under 31 U.S.C. \xA73729 if the\
+    \ submission was knowingly false)."
   domains:
-  - identity-security
-- position: malicious_relying_party
-  description: "Attacker-registered or attacker-controlled OAuth/OIDC client targeting\
-    \ end-user redirect/consent flows \u2014 open-registration abuse, lookalike client_name\
-    \ spoofing, redirect_uri manipulation via path/fragment variants, scope-upgrade\
-    \ requests against weak consent UX, and the OAuth covert-redirect / mix-up attacks\
-    \ (RFC 9700 \xA74.4). The threat model assumes registration is reachable; severity\
-    \ depends on the registration-gate strength."
+  - pbm
+- position: compromised_admin_workstation
+  description: 'Attacker who has compromised an operator or administrator workstation
+    with privileged access to formulary configuration, PA-criteria configuration,
+    MAC pricing, contract-pricing tables, or audit-log retention settings. Distinct
+    from compromised_dev_workstation (which models pre-production tooling). Models
+    the post-phishing escalation path where a compromised admin can silently disable
+    audit shipping (T1070), backdate audit entries (T1036 Masquerading at the audit
+    layer), or alter the formulary configuration to produce clinical-decision harm
+    at scale. The defining feature: actions taken from this position attribute to
+    a legitimate operator credential, so defensibility depends entirely on the audit-of-audit
+    surface.'
   domains:
-  - identity-security
-- position: internal_lateral_attacker_in_idp_tier
-  description: "Post-breach attacker pivoting inside the IdP's trust zone \u2014 has\
-    \ shell on a worker pod, a database read replica credential, a Redis session-store\
-    \ credential, or a Kubernetes ServiceAccount in the IdP namespace. Models east-west\
-    \ exposure of credential hashes, signing keys, session state, and the audit pipeline;\
-    \ the 'assume compromise' position for the IdP's own infrastructure."
+  - pbm
+- position: internal_lateral_attacker_in_adjudication_tier
+  description: "Attacker who has already established a foothold in the internal network\
+    \ \u2014 typically through the dev_workstation position, an exposed admin-console\
+    \ session, or a vendor-integration compromise \u2014 and is now attempting lateral\
+    \ movement to reach the PHI store, the adjudication engine, or the PDE submission\
+    \ pipeline. Models the post-breach window where the attacker has time and access\
+    \ to enumerate internal services, abuse in-cluster trust assumptions (T1078 Valid\
+    \ Accounts on service-account credentials, T1213 Data from Information Repositories\
+    \ on internal PHI replicas), and escape from a low-value tier to a high-value\
+    \ tier. The defining test for this position: would mTLS, network segmentation,\
+    \ and credential-scoping prevent the attacker from reaching the crown jewel from\
+    \ their established foothold?"
   domains:
-  - identity-security
+  - pbm
 ```
 
 ### Default trust boundaries
 
 ```yaml
 default_trust_boundaries:
-- boundary: public_internet_to_login_endpoint
-  description: "First crossing from untrusted client to the IdP's external surface\
-    \ \u2014 /authorize, /token, /userinfo, /jwks.json, /.well-known/openid-configuration,\
-    \ the SAML SSO/SLO endpoints, the WebAuthn enrollment/assertion endpoints, the\
-    \ credential-recovery surface. TLS termination, edge rate-limit, bot management,\
-    \ and IP-reputation enforcement happen here; downstream tiers must not re-trust\
-    \ client-supplied identity."
+- boundary: pharmacy_submission_ingress
+  description: Boundary between external pharmacy submitters and the claim-ingress
+    API; first authentication/authorization checkpoint for claim submission.
   domains:
-  - identity-security
-- boundary: login_endpoint_to_credential_store
-  description: "Authentication front-end to the credential backend \u2014 password\
-    \ hash store, MFA secret store, WebAuthn credential store, recovery-code store.\
-    \ Carries plaintext credentials in the request window; hashing and comparison\
-    \ must happen on the backend side of this boundary, never on the edge. Compromise\
-    \ scope: every credential that crosses during the compromise window."
+  - pbm
+- boundary: member_portal_ingress
+  description: Boundary between internet members and the member-facing portal; second
+    external ingress with PHI-read scope after authentication.
   domains:
-  - identity-security
-- boundary: oauth_authorization_endpoint_to_token_endpoint
-  description: "Internal crossing between the user-interactive /authorize surface\
-    \ (browser-driven, consent UX, redirect flow) and the machine-to-machine /token\
-    \ surface (back-channel, client-authenticated, returns tokens). Authorization\
-    \ codes, PKCE verifiers, request_uri references, and DPoP proofs cross this boundary;\
-    \ mix-up between the two surfaces is RFC 9700 \xA74.4 territory."
+  - pbm
+- boundary: internal_to_pde_submission
+  description: Boundary between internal services and the CMS Part D submission pipeline;
+    outbound regulatory channel with submission-integrity guarantees.
   domains:
-  - identity-security
-- boundary: idp_to_relying_party
-  description: "Federation hop \u2014 the IdP issues a SAML assertion, an OIDC ID\
-    \ token, or an OAuth access token to a downstream relying party. Trust expressed\
-    \ via signature on the artifact and audience binding; weak signature validation,\
-    \ missing audience check, or assertion-injection across the boundary collapses\
-    \ the federation trust model."
+  - pbm
+- boundary: adjudication_engine_to_phi_data_tier
+  description: Service-to-datastore crossing between the claim-adjudication engine
+    and the underlying PHI store (PostgreSQL, MongoDB, or vendor-specific adjudication-engine
+    database). Frequently the weakest link under 'in-cluster trust' assumptions; enforcement
+    requires in-cluster mTLS, query parameterization to prevent NoSQL/SQL injection
+    on member-id or claim-reference parameters, and least-privilege datastore credentials
+    scoped to the specific adjudication operation. A successful boundary failure here
+    reaches the largest PHI scope in the PBM.
   domains:
-  - identity-security
-- boundary: idp_to_directory_backend
-  description: IdP to LDAP/Active Directory, IdP to user-database backend, IdP to
-    upstream IdP for federation chains. Carries directory bind credentials, user-attribute
-    reads, group-membership lookups, and SCIM writes. Often the legacy-protocol edge
-    where TLS posture and bind-credential rotation lag the rest of the platform.
+  - pbm
+- boundary: pbm_to_third_party_vendor
+  description: "Outbound egress from PBM services to third-party vendors with whom\
+    \ the PBM has a Business Associate Agreement under HIPAA \xA7164.504(e) \u2014\
+    \ rebate aggregators, accumulator vendors, COB carriers, analytics partners, mail-order\
+    \ fulfillment pharmacies, specialty-pharmacy fulfillment, and switch operators\
+    \ (RelayHealth, Change Healthcare). The boundary is multi-channel (HTTPS APIs,\
+    \ SFTP file drops, IBM MQ enterprise messaging) and each channel needs its own\
+    \ authentication, encryption-in-transit, and data-scope-enforcement. Vendor-credential\
+    \ compromise (see compromised_vendor_integration attacker position) is the dominant\
+    \ breach vector here."
   domains:
-  - identity-security
-- boundary: idp_to_session_store
-  description: "IdP application tier to the session-state datastore \u2014 Redis,\
-    \ PostgreSQL session table, distributed cache. Carries session identifiers, refresh-token\
-    \ records, OAuth grant codes pre-exchange, and CIBA auth_req_id state. The 'in-cluster\
-    \ trust' assumption commonly hides here; session-store compromise yields impersonation\
-    \ of every active session."
+  - pbm
+- boundary: phi_subject_zone
+  description: "HIPAA-anchored PHI segmentation boundary, analogous to api-security's\
+    \ personal_data_subject_zone for GDPR. Crossings into or out of this zone trigger\
+    \ HIPAA Privacy Rule disclosure analysis (45 CFR \xA7164.502 Uses and Disclosures,\
+    \ \xA7164.514(b)(1) Expert Determination and \xA7164.514(b)(2)(i) Safe Harbor\
+    \ identifier enumeration). Includes the de-identification gate for analytics surfaces,\
+    \ the minimum-necessary gate for internal cross-team data sharing (\xA7164.502(b)),\
+    \ and the lawful-basis gate for any disclosure outside the Treatment / Payment\
+    \ / Operations exception (\xA7164.506)."
   domains:
-  - identity-security
-- boundary: admin_console_to_idp_backend
-  description: Administrator-only surface for tenant configuration, RBAC policy edits,
-    federation-trust registration, signing-key rotation, and audit-config changes.
-    Highest-blast-radius boundary in the IdP; mandates phishing-resistant MFA, separate
-    network path where possible, per-action audit, and ideally an out-of-band approval
-    gate for irreversible actions (key rotation, trust deletion, audit-config change).
+  - pbm
+- boundary: admin_console_to_pbm_backend
+  description: "Privileged-administration crossing between the operator admin console\
+    \ (formulary editor, PA criteria editor, MAC list editor, contract-pricing editor,\
+    \ audit-retention configuration) and the corresponding backend services and configuration\
+    \ stores. The blast radius of any boundary failure here is the entire PBM \u2014\
+    \ admin actions silently affect every subsequent claim adjudicated against the\
+    \ modified configuration. Enforcement requires step-up authentication (per the\
+    \ severity rubric's authentication-bypass clause), four-eyes / dual-approval workflows\
+    \ on configuration-changing actions, and an audit chain attributing the action\
+    \ to the human operator (not the operator's session token or sidecar identity)."
   domains:
-  - identity-security
+  - pbm
 ```

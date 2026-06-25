@@ -12,10 +12,10 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from . import linters
+from . import resources as _resources
 from .report import taxonomy as _taxonomy
 
-REPO = pathlib.Path(__file__).resolve().parent.parent.parent
-SCHEMAS_DIR = REPO / "schemas"
+SCHEMAS_DIR = _resources.schemas_dir()
 
 # Map record kind → (schema filename, root key in YAML, filename glob)
 RECORD_KINDS: dict[str, tuple[str, str, str]] = {

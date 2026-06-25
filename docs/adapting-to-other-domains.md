@@ -19,6 +19,8 @@ Everything else — the lens definitions, the boundary calls between adjacent go
 
 ## 2. Anatomy: the 14 files and the `domain.yaml` schema
 
+> **Note.** The canonical home for the JSON Schemas and domain packs is `tools/apd_gauntlet/data/{schemas,domains}` (read via `apd_gauntlet.resources`); the repo-root `schemas/` and `domains/` are convenience symlinks. The repo-root path citations throughout this guide resolve through those symlinks.
+
 A pack is a directory under `domains/<name>/` containing exactly 14 files — `domain.yaml`, the four calibration files, and the nine per-goal pattern files:
 
 ```text

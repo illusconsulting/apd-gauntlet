@@ -15,7 +15,7 @@ The framework was initially built for PBM clients. However, given OSS ambitions 
 
 Lens definitions, specialist skills, and the synthesizer are domain-neutral. Domain-specific content — severity rubric, consequential-action surface, immutability classes, data taxonomy, and per-goal common patterns — lives in `domains/<pack-name>/` packs. The PBM pack ships with v1.0 at `domains/pbm/` and is the default when no pack is specified. The synthesizer skill accepts a `--domain` flag at invocation time and loads the named pack's content.
 
-Pack structure is defined by a schema at `schemas/domain-pack.schema.json`. New packs must pass `apd-gauntlet validate-domain` before being accepted.
+Pack structure is defined by a schema at `schemas/domain.schema.json` (canonical `tools/apd_gauntlet/data/schemas/domain.schema.json`). New packs must pass `apd-gauntlet validate-domain` before being accepted.
 
 ## Consequences
 

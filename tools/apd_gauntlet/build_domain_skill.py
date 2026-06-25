@@ -2,17 +2,21 @@
 from __future__ import annotations
 
 import datetime
-import json
 import pathlib
 import re
 from collections.abc import Iterable
+from functools import lru_cache
 from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
 
-REPO = pathlib.Path(__file__).resolve().parent.parent.parent
-DOMAIN_SCHEMA = json.loads((REPO / "schemas" / "domain.schema.json").read_text(encoding="utf-8"))
+from . import resources as _resources
+
+
+@lru_cache(maxsize=1)
+def _domain_schema() -> dict[str, Any]:
+    return _resources.read_schema("domain.schema.json")
 
 
 SemverTuple = tuple[int, int, int]
@@ -82,7 +86,7 @@ def _load_pack_meta(pack_dir: pathlib.Path, domain_name: str) -> dict[str, Any]:
     if not meta_path.exists():
         raise FileNotFoundError(f"Domain pack '{domain_name}' not found at {pack_dir}")
     meta: dict[str, Any] = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
-    Draft202012Validator(DOMAIN_SCHEMA).validate(meta)
+    Draft202012Validator(_domain_schema()).validate(meta)
     return meta
 
 
@@ -168,7 +172,8 @@ def _finalize(text: str) -> str:
     joins yield a single blank line. The only places that can produce 3+ newlines
     are the frontmatter→first-section seam and the trailing surfaces seam — collapse
     them to a single blank line (markdownlint MD012) and trim to one EOF newline
-    (MD047). Pack bodies are already MD012-clean (linted via ``domains/**/*.md``),
+    (MD047). Pack bodies are already MD012-clean (linted via
+    ``tools/apd_gauntlet/data/domains/**/*.md``),
     so collapsing never disturbs intended in-body spacing.
     """
     return re.sub(r"\n{3,}", "\n\n", text).rstrip() + "\n"

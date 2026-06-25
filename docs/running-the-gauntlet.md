@@ -21,6 +21,21 @@ pip install apd-gauntlet
 apd-gauntlet --version
 ```
 
+The framework ships through two channels in lockstep (ADR-0023): the
+`apd-gauntlet` PyPI package above (the validator CLI and workflow engine), and a
+Claude Code plugin (the agents, skills, and slash commands). To install the
+plugin lane, add the marketplace and install the plugin from Claude Code:
+
+```text
+/plugin marketplace add illusconsulting/apd-gauntlet
+/plugin install apd-gauntlet@apd-security
+```
+
+With the plugin installed you can launch a run with the `/apd-gauntlet:run`
+slash command (defined in `commands/run.md`), which preflights the engine,
+confirms the run is scaffolded, and drives the runner in the foreground. The
+plugin still requires the `apd-gauntlet` CLI on your `PATH`.
+
 The CLI exposes the following operator subcommands:
 
 ```
@@ -32,7 +47,9 @@ apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml agai
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
+apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
+apd-gauntlet mint-improvement-id ...             # print the canonical dimpr-<sha8> id for a domain-improvement record
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics
 apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
@@ -50,6 +67,8 @@ apd-gauntlet refresh-owasp                       # refresh OWASP Top 10 / API To
 apd-gauntlet refresh-d3fend                      # refresh MITRE D3FEND reference data
 apd-gauntlet refresh-atlas                       # refresh MITRE ATLAS technique-title reference data (AML.T####)
 apd-gauntlet refresh-mas                         # refresh OWASP MASVS + MASWE mobile taxonomy reference data
+apd-gauntlet refresh-capec                       # refresh MITRE CAPEC reference data (the CWE<->ATT&CK bridge catalog)
+apd-gauntlet refresh-crosswalks --csf2-json … --hipaa-json …  # ground the HIPAA + CSF 2.0 crosswalks against NIST CPRT exports
 ```
 
 `build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
@@ -327,7 +346,7 @@ is already isolated and on `PATH`. That is a nudge, not a gate.
 
 | Check | Command / signal | When |
 |---|---|---|
-| CLI installed in an isolated env; version matches `plugin.json` | `apd-gauntlet --version` | always |
+| CLI installed in an isolated env; version matches `.claude-plugin/plugin.json` (mirrored in `.claude-plugin/marketplace.json`) | `apd-gauntlet --version` | always |
 | Run scaffolded (`runs/<id>/` + `.apd-run.yaml`) | output of `init-run` (Step 1) | always |
 | Run-config valid | `apd-gauntlet validate-run-config runs/<id>/.apd-run.yaml` | always |
 | Domain pack(s) valid | `apd-gauntlet validate-domain <pack…>` | always |

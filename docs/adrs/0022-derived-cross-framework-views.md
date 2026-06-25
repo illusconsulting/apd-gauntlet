@@ -1,7 +1,8 @@
 # ADR-0022: Derived Cross-Framework Views (Bridges, Overlays, Projections) Are Synthesis-Authored, Not Specialist-Emitted
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-06-14
+**Implemented:** PR #110
 **Complements:** [ADR-0008](0008-multi-framework-taxonomy-mappings.md) (multi-framework taxonomy mappings — the *emission* class this sits beside)
 **Shares philosophy with:** [ADR-0020](0020-tooling-authored-derived-fields.md) (derive deterministically; never ask the LLM to author what is a pure function of existing content)
 

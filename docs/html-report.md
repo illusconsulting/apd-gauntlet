@@ -1,4 +1,4 @@
-# HTML Advisory Report (v1.6)
+# HTML Advisory Report (v1.7)
 
 Every gauntlet run automatically produces an interactive HTML view of the
 synthesizer's outputs at:
@@ -10,7 +10,10 @@ contains six core tabs (Overview, Findings, Capabilities, Coverage, Attack paths
 Annexes) sourced from the existing `40-synthesis/*.yaml` artifacts plus the
 synthesizer-emitted `report-data.yaml`. A seventh **Threat model** tab appears
 between Coverage and Attack paths only when a threat model exists for the run
-(see [Threat model tab](#threat-model-tab)); it is omitted entirely otherwise.
+(see [Threat model tab](#threat-model-tab)); it is omitted entirely otherwise. An
+**Architecture (C4)** tab appears between Attack paths and Annexes only when a
+grounded C4 model exists for the run (see
+[Architecture (C4) tab](#architecture-c4-tab)); it is omitted entirely otherwise.
 
 The Coverage tab renders taxonomy tooltips for every cited control or technique
 ID. Tooltip families include NIST 800-53r5, MITRE ATT&CK, CWE, OWASP (web /
@@ -132,6 +135,17 @@ The scene is composed of up to five blocks:
 The completeness gate's `threat_model_scene_coherent` structural check guards the
 scene: it is exempt when the scene is legitimately omitted (no threat model), and
 fails if the scene is marked present but carries no entries or matrix rows.
+
+## Architecture (C4) tab
+
+When the run has a grounded C4 model (`data.c4_model.present`), the report adds an
+**Architecture (C4)** tab between Attack paths and Annexes. It is `code_recon`-gated:
+the model is authored only when source-code reconnaissance ran, and the tab is
+**omitted entirely** otherwise, with the remaining tabs renumbering automatically.
+The view is governed by the `apd-c4-discipline` never-invent constraints — every
+container, component, and `uses`/containment edge must be grounded in observed code,
+flagged `machine_extracted` versus `hand_read`, with L3 components blocked by
+default (see ADR-0021).
 
 ## Manual regeneration
 
@@ -327,5 +341,5 @@ rebuild the precompiled bundle and commit the result:
 
 CI gates that the precompiled bundle matches the JSX source
 (`tools/check_report_template_freshness.py`). The Node toolchain
-(esbuild 0.25.0 + react 18.3.1 + cytoscape 3.30.2 with cytoscape-dagre 2.5.0
+(esbuild 0.28.1 + react 18.3.1 + cytoscape 3.30.2 with cytoscape-dagre 2.5.0
 and cytoscape-fcose 2.2.0) is contributor-only — no runtime user needs Node.

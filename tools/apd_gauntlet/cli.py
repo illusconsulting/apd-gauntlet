@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .attack_path.graph import Edge, Graph, Node
 
 from . import __version__
+from . import resources as _resources
 from .build_domain_skill import build_domain_skill
 from .init_run import scaffold_run
 from .lint_agents import lint_agents_dir
@@ -129,7 +130,7 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
-    default=pathlib.Path("domains"),
+    default=None,
 )
 @click.option(
     "--out",
@@ -145,6 +146,8 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
     "sidecars (which lens agents read to bound context on multi-domain runs).",
 )
 def build_domain_skill_cmd(domain_names, domains_dir, out, framework_version, full_only) -> None:  # type: ignore[no-untyped-def]
+    if domains_dir is None:
+        domains_dir = _resources.domains_dir()
     try:
         path = build_domain_skill(
             list(domain_names), domains_dir, out, framework_version,
@@ -230,15 +233,14 @@ def init_run_cmd(run_id, inputs, domains, root, taxonomies, threat_model, method
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
-    default=pathlib.Path("domains"),
+    default=None,
 )
 def validate_domain_cmd(domain_names, domains_dir) -> None:  # type: ignore[no-untyped-def]
     from jsonschema import Draft202012Validator
 
-    schema_path = (
-        pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "domain.schema.json"
-    )
-    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+    if domains_dir is None:
+        domains_dir = _resources.domains_dir()
+    schema = _resources.read_schema("domain.schema.json")
     import yaml as _yaml
 
     for domain_name in domain_names:
@@ -270,10 +272,7 @@ def validate_run_config_cmd(config_path) -> None:  # type: ignore[no-untyped-def
     import yaml as _yaml
     from jsonschema import Draft202012Validator
 
-    schema_path = (
-        pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"
-    )
-    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+    schema = _resources.read_schema("run-config.schema.json")
     data = _yaml.safe_load(config_path.read_text(encoding="utf-8"))
     errors = list(Draft202012Validator(schema).iter_errors(data))
     if errors:
@@ -365,10 +364,7 @@ def plan_run_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
         click.echo(f"No .apd-run.yaml under {run_dir}", err=True)
         raise SystemExit(1)
 
-    schema_path = (
-        pathlib.Path(__file__).resolve().parent.parent.parent / "schemas" / "run-config.schema.json"
-    )
-    schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+    schema = _resources.read_schema("run-config.schema.json")
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     errors = list(Draft202012Validator(schema).iter_errors(cfg))
     if errors:
@@ -717,12 +713,7 @@ def parse_threat_model_cmd(
         raise click.UsageError(str(e)) from e
 
     if validate:
-        schema_path = (
-            pathlib.Path(__file__).resolve().parent.parent.parent
-            / "schemas"
-            / "threat-model-normalized.schema.json"
-        )
-        schema = _stdjson.loads(schema_path.read_text(encoding="utf-8"))
+        schema = _resources.read_schema("threat-model-normalized.schema.json")
         registry = build_registry()
         validator = Draft202012Validator(schema, registry=registry)
         errors = list(validator.iter_errors(normalized))
@@ -1357,12 +1348,14 @@ def rollup_cmd(run_dir: Path) -> None:
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    default=Path("domains"),
+    default=None,
 )
-def domain_coverage_delta_cmd(run_dir: Path, domains_dir: Path) -> None:
+def domain_coverage_delta_cmd(run_dir: Path, domains_dir: Path | None) -> None:
     """5h-i: deterministic coverage-delta pre-pass; emit domain-coverage-delta.yaml."""
     from .synthesis.coverage_delta import build_coverage_delta
 
+    if domains_dir is None:
+        domains_dir = _resources.domains_dir()
     path = build_coverage_delta(run_dir, domains_dir)
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     click.echo(f"domain-coverage-delta: wrote {len(doc.get('candidates') or [])} candidates")
@@ -1373,7 +1366,7 @@ def domain_coverage_delta_cmd(run_dir: Path, domains_dir: Path) -> None:
 @click.option(
     "--domains-dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    default=Path("domains"),
+    default=None,
 )
 @click.option("--out", "out", type=click.Path(path_type=Path), default=None,
               help="Patch output path. Default: <run_dir>/40-synthesis/domain-improvements.patch")
@@ -1384,6 +1377,8 @@ def draft_domain_improvements_cmd(run_dir, domains_dir, out, ids, types, packs) 
     """On-demand: insert chosen draft_snippets into a temp copy, gate, emit a diff."""
     from .synthesis.draft import DraftError, draft_domain_improvements
 
+    if domains_dir is None:
+        domains_dir = _resources.domains_dir()
     out_path = out or (run_dir / "40-synthesis" / "domain-improvements.patch")
     try:
         res = draft_domain_improvements(

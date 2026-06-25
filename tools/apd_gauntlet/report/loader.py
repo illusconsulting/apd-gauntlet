@@ -75,6 +75,8 @@ from typing import Any
 
 import yaml
 
+from .. import resources as _resources
+
 
 class MissingArtifactError(FileNotFoundError):
     """Raised when a required input file is absent from the run dir."""
@@ -309,11 +311,10 @@ def _extract_domain_pack_name(run_cfg: dict[str, Any]) -> str:
     return ""
 
 
-# Repo-root ``domains/`` directory, relative to this module
-# (tools/apd_gauntlet/report/loader.py → repo_root/domains). Used as the
+# Packaged ``domains/`` directory (wheel-safe via ``resources``). Used as the
 # default source for domain-pack versions when the run uses the multi-domain
 # ``domains: [...]`` list shape (which carries no inline version).
-_DOMAINS_DIR = pathlib.Path(__file__).resolve().parents[3] / "domains"
+_DOMAINS_DIR = _resources.domains_dir()
 
 
 def _pack_versions_from_domains(

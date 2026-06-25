@@ -50,15 +50,19 @@ The framework's external surface includes:
 - The expected directory layout of a run.
 - The expected frontmatter fields on context-brief and advisory-report.
 
+> **Note:** The canonical home for the JSON Schemas and domain packs is `tools/apd_gauntlet/data/{schemas,domains}` (read via `apd_gauntlet.resources`); the repo-root `schemas/` and `domains/` are convenience symlinks. Repo-root path citations elsewhere in this doc resolve through those symlinks.
+
 Changes to any of these surfaces require a version bump. Internal refactors of `tools/apd_gauntlet/` modules don't.
 
 ## PyPI trusted publishing
 
+> **Note:** As of [ADR-0023](adrs/0023-two-channel-distribution.md), a release spans two lockstep channels — the PyPI engine (this section) and the Claude Code plugin (`.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json`). Both carry the same version and are cut together; see [RELEASING.md](../RELEASING.md) for the full lockstep checklist.
+
 The release workflow publishes to PyPI via trusted publishing. This requires a one-time setup:
 
 1. Create the `apd-gauntlet` project on PyPI (manual; reserved by initial release).
-2. In PyPI's "Publishing" tab, add a trusted publisher entry for the GitHub repo `user/apd-gauntlet`, workflow `release.yml`, environment unset.
-3. Tag a release (`git tag v1.0.0 && git push origin v1.0.0`). The release workflow publishes automatically.
+2. In PyPI's "Publishing" tab, add a trusted publisher entry for the GitHub repo `illusconsulting/apd-gauntlet`, workflow `release.yml`, environment unset.
+3. Tag a release (`git tag vX.Y.Z && git push --tags`). The release workflow publishes automatically.
 
 If trusted publishing isn't set up, the workflow's PyPI step fails; the GitHub Release still succeeds. Set up trusted publishing before the first tag.
 

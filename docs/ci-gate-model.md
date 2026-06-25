@@ -19,7 +19,7 @@ would leak a sensitive review. We resolve it with two tracks.
 
 | Track | What it measures | Where it runs | Fixtures it uses | Committed? |
 |---|---|---|---|---|
-| **CI-enforceable** | Structural, schema, and unit correctness. Does a committed synthetic artifact validate? Does a refactor stay byte-stable? Does the cache carry provenance? | Every PR, for everyone, via `.github/workflows/validate.yml` and `.github/workflows/python-tests.yml`. | Hand-authored synthetic fixtures only: `examples/apd-20260601-claim-event-bus/expected/`, `examples/apd-20260602-acme-mobile-banking/expected/`, the negative fixtures under `tests/fixtures/invalid/`, and `tests/fixtures/`. | Yes — these are synthetic, no real-subject data. |
+| **CI-enforceable** | Structural, schema, and unit correctness. Does a committed synthetic artifact validate? Does a refactor stay byte-stable? Does the cache carry provenance? | Every PR, for everyone, via `.github/workflows/validate.yml` and `.github/workflows/python-tests.yml`. | Hand-authored synthetic fixtures only: `examples/apd-20260601-claim-event-bus/expected/`, `examples/apd-20260602-acme-mobile-banking/expected/`, `examples/apd-20260612-home-assistant/expected/`, the negative fixtures under `tests/fixtures/invalid/`, and `tests/fixtures/`. | Yes — these are synthetic, no real-subject data. |
 | **Locally measured** | Holistic accuracy and insight: false-uncertainty promotion rate, redundancy collapsed, chokepoint-finding count, etc. | The maintainer's own machine, against a gitignored real run. | The maintainer's own run output (`40-synthesis/metrics.yaml`, produced by `compute_metrics`, `tools/apd_gauntlet/synthesis/metrics.py`). | **No.** All outputs of all real runs stay fully out-of-band — including bare metric counts and the baseline `B0`. Nothing run-derived is ever committed. |
 
 ## Version target: held at 1.7.0
@@ -38,12 +38,13 @@ shipped reference docs.
 
 - `apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/` exits 0 (`validate.yml`).
 - `apd-gauntlet validate examples/apd-20260602-acme-mobile-banking/expected/` exits 0 (`validate.yml`).
+- `apd-gauntlet validate examples/apd-20260612-home-assistant/expected/` exits 0 (`validate.yml`).
 - `apd-gauntlet validate-domain pbm` (and any additional packs) exits 0 (`validate.yml`).
 - `pytest tests/test_meta_schemas.py` — every schema is itself valid Draft 2020-12 (`validate.yml`).
 - `ruff check tools/ tests/`, `mypy tools/`, `pytest --cov` with `fail_under = 85` (`python-tests.yml`).
 - `python tools/check_report_template_freshness.py` — the precompiled report bundle matches its source (`python-tests.yml`).
 - `python tools/check_kb_cache_freshness.py` — every fetched `tools/apd_gauntlet/data/*.json` carries provenance metadata (`python-tests.yml`; see [Schema evolution](schema-evolution.md)).
-- markdownlint over `docs/**`.
+- markdownlint over `docs/**/*.md` (excluding `docs/superpowers/plans/**`), `.claude/**/*.md`, `tools/apd_gauntlet/data/domains/**/*.md`, and the root `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, and `CODE_OF_CONDUCT.md` (`markdown-lint.yml`).
 
 ## What is measured locally (never committed)
 
