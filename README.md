@@ -36,7 +36,7 @@ Optional, when you supply the inputs:
 ```bash
 git clone https://github.com/illusconsulting/apd-gauntlet.git && cd apd-gauntlet
 python3 -m venv .venv && . .venv/bin/activate
-pip install apd-gauntlet      # installs the apd-gauntlet CLI + the Claude Code agent/skill bundle
+pip install apd-gauntlet      # installs the apd-gauntlet CLI + bundled schemas/domains/taxonomies
 apd-gauntlet --version        # confirms the CLI is on your PATH
 ```
 

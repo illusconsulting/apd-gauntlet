@@ -16,11 +16,11 @@ cd apd-gauntlet
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -e ".[dev]"
-pytest                       # full test suite (~95 tests, ~92% coverage)
+pytest                       # full test suite (1700+ tests; 85% line-coverage gate)
 ruff check tools/ tests/
 mypy tools/
 # docs lint — mirrors the markdownlint CI job (npx fetches the tool; no local install needed)
-npx --yes markdownlint-cli2 "docs/**/*.md" "!docs/superpowers/plans/**" ".claude/**/*.md" "domains/**/*.md" "README.md" "CONTRIBUTING.md" "CHANGELOG.md" "CODE_OF_CONDUCT.md"
+npx --yes markdownlint-cli2 "docs/**/*.md" "!docs/superpowers/plans/**" ".claude/**/*.md" "tools/apd_gauntlet/data/domains/**/*.md" "README.md" "CONTRIBUTING.md" "CHANGELOG.md" "CODE_OF_CONDUCT.md"
 apd-gauntlet validate examples/apd-20260601-claim-event-bus/expected/
 ```
 
@@ -44,7 +44,7 @@ The CI workflows enforce these gates on every PR.
 ## Commit messages
 
 - Keep subject lines under 80 characters.
-- Reference the milestone (e.g. `M3:`) when the change is part of the v1.0 build.
+- Reference the relevant ADR or issue number where applicable.
 - Use the imperative mood: "Add ATT&CK rationale check" not "Added".
 
 ## Sign-off

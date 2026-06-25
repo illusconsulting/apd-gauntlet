@@ -13,7 +13,7 @@ first.
 | Existing module / surface | Extended by | Do-not-reinvent note |
 |---|---|---|
 | `tools/apd_gauntlet/validate.py` (`run_schema_pass`, Registry pass) | W0, W1a, W1b, W3b | The schema gate already encodes every needed constraint. W0 only makes the existing `validate-full-prephase5` receipt block; W1a/W1b/W3b add schema fields validated for free by the two existing validators. Never write a second validator. |
-| `tools/apd_gauntlet/synthesis/canonicalize.py` | W0, W2 | Canonical YAML round-trip lives here. Re-emit through it; do not hand-roll serialization. |
+| `tools/apd_gauntlet/canonicalize.py` | W0, W2 | Canonical YAML round-trip lives here. Re-emit through it; do not hand-roll serialization. |
 | `tools/apd_gauntlet/synthesis/audit.py` (structural/editorial `_check(klass=...)` split) | W0, W2, W3b | Add a gate row via `_check(klass="structural")` (blocks) or `klass="editorial"` (non-blocking). Do not add a parallel audit pass. |
 | `tools/apd_gauntlet/synthesis/metrics.py` (`compute_metrics`) | W3a | `compute_metrics` is the ONE report-summary implementation. W3a edits it in place to make `findings_pre_dedup` real. Do not compute metrics anywhere else. |
 | `tools/apd_gauntlet/synthesis/apply.py` (`_merge_capabilities`, `_write_outputs`) | W0, W3a | The single emit point. W0 stops the `str(scope)` coercion here; W3a threads the pre-dedup census through here. |

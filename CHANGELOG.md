@@ -7,8 +7,8 @@ All notable changes to this project will be documented in this file. Format base
 ### Added
 
 - **Two-channel distribution** ([ADR-0023](docs/adrs/0023-two-channel-distribution.md)) —
-  the gauntlet now ships via two lockstep channels at **1.7.0** (first versioned
-  release):
+  additive packaging work that will ship under **1.7.0** (currently held); the
+  gauntlet now distributes via two lockstep channels:
   - **PyPI engine** (`pip install apd-gauntlet`): fixed a wheel-crash-on-import
     bug where `schemas/` and `domains/` were resolved from the repo root (absent
     in a wheel). Both trees are now relocated into the package at

@@ -181,7 +181,7 @@ contradiction findings.
 The evaluator does not invent threats. If you expect a contradiction or
 coverage-gap finding that didn't appear, check:
 
-1. Is the TM entry actually parsed? (Look at `00-context/threat-model-normalized.yaml`)
+1. Is the TM entry actually parsed? (Look at `00-context/threat-model-supplied-normalized.yaml`)
 2. Does the entry's `asset` field match the surface a specialist finding's
    `evidence[*].artifact` points at? Surface matching is by string identity.
 3. For contradictions: does the TM entry have a `mitigation` field? Entries

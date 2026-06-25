@@ -223,7 +223,7 @@ reference; open it alongside this guide.
 | Artifact | What's in it | Bundled example |
 | --- | --- | --- |
 | `40-synthesis/asset-graph.yaml` | Nodes, edges, provenance, confidence | 16 nodes (8 assets, 3 identities, 3 attacker positions, 2 crown jewels), 43 edges |
-| `40-synthesis/attack-paths.yaml` | Enumerated paths and the bottleneck-edge set | 75 paths, 24 bottleneck edges, `enumeration_parameters` block |
+| `40-synthesis/attack-paths.yaml` | Enumerated paths and the bottleneck-edge set | 75 paths, 10 bottleneck edges, `enumeration_parameters` block |
 | `40-synthesis/defense-graph.yaml` | D3FEND overlay on bottleneck edges | 0 net-new D3FEND counters (see below) |
 | `40-synthesis/attack-path.findings.yaml` | One finding per enumerated path or bottleneck | uncertainty / risk / gap / blocked dispositions |
 | `40-synthesis/attack-path-report.md` | Human-readable executive summary with the Mermaid diagram | Headline summary, bottleneck table, path catalogue |
@@ -236,15 +236,15 @@ pre-C-20 build.
 
 ### The "0 net-new D3FEND" case
 
-The bundled `claim-event-bus` example has **24 bottleneck edges and 0
+The bundled `claim-event-bus` example has **10 bottleneck edges and 0
 net-new D3FEND counters**, which is the canonical low-ATT&CK-coverage
 disposition. The reason is deterministic: D3FEND counters can be added
 only on bottleneck edges that expose an ATT&CK technique through the
 backing finding's `control_mappings.mitre_attack` block. In the bundled
-example, 23 of the 24 bottlenecks are `network_reachable`, `trusts`, or
+example, 9 of the 10 bottlenecks are `network_reachable`, `trusts`, or
 `data_resides_on` edges (inventory- and TM-derived; no ATT&CK link).
 The single `compromisable_via_finding` bottleneck edge backs a finding
-(`tmeval-eeee5555`) with no ATT&CK mapping, so the D3FEND-must-counter-
+(`tmeval-cb19d940`) with no ATT&CK mapping, so the D3FEND-must-counter-
 ATT&CK rule produces zero recommendations.
 
 That outcome is informative, not a bug. It flags a gap in upstream

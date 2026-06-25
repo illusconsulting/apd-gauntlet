@@ -103,11 +103,12 @@ Ship via **two lockstep channels** — one PyPI package and one Claude Code plug
   plugin alone does not give the user a working CLI. The `commands/run.md`
   preflight step checks `apd-gauntlet --version` and stops with an actionable
   message if it is missing.
-- **setuptools `license-files` deprecation** — the current `pyproject.toml` uses
-  the `License ::` classifier form that setuptools will make a hard error on
-  2027-02-18. Migration to PEP 639 form (`license = "Apache-2.0"` + `license-files
-  = ["LICENSE", "NOTICE"]`) is required before then. See `RELEASING.md` for the
-  migration steps.
+- **PEP 639 license metadata migration** — `pyproject.toml` already sets
+  `license-files = ["LICENSE", "NOTICE"]` (under `[tool.setuptools]`). The
+  remaining migration is replacing the table-form `license = { text = "Apache-2.0" }`
+  with the PEP 639 string form `license = "Apache-2.0"`, dropping the `License ::`
+  classifier, and bumping the build requirement to `setuptools>=77`. See
+  `RELEASING.md` for the migration steps.
 
 ## Alternatives considered
 
