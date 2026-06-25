@@ -18,6 +18,9 @@ from typing import Any, cast
 @lru_cache(maxsize=1)
 def data_dir() -> pathlib.Path:
     """Absolute path to the packaged ``tools/apd_gauntlet/data`` root."""
+    # No try/except fallback (unlike report/build.py): data_dir() is called
+    # lazily at read time, so a misconfigured environment surfaces a clean
+    # error at the point of use rather than silently binding a wrong path.
     return pathlib.Path(str(resources.files("apd_gauntlet") / "data"))
 
 

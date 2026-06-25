@@ -17,7 +17,7 @@ jobs:
             docs/**/*.md
             !docs/superpowers/plans/**
             .claude/**/*.md
-            domains/**/*.md
+            tools/apd_gauntlet/data/domains/**/*.md
             README.md
             CONTRIBUTING.md
             CHANGELOG.md
