@@ -39,5 +39,6 @@
     "./.claude/skills/apd-finding-schema/SKILL.md",
     "./.claude/skills/apd-framework/SKILL.md",
     "./.claude/skills/apd-threat-model-methodologies/SKILL.md"
-  ]
+  ],
+  "commands": ["./commands/run.md"]
 }
