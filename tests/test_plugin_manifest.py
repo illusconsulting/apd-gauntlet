@@ -38,11 +38,16 @@ def test_agents_array_matches_dir() -> None:
 
 
 def test_skills_array_matches_dir() -> None:
-    """Explicit skills array must list EXACTLY each .claude/skills/<name>/SKILL.md (no drift)."""
+    """Explicit skills array must list EXACTLY each .claude/skills/<name> directory (no drift).
+
+    Claude Code requires each skills entry to be the directory that contains a
+    SKILL.md, not the SKILL.md file itself; a file path fails to load with
+    "path is a file; skills entries must be directories containing SKILL.md".
+    """
     m = _manifest()
     listed = {_norm(p) for p in m["skills"]}
     actual = {
-        str((d / "SKILL.md").relative_to(REPO))
+        str(d.relative_to(REPO))
         for d in (REPO / ".claude" / "skills").iterdir()
         if d.is_dir() and (d / "SKILL.md").is_file()
     }
@@ -51,6 +56,18 @@ def test_skills_array_matches_dir() -> None:
         f"  missing from manifest: {sorted(actual - listed)}\n"
         f"  stale in manifest: {sorted(listed - actual)}"
     )
+
+
+def test_skills_entries_are_directories_not_files() -> None:
+    """Regression: every skills entry must resolve to a directory holding a SKILL.md.
+
+    Guards against reintroducing the ".../SKILL.md" file-path form that Claude
+    Code rejects at load time.
+    """
+    for rel in _manifest()["skills"]:
+        skill_dir = REPO / _norm(rel)
+        assert skill_dir.is_dir(), f"skills entry is not a directory: {rel}"
+        assert (skill_dir / "SKILL.md").is_file(), f"missing SKILL.md in {rel}"
 
 
 def test_commands_paths_exist() -> None:
