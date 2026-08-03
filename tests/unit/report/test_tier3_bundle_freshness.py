@@ -141,3 +141,12 @@ def test_source_hash_parity_with_node_walk(monkeypatch, tmp_path):
         ["node", str(script), str(src)], capture_output=True, text=True, check=True
     )
     assert proc.stdout.strip() == mod.compute_source_hash()
+
+
+def test_ci_has_bundle_rebuild_diff_job():
+    """The rebuild-and-diff CI job is the only guard that catches a stale or
+    hand-edited committed bundle (the .source-hash marker cannot). Source-grep
+    guard so the job is not silently dropped or renamed."""
+    wf = (REPO / ".github" / "workflows" / "python-tests.yml").read_text(encoding="utf-8")
+    assert "bundle-rebuild-diff:" in wf
+    assert "git diff --exit-code -- tools/apd_gauntlet/data/report-template/" in wf
