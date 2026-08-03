@@ -20,6 +20,7 @@ from . import resources as _resources
 from .build_domain_skill import build_domain_skill
 from .init_run import scaffold_run
 from .lint_agents import lint_agents_dir
+from .lint_skills import lint_skills_dir
 from .linters import check_capability_id, check_finding_id
 from .manual_audit import write_prompts
 from .refresh_cwe import refresh_cwe
@@ -330,6 +331,23 @@ def lint_agents_cmd(agent_dir) -> None:  # type: ignore[no-untyped-def]
             click.echo(e)
         raise SystemExit(1)
     click.echo(f"Lint clean: {len(list(agent_dir.glob('*.md')))} agents checked.")
+
+
+@main.command("lint-skills")
+@click.option(
+    "--skill-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path),
+    default=pathlib.Path(".claude/skills"),
+    show_default=True,
+)
+def lint_skills_cmd(skill_dir) -> None:  # type: ignore[no-untyped-def]
+    errors = lint_skills_dir(skill_dir)
+    if errors:
+        for e in errors:
+            click.echo(e)
+        raise SystemExit(1)
+    n = sum(1 for p in skill_dir.iterdir() if p.is_dir())
+    click.echo(f"Lint clean: {n} skills checked.")
 
 
 @main.command("summarize")

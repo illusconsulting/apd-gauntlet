@@ -30,5 +30,6 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -e ".[dev]"
       - run: apd-gauntlet lint-agents --agent-dir .claude/agents/
+      - run: apd-gauntlet lint-skills --skill-dir .claude/skills/
       - name: Validate plugin + marketplace manifests
         run: pytest tests/test_plugin_manifest.py -v
