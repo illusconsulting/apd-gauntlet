@@ -84,3 +84,29 @@ def test_shipped_bundle_source_hash_matches():
         f"bundle .source-hash ({expected[:8]}) != compute_source_hash() "
         f"({actual[:8]}) — refresh via tools/build_report_template.py"
     )
+
+
+def test_compute_source_hash_excludes_nested_dotfiles_and_node_modules(monkeypatch, tmp_path):
+    """Dotfiles / node_modules / .build are excluded at EVERY depth, matching
+    report-template/.build/build.mjs walk() (line 54, which skips them during
+    recursive descent). Regression for the Python/Node divergence that only
+    excluded at the top level (rel.parts[0])."""
+    mod = _load_freshness_module()
+    src = tmp_path / "src"
+    (src / "sub").mkdir(parents=True)
+    (src / "app.jsx").write_text("A", encoding="utf-8")
+    (src / "sub" / "child.jsx").write_text("B", encoding="utf-8")
+    monkeypatch.setattr(mod, "SRC", src)
+    baseline = mod.compute_source_hash()
+    # Entries build.mjs excludes at nested depth (parts[0] == "sub", not excluded
+    # by the old top-level-only rule):
+    (src / "sub" / ".gitkeep").write_text("x", encoding="utf-8")
+    (src / "sub" / "node_modules").mkdir()
+    (src / "sub" / "node_modules" / "pkg.js").write_text("y", encoding="utf-8")
+    (src / "sub" / ".build").mkdir()
+    (src / "sub" / ".build" / "out.js").write_text("z", encoding="utf-8")
+    with_excluded = mod.compute_source_hash()
+    assert with_excluded == baseline, (
+        "nested dotfiles / node_modules / .build must not affect the hash "
+        "(they don't in build.mjs)"
+    )
