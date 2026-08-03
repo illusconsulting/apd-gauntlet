@@ -24,7 +24,7 @@ SPECIALIST_NAMES = {
 def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
     """Return a list of error strings; empty list means clean."""
     errors: list[str] = []
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
     m = FRONTMATTER_PATTERN.match(text)
     if not m:
         return [f"{path}: no YAML frontmatter (missing '---' block at top)"]

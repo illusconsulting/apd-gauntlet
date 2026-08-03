@@ -269,3 +269,13 @@ Applied after re-verifying every claim against `illusconsulting/apd-gauntlet`
    `source-hash.mjs`'s CLI entry guard is made safe for an undefined
    `argv[1]` (`process.argv[1] && ...`), matching Node's own recommended
    `main`-module check.
+8. Execution note (2026-08-02): the optional `$schema` manifest pointers (PR
+   A docs component) were NOT added — `claude plugin validate` 2.0.76
+   hard-errors on the key (`Unrecognized key(s) in object: '$schema'`), so
+   the plan's REMOVE fallback fired as designed; the outcome is recorded in
+   PR #10's description. Do not re-add `$schema` while the installed CLI
+   rejects it. Follow-ups from both final reviews (commands drift guard,
+   skill-lint limit checks per the documented 1,536-character listing
+   truncation, shared CRLF-tolerant frontmatter regex, `plugin-lint` job
+   rename, npm dependabot entry for `report-template/.build`) were applied
+   on the open PRs on 2026-08-02.

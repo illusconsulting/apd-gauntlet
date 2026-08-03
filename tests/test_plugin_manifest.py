@@ -37,6 +37,18 @@ def test_agents_array_matches_dir() -> None:
     )
 
 
+def test_commands_array_matches_dir() -> None:
+    """The explicit commands array must list EXACTLY the commands/*.md files (no drift)."""
+    m = _manifest()
+    listed = {_norm(p) for p in m.get("commands", [])}
+    actual = {str(p.relative_to(REPO)) for p in (REPO / "commands").glob("*.md")}
+    assert listed == actual, (
+        f"commands array out of sync with commands/.\n"
+        f"  missing from manifest: {sorted(actual - listed)}\n"
+        f"  stale in manifest: {sorted(listed - actual)}"
+    )
+
+
 def test_skills_array_matches_dir() -> None:
     """Explicit skills array must list EXACTLY each .claude/skills/<name> directory (no drift).
 

@@ -44,3 +44,22 @@ def test_lint_skills_cli_exit_zero_on_real_repo() -> None:
     result = CliRunner().invoke(main, ["lint-skills", "--skill-dir", str(REPO / ".claude/skills")])
     assert result.exit_code == 0, result.output
     assert "Lint clean" in result.output
+
+
+def test_lint_skills_flags_bad_name_format(tmp_path) -> None:
+    d = _write_skill(tmp_path, "Foo_Bar", "name: Foo_Bar\ndescription: x")
+    errors = lint_skill_dir(d)
+    assert any("lowercase-hyphen" in e for e in errors)
+
+
+def test_lint_skills_flags_overlong_description(tmp_path) -> None:
+    d = _write_skill(tmp_path, "foo", "name: foo\ndescription: " + "x" * 1600)
+    errors = lint_skill_dir(d)
+    assert any("1536" in e for e in errors)
+
+
+def test_lint_skills_accepts_crlf_frontmatter(tmp_path) -> None:
+    d = tmp_path / "foo"
+    d.mkdir()
+    (d / "SKILL.md").write_bytes(b"---\r\nname: foo\r\ndescription: x\r\n---\r\nbody\r\n")
+    assert lint_skill_dir(d) == []
