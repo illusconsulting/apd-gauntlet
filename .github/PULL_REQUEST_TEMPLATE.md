@@ -20,6 +20,7 @@
 - [ ] Schema changes (if any) include a `schema_version` bump per [docs/schema-evolution.md](../docs/schema-evolution.md)
 - [ ] Docs / CHANGELOG updated for user-visible changes
 - [ ] DCO sign-off (`git commit -s`)
+- [ ] Plugin/`.claude` changes: `claude plugin validate .claude-plugin/plugin.json` clean and `/doctor` loads all skills
 
 ## Notes for reviewers
 
