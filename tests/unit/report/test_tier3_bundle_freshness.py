@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import shutil
+import subprocess
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 
@@ -84,3 +88,69 @@ def test_shipped_bundle_source_hash_matches():
         f"bundle .source-hash ({expected[:8]}) != compute_source_hash() "
         f"({actual[:8]}) — refresh via tools/build_report_template.py"
     )
+
+
+def test_compute_source_hash_excludes_nested_dotfiles_and_node_modules(monkeypatch, tmp_path):
+    """Dotfiles / node_modules / .build are excluded at EVERY depth, matching
+    report-template/.build/source-hash.mjs (the walk build.mjs now imports,
+    which skips them during recursive descent). Regression for the
+    Python/Node divergence that only excluded at the top level
+    (rel.parts[0])."""
+    mod = _load_freshness_module()
+    src = tmp_path / "src"
+    (src / "sub").mkdir(parents=True)
+    (src / "app.jsx").write_text("A", encoding="utf-8")
+    (src / "sub" / "child.jsx").write_text("B", encoding="utf-8")
+    monkeypatch.setattr(mod, "SRC", src)
+    baseline = mod.compute_source_hash()
+    # Entries build.mjs excludes at nested depth (parts[0] == "sub", not excluded
+    # by the old top-level-only rule):
+    (src / "sub" / ".gitkeep").write_text("x", encoding="utf-8")
+    (src / "sub" / "node_modules").mkdir()
+    (src / "sub" / "node_modules" / "pkg.js").write_text("y", encoding="utf-8")
+    (src / "sub" / ".build").mkdir()
+    (src / "sub" / ".build" / "out.js").write_text("z", encoding="utf-8")
+    with_excluded = mod.compute_source_hash()
+    assert with_excluded == baseline, (
+        "nested dotfiles / node_modules / .build must not affect the hash "
+        "(they don't in build.mjs)"
+    )
+
+
+def test_source_hash_parity_with_node_walk(monkeypatch, tmp_path):
+    """Python compute_source_hash() and the Node walk (source-hash.mjs — the
+    same code build.mjs runs) must agree byte-for-byte on one tree, including
+    the two divergence-prone shapes: a nested dotfile, and a directory/file
+    name-collision pair ("screens" dir vs "screens.css" file) that pins
+    ordering agreement (Python's parts-tuple sort vs Node's per-directory
+    sorted DFS). Skipped without node; the bundle-rebuild-diff CI job runs
+    this module with Node present, so the skip cannot go permanently
+    unnoticed."""
+    if shutil.which("node") is None:
+        pytest.skip("node unavailable; exercised in the bundle-rebuild-diff CI job")
+    mod = _load_freshness_module()
+    src = tmp_path / "src"
+    (src / "screens").mkdir(parents=True)
+    (src / "screens" / "A.jsx").write_text("A", encoding="utf-8")
+    (src / "screens.css").write_text("C", encoding="utf-8")
+    (src / "sub").mkdir()
+    (src / "sub" / "child.jsx").write_text("B", encoding="utf-8")
+    (src / "sub" / ".gitkeep").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(mod, "SRC", src)
+    script = REPO / "report-template" / ".build" / "source-hash.mjs"
+    proc = subprocess.run(
+        ["node", str(script), str(src)], capture_output=True, text=True, check=True
+    )
+    assert proc.stdout.strip() == mod.compute_source_hash()
+
+
+def test_ci_has_bundle_rebuild_diff_job():
+    """The rebuild-and-diff CI job is the only guard that catches a stale or
+    hand-edited committed bundle (the .source-hash marker cannot). Source-grep
+    guard so the job is not silently dropped or renamed, and so the intent-to-add
+    hardening (new untracked bundle files must fail the gate too) is not silently
+    dropped either."""
+    wf = (REPO / ".github" / "workflows" / "python-tests.yml").read_text(encoding="utf-8")
+    assert "bundle-rebuild-diff:" in wf
+    assert "git diff --exit-code -- tools/apd_gauntlet/data/report-template/" in wf
+    assert "git add -N tools/apd_gauntlet/data/report-template/" in wf

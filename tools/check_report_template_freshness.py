@@ -22,9 +22,12 @@ def compute_source_hash() -> str:
         if not entry.is_file():
             continue
         rel = entry.relative_to(SRC)
-        if rel.parts and rel.parts[0] in {".build", "node_modules"}:
-            continue
-        if rel.parts and rel.parts[0].startswith("."):
+        # Mirror report-template/.build/source-hash.mjs (the walk build.mjs now
+        # imports): skip any entry whose basename is "node_modules" or starts
+        # with "." — at EVERY depth, not just the top level. The old
+        # rel.parts[0]-only check diverged from Node on nested dotfiles (e.g.
+        # sub/.gitkeep), turning the gate falsely red on a correctly-built bundle.
+        if any(part == "node_modules" or part.startswith(".") for part in rel.parts):
             continue
         # Hash the FULL relative path with NUL separator so a rename
         # invalidates the hash even when content is unchanged.

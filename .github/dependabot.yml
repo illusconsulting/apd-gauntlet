@@ -11,3 +11,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /report-template/.build
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Any bump here changes what esbuild inlines into the shipped report
+    # bundle: the bundle-rebuild-diff CI job stays red until the same PR
+    # also runs `python tools/build_report_template.py` and commits the
+    # refreshed bundle (that is the gate working as designed).

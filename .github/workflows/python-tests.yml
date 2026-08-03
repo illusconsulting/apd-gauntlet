@@ -39,3 +39,25 @@ jobs:
       - run: pip install uv
       - run: pip install -e ".[dev]"
       - run: pytest tests/integration/test_wheel_install_smoke.py -m wheel -v
+
+  bundle-rebuild-diff:
+    # Defense-in-depth for the freshness gate: check_report_template_freshness.py
+    # only proves the .source-hash marker matches source; it never rebuilds the
+    # bundle. This job rebuilds via build.mjs and fails if the committed bundle
+    # (app.js included) is not byte-identical to a fresh build. It also runs the
+    # freshness test module with an explicitly provisioned, pinned Node, so the
+    # Node-parity test is guaranteed to execute every CI run (the python-tests
+    # matrix only runs it incidentally, via whatever Node the runner image ships).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with: { node-version: "20" }
+      - run: python tools/build_report_template.py
+      - name: Assert committed bundle matches a fresh build
+        run: git add -N tools/apd_gauntlet/data/report-template/ && git diff --exit-code -- tools/apd_gauntlet/data/report-template/
+      - run: pip install -e ".[dev]"
+      - name: Freshness tests with Node present (parity test executes here)
+        run: pytest tests/unit/report/test_tier3_bundle_freshness.py -v
