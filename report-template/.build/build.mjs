@@ -1,8 +1,8 @@
 // report-template/.build/build.mjs
 import { build } from "esbuild";
-import { mkdirSync, copyFileSync, writeFileSync, readFileSync, statSync, readdirSync } from "node:fs";
+import { mkdirSync, copyFileSync, writeFileSync, readFileSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
-import { createHash } from "node:crypto";
+import { computeSourceHash } from "./source-hash.mjs";
 
 const HERE = dirname(new URL(import.meta.url).pathname);
 const TEMPLATE_DIR = resolve(HERE, "..");                   // report-template/
@@ -47,23 +47,8 @@ const stripped = html
   .replace(/<link[^>]*fonts\.gstatic\.com[^>]*>\s*/g, "");
 writeFileSync(join(OUT_DIR, "index.html"), stripped);
 
-// 4. Source hash of report-template/ JSX + CSS sources.
-const hash = createHash("sha256");
-function walk(d, prefix = "") {
-  for (const e of readdirSync(d).sort()) {
-    if (e === ".build" || e === "node_modules" || e.startsWith(".")) continue;
-    const p = join(d, e);
-    const rel = prefix ? `${prefix}/${e}` : e;
-    if (statSync(p).isDirectory()) walk(p, rel);
-    else {
-      hash.update(rel);
-      hash.update(Buffer.from([0]));  // NUL separator matches Python
-      hash.update(readFileSync(p));
-    }
-  }
-}
-walk(TEMPLATE_DIR);
-writeFileSync(join(OUT_DIR, ".source-hash"), hash.digest("hex"));
+// 4. Source hash of report-template/ JSX + CSS sources (rule lives in source-hash.mjs).
+writeFileSync(join(OUT_DIR, ".source-hash"), computeSourceHash(TEMPLATE_DIR));
 
 // 5. Vendor-licenses.txt.
 writeFileSync(join(OUT_DIR, "vendor-licenses.txt"), [

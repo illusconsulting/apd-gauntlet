@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import shutil
+import subprocess
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 
@@ -110,3 +114,30 @@ def test_compute_source_hash_excludes_nested_dotfiles_and_node_modules(monkeypat
         "nested dotfiles / node_modules / .build must not affect the hash "
         "(they don't in build.mjs)"
     )
+
+
+def test_source_hash_parity_with_node_walk(monkeypatch, tmp_path):
+    """Python compute_source_hash() and the Node walk (source-hash.mjs — the
+    same code build.mjs runs) must agree byte-for-byte on one tree, including
+    the two divergence-prone shapes: a nested dotfile, and a directory/file
+    name-collision pair ("screens" dir vs "screens.css" file) that pins
+    ordering agreement (Python's parts-tuple sort vs Node's per-directory
+    sorted DFS). Skipped without node; the bundle-rebuild-diff CI job runs
+    this module with Node present, so the skip cannot go permanently
+    unnoticed."""
+    if shutil.which("node") is None:
+        pytest.skip("node unavailable; exercised in the bundle-rebuild-diff CI job")
+    mod = _load_freshness_module()
+    src = tmp_path / "src"
+    (src / "screens").mkdir(parents=True)
+    (src / "screens" / "A.jsx").write_text("A", encoding="utf-8")
+    (src / "screens.css").write_text("C", encoding="utf-8")
+    (src / "sub").mkdir()
+    (src / "sub" / "child.jsx").write_text("B", encoding="utf-8")
+    (src / "sub" / ".gitkeep").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(mod, "SRC", src)
+    script = REPO / "report-template" / ".build" / "source-hash.mjs"
+    proc = subprocess.run(
+        ["node", str(script), str(src)], capture_output=True, text=True, check=True
+    )
+    assert proc.stdout.strip() == mod.compute_source_hash()
