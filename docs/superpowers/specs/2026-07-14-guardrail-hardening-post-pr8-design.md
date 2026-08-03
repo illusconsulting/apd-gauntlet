@@ -257,3 +257,15 @@ Applied after re-verifying every claim against `illusconsulting/apd-gauntlet`
    the "re-checks on the CI toolchain" promise. PR A gained a
    `commands`-branch non-vacuity fixture (4 new tests, 10 total) and an
    import-order fix (ruff I001).
+7. Final whole-branch review of PR B (2026-08-02) found three residual
+   hardening gaps. The `bundle-rebuild-diff` job's diff step gains a
+   `git add -N tools/apd_gauntlet/data/report-template/` intent-to-add prefix
+   so the gate also catches brand-new untracked bundle outputs, which plain
+   `git diff` is blind to (a guard test now asserts the prefix is present).
+   The two comment pointers left over from Task 3's extraction — one in
+   `tools/check_report_template_freshness.py`, one in the parity test's
+   docstring — that still cited `build.mjs walk() (line 54)` are re-aimed at
+   `report-template/.build/source-hash.mjs`, the file that now owns the walk.
+   `source-hash.mjs`'s CLI entry guard is made safe for an undefined
+   `argv[1]` (`process.argv[1] && ...`), matching Node's own recommended
+   `main`-module check.

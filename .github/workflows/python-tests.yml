@@ -57,7 +57,7 @@ jobs:
         with: { node-version: "20" }
       - run: python tools/build_report_template.py
       - name: Assert committed bundle matches a fresh build
-        run: git diff --exit-code -- tools/apd_gauntlet/data/report-template/
+        run: git add -N tools/apd_gauntlet/data/report-template/ && git diff --exit-code -- tools/apd_gauntlet/data/report-template/
       - run: pip install -e ".[dev]"
       - name: Freshness tests with Node present (parity test executes here)
         run: pytest tests/unit/report/test_tier3_bundle_freshness.py -v

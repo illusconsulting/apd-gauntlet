@@ -27,6 +27,6 @@ export function computeSourceHash(rootDir) {
   return hash.digest("hex");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.stdout.write(computeSourceHash(process.argv[2]) + "\n");
 }

@@ -41,9 +41,10 @@
 ```python
 def test_compute_source_hash_excludes_nested_dotfiles_and_node_modules(monkeypatch, tmp_path):
     """Dotfiles / node_modules / .build are excluded at EVERY depth, matching
-    report-template/.build/build.mjs walk() (line 54, which skips them during
-    recursive descent). Regression for the Python/Node divergence that only
-    excluded at the top level (rel.parts[0])."""
+    the Node walk rule (now in report-template/.build/source-hash.mjs, imported
+    by build.mjs), which skips them during recursive descent. Regression for
+    the Python/Node divergence that only excluded at the top level
+    (rel.parts[0])."""
     mod = _load_freshness_module()
     src = tmp_path / "src"
     (src / "sub").mkdir(parents=True)
@@ -74,11 +75,11 @@ Expected: FAIL — `with_excluded != baseline` (the nested `.gitkeep` and `node_
 
 ```python
         rel = entry.relative_to(SRC)
-        # Mirror report-template/.build/build.mjs walk() (line 54): skip any
-        # entry whose basename is "node_modules" or starts with "." — at EVERY
-        # depth, not just the top level. The old rel.parts[0]-only check diverged
-        # from Node on nested dotfiles (e.g. sub/.gitkeep), turning the gate
-        # falsely red on a correctly-built bundle.
+        # Mirror the Node walk rule (now in report-template/.build/source-hash.mjs,
+        # imported by build.mjs): skip any entry whose basename is "node_modules"
+        # or starts with "." — at EVERY depth, not just the top level. The old
+        # rel.parts[0]-only check diverged from Node on nested dotfiles (e.g.
+        # sub/.gitkeep), turning the gate falsely red on a correctly-built bundle.
         if any(part == "node_modules" or part.startswith(".") for part in rel.parts):
             continue
 ```
@@ -235,7 +236,7 @@ export function computeSourceHash(rootDir) {
   return hash.digest("hex");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.stdout.write(computeSourceHash(process.argv[2]) + "\n");
 }
 ```
@@ -327,10 +328,13 @@ Expected: `exit=1` (the diff detects the tampered `app.js`), then the checkout r
 def test_ci_has_bundle_rebuild_diff_job():
     """The rebuild-and-diff CI job is the only guard that catches a stale or
     hand-edited committed bundle (the .source-hash marker cannot). Source-grep
-    guard so the job is not silently dropped or renamed."""
+    guard so the job is not silently dropped or renamed, and so the intent-to-add
+    hardening (new untracked bundle files must fail the gate too) is not silently
+    dropped either."""
     wf = (REPO / ".github" / "workflows" / "python-tests.yml").read_text(encoding="utf-8")
     assert "bundle-rebuild-diff:" in wf
     assert "git diff --exit-code -- tools/apd_gauntlet/data/report-template/" in wf
+    assert "git add -N tools/apd_gauntlet/data/report-template/" in wf
 ```
 
 Run: `pytest tests/unit/report/test_tier3_bundle_freshness.py::test_ci_has_bundle_rebuild_diff_job -v`
@@ -356,7 +360,7 @@ Expected: FAIL — the job does not exist in the workflow yet.
         with: { node-version: "20" }
       - run: python tools/build_report_template.py
       - name: Assert committed bundle matches a fresh build
-        run: git diff --exit-code -- tools/apd_gauntlet/data/report-template/
+        run: git add -N tools/apd_gauntlet/data/report-template/ && git diff --exit-code -- tools/apd_gauntlet/data/report-template/
       - run: pip install -e ".[dev]"
       - name: Freshness tests with Node present (parity test executes here)
         run: pytest tests/unit/report/test_tier3_bundle_freshness.py -v

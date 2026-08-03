@@ -92,9 +92,10 @@ def test_shipped_bundle_source_hash_matches():
 
 def test_compute_source_hash_excludes_nested_dotfiles_and_node_modules(monkeypatch, tmp_path):
     """Dotfiles / node_modules / .build are excluded at EVERY depth, matching
-    report-template/.build/build.mjs walk() (line 54, which skips them during
-    recursive descent). Regression for the Python/Node divergence that only
-    excluded at the top level (rel.parts[0])."""
+    report-template/.build/source-hash.mjs (the walk build.mjs now imports,
+    which skips them during recursive descent). Regression for the
+    Python/Node divergence that only excluded at the top level
+    (rel.parts[0])."""
     mod = _load_freshness_module()
     src = tmp_path / "src"
     (src / "sub").mkdir(parents=True)
@@ -146,7 +147,10 @@ def test_source_hash_parity_with_node_walk(monkeypatch, tmp_path):
 def test_ci_has_bundle_rebuild_diff_job():
     """The rebuild-and-diff CI job is the only guard that catches a stale or
     hand-edited committed bundle (the .source-hash marker cannot). Source-grep
-    guard so the job is not silently dropped or renamed."""
+    guard so the job is not silently dropped or renamed, and so the intent-to-add
+    hardening (new untracked bundle files must fail the gate too) is not silently
+    dropped either."""
     wf = (REPO / ".github" / "workflows" / "python-tests.yml").read_text(encoding="utf-8")
     assert "bundle-rebuild-diff:" in wf
     assert "git diff --exit-code -- tools/apd_gauntlet/data/report-template/" in wf
+    assert "git add -N tools/apd_gauntlet/data/report-template/" in wf
