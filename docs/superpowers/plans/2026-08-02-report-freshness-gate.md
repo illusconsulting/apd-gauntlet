@@ -10,7 +10,7 @@
 
 **Spec:** [docs/superpowers/specs/2026-07-14-guardrail-hardening-post-pr8-design.md](../specs/2026-07-14-guardrail-hardening-post-pr8-design.md) — §"PR B" and §"Amendments (2026-08-02)".
 
-**Supersedes:** [2026-07-14-report-freshness-gate.md](2026-07-14-report-freshness-gate.md) (amended draft; all content folded in here).
+**Supersedes:** the 2026-07-14 amended draft of this plan (kept uncommitted; all content folded in here).
 
 **Base:** `illusconsulting/apd-gauntlet` `main` @ `27270d5`. This checkout is at that commit; every file/line anchor below was re-verified against it on 2026-08-02.
 
