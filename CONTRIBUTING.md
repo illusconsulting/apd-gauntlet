@@ -41,6 +41,19 @@ Every PR must:
 
 The CI workflows enforce these gates on every PR.
 
+### Plugin channel
+
+If you change anything under `.claude/` or `.claude-plugin/`, a green `pytest`
+does not prove the plugin loads. Run `claude plugin validate
+.claude-plugin/plugin.json` and confirm `/doctor` is clean in Claude Code.
+
+Guardrails that protect an external contract — the Claude Code loader, a
+schema, a consumer's file format — must assert that contract from its
+authoritative spec, not mirror the current repo state. A test that reflects
+whatever shape is already present only catches drift between two copies of the
+same possibly-wrong thing (this is why the pre-PR-#8 skills test stayed green
+while every skill failed to load).
+
 ## Commit messages
 
 - Keep subject lines under 80 characters.
