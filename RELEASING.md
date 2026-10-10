@@ -119,9 +119,10 @@ remain.
    README and this file), so 1.7 users can register it next to the default
    marketplace.
 3. Merge `main` into `next` one last time.
-4. On `next`, set every version to `2.0.0`, rename the marketplace back to
-   `apd-security`, and write the `## v2.0.0` changelog section, including
-   upgrade notes for 1.7 users.
+4. On `next`, set every version to `2.0.0` and rename the marketplace back to
+   `apd-security`. Remove the pre-release notice at the top of the README and
+   the `--pre` install hint in `commands/run.md`. Write the `## v2.0.0`
+   changelog section, including upgrade notes for 1.7 users.
 5. Merge `next` into `main` with a merge commit, then tag `v2.0.0` on `main`.
    Existing plugin users on the default marketplace receive 2.0.0 at their next
    update, and `pip install apd-gauntlet` resolves to 2.0.0.
