@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -87,9 +88,16 @@ def test_commands_paths_exist() -> None:
         assert (REPO / _norm(rel)).is_file(), f"missing command file {rel}"
 
 
+# One marketplace name per release line, so a tester can register the stable and
+# next marketplaces side by side (Claude Code keys marketplaces by name):
+#   main → apd-security, next → apd-security-next, release/1.7 → apd-security-1.7.
+# See RELEASING.md.
+MARKETPLACE_NAME = re.compile(r"^apd-security(-next|-\d+\.\d+)?$")
+
+
 def test_marketplace_well_formed_and_versions_match() -> None:
     mk = json.loads(MARKET.read_text(encoding="utf-8"))
-    assert mk["name"] == "apd-security"
+    assert MARKETPLACE_NAME.match(mk["name"]), mk["name"]
     assert isinstance(mk.get("owner"), dict) and mk["owner"].get("name")
     entry = next(p for p in mk["plugins"] if p["name"] == "apd-gauntlet")
     assert entry["source"] == "./"

@@ -90,6 +90,13 @@ All notable changes to this project will be documented in this file. Format base
   authors `crosses` by name) no longer author derived fields; the assembler is the
   sole author. Finding/capability/domain-improvement/asset-inventory schemas
   relaxed accordingly (permissive — existing valid records still validate).
+- **Two release lines.** `main` keeps shipping the stable 1.7 line; `next`
+  carries the 2.0 pre-releases. A new release gate
+  (`tools/check_release_tag.py`) runs first in the `release` workflow. It
+  refuses a tag that does not match the package version or that sits on the
+  wrong branch for its kind of version, and it flags pre-releases on GitHub so
+  that only the highest stable version is marked Latest. CI now also runs on
+  `next` and `release/**`. See [RELEASING.md](RELEASING.md).
 
 ## v1.7.0 — 2026-06-09
 
