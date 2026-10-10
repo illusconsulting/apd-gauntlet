@@ -19,7 +19,7 @@
 - Response headers on every web response: `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`. No CORS headers.
 - Every interface shows the egress notice text from Plan 1 before a run with a decision model starts and records consent in `.apd-state/consent.json`.
 - The TUI stays usable at 80×24.
-- Release bump: `1.7.0` → `1.8.0` in `pyproject.toml`, `tools/apd_gauntlet/__init__.py` and `.claude-plugin/plugin.json` together.
+- Versioning: this work lands on the `next` branch, which already carries the 2.0 pre-release version (`2.0.0aN`). Plan 3 changes no version strings. Tester drops (`aN` → `bN` → `rcN`) and the 2.0.0 GA follow `RELEASING.md`.
 
 ## Review Focus
 
@@ -43,7 +43,7 @@
 | `tools/apd_gauntlet/app/tui/{__init__,app,screens}.py` | Textual app | Create |
 | `tools/apd_gauntlet/runner/ledger.py` | `read_events` holds back a partial last line | Modify |
 | `tools/apd_gauntlet/cli.py` | `setup`, `doctor`, `new`, `runs`, `report`, `tui`, `web` | Modify |
-| `pyproject.toml`, `tools/apd_gauntlet/__init__.py`, `.claude-plugin/plugin.json` | Extras, package data, version | Modify |
+| `pyproject.toml` | Extras, package data | Modify |
 | `README.md`, `docs/QUICKSTART.md`, `docs/local-apps.md`, `docs/adrs/0026-local-web-ui-security.md`, `CHANGELOG.md` | Docs | Create/Modify |
 | `tests/app/…`, `tests/test_cli_setup.py`, `tests/test_cli_new_runs_report.py` | Tests | Create |
 
@@ -573,7 +573,7 @@ git commit -m "feat(tui): add Textual interface for setup, runs and reports"
 
 **Files:**
 
-- Modify: `pyproject.toml`, `tools/apd_gauntlet/__init__.py`, `.claude-plugin/plugin.json`, `README.md`, `docs/QUICKSTART.md`, `CHANGELOG.md`, `tests/integration/test_wheel_install_smoke.py`
+- Modify: `pyproject.toml`, `README.md`, `docs/QUICKSTART.md`, `CHANGELOG.md`, `tests/integration/test_wheel_install_smoke.py`
 - Create: `docs/local-apps.md`, `docs/adrs/0026-local-web-ui-security.md`
 
 - [ ] **Step 1: Extend the wheel smoke test**
@@ -585,9 +585,9 @@ Install `.[app]` into the isolated venv and assert `apd-gauntlet --help` lists `
 Run: `pytest -m wheel tests/integration/test_wheel_install_smoke.py -v`
 Expected: FAIL until the extras and package data are added
 
-- [ ] **Step 3: Add extras, package data and the version bump; write the docs**
+- [ ] **Step 3: Add extras and package data; write the docs**
 
-README opens with the golden path from spec §8.1. `docs/QUICKSTART.md` becomes that path plus one section each for the TUI and web UI. `docs/local-apps.md` covers the screens, the web security posture and the data-egress notice. ADR-0026 records spec §8.5.
+Below the 2.0 pre-release notice, the README opens with the golden path from spec §8.1. The CHANGELOG entry goes under "Unreleased — 2.0 line". `docs/QUICKSTART.md` becomes that path plus one section each for the TUI and web UI. `docs/local-apps.md` covers the screens, the web security posture and the data-egress notice. ADR-0026 records spec §8.5.
 
 - [ ] **Step 4: Run the full suite, the wheel test and markdownlint**
 
@@ -597,6 +597,6 @@ Expected: all pass, 0 lint errors
 - [ ] **Step 5: Commit**
 
 ```bash
-git add pyproject.toml tools/apd_gauntlet/__init__.py .claude-plugin/plugin.json README.md docs CHANGELOG.md tests/integration/test_wheel_install_smoke.py
-git commit -m "chore(release): 1.8.0 with local apps and optional decision models"
+git add pyproject.toml README.md docs CHANGELOG.md tests/integration/test_wheel_install_smoke.py
+git commit -m "feat(app): extras, package data and docs for the local apps"
 ```

@@ -469,8 +469,13 @@ or a typed confirmation; the TUI and web show a confirm dialog.
 
 - Package data adds `data/claude/**`, `data/templates/*`,
   `data/decision-models.json` and the app's templates and static files.
-- The release that ships Plan 3 bumps the minor version, with the plugin in
-  lockstep per ADR-0023. Run-config changes are additive.
+- This work ships as **2.0.0** on the `next` release line, while `main` keeps
+  publishing 1.7.x. Pre-releases (`2.0.0aN`, `bN`, `rcN`) go to PyPI as
+  pre-releases and to the `apd-security-next` plugin marketplace. GA merges
+  `next` into `main`. `RELEASING.md` covers both lines. The plugin stays in
+  lockstep per ADR-0023. Run-config changes are additive, so 1.7 run
+  directories still validate. Bundled domain packs declare
+  `framework_compat: ">=1.0.0,<3.0.0"`.
 
 ## 11. Delivery
 
