@@ -1,7 +1,7 @@
 name: security-tooling
 display_name: "Security Tooling (Offensive + Defensive Platforms)"
 version: 1.0.0
-framework_compat: ">=1.0.0,<2.0.0"
+framework_compat: ">=1.0.0,<3.0.0"
 description: "Security-tooling-specialized severity rubric and pattern library for platforms that wield offensive capability or operate critical defensive functions — C2 frameworks, adversary-emulation platforms, breach-and-attack-simulation systems, security-orchestration platforms, and vulnerability scanners. Anchored to NIST SP 800-115 (Penetration Testing), NIST SP 800-181 (NICE Workforce Framework), MITRE ATT&CK, MITRE D3FEND, OWASP API Top 10 (operator-console surfaces), and the legal exposure created by Rules-of-Engagement and Computer Fraud and Abuse Act considerations. The defining characteristic of this domain: the tool itself is a weapons platform — compromise yields not just data exposure but the ability to wield the tool's offensive capability against unauthorized targets."
 includes:
   - severity-rubric.md

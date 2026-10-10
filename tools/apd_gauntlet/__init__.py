@@ -1,7 +1,7 @@
 """APD Gauntlet — Python validator and CLI for the APD security architecture review framework."""
 import re
 
-__version__ = "1.7.0"
+__version__ = "2.0.0a1"
 
 
 def release_of(version: str) -> str:

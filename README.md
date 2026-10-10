@@ -1,5 +1,14 @@
 # APD Gauntlet
 
+> **This is the 2.0 pre-release line (the `next` branch).** It is published as
+> PyPI pre-releases (`pip install --pre apd-gauntlet`) and as the
+> `apd-security-next` plugin marketplace
+> (`/plugin marketplace add illusconsulting/apd-gauntlet#next`, then
+> `/plugin install apd-gauntlet@apd-security-next`). Install only one line's
+> plugin at a time. For the stable 1.7 line, use the
+> [`main` branch](https://github.com/illusconsulting/apd-gauntlet/tree/main).
+> [RELEASING.md](RELEASING.md) explains both lines.
+
 **Multi-agent security architecture review for technical plans and running systems.** You give it a tech plan plus whatever supporting artifacts you have (PRD, source code, IaC, diagrams, threat models, ADRs); nine specialist agents — orchestrated by Claude Code — review it through nine independent security lenses; a synthesizer dedups across lenses, surfaces contradictions, and emits an advisory report with an interactive HTML view.
 
 The output is **structured advisory input for an architect — not a gate.** It doesn't approve or block changes; it makes the human review better-informed and harder to bypass.

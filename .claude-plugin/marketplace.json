@@ -1,14 +1,14 @@
 {
-  "name": "apd-security",
+  "name": "apd-security-next",
   "owner": { "name": "APD Gauntlet contributors" },
-  "description": "APD security architecture review framework — agents, skills, and the gauntlet workflow.",
+  "description": "APD security architecture review framework — agents, skills, and the gauntlet workflow. 2.0 pre-release line (next branch); for the stable line use the apd-security marketplace.",
   "metadata": { "description": "APD security architecture review framework marketplace." },
   "plugins": [
     {
       "name": "apd-gauntlet",
       "source": "./",
       "description": "9 APD specialist agents + intake + the gauntlet workflow runner + synthesizer fallback. Requires the apd-gauntlet PyPI package on PATH.",
-      "version": "1.7.0",
+      "version": "2.0.0-alpha.1",
       "license": "Apache-2.0",
       "homepage": "https://github.com/illusconsulting/apd-gauntlet",
       "keywords": ["security", "architecture", "review", "apd"]
