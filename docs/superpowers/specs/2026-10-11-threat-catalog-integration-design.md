@@ -215,7 +215,7 @@ New package `tools/apd_gauntlet/catalog/`:
 
 | Module | Responsibility |
 |---|---|
-| `config.py` | `CatalogConfig.from_run_config(run_cfg: dict, packs: list[DomainPack]) -> CatalogConfig \| None` |
+| `config.py` | `catalog_config_from_run_config(run_cfg: Mapping[str, Any]) -> CatalogConfig \| None`; `load_selection_params()` |
 | `load.py` | `load_catalog(cfg: CatalogConfig) -> Catalog`; validation (§12.1); edition fallback |
 | `model.py` | `Catalog`, `Threat` (frozen dataclasses); indexes by id, system type, STRIDE letter, LINDDUN code and mapping id |
 | `scope.py` | Run and surface system types; eligibility; `threat-scope.yaml` |
@@ -700,9 +700,9 @@ New workstream **WS10, threat catalog**, four plans:
 | Plan | Scope | Depends on | Milestone |
 |---|---|---|---|
 | CAT1 — data, loader, editions | §6, §7 (`threat_catalog` key), §8 `config`/`load`/`model`/`translate`, §10, §12.1, §12.3 CI tests, LA3 doctor check, ADR-0030 | WS2 (`compare-runs` crosswalk hook) | M4; may start in M3 alongside LA1 |
-| CAT2 — scope and TM author | §8.1–8.3, domain `threat_profile` for the six packs, TM schema, `catalog-scope` step in workflow, `plan_run.py` and `runner/flow.py` | CAT1, WS1 (`canonicalize-threat-model`, `resume-plan`), LA2 | M5 |
+| CAT2 — scope and TM author | §8.1–8.3, domain `threat_profile` for the six packs, TM schema, `catalog-scope` step in workflow, `plan_run.py` and `runner/flow.py`, and the §14 metamorphic suite `catalog` (C4 as a unit test, since it checks sensitivity rather than invariance) | CAT1, WS1 (`canonicalize-threat-model`, `resume-plan`), LA2 | M5 |
 | CAT3 — lenses, evaluator, paths, report, gaps | §8.4–8.10, `catalog-shortlists` step, schemas, skills, report section | CAT2, WS5 Task 8 (`tm-candidates`) | M5 |
-| CAT4 — evaluation | §14 | CAT3, WS2 | M6, before feature freeze |
+| CAT4 — evaluation | §14 except the metamorphic suite: labels, evaluators, gates, tuning and freeze, and the default | CAT3, WS2 | M6, before feature freeze |
 
 Registry additions (master plan R1–R10) land with this spec. The catalog takes
 ADR-0030; code-flow moves to 0031 onward.

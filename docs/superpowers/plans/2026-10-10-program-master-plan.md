@@ -135,7 +135,7 @@ Every detailed plan uses these exact names. A plan that needs a new shared name 
 - **`apd_gauntlet.context.select`** (created by IAC3; reused by CF3): `select_packet(graph: TypedGraph, seeds: dict[str, float], params: ContextParams) -> Packet`, with `ContextParams` loaded from `data/<domain>/context-params.yaml`.
 - **`apd_gauntlet.validate` evidence-index registry** (created by IAC2): `EVIDENCE_INDEXES: dict[str, EvidenceIndexSpec]`, keyed by filename (`code-evidence-index.yaml`, `iac-evidence-index.yaml`, `iac-graph.yaml`, later `code-flow-index.yaml`), with `EvidenceIndexSpec(schema: str, locator_re: str, id_field: str)`. The existing code-evidence handling moves behind it unchanged.
 - **`apd_gauntlet.eval.evaluators`** (created by WS2): `register(name: str, fn: Callable[[CorpusEntry, Labels], EvalResult])`.
-- **`apd_gauntlet.catalog`** (created by CAT1): `CatalogConfig.from_run_config(run_cfg: dict, packs: list[DomainPack]) -> CatalogConfig | None` and `load_catalog(cfg: CatalogConfig) -> Catalog`. CAT2 adds `scope` and `candidates`; CAT3 adds `shortlists`, `derive`, `coverage` and `gaps`.
+- **`apd_gauntlet.catalog`** (created by CAT1): `catalog_config_from_run_config(run_cfg: Mapping[str, Any]) -> CatalogConfig | None`, `load_selection_params(path: Path | None = None) -> SelectionParams`, `load_catalog(cfg: CatalogConfig, *, data_dir: Path | None = None) -> Catalog | None` and the frozen `Threat`/`Catalog` model. CAT2 adds `goals`, `scope` and `candidates`; CAT3 adds `shortlists`, `derive`, `coverage` and `gaps`. The CAT brief fixes every signature.
 
 ### R3. Phases
 
