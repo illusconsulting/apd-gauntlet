@@ -487,9 +487,15 @@ schema-validates them.
 
 ## 9. Specialist integration
 
-- **Intake.** Stops reading raw `.tf` files. It lists IaC files in the
-  artifact inventory, reads `iac-summary.md`, and builds trust boundaries from
-  graph exposure, routing and cross-account trust edges.
+- **Intake.** Stops reading raw `.tf` files for every root the `iac` phase
+  resolved. It lists IaC files in the artifact inventory, reads
+  `iac-summary.md`, and builds trust boundaries from graph exposure, routing
+  and cross-account trust edges.
+- **Fallback for unresolved roots.** A root the phase could not resolve (a
+  missing tool, a sanitise refusal, or every stack failing) is listed in
+  `iac-summary.md` as `unresolved-raw`. For that root only, intake keeps 1.7's
+  raw reading of the declared files, so coverage never drops below 1.7.
+  Findings resting only on raw-read evidence carry `confidence: low`.
 - **Lenses.** Each lens dispatch names its goal's packet file. Lenses cite
   index or graph entries, never re-derive them, and never read `iac-graph.yaml`
   whole.
@@ -679,6 +685,10 @@ Each unit degrades on its own, and the run never crashes on IaC input:
   before held-out runs: edge weights, score coefficients, K, reliability
   weights, and decision thresholds. A tunable changed after a held-out run
   means a new held-out set.
+- **Baseline.** Every metric is also computed for 1.7's raw-read path on the
+  same corpus and labels, so the evaluation reports a before-and-after delta,
+  not only an absolute score. A release that lowers recall of labelled issues
+  against that baseline does not ship.
 
 ### 13.3 Behaviour-preserving transformation suite (CI, deterministic)
 
@@ -789,3 +799,8 @@ Four implementation plans, each shippable alone:
 - **Mocks.** If Atmos adds an allow-list mode for functions, a later version
   could resolve `!terraform.output` from mocks without running other
   functions.
+- **Infrastructure-to-code join.** This spec builds the infrastructure graph
+  but does not link a compute resource (ECS task, EC2 instance, Kubernetes
+  workload, Lambda function) to the service code it runs. Until the code-flow
+  layer defines that join (`2026-10-10-code-flow-layer-design.md`, §9),
+  attack paths stop at the compute node.
