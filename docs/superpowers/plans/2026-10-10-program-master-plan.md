@@ -23,7 +23,7 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 - `docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md` (PR #29)
 - `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md`
 - `docs/superpowers/specs/2026-10-10-code-flow-layer-design.md` (draft, awaiting review)
-- `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md` (proposed)
+- `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md` (approved 2026-10-11)
 - The cost and token audit (Claude Doc "APD Gauntlet cost and token audit", 2026-10-10), the source for WS1, WS3, WS5 and WS6.
 
 ## Global Constraints
@@ -154,7 +154,7 @@ WS3 renames no phase. The `setup` phase runs `prepare-run`. WS10 adds no phase: 
 | `domain_improvement_capture: false` | WS3 |
 | `infrastructure.static.atmos`, the object form of `infrastructure.static.terraform`, `infrastructure.modules`, `infrastructure.plans`, `infrastructure.require_tools` | IAC1 |
 | `code_flow`, `repos[].deploys_as` | CF1 |
-| `threat_catalog` (`off \| open \| full`, or an object with `edition`, `path`, `system_types`, `exclude_system_types`, `hitrust_lineage`) | CAT1 |
+| `threat_catalog` (`off \| open \| full`, or an object with `edition`, `path`, `system_types`, `exclude_system_types`) | CAT1 |
 
 ### R5. Agent frontmatter
 
@@ -345,7 +345,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
   - raw-read fallback for unresolved roots (§9);
   - 1.7 baseline in the evaluation (§13.2);
   - infrastructure-to-code join noted as an open item (§16).
-- **A5. WS1 gains a task (proposed, needs approval): make the OWASP LLM guidance agree on the 2025 edition.** The bundled `owasp_llm_top10.json` and the `apd-control-mappings` skill use the 2023 list (`LLM06 Sensitive Information Disclosure`, `LLM07 Insecure Plugin Design`), while the `agentic-ai` pack's prose uses 2025 meanings (`LLM06 Excessive Agency`) under the same bare ids. In an `agentic-ai` run a bare `LLM06` can mean either, and rollups print the 2023 name. The 1.7.1 fix changes the seed list, its golden fixture, `refresh_owasp`'s LLM source and the skill's LLM section. The finding pattern does not change on 1.7.1; CAT1 adds year-qualified ids on 2.0 (threat catalog spec §10).
+- **A5. Declined 2026-10-11: the OWASP LLM fix is 2.0 only (CAT1); WS1 is unchanged.** For the record: The bundled `owasp_llm_top10.json` and the `apd-control-mappings` skill use the 2023 list (`LLM06 Sensitive Information Disclosure`, `LLM07 Insecure Plugin Design`), while the `agentic-ai` pack's prose uses 2025 meanings (`LLM06 Excessive Agency`) under the same bare ids. In an `agentic-ai` run a bare `LLM06` can mean either, and rollups print the 2023 name. The 1.7.1 fix changes the seed list, its golden fixture, `refresh_owasp`'s LLM source and the skill's LLM section. The finding pattern does not change on 1.7.1; CAT1 adds year-qualified ids on 2.0 (threat catalog spec §10).
 
 ---
 
@@ -396,7 +396,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 - [ ] **Step 1:** Execute LA3, as amended by A3.
 - [ ] **Step 2:** Execute the Wave 2 part of WS5 in the plan's order (digests and renders first), with `compare-runs` after each item. Expected: gates pass; `usage` shows the per-item saving.
-- [ ] **Step 2a:** After the threat catalog spec is approved, write CAT1–CAT4 with superpowers:writing-plans, then execute CAT1. Expected: the vendored open catalog passes the load, stub-rule and KB-edition tests; `compare-runs` passes with `threat_catalog: off` (CAT1 changes OWASP editions, so crosswalked comparisons are part of this check).
+- [ ] **Step 2a:** Execute CAT1 (`2026-10-11-cat1-catalog-data-loader-editions.md`). Expected: the vendored open catalog passes the load, stub-rule and KB-edition tests; `compare-runs` passes with `threat_catalog: off` (CAT1 changes OWASP editions, so crosswalked comparisons are part of this check).
 - [ ] **Step 3:** Cut `v2.0.0a3`.
 
 ## Task 7: M5 — IAC1–IAC3 and WS6 shadow mode, then `v2.0.0a4`
@@ -473,6 +473,8 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
     - Render failures are advisory.
     - `build-lens-skills` stays a separate step.
 12. **Evaluation corpora.** The committed examples form the development findings corpus. The held-out findings corpus is private PBM runs under `eval/local/`.
+13. **Execution method** (2026-10-11): every detailed plan runs with superpowers:subagent-driven-development — a fresh implementer per task, spec and quality review before the next task, and a whole-branch review at the end.
+14. **Threat catalog** (2026-10-11): spec approved. The OWASP LLM fix is 2.0 only (A5 declined). HITRUST lineage is removed everywhere: open stubs carry no `hitrust` block, and the gauntlet never reads lineage from either edition.
 
 ## Decisions still needed (defaults apply if no answer)
 
@@ -483,9 +485,6 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 | IaC held-out repositories (a public OpenTofu repository plus Atmos repositories), with licences checked at pinned commits | Chosen during IAC4 Task 1 | M6 |
 | How aggressive the domain consumer map is (pbm drops 55% against the audit's 45%) | Packs' stated consumers | WS5 Task 9 |
 | Match parameters (title similarity 0.5; at least 10 predicted positives for `calibrate`) | Confirmed or adjusted by WS2 Task 14's noise check | M2 |
-| Approve the threat catalog spec | — | WS10 |
-| Amendment A5: fix the OWASP LLM list in 1.7.1 | Fix on 2.0 only (CAT1) | M1 scope |
-| HITRUST position for the open catalog: stubs keep names, families and mappings | As specified (stubs) | Catalog release 1.0.0 |
 
 ## Size
 

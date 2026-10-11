@@ -1,7 +1,7 @@
 # Threat catalog integration — design
 
 **Date:** 2026-10-11
-**Status:** Proposed
+**Status:** Approved 2026-10-11
 **Release line:** `next` (2.0)
 **Related:** ADR-0008 (multi-framework taxonomy mappings), ADR-0017
 (local-only accuracy benchmark), ADR-0020 (tooling-authored derived fields),
@@ -90,7 +90,7 @@ catalog's schema.
 | F2 | Inventory `asset_type` is coarse: `service`, `data_store`, `secret_store`, `queue`, `network`, `external_dependency`, `compute`. Identities have `human_role`, `service_account`, `workload_identity`, `external_party`. Assets carry `data_classifications`. | Asset type alone cannot pick catalog system types (`service` could be `web_app`, `api` or `serverless`). Scope intersects asset-type candidates with run-level system types (§8.1). |
 | F3 | `threat-model-normalized` entries, `finding`, `capability` and `run-config` all set `additionalProperties: false`. `framework_refs` holds `stride_letter`, `linddun_letter`, `attack_tree_position` and `mitre_attack`. | Every new field is an additive schema change with a `schema-evolution.md` entry. |
 | F4 | ADR-0022: derived views are synthesis-authored, "never add a `control_mappings` key, never appear in specialist discipline, never gate specialist emission". ADR-0020: tooling authors every field that is a pure function of authored content. ADR-0008 rejected always-on taxonomies because agents over-map. | Lenses author `threat_refs`; canonicalize derives `catalog_mappings`; rollups count the two sources apart; only active taxonomies are derived. |
-| F5 | `owasp_llm_top10.json` is the 2023 list (`LLM02 Insecure Output Handling` … `LLM10 Model Theft`), seed-only, and the `apd-control-mappings` skill teaches 2023 meanings (`LLM06 (Sensitive Information Disclosure)`, `LLM07 (Insecure Plugin Design)`). The `agentic-ai` pack's ten prose files use 2025 meanings (`LLM02 Sensitive Information Disclosure`, `LLM06 Excessive Agency`, `LLM10 Unbounded Consumption`). The finding pattern `^LLM(0[1-9]\|10)$` has no year. | An existing 1.7 defect: in an `agentic-ai` run, a bare `LLM06` can mean either edition, and rollups print the 2023 name. Bare ids in 1.7 runs are ambiguous. Fixed in CAT1; the guidance part is proposed for 1.7.1 (§16). |
+| F5 | `owasp_llm_top10.json` is the 2023 list (`LLM02 Insecure Output Handling` … `LLM10 Model Theft`), seed-only, and the `apd-control-mappings` skill teaches 2023 meanings (`LLM06 (Sensitive Information Disclosure)`, `LLM07 (Insecure Plugin Design)`). The `agentic-ai` pack's ten prose files use 2025 meanings (`LLM02 Sensitive Information Disclosure`, `LLM06 Excessive Agency`, `LLM10 Unbounded Consumption`). The finding pattern `^LLM(0[1-9]\|10)$` has no year. | An existing 1.7 defect: in an `agentic-ai` run, a bare `LLM06` can mean either edition, and rollups print the 2023 name. Bare ids in 1.7 runs are ambiguous. Fixed on 2.0 only, in CAT1 (§10); 1.7.x is unchanged. |
 | F6 | `owasp_top10.json` is the 2021 seed (`A01:2021`); the `apd-control-mappings` skill teaches 2021 ids. The catalog maps OWASP Top 10 2025. ATT&CK was fetched 2026-05-29 from `mitre/cti` master. | KB refresh plus crosswalks for comparing new runs with 1.7 baselines (§10). |
 | F7 | The catalog's LINDDUN codes are `L, I, Nr, D, DD, U, Nc`; the gauntlet's are `L, I, N_repudiation, D_etectability, D_isclosure, U, N_compliance`. | A fixed translation table, pinned by a test (§8.6). |
 | F8 | Catalog mapping keys include `attack_enterprise`, `attack_mobile`, `atlas`, `capec`, `cwe`, `maswe`, `owasp_top10`, `owasp_api`, `owasp_llm`, `owasp_llm_2025`, `owasp_agentic`, `owasp_nhi`, `owasp_cicd`, `owasp_k8s`, `maestro`, `csa_top_threats`, `hicp` and others; control keys are `nist_800_53`, `nist_csf2`, `cis_v8`, `d3fend`, `hicp`, `emb3d_mitigations`, `owasp_docker`. Each mapping has `fit: primary\|partial`. | One table maps catalog keys to gauntlet taxonomies (§8.6); everything else goes to the coverage view. |
@@ -196,14 +196,12 @@ threat_catalog:
   path: ~/threat-catalog/threat-catalog-full-1.0.0.json      # required for full
   system_types: [api, cloud, b2b_integration]               # optional, added to the run's types
   exclude_system_types: [ot_ics]                            # optional
-  hitrust_lineage: false        # true shows the HITRUST lineage view; full only
 ```
 
 - Absent means the release default: `off` until CAT4 passes, then `open`.
 - `edition: full` without a readable, valid file falls back to `open` and
   writes a warning to `00-context/threat-scope.yaml` and the run log; it never
   fails the run.
-- `hitrust_lineage: true` with `open` is a validation error.
 - The domain pack schema gains an optional `threat_profile`
   (`system_types`, `emphasize_families`, `include_families`,
   `exclude_families`). The six shipped packs get one each in CAT2; for
@@ -497,8 +495,6 @@ derived view) contains:
   This covers OWASP Agentic, NHI, CI/CD and Kubernetes, MAESTRO, CSA, HICP,
   CIS v8 and EMB3D. The view says what the review examined, not an
   attestation.
-- `hitrust_lineage`: only with `edition: full` and `hitrust_lineage: true`. It
-  lists the HITRUST ids per in-scope threat, ids only.
 
 **Report.** `build-report` adds a "Threat coverage" section when the file
 exists:
@@ -627,8 +623,11 @@ handling protects against an edited local file.
 - **CI:** the stub rule test (§12.1, item 7) runs on the vendored file.
 - **CI:** every committed example run under `examples/` has no scope file or
   one with `edition` `open`.
-- **Report:** HITRUST-sourced threats show id and name only. The lineage view
-  needs `full` plus `hitrust_lineage: true`, and shows ids only.
+- **Report:** HITRUST-sourced threats show id and name only.
+- **No lineage anywhere:** the gauntlet never reads a threat's `hitrust` block
+  or the `hitrust_crosswalk`, in either edition. `model.py` does not load them,
+  and a test runs the catalog steps on a fixture full catalog and asserts that
+  no output contains a `hitrust` key or any of the fixture's HITRUST ids.
 - **Export:** `catalog export-gaps` never includes catalog prose.
 - **Run directories:** with `full`, a run's shortlists may contain HITRUST
   prose. Run directories are local-only under ADR-0017, and the run log
@@ -716,11 +715,9 @@ ADR-0030; code-flow moves to 0031 onward.
 
 ## 16. Risks and open questions
 
-1. **The OWASP LLM defect predates this work** (F5). The proposal is to make
-   1.7.1's guidance agree on the 2025 edition, as a WS1 addition: the KB list,
-   its golden fixture, `refresh_owasp`'s LLM source and the LLM section of
-   `apd-control-mappings`. Ids stay bare on 1.7.1; 2.0 adds the year. Master
-   plan amendment A5.
+1. **The OWASP LLM defect predates this work** (F5). Decided 2026-10-11: it is
+   fixed on 2.0 only (CAT1, §10). 1.7.x keeps the 2023 list and skill text, so
+   `agentic-ai` runs on 1.7.x may still carry ambiguous bare ids.
 2. **Catalog quality bounds derived mappings.** The catalog's residual mapping
    error is about 1–2%. Derived mappings are a separate field and are counted
    apart, so an error never changes a lens-authored count. The precision gate
