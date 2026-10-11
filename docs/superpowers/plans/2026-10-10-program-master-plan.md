@@ -29,7 +29,9 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 - **Release lines:** per RELEASING.md. Bug fixes go to `main` by PR, then `main` merges into `next`. Features go to `next` by PR. Tags pass `tools/check_release_tag.py`.
 - **Versions:** pyproject and `__init__` use PEP 440 (`2.0.0aN`); the plugin manifests use SemVer (`2.0.0-alpha.N`). The test literal moves with each pre-release.
 - **CI never touches the network** (ADR-0017). Real-run accuracy is judged locally, and real runs are never committed.
-- **Every behaviour-changing task ships behind `compare-runs`** against the baseline, run twice per configuration. These comparison gates are proposals, recorded in `eval/gates.yaml`:
+- **Every behaviour-changing task ships behind `compare-runs`,** run twice per configuration. Each task or PR group gates against the previous accepted state (the last configuration whose gates passed). Each milestone exit gates against the 1.7.0 baseline.
+- **Gates that a baseline cannot measure.** 1.7 runs record no retries, first-pass validation or audit iterations, so `compare-runs` reports gates 4–5 as `not_available` against the 1.7.0 baseline. It still exits 0 (`pass_with_gaps`); `--strict` turns that into a failure. A second baseline captured on `next` after WS2 Task 7 makes those gates measurable for WS3 onward.
+- **The comparison gates.** These comparison gates are proposals, recorded in `eval/gates.yaml`:
   - no critical or high finding lost unless the loss traces to evidence;
   - severity agrees on at least 90% of matched findings;
   - blocked rate moves by no more than 5 points;
@@ -55,13 +57,13 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 | Id | Workstream | Line | Detailed plan | Depends on |
 |---|---|---|---|---|
 | WS0 | Release lines | both | Done: PRs #27, #28 | — |
-| WS1 | Audit defect fixes → 1.7.1 | `main` | `2026-10-10-ws1-defect-fixes-1.7.1.md` | — |
-| WS2 | Measurement and evaluation harness | `next` | `2026-10-10-ws2-measurement-and-evaluation.md` | — |
-| WS3 | Cost wave 1 (quick wins) | `next` | `2026-10-10-ws3-cost-wave1-quick-wins.md` | WS1 merged forward, WS2 |
-| WS4 | Local apps and decision models | `next` | `2026-10-10-local-apps-plan{1,2,3}-*.md` (PR #29), amended per §A | WS3 (LA2, LA3) |
-| WS5 | Cost waves 2–3 (context, determinism, tiering) | `next` | `2026-10-10-ws5-cost-waves2-3-context-and-tiering.md` | WS3, WS2; Wave 3 also needs WS7-IAC4 calibration data |
-| WS6 | Decision tasks beyond finding QA (audit wave 4) | `next` | `2026-10-10-ws6-decision-tasks.md` | LA1, WS2 (`calibrate`) |
-| WS7 | IaC: Terraform, OpenTofu, Atmos | `next` | `2026-10-10-iac-plan{1,2,3,4}-*.md` | LA1 (consent), LA2 (runner phases) |
+| WS1 | Audit defect fixes → 1.7.1 | `main` | `2026-10-10-ws1-defect-fixes-1.7.1.md` (12 tasks) | — |
+| WS2 | Measurement and evaluation harness | `next` | `2026-10-10-ws2-measurement-and-evaluation.md` (14 tasks) | — |
+| WS3 | Cost wave 1 (quick wins) | `next` | `2026-10-10-ws3-cost-wave1-quick-wins.md` (9 tasks) | WS1 merged forward, WS2 |
+| WS4 | Local apps and decision models | `next` | `2026-10-10-local-apps-plan{1,2,3}-*.md` (PR #29; 9, 9 and 8 tasks), amended per §A | WS3 (LA2, LA3) |
+| WS5 | Cost waves 2–3 (context, determinism, tiering) | `next` | `2026-10-10-ws5-cost-waves2-3-context-and-tiering.md` (23 tasks) | WS3, WS2, LA2; Wave 3 runs in M6 |
+| WS6 | Decision tasks beyond finding QA (audit wave 4) | `next` | `2026-10-10-ws6-decision-tasks.md` (13 tasks) | LA1, WS2 (`calibrate`), WS5 (`tm-candidates`, `edge-review`), IAC3 (`iac-triage`) |
+| WS7 | IaC: Terraform, OpenTofu, Atmos | `next` | `2026-10-10-iac-plan{1,2,3,4}-*.md` (14, 8, 10 and 6 tasks) | LA1 (consent), LA2 (runner phases), LA3 (doctor hook), WS2 (IAC4) |
 | WS8 | Code-flow layer, plus infrastructure-to-code join | `next` (2.1) | CF1–CF4, written after spec approval | WS7, WS2 |
 | WS9 | 2.0.0 GA | both | RELEASING.md "2.0.0 GA" | M6 |
 
@@ -70,10 +72,10 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 | Milestone | Tag | Contents | Exit gate |
 |---|---|---|---|
 | M1 | `v1.7.1` (`main`) | Baseline captured on 1.7.0; WS1 | WS1 tests green; `compare-runs` 1.7.1 vs 1.7.0 passes the gates |
-| M2 | `v2.0.0a1` | Docs PRs merged; WS2; WS3 | Gates pass vs baseline; cost per run measured lower |
+| M2 | `v2.0.0a1` | Docs PRs merged; WS2; second baseline captured on `next`; WS3 | Gates pass (gates 4–5 against the second baseline); `usage` shows lower cost per run |
 | M3 | `v2.0.0a2` | LA1, LA2 (amended) | Runner completes the committed examples with parity; finding QA in shadow |
 | M4 | `v2.0.0a3` | LA3; WS5 Wave 2 | Gates pass after each Wave 2 item |
-| M5 | `v2.0.0a4` | IAC1–IAC3; WS6 tasks in shadow mode | IaC transformation suite green; IaC fixtures resolve with zero `!exec` executions |
+| M5 | `v2.0.0a4` | IAC1–IAC3; WS6 tasks in shadow mode | IaC probe-regression and security tests green: `!exec` and template canaries, outside and remote includes, `.tofu` precedence, override files, argument allowlist, suppressions surfaced |
 | M6 | `v2.0.0b1` | IAC4; calibration; WS5 Wave 3, one tier at a time; WS6 tasks enabled one at a time | Held-out IaC recall ≥ 1.7 baseline; gates pass per tier; feature freeze |
 | M7 | `v2.0.0rc1` → `v2.0.0` | Fixes only; WS9 | RELEASING.md GA checklist |
 | M8 | `v2.1.0aN` | WS8 (CF1–CF4) after spec approval | CF4 evaluation vs the 1.7 CBM-only baseline |
@@ -185,16 +187,136 @@ Each change gets a dated entry in `docs/schema-evolution.md`.
 - `tools/apd_gauntlet/data/codeflow/` (WS8)
 - `eval/` at the repo root, not packaged: corpora manifests, labels, gates and local results (results are gitignored)
 
+### R9. Additions settled by the detailed plans
+
+The detailed plans fixed these names. They are binding in the same way as R1–R8.
+
+**CLI (R1):**
+
+- **`resume-plan`:** exits 2 when `.apd-run.yaml` is missing or invalid, and 3 when the run's `framework_version` major differs from the engine's. 2.0 applies the mirror rule. `steps` lists the 18 agent steps only, by first-attempt label (WS1).
+- **Composites** (WS3):
+  - each constituent always runs;
+  - status lines `<composite>: <step> exit=<N>` go to stderr, then `ok` or `failed <steps>`;
+  - the exit code is `validate`'s for `tier-gate` and the first failure for the others;
+  - `tier-gate` canonicalizes the whole run, because `canonicalize` has no per-tier mode;
+  - `tier-gate --json` returns errors keyed by file for WS1's repair loop;
+  - `closeout` forwards `--record-attempts`.
+- **Excerpt check:** `--strict-excerpts` (WS1, opt-in on 1.7.1). WS3 makes it the default on `next`, with `--no-strict-excerpts`, on `validate`, `tier-gate` and `closeout`. The check applies only to citations of files under `inputs/`, and `...` splits an excerpt into fragments that must appear in order.
+- **`compare-runs`:** results are `pass`, `pass_with_gaps` (exit 0) or `fail` (exit 1). `--strict` treats gaps as failures. `--excuse <gate>:<reason>` records a known, accepted deviation (WS2).
+- **WS2:**
+  - new subcommands: `eval freeze [--root] [--new-heldout-set]` and `eval label-template <run-dir> --entry <id> --out <file>`;
+  - new options: `summarize --record-attempts <json>`, `usage --workflow-run --json`, `eval run --root --results-dir --json`, `calibrate --min-support --thresholds` and `metamorphic run --root --json`.
+- **WS6:** `decide-labels sheet|annotate|export`, and `decide` task `output-screen`.
+
+**Modules (R2):**
+
+- **WS1:**
+  - `resume_plan.{RESUMABLE_STEPS, ResumeStep, build_resume_plan, step_status, check_engine_compat, EngineMismatch}`;
+  - `resources.read_prompt`;
+  - `validate.{schema_errors_for_file, check_excerpts_verbatim}` and `run_cross_file_pass(strict_excerpts=)`;
+  - `linters.{compute_cev_id, compute_tm_entry_id}`.
+- **WS2:**
+  - `measure.attempts.write_attempts` (the LA2 runner calls it at closeout);
+  - `measure.usage.AGENT_PHASES` (WS3 adds `apd-cli-runner` and `apd-tier-repair`);
+  - `eval.calibrate.{register_value, ValueSpec}`;
+  - `eval.metamorphic.{register_suite, BUILTIN_SUITE_MODULES}`.
+
+  `tests/conftest.py` is created by WS2; later plans add to it.
+- **WS3:** `apd_gauntlet.composite.{SubStep, invoke, run_composite}` and the four step builders, which LA2 reuses. Shared workflow test harness: `tests/js/workflow_dispatch_trace.mjs` (`trace`, `CLI_LABELS`, `HA_SHAPED`).
+- **WS5:** `code_recon.shards.{recon_shards, RECON_SHARD_SIZE}` (6, mirrored in the workflow) and `attack_path.edge_review.REVIEWED_EDGE_TYPES`.
+- **WS6:**
+  - `decide.tasks.{TASKS, register, get_task, task_names, TASK_EGRESS}`;
+  - `decide.policy.{WS6_TASKS, task_mode, load_threshold, policy_for, TaskPolicy}`;
+  - `decide.batch.{TaskSpec, run_task}`;
+  - `runner.instructions.ESCALATION_NOTES`;
+  - `attack_path.build.is_heuristic_edge`, which WS5's `edge-review` uses.
+- **IAC:**
+  - `register_invocation` takes keyword-only `helpers`, `env` and `allow_network`;
+  - a `ToolRunner` protocol;
+  - `run_tool` return codes 124 (timeout), 125 (output cap) and 127 (tool not found);
+  - `context.select` also exports `TypedGraph`, `TypedEdge`, `ContextParams`, `Packet` and `load_context_params(domain)`.
+
+**Run-config (R4):**
+
+- `decision_model.tasks: {<task>: off|shadow|active}`, default `off` for every WS6 task even when a provider is set;
+- `decision_model.weights_revision`;
+- `decision_model.allow_full_inputs: false`, which `intake-score`, `input-screen` and `output-screen` require to be true.
+
+**Agents (R5), replacing R5's first line:**
+
+- Every agent sets `effort` after WS3, and `model` after WS5 Task 23, when the linter starts requiring it.
+- Descriptions are one line: at most 160 characters for agents, 200 for skills, and 4,096 bytes in total.
+- New agent `apd-tier-repair` (WS3): tools Read and Edit, `sonnet`, `low`, usage phase `canonicalize`. WS1's `repairTierGate` dispatches it.
+- `apd-orchestrator` is deleted by WS3.
+
+**State (R6):**
+
+- `consent.json["decision_model"].tasks` (WS6).
+- IaC consent functions live in `apd_gauntlet.iac.consent`, with methods `flag | prompt | tui | web`.
+- New state files `.apd-state/attempts.yaml` and `.apd-state/usage.yaml` (WS2).
+
+**Schemas (R7):**
+
+- **WS1:** `agent-receipt` gains `resume_plan`. Agent-emitted `code-evidence-index` `id` and `threat-model-normalized` `entry_id`/`inferred_apd_goals` become optional.
+- **WS2:** new `run-attempts` schema. `eval-labels` kinds are `findings`, `decisions` and `iac` (IAC4 adds the last).
+- **WS5:** new schemas `xref-digest`, `report-digest`, `edge-review`, `tm-candidates` and `code-recon-shard`. `domain.consumers` maps a calibration include path to hyphenated goal stems.
+- **WS6:**
+  - `decision-record` gains WS6 fields, plus an item-level `where`;
+  - new `decision-escalations` schema;
+  - `severity-disagreement` gains an optional `decision`;
+  - `asset-graph` provenance gains `decision`.
+- **IAC:**
+  - id patterns `iev-`, `n-` and `e-`, each followed by 8 hex characters;
+  - index entries gain `suppressed_in_repo` and `suppression`;
+  - `asset-graph` `build_summary.sources_used` gains `iac_graph`.
+
+**Paths (R8):**
+
+- **WS2:** `eval/frozen.yaml` and `eval/findings/`; `eval/local/` and `eval/results/` are gitignored. Threshold keys are `<task>` or `<task>.<flag>`, for example `finding-qa.unsupported`.
+- **WS5:**
+  - `40-synthesis/digests/`;
+  - `00-context/code-recon/*.yaml` and `merge-report.yaml`;
+  - `.claude/skills/apd-domain/attack-path-defaults.md`;
+  - `.claude/skills/apd-domain/lens/<goal>.md`.
+- **WS6:** decision records at `40-synthesis/decisions/<task>.all.yaml`, escalations at `40-synthesis/escalations/<task>.yaml`, labels under `eval/local/decide/`.
+- **IAC:** `data/iac/{tools,check-goal-map,control-allowlist,security-vars,aws-graph-map,context-params,internet-aliases}.yaml` and `eval/local/iac/`. IaC packets with more seeds than the cap write overflow ids to `<goal>.overflow.md`.
+
+**Workflow labels:** each plan lists the labels it adds. These are shared because later plans edit around them:
+
+- `resume-plan`, `canonicalize-code-evidence`, `canonicalize-threat-model`, `repair-*`, `*-rerun`, `*-after-repair` and `*-after-rerun` (WS1);
+- `prepare-run`, `tier-gate-<tier>`, `post-tier4`, `post-tier4-retry-1` and `closeout` (WS3);
+- `xref-digest-<tier>`, `report-digest`, `render-*`, `analyze-attack-paths`, `edge-review`, `tm-candidates`, `build-lens-skills`, `code-recon-<shard>` and `code-recon-cross-repo` (WS5);
+- `iac-run` (IAC1).
+
+### R10. ADR numbers
+
+| ADR | Owner |
+|---|---|
+| 0024–0026 | LA1–LA3 |
+| 0027 | IAC1 (IaC evaluation, including template-driven execution) |
+| 0028 | WS2 (measurement, and the narrow ADR-0017 exception for aggregate calibration statistics) |
+| 0029 | WS6 |
+| 0030 onward | Code-flow (CF1–CF4) |
+
 ---
 
 ## §A. Amendments to existing plans (make before executing the affected plan)
 
-- **A1. LA1 Task 6.** `record_consent`/`has_consent` read and write `consent.json["decision_model"]` (R6). Finding-QA thresholds load from `data/decide/thresholds.yaml`. The proposal values ship as `calibrated: false` entries, and every decision record copies `calibrated`.
+- **A1. LA1 Tasks 5–6.**
+  - `record_consent`/`has_consent` read and write `consent.json["decision_model"]` (R6).
+  - Finding-QA thresholds load through WS6's `decide.policy.load_threshold` from `data/decide/thresholds.yaml`, under keys `finding-qa.<flag>`. The proposal values ship as `calibrated: false` entries, and every decision record copies `calibrated`.
+  - The `severity` score scale is fixed at five levels, 0 to 4 (informational, low, medium, high, critical), so `calibrate` can register `finding-qa.severity_delta`.
+  - LA1 adds its fixtures to `tests/conftest.py` (created by WS2) rather than creating that file.
+  - Finding QA counts toward the per-run decision spend that WS6 computes from all decision records.
 - **A2. LA2 Tasks 3, 6 and 7.**
   - The step table uses WS3's composite commands (`prepare-run`, `tier-gate`, `post-tier4`, `closeout`) and WS1's `resume-plan` semantics.
   - The repair dispatch reuses WS1's repair prompt template (`tools/apd_gauntlet/data/prompts/repair.md`).
   - Agent specs read `model` and `effort` from frontmatter (R5).
-- **A3. LA3 Task 3.** `doctor` gains checks for the WS7 tools once IAC1 lands. LA3 leaves a `register_doctor_check(name, fn)` hook that IAC1 and CF1 call.
+  - CLI steps call WS3's `apd_gauntlet.composite` builders rather than re-implementing the composites.
+  - The repair dispatch uses the `apd-tier-repair` agent.
+  - The runner calls `measure.attempts.write_attempts` at closeout.
+  - The runner refuses to resume a 1.7 run, mirroring `resume-plan`'s exit 3.
+- **A3. LA3 Task 3.** In `tools/apd_gauntlet/app/services.py`, add `register_doctor_check(name: str, fn: Callable[[UserConfig], Check]) -> None`. `doctor()` appends the registered checks, in registration order, after the built-in ones. IAC1 and CF1 call it. `Check` is LA3's existing dataclass (`name`, `status`, `detail`, `fix`).
 - **A4. IaC spec.** Done in this branch:
   - raw-read fallback for unresolved roots (§9);
   - 1.7 baseline in the evaluation (§13.2);
@@ -206,12 +328,14 @@ Each change gets a dated entry in `docs/schema-evolution.md`.
 
 **Files:** none committed. Run directories stay local, under `runs/` (gitignored).
 
-- [ ] **Step 1: Configure telemetry.** In the shell that launches Claude Code, export:
-  - `CLAUDE_CODE_ENABLE_TELEMETRY=1`
-  - `OTEL_LOGS_EXPORTER=otlp` (or `console`, redirected to a file)
-  - `OTEL_LOG_TOOL_DETAILS=1`
-
-  Custom agents report as `custom` without the last one.
+- [ ] **Step 1: Configure telemetry.** Claude Code has no default OTLP protocol, and `usage` does not parse the console exporter, so:
+  - Run a local OpenTelemetry Collector with an OTLP HTTP receiver and a `file` exporter writing `telemetry/<run-id>.otlp.jsonl`. WS2 Task 4's runbook has the config.
+  - In the shell that launches Claude Code (2.1.273 or later, so agents report real names), export:
+    - `CLAUDE_CODE_ENABLE_TELEMETRY=1`
+    - `OTEL_LOGS_EXPORTER=otlp`
+    - `OTEL_EXPORTER_OTLP_PROTOCOL=http/json`
+    - `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318`
+    - `OTEL_LOG_TOOL_DETAILS=1`
 - [ ] **Step 2: Run the baseline set twice each on 1.7.0:** the three committed examples (`examples/apd-20260601-claim-event-bus`, `examples/apd-20260602-acme-mobile-banking`, `examples/apd-20260612-home-assistant`), plus one private PBM run. Keep each run directory and its telemetry export under a name ending `-baseline-r1` or `-baseline-r2`.
 - [ ] **Step 3: Verify.** Each run directory passes `apd-gauntlet validate <run-dir>`, and each telemetry file contains `claude_code.api_request` events. Expected: "Clean." for every run; a non-empty event count for every file.
 
@@ -231,7 +355,8 @@ Each change gets a dated entry in `docs/schema-evolution.md`.
 
 ## Task 4: M2 — WS2 and WS3, then `v2.0.0a1`
 
-- [ ] **Step 1:** Execute the WS2 plan. Expected: `compare-runs` and `usage` work on the Task 1 baselines.
+- [ ] **Step 1:** Execute the WS2 plan. Expected: `compare-runs` and `usage` work on the Task 1 baselines; WS2 Task 14's noise-floor check passes.
+- [ ] **Step 1a: Capture the second baseline.** After WS2 Task 7 (attempts recorded), rerun the Task 1 set twice on `next` with the names ending `-next-baseline-r1` and `-next-baseline-r2`. Expected: each run has `.apd-state/attempts.yaml`, so gates 4–5 are measurable from WS3 onward.
 - [ ] **Step 2:** Execute the WS3 plan, one PR per task. After each behaviour-changing task, run the Task 1 set twice and `compare-runs`. Expected: every gate passes, and `usage` shows per-run cost at or below baseline.
 - [ ] **Step 3:** Cut `v2.0.0a1` per RELEASING.md "Cutting a 2.0 pre-release". Expected: the gate prints `prerelease=true, make_latest=false`.
 
@@ -283,9 +408,74 @@ Each change gets a dated entry in `docs/schema-evolution.md`.
 
 ---
 
+## Decisions taken while planning
+
+These were settled while writing the detailed plans. Each plan's Global Constraints repeat the ones it depends on.
+
+1. **Composite naming.** The setup composite is `prepare-run`, not `setup`, because LA3 owns `apd-gauntlet setup`.
+2. **Shared module locations.** `run_tool` lives in `apd_gauntlet.sandbox` and the packet selector in `apd_gauntlet.context`, so the code-flow layer reuses both.
+3. **Excerpt check.**
+   - It checks only citations of files under `inputs/`.
+   - An excerpt containing `...` must match as fragments, in order.
+   - It runs at tier gates, so the repair loop can fix it.
+   - It warns on 1.7.1 (opt-in `--strict-excerpts`) and errors by default on `next`.
+4. **Read-only gates always run on 1.7.1.** A schema-only guard check could otherwise skip a gate whose only errors are semantic.
+5. **Id minting.** `cev-` and `tm-` ids are minted only when absent, so ids in committed examples keep resolving. ADR-0020 gets an amendment note.
+6. **Agents.** Repairs go to a narrow `apd-tier-repair` agent, and `apd-orchestrator` is deleted.
+7. **Comparison policy.**
+   - Each step compares against the previous accepted state; milestones compare against 1.7.0.
+   - WS1 runs comparisons once per PR group.
+   - A second baseline on `next` makes gates 4–5 measurable.
+   - WS3 Task 8 (strict excerpts by default) records `--excuse` for the first-pass validity gate, because it introduces a new error class on purpose.
+8. **IaC.**
+   - Client suppressions are surfaced as `suppressed_in_repo` entries, never honoured silently.
+   - `atmos.*` template calls are rewritten to literals.
+   - The CI job downloads pinned tools in its setup step only; the tests stay offline.
+   - Internet attacker positions map through `data/iac/internet-aliases.yaml`.
+9. **Decision tasks.**
+   - Every WS6 task defaults to `off`.
+   - `output-screen` is added (audit Wave 4).
+   - `iac-triage` escalations go to the severity-disagreements annex and never change severity.
+   - Whole-file tasks require `allow_full_inputs: true`.
+   - Finding QA shares the per-run spend.
+10. **Threat-model join.** The `tm-candidates` join matches on APD goal plus shared code evidence or a cited `tm-` id. Matching on asset names finds no pairs on the Home Assistant example; this join recovers its one known contradiction.
+11. **Context trimming.**
+    - Domain sidecar consumers come from each pack's stated consumers, defaulting to all nine lenses.
+    - Code-recon shards hold 6 repositories each.
+    - Render failures are advisory.
+    - `build-lens-skills` stays a separate step.
+12. **Evaluation corpora.** The committed examples form the development findings corpus. The held-out findings corpus is private PBM runs under `eval/local/`.
+
+## Decisions still needed (defaults apply if no answer)
+
+| Decision | Default | Blocks |
+|---|---|---|
+| Where Clef runs for SmithRx reviews (Workers AI only if SmithRx's Cloudflare agreements cover it, otherwise self-hosted) | No decision model on SmithRx reviews until confirmed | WS6 and finding QA on SmithRx reviews |
+| Approve the code-flow spec and its release target | 2.1, after GA | M8 |
+| IaC held-out repositories (a public OpenTofu repository plus Atmos repositories), with licences checked at pinned commits | Chosen during IAC4 Task 1 | M6 |
+| How aggressive the domain consumer map is (pbm drops 55% against the audit's 45%) | Packs' stated consumers | WS5 Task 9 |
+| Match parameters (title similarity 0.5; at least 10 predicted positives for `calibrate`) | Confirmed or adjusted by WS2 Task 14's noise check | M2 |
+
+## Size
+
+| Plan | Tasks |
+|---|---|
+| WS1 | 12 |
+| WS2 | 14 |
+| WS3 | 9 |
+| LA1, LA2, LA3 | 26 |
+| WS5 | 23 |
+| WS6 | 13 |
+| IAC1–IAC4 | 38 |
+| **Total for 1.7.1 and 2.0** | **135** |
+| CF1–CF4 (2.1, after spec approval) | To be planned |
+
+Each behaviour-changing PR group also needs about 8 gauntlet runs (4 configurations × 2) for its comparison. That operator time, not coding, is the long pole.
+
 ## Operator work outside the code
 
-- **Baseline capture** (Task 1) and every `compare-runs` rerun: about 8 gauntlet runs per behaviour-changing change.
+- **Baseline capture** (Task 1), the second baseline on `next` (Task 4 Step 1a), and every `compare-runs` rerun: about 8 gauntlet runs per behaviour-changing PR group.
+- **Telemetry collector:** a local OpenTelemetry Collector during every measured run (Task 1 Step 1).
 - **Labelling:**
   - about 200 cluster pairs (WS6);
   - finding goal and severity labels from the committed examples (WS2);

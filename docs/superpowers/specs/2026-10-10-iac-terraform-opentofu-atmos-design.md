@@ -82,6 +82,12 @@ Verified on 2026-10-10 against Atmos 1.231.0, Checkov 3.3.26 and Trivy 0.70.0:
 | Checkov on a directory with only `main.tofu` | Zero findings | `.tofu` files are renamed `.tf` in the workspace (§7.4) |
 | Trivy with `main.tf` and `main.tofu` | Reported `main.tf`, which OpenTofu never loads | Workspace applies OpenTofu precedence (§7.4) |
 | Both scanners with `main_override.tf` fixing a block | Both reported the original block as insecure | Overridden blocks are marked uncertain (§7.4) |
+| Go template calling `atmos.Component`, functions off | Atmos ran `components.terraform.command`, a repository script, during `describe component` | `atmos.*` template calls are rewritten to literals and the command is neutralised (§7.3) |
+| Plain `atmos` invocation | Contacted GitHub (version check) and PostHog (telemetry) | The gateway sets `ATMOS_VERSION_CHECK_ENABLED=false` and `ATMOS_TELEMETRY_ENABLED=false` (§7.1) |
+| Trivy on a file it cannot parse | Exit 0, no results for that file; with `--quiet` no error printed | No `--quiet`; parse errors on stderr become `unknown` entries (§7.6) |
+| Trivy passed checks | Reported only against target `.`, with no resource | `control` entries come from Checkov and the APD checks (§7.6) |
+| Checkov and fetched modules | Reads `.terraform/modules` only with `CHECKOV_EXPERIMENTAL_TERRAFORM_MANAGED_MODULES=True` and `--download-external-modules false` | Set both; Trivy needs nothing extra (§7.6) |
+| Inline suppressions (`#checkov:skip=`, `trivy:ignore:`, `.trivyignore`) | Honoured silently by both scanners; neither has a flag to turn them off | Suppressed results are recovered and recorded, never dropped (§7.6) |
 
 `--use-mocks` resolves `!terraform.output` and `!terraform.state` from mocks
 only when functions run. Atmos's `--skip` is a deny-list, so a function added in
@@ -171,7 +177,9 @@ subprocess starts. It enforces:
   - `HOME` and `TMPDIR` to a fresh temp directory;
   - `LANG`;
   - `GIT_TERMINAL_PROMPT=0`;
-  - `GIT_SSH_COMMAND=false`.
+  - `GIT_SSH_COMMAND=false`;
+  - `ATMOS_VERSION_CHECK_ENABLED=false` and `ATMOS_TELEMETRY_ENABLED=false`
+    for every Atmos call.
 
   No cloud, Terraform, OpenTofu, Atmos, GitHub or SSH variables pass through.
 - **Egress.** With `network=False`, `HTTP_PROXY`, `HTTPS_PROXY` and
@@ -216,6 +224,13 @@ refusing symlinks that resolve outside the root. In the copy:
   source or a path outside the root to a quoted literal
   (`"!include <target>"`). Record each as `unknown`.
 - Remove remote `import:` entries and record each as `unknown`.
+- Rewrite every Go template call to an `atmos.*` function (such as
+  `atmos.Component`) to a literal and record it as `unknown`. Probes showed
+  such a call runs `components.terraform.command`, a repository script, even
+  with functions off.
+- Replace `components.terraform.command` in the copied `atmos.yaml` with a
+  path that does not exist. The original value is still recorded for the
+  engine choice (§7.2) and as an execution point (§7.10).
 - Strip `templates.settings.gomplate.datasources` from the copied `atmos.yaml`
   and record it as `unknown`.
 - Refuse a root whose configured `base_path` values escape it.
@@ -312,9 +327,29 @@ recorded as unknown for that scanner.
 Runs offline on each workspace through `run_tool`:
 
 - **Trivy:** `trivy config` with bundled checks (`--skip-check-update`), JSON
-  output and `--tf-vars` pointing at the generated variable file.
+  output and `--tf-vars` pointing at the generated variable file. Never
+  `--quiet`: Trivy exits 0 and drops a file it cannot parse, so parse errors
+  on stderr become `unknown` entries.
 - **Checkov:** the Terraform framework, JSON output, `--var-file`, and no
-  downloads (external modules or platform metadata).
+  downloads (external modules or platform metadata). To read fetched modules
+  it needs `--download-external-modules false` with
+  `CHECKOV_EXPERIMENTAL_TERRAFORM_MANAGED_MODULES=True`.
+- **Working directory.** Every scanner runs in an empty working directory.
+  Trivy reads `.trivyignore` and `trivy.yaml` from its working directory, and
+  client config files are never copied into workspaces.
+- **Client suppressions are surfaced, never honoured silently.**
+  - **Detection:** inline markers (`#checkov:skip=`, `trivy:ignore:`,
+    `tfsec:ignore:`) and client ignore and config files are found first.
+  - **Neutralised scan:** the scanners run on a copy with every marker broken.
+  - **Recovery:** the original configuration is re-scanned to tell which
+    results the client suppressed. Checkov's `skipped_checks` cover inline
+    skips; for Trivy, a second run with the client's ignore file passed by
+    `--ignorefile` does the same job.
+  - **Recording:** each suppressed result is recorded with
+    `suppressed_in_repo: true` and the suppression text as a second excerpt.
+    It is the client's own risk acceptance, not a fix.
+  - **Modules:** a marker inside a downloaded module is the module author's,
+    so it is recorded as `origin: module`.
 
 Results are normalised to one shape: scanner, check id, title, scanner
 severity, resource address, file, line range and category. A data table
@@ -322,7 +357,8 @@ severity, resource address, file, line range and category. A data table
 checks go to the intake summary only.
 
 Failed checks become `check` entries. Passed checks become `control` entries
-only when their category is on `data/iac/control-allowlist.yaml`: encryption
+(from Checkov and the APD checks, because Trivy reports passes without a
+resource) only when their category is on `data/iac/control-allowlist.yaml`: encryption
 at rest and in transit, logging, versioning, object lock, deletion protection,
 IMDSv2 and similar. Capabilities then have evidence without the index
 recording every passing check.
@@ -727,7 +763,8 @@ caught all three scanner and engine gaps in §4.
 
 ## 14. Packaging, tools and versions
 
-- **`[iac]` extra:** `python-hcl2`.
+- **`[iac]` extra:** `python-hcl2>=7,<8`. Version 8 changed the API and lost
+  line numbers.
 - **External tools,** found on `PATH` with minimum versions recorded in
   `data/iac/tools.yaml`:
 
@@ -785,8 +822,9 @@ Four implementation plans, each shippable alone:
 
 - **python-hcl2 fidelity** on complex expressions limits graph edges. Missed
   references become unknowns; the evaluation measures how often.
-- **Checkov module resolution** from `.terraform/modules` is unverified (plan
-  1 checks it).
+- **Checkov module resolution** from `.terraform/modules` works only with its
+  experimental managed-modules setting (§7.6). If Checkov drops that setting,
+  module internals become unknown for Checkov; Trivy is unaffected.
 - **Provenance cost** on large Atmos repositories, from one `describe
   component` per instance. Concurrency is bounded; if it proves too slow,
   provenance is fetched only for instances with findings or overrides.
