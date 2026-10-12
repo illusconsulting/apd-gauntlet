@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 from pathlib import Path
 
+import apd_gauntlet.validate as validate_mod
+import pytest
 from apd_gauntlet.cli import main
 from apd_gauntlet.validate import (
     check_excerpts_verbatim,
@@ -256,3 +259,133 @@ def test_schema_only_skips_the_check(tmp_path):
     assert "not found verbatim" not in _validate(run, "--schema-only").output
     r = _validate(run, "--schema-only", "--strict-excerpts")
     assert r.exit_code == 0 and "not found verbatim" not in r.output
+
+
+# --- untrusted structured input: bounded work, never an exception ----------
+
+
+def _laughs(payload: str) -> str:
+    """An 8-level, 10-way alias fan-out ("billion laughs"): a few hundred bytes."""
+    lines = [f"note: {json.dumps(payload)}", "l0: &l0 [" + ", ".join(['"lol"'] * 10) + "]"]
+    lines += [f"l{n}: &l{n} [" + ", ".join([f"*l{n - 1}"] * 10) + "]" for n in range(1, 8)]
+    return "\n".join(lines) + "\n"
+
+
+def _nested(depth: int):
+    return lambda payload: "[" * depth + json.dumps(payload) + "]" * depth
+
+
+# Generous on purpose: a hostile input made the unfixed check hang for minutes or raise.
+TIME_BOUND_S = 15
+
+PATHOLOGICAL = {
+    "recursive-anchor": ("rec.yaml", lambda p: f"note: {json.dumps(p)}\na: &a [*a]\n"),
+    "deep-json-3000": ("deep.json", _nested(3_000)),
+    "deep-json-100000": ("deep.json", _nested(100_000)),
+    "deep-flow-yaml-3000": ("deep.yaml", _nested(3_000)),
+    "alias-fan-out": ("laughs.yaml", _laughs),
+}
+
+
+def _run_structured(tmp_path, filename: str, body: str) -> Path:
+    """A clean run whose only input, cited by the brief and both records, is ``filename``."""
+    run = _run(tmp_path, None)
+    for rel in (
+        "00-context/context-brief.md",
+        "10-trustworthiness/confidentiality.findings.yaml",
+        "10-trustworthiness/confidentiality.capabilities.yaml",
+    ):
+        f = run / rel
+        f.write_text(f.read_text().replace("tech_plan.md", filename))
+    (run / "inputs" / filename).write_text(body)
+    return run
+
+
+@pytest.fixture
+def parse_calls(monkeypatch):
+    """Records each structured parse ``check_excerpts_verbatim`` starts."""
+    calls: list[str] = []
+    real_yaml, real_json = validate_mod.yaml.safe_load_all, validate_mod.json.loads
+
+    def spy_yaml(*args, **kwargs):
+        calls.append("yaml")
+        return real_yaml(*args, **kwargs)
+
+    def spy_json(*args, **kwargs):
+        calls.append("json")
+        return real_json(*args, **kwargs)
+
+    monkeypatch.setattr(validate_mod.yaml, "safe_load_all", spy_yaml)
+    monkeypatch.setattr(validate_mod.json, "loads", spy_json)
+    return calls
+
+
+@pytest.mark.parametrize("case", sorted(PATHOLOGICAL))
+def test_pathological_input_with_a_whole_text_match_is_clean_and_never_parsed(
+    tmp_path, parse_calls, case
+):
+    name, build = PATHOLOGICAL[case]
+    run = _run_structured(tmp_path, name, build(f"{FINDING_EX} {CAP_EX}"))
+    started = time.perf_counter()
+    assert check_excerpts_verbatim(run) == []
+    assert time.perf_counter() - started < TIME_BOUND_S
+    assert parse_calls == []  # the whole-text haystack matched first; scalars are lazy
+
+
+@pytest.mark.parametrize("case", sorted(PATHOLOGICAL))
+def test_pathological_input_without_a_match_warns_and_never_fails_a_gate(tmp_path, case):
+    name, build = PATHOLOGICAL[case]
+    run = _run_structured(tmp_path, name, build("unrelated text"))
+    started = time.perf_counter()
+    assert len(check_excerpts_verbatim(run)) == 2
+    assert time.perf_counter() - started < TIME_BOUND_S
+    # The workflow's own gate commands: a warning-only check must never fail them.
+    for flags in (("--errors-only",), ("--tier", "10-trustworthiness", "--errors-only")):
+        r = _validate(run, *flags)
+        assert r.exit_code == 0 and r.output == "", (flags, r.exception, r.output)
+    r = _validate(run, "--strict-excerpts")
+    assert r.exit_code == 1 and "not found verbatim" in r.output
+
+
+def test_string_scalars_visits_each_container_once_and_respects_the_limit():
+    loop: list = []
+    loop.append(loop)
+    loop.append("x")
+    assert validate_mod._string_scalars(loop, 10) == ["x"]
+    shared = ["s"]
+    found = validate_mod._string_scalars([shared, shared, {"k": shared}], 100)
+    assert sorted(found) == ["k", "s"]
+    assert len(validate_mod._string_scalars([str(i) for i in range(50)], 7)) == 7
+
+
+def test_structured_input_above_the_parse_cap_uses_only_the_whole_text(tmp_path, parse_calls):
+    run = _run(tmp_path, CAP_EX)
+    big = run / "inputs/big.yaml"
+    big.write_text("note: 'it''s replicated: factor 3'\n" + "".join(
+        f"k{i}: v{i}\n" for i in range(100_000)
+    ))
+    assert big.stat().st_size > validate_mod._MAX_STRUCTURED_PARSE_BYTES
+    _cite(run, "big.yaml")
+    _set_excerpt(run, "it's replicated: factor 3")  # matches a parsed scalar only
+    assert len(check_excerpts_verbatim(run)) == 1
+    _set_excerpt_from(run, "it's replicated: factor 3", "k99999: v99999")  # whole text
+    assert check_excerpts_verbatim(run) == []
+    assert parse_calls == []
+
+
+def test_input_above_the_size_cap_is_skipped_without_being_read(tmp_path, monkeypatch):
+    run = _run(tmp_path, CAP_EX)
+    huge = run / "inputs/huge.md"
+    with huge.open("wb") as f:  # sparse: no real 20 MiB written
+        f.truncate(validate_mod._MAX_EXCERPT_INPUT_BYTES + 1)
+    _cite(run, "huge.md")
+    read: list[Path] = []
+    real_read_text = Path.read_text
+
+    def spy(self, *args, **kwargs):
+        read.append(self.resolve())
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", spy)
+    assert check_excerpts_verbatim(run) == []  # a read would find only NULs and warn
+    assert huge.resolve() not in read

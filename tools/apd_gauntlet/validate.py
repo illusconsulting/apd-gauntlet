@@ -211,6 +211,13 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
 
 _ELLIPSIS = re.compile(r"\.\.\.|\u2026")  # "..." or the single character U+2026
 _STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
+# The inputs/ files are untrusted, and this check only warns, so it must stay cheap and
+# never raise. A cited file larger than this is skipped without being read.
+_MAX_EXCERPT_INPUT_BYTES = 20 * 1024 * 1024
+# A YAML or JSON input larger than this is searched as plain text only (never parsed).
+_MAX_STRUCTURED_PARSE_BYTES = 1024 * 1024
+# At most this many string scalars of one parsed input become haystacks.
+_MAX_SCALAR_HAYSTACKS = 100_000
 
 
 def normalize_excerpt_text(text: str) -> str:
@@ -244,36 +251,75 @@ def _is_parenthesized(text: str) -> bool:
     return False
 
 
-def _string_scalars(node: Any) -> Iterator[str]:
-    if isinstance(node, str):
-        yield node
-    elif isinstance(node, dict):
-        for key, value in node.items():
-            yield from _string_scalars(key)
-            yield from _string_scalars(value)
-    elif isinstance(node, list):
-        for item in node:
-            yield from _string_scalars(item)
+def _string_scalars(root: Any, limit: int) -> list[str]:
+    """Up to ``limit`` string scalars (mapping keys included) of a parsed document.
+
+    Iterative, so nesting depth cannot overflow the stack, and each container is
+    visited once, so a YAML alias cycle or fan-out costs one visit per container.
+    """
+    found: list[str] = []
+    seen: set[int] = set()
+    pending = [root]
+    while pending and len(found) < limit:
+        node = pending.pop()
+        if isinstance(node, str):
+            found.append(node)
+        elif isinstance(node, (dict, list)) and id(node) not in seen:
+            seen.add(id(node))
+            if isinstance(node, dict):
+                pending.extend(node.keys())
+                pending.extend(node.values())
+            else:
+                pending.extend(node)
+    return found
 
 
-def _excerpt_haystacks(path: pathlib.Path) -> list[str] | None:
-    """Normalized texts an excerpt may be found in: the whole file and, for a
-    YAML or JSON input, each parsed string scalar (so a quoted or escaped value
-    matches what it means, not how it is spelled). ``None`` when the file cannot
-    be read as UTF-8 text; a parse error leaves only the whole-file text."""
+class _ExcerptInput:
+    """One cited input, read once. Matching tries the whole normalized text first;
+    for a YAML or JSON input small enough to parse, the parsed string scalars are
+    built only on a miss (so a quoted or escaped value matches what it means, not
+    how it is spelled), and any failure to parse or walk leaves the whole text."""
+
+    def __init__(self, text: str, *, parse_as: str | None) -> None:
+        self._whole = normalize_excerpt_text(text)
+        self._raw = text if parse_as else None
+        self._parse_as = parse_as
+        self._scalars: list[str] | None = None
+
+    def contains(self, fragments: list[str]) -> bool:
+        if _fragments_in_order(fragments, self._whole):
+            return True
+        if self._scalars is None:
+            self._scalars = self._parse_scalars()
+        return any(_fragments_in_order(fragments, scalar) for scalar in self._scalars)
+
+    def _parse_scalars(self) -> list[str]:
+        raw, self._raw = self._raw, None  # parse once; drop the text either way
+        if raw is None:
+            return []
+        try:
+            docs = [json.loads(raw)] if self._parse_as == ".json" else list(yaml.safe_load_all(raw))
+            return [
+                normalize_excerpt_text(scalar)
+                for scalar in _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
+            ]
+        except Exception:  # untrusted input: RecursionError, MemoryError, a parse error, ...
+            return []
+
+
+def _load_excerpt_input(path: pathlib.Path) -> _ExcerptInput | None:
+    """``None`` when the file is over ``_MAX_EXCERPT_INPUT_BYTES`` (not read), unreadable,
+    or not UTF-8 text."""
     try:
+        size = path.stat().st_size
+        if size > _MAX_EXCERPT_INPUT_BYTES:
+            return None
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
-    haystacks = [normalize_excerpt_text(text)]
     suffix = path.suffix.lower()
-    if suffix in _STRUCTURED_INPUT_SUFFIXES:
-        try:
-            docs = [json.loads(text)] if suffix == ".json" else list(yaml.safe_load_all(text))
-        except (ValueError, yaml.YAMLError):
-            return haystacks
-        haystacks.extend(normalize_excerpt_text(s) for doc in docs for s in _string_scalars(doc))
-    return haystacks
+    structured = suffix in _STRUCTURED_INPUT_SUFFIXES and size <= _MAX_STRUCTURED_PARSE_BYTES
+    return _ExcerptInput(text, parse_as=suffix if structured else None)
 
 
 def _fragments_in_order(fragments: list[str], haystack: str) -> bool:
@@ -318,9 +364,12 @@ def check_excerpts_verbatim(
     markers) are skipped silently. Whitespace, backticks and ``*`` are ignored,
     and an ellipsis joins fragments that must each appear, in order, in the
     artifact's text or, for a YAML or JSON input, in one of its string scalars.
+    Inputs are untrusted: a file over ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread,
+    one over ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, and the check never raises
+    on a malformed or hostile YAML or JSON input.
     """
     inputs_dir = (run_dir / "inputs").resolve()
-    cache: dict[pathlib.Path, list[str] | None] = {}
+    cache: dict[pathlib.Path, _ExcerptInput | None] = {}
     violations: list[Violation] = []
     for path, _kind, record in _iter_records(records_dir if records_dir is not None else run_dir):
         if "_parse_error" in record:
@@ -339,11 +388,9 @@ def check_excerpts_verbatim(
             if source is None:
                 continue
             if source not in cache:
-                cache[source] = _excerpt_haystacks(source)
-            haystacks = cache[source]
-            if haystacks is not None and not any(
-                _fragments_in_order(fragments, h) for h in haystacks
-            ):
+                cache[source] = _load_excerpt_input(source)
+            cited = cache[source]
+            if cited is not None and not cited.contains(fragments):
                 violations.append(Violation(
                     path,
                     record.get("id"),

@@ -214,9 +214,11 @@ All notable changes to this project will be documented in this file. Format base
   the new `--strict-excerpts` flag. Whitespace, backticks and `*` are ignored, `...`
   or `…` joins fragments that must appear in order, an excerpt wholly in parentheses
   (an absence marker such as `(absent in supplied TM)`) is skipped, and so are
-  run-internal artifacts, unresolvable paths and files that are not UTF-8. The
-  workflow's gates ignore warnings, so on 1.7.1 the warning shows in a manual
-  `apd-gauntlet validate <run-dir>` run only.
+  run-internal artifacts, unresolvable paths, files that are not UTF-8 and files
+  over 20 MiB. A YAML or JSON input over 1 MiB is searched as plain text only, and a
+  malformed or hostile one never makes the check fail. The workflow's gates ignore
+  warnings, so on 1.7.1 the warning shows in a manual `apd-gauntlet validate <run-dir>`
+  run only.
 
 ## v1.7.0 — 2026-06-09
 
