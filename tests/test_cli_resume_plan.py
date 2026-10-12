@@ -137,6 +137,16 @@ def test_other_major_with_a_key_this_schema_lacks_exits_3(tmp_path):  # Review F
     assert _snapshot(run) == before
 
 
+def test_other_major_with_trailing_newline_still_exits_3(tmp_path):  # Review Focus 1
+    """The schema pattern's ``$`` also matches before a trailing newline, so the gate must too."""
+    run = _config_run(tmp_path, framework_version="2.0.0\n")
+    before = _snapshot(run)
+    r = CliRunner().invoke(main, ["resume-plan", str(run), "--json"])
+    assert r.exit_code == 3 and r.stdout == ""
+    assert "apd-gauntlet 2.x engine" in r.stderr
+    assert _snapshot(run) == before
+
+
 def test_same_major_with_a_key_this_schema_lacks_exits_2(tmp_path):
     run = _config_run(tmp_path, framework_version="1.7.1", key_added_in_2x={"x": 1})
     r = CliRunner().invoke(main, ["resume-plan", str(run), "--json"])

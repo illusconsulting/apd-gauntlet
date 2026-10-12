@@ -32,7 +32,6 @@ from .plan_run import _TIERS
 from .validate import parse_intake_brief, schema_errors_for_file
 
 _CONTEXT_BRIEF = "00-context/context-brief.md"
-_SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")  # run-config.schema.json framework_version
 _REASON_ERROR_LIMIT = 200  # keep a step's reason one short line; the receipt carries it
 
 
@@ -104,9 +103,8 @@ def _read_run_config(config_path: Path) -> Any:
         raise RunConfigError(f"resume-plan: cannot parse {config_path}: {e}") from e
 
 
-def _check_run_config_schema(config_path: Path, cfg: Any) -> None:
-    validator = Draft202012Validator(_resources.read_schema("run-config.schema.json"))
-    problems = [err.message for err in validator.iter_errors(cfg)]
+def _check_run_config_schema(config_path: Path, cfg: Any, schema: dict[str, Any]) -> None:
+    problems = [err.message for err in Draft202012Validator(schema).iter_errors(cfg)]
     if problems:
         raise RunConfigError(
             f"resume-plan: {config_path} fails run-config validation: {'; '.join(problems)}"
@@ -125,8 +123,15 @@ def check_engine_compat(run_dir: Path) -> None:
     """
     config_path = run_dir / ".apd-run.yaml"
     cfg = _read_run_config(config_path)
+    schema = _resources.read_schema("run-config.schema.json")
+    # The gate uses the schema's own framework_version pattern, with the same re.search
+    # semantics jsonschema applies, so it accepts exactly what the schema accepts. (A
+    # hand-copied regex with fullmatch would reject "2.0.0\n", which the schema's `$`
+    # accepts, and that run would skip the major check.)
+    version_pattern = schema["properties"]["framework_version"]["pattern"]
     framework_version = cfg.get("framework_version") if isinstance(cfg, dict) else None
-    if isinstance(framework_version, str) and _SEMVER.fullmatch(framework_version):
+    if isinstance(framework_version, str) and re.search(version_pattern, framework_version):
+        framework_version = framework_version.strip()
         run_major = int(framework_version.split(".")[0])
         if run_major != int(FRAMEWORK_VERSION.split(".")[0]):
             raise EngineMismatch(
@@ -135,7 +140,7 @@ def check_engine_compat(run_dir: Path) -> None:
                 f"(framework {FRAMEWORK_VERSION}). Resume it with an apd-gauntlet "
                 f"{run_major}.x engine."
             )
-    _check_run_config_schema(config_path, cfg)
+    _check_run_config_schema(config_path, cfg, schema)
 
 
 def _one_line(text: str) -> str:
