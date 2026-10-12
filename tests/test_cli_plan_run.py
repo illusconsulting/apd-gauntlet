@@ -199,3 +199,11 @@ def test_plan_run_starts_with_resume_plan(tmp_path):
     )
     assert plan[0]["ref"] == "resume-plan runs/apd-test-full --json"
     assert plan[0]["phase"] == "setup"
+
+
+def test_plan_run_tier_gates_name_the_repair_path(tmp_path):
+    plan = json.loads(
+        CliRunner().invoke(main, ["plan-run", "--json", str(_write_run(tmp_path, FULL_CFG))]).output
+    )
+    gates = [s for s in plan if s["ref"].startswith("validate ") and "--tier" in s["ref"]]
+    assert len(gates) == 3 and all("repair.md" in s["gate"] and "halt" in s["gate"] for s in gates)

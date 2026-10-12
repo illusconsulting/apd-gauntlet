@@ -419,13 +419,10 @@ def test_canonicalize_pystep_uses_always_run() -> None:
 
 def test_canonicalize_precedes_tier_validate_gate() -> None:
     text = _text()
-    # inside runTier, the canonicalize pyStep must appear before the tier
-    # validate gate pyStep.
+    # inside runTier, the canonicalize pyStep must appear before the tier gate call.
     run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
     assert "pyStep('canonicalize'" in run_tier
-    assert run_tier.index("pyStep('canonicalize'") < run_tier.index(
-        "pyStep('validate'"
-    )
+    assert run_tier.index("pyStep('canonicalize'") < run_tier.index("tierGate(")
 
 
 # ---------------------------------------------------------------------------
@@ -1312,14 +1309,14 @@ def _fn_body(text: str, name: str) -> str:
 
 def _llmstep_calls(text: str) -> list[str]:
     # The comma requirement skips the header comment's "llmStep('apd-threat-model-author')";
-    # on today's file this yields the 14 real call sites.
+    # on today's file this yields the 15 real call sites.
     return re.findall(r"llmStep\('[^'\n]*'(?: \+ \w+)?,.*?\}\);", text, re.DOTALL)
 
 
 def test_llmstep_call_sites_are_all_found() -> None:
     # Guards the regex above: if it silently matched fewer calls, the no-guard-options
     # test would pass vacuously.
-    assert len(_llmstep_calls(_text())) == 14
+    assert len(_llmstep_calls(_text())) == 15
 
 
 def test_llmstep_prompt_has_no_guard() -> None:
@@ -1406,3 +1403,50 @@ def test_resumable_labels_match_workflow_llmstep_labels() -> None:
     first = {lb for lb in quoted if "retry" not in lb and "build-fix" not in lb
              and not lb.endswith("-")}
     assert {s.label for s in RESUMABLE_STEPS} == first | LENSES
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 3 — tier gates block: one repair per failing file, then one lens re-run,
+# then a halt that names the files. The repair prompt ships as a packaged template.
+# ---------------------------------------------------------------------------
+
+
+def test_repair_template_embedded_verbatim() -> None:
+    from apd_gauntlet.resources import read_prompt
+
+    js = _text()
+    assert [ln for ln in read_prompt("repair").splitlines() if ln and f"'{ln}'" not in js] == []
+
+
+def test_tier_gate_always_runs_and_reports_json_errors() -> None:
+    body = _fn_body(_text(), "tierGate")
+    assert "pyStep('validate'" in body and "alwaysRun: true" in body
+    assert "errorsFromJson: true" in body and "' --json'" in body
+
+
+def test_run_tier_repairs_before_rerunning_lens() -> None:
+    assert "repairTierGate(phaseName, tierDir, lenses, gate)" in _fn_body(_text(), "runTier")
+    rep = _fn_body(_text(), "repairTierGate")
+    assert rep.index("agent(repairPrompt(") < rep.index("'-after-repair'") < rep.index("'-rerun'")
+
+
+def test_tier_gate_halts_when_repair_and_rerun_fail() -> None:
+    rep = _fn_body(_text(), "repairTierGate")
+    assert rep.count("throw new Error(") >= 2
+    assert "after repair and lens re-run" in rep and "no attributable file" in rep
+
+
+def test_pystep_maps_validate_json_errors() -> None:
+    body = _fn_body(_text(), "pyStep")
+    assert "opts.errorsFromJson" in body and "at most 50" in body
+
+
+def test_gate_helpers_are_defined_before_run_tier() -> None:
+    # Every helper the repair path calls must be a declaration the file defines, ahead of
+    # runTier, so a call to an undefined name cannot ship.
+    t = _text()
+    for name in ("baseName", "errorText", "failingFiles", "lensesOf", "repairPrompt",
+                 "tierGate", "regate", "repairTierGate"):
+        assert f"function {name}(" in t, name
+        assert t.index(f"function {name}(") < t.index("function runTier("), name
+    assert t.index("const REPAIR_TEMPLATE") < t.index("function runTier(")

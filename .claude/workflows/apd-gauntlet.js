@@ -212,6 +212,12 @@ function guard(outputsList, validateScope, validateFlags) {
 // opts.resumePlan: the command prints one line of JSON on stdout; the worker
 //   copies that object into the receipt as resume_plan, VERBATIM (setup reads it
 //   to fill RESUME_DONE). Only the resume-plan step sets it.
+// opts.errorsFromJson: the command is `validate ... --json`. On a nonzero exit its
+//   stdout is JSON ({"errors": [{"file", "id", "message", "path"}, ...], ...}); the
+//   worker maps each entry to a receipt error {path: <file>, message: "<id> <path>:
+//   <message>"}, at most 50, so the script learns WHICH files failed (the tier gate
+//   repairs them). Stdout that is not that JSON falls back to the default
+//   'exit=<N>; <stderr-tail>' entry.
 function pyStep(cmd, opts) {
   opts = opts || {};
   const outputs = opts.outputs || ('expected ' + cmd + ' outputs under ' + runDir + '/40-synthesis/');
@@ -237,7 +243,13 @@ function pyStep(cmd, opts) {
     '  status: "ok" if exit==0, else "error"',
     '  outputs: one {path, schema_valid:true} per file the command wrote (or the skip sentinel if you short-circuited)',
     '  counts: {} (or blocked:N if the command reported blocked findings)',
-    '  errors: on nonzero exit, [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}]',
+    opts.errorsFromJson
+      ? '  errors: on nonzero exit, read the JSON the command printed on stdout ' +
+        '({"errors": [{"file", "id", "message", "path"}, ...], ...}) and return one ' +
+        '{path:<file>, message:"<id> <path>: <message>"} per entry of its "errors" array ' +
+        '(leave out an empty or null id or path), at most 50 entries, in the order printed; ' +
+        'if stdout is not that JSON, return [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}] instead'
+      : '  errors: on nonzero exit, [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}]',
     // F3: the audit-report worker ALSO lifts the per-class completeness counts the
     // CLI prints (`audit-report: <status> (... structural_failed=<S> editorial_failed=<E>)`)
     // into a report_audit block so the gate can block on STRUCTURAL failures only.
@@ -512,7 +524,143 @@ if (args.threat_model) {
 }
 
 // ===========================================================================
-// Tier helper: parallel lens dispatch + per-lens 2-retry + tier validate gate.
+// Tier gate repair. A tier gate BLOCKS the run. A red gate gets ONE repair attempt
+// per failing record file, then ONE re-run of the lenses that own the files that are
+// still red, then a halt that names the files. REPAIR_TEMPLATE is the packaged
+// tools/apd_gauntlet/data/prompts/repair.md, one string per line (the script has no
+// filesystem; a test pins the two copies equal). Placeholders: {{RUN_DIR}}, {{FILE}}, {{ERRORS}}.
+// ===========================================================================
+const REPAIR_TEMPLATE = [
+  'You are the APD gauntlet repair worker for run {{RUN_DIR}}.',
+  'The tier gate rejected one record file: {{FILE}}',
+  'Validator errors for that file:',
+  '{{ERRORS}}',
+  '',
+  'Fix ONLY what these errors require, editing ONLY {{FILE}}:',
+  '- YAML syntax and quoting: quote any scalar that contains a colon-space, an em-dash or a leading special character.',
+  '- Field placement and enum values named in the errors; taxonomy keys belong under control_mappings.',
+  '- An excerpt over 25 tokens: shorten it to a contiguous run of the same words; never paraphrase.',
+  '- An excerpt not found verbatim in its artifact: copy the exact words from the cited file under inputs/ (an ellipsis may join exact fragments, in order); never paraphrase.',
+  '- A title over 200 characters: shorten it without changing the claim.',
+  'Never add, drop or merge records. Never change severity, disposition, evidence artifacts or locators unless an error names that field.',
+  'Never invent evidence. Never add an id or schema_version field: apd-gauntlet canonicalize mints them.',
+  'If an error cannot be fixed without new analysis, leave that record unchanged and report it.',
+  'Return ONLY a receipt conforming to schemas/agent-receipt.schema.json:',
+  '  agent: "repair"',
+  '  status: "ok" when every listed error is fixed, else "error"',
+  '  outputs: [{path: "{{FILE}}", schema_valid: true or false}]',
+  '  counts: {}',
+  '  errors: one {path: "{{FILE}}", message: <the error line>} per error you could not fix',
+].join('\n');
+
+function baseName(path) { return path.split('/').pop(); }
+
+// The gate receipt's first five errors, each led by its file (a receipt message
+// carries the record id and field path, not the file), for a halt message.
+function errorText(gate) {
+  return (gate.errors || []).slice(0, 5).map(function (e) { return e.path + ': ' + e.message; }).join('; ');
+}
+
+// {path: [message, ...]} for the gate errors that name a lens record file under
+// tierDir. Anything else (a directory-level error, the exit=<N> fallback entry) is
+// not attributable to a file a repair agent can edit.
+function failingFiles(gate, tierDir) {
+  const byFile = {};
+  (gate.errors || []).forEach(function (e) {
+    if (e.path.indexOf('/' + tierDir + '/') === -1) { return; }
+    if (!/\.(findings|capabilities)\.yaml$/.test(e.path)) { return; }
+    (byFile[e.path] = byFile[e.path] || []).push(e.message);
+  });
+  return byFile;
+}
+
+// The lenses, in tier order and each once, that own any of the record files.
+function lensesOf(files, lenses) {
+  return lenses.filter(function (lens) {
+    return files.some(function (f) {
+      return f.endsWith('/' + lens + '.findings.yaml') || f.endsWith('/' + lens + '.capabilities.yaml');
+    });
+  });
+}
+
+// split/join, not replace(): error text may hold '$' sequences. ERRORS goes last so
+// error text is never scanned for placeholders.
+function repairPrompt(file, errorLines) {
+  return REPAIR_TEMPLATE
+    .split('{{RUN_DIR}}').join(runDir)
+    .split('{{FILE}}').join(file)
+    .split('{{ERRORS}}').join(errorLines.join('\n'));
+}
+
+// The tier-end gate. --tier SKIPS cross-file Pass 3 (the full pre-Phase-5 gate covers
+// that). The CLI joins --tier to the run dir, so the command is
+// `validate runs/<id> --tier <tierDir> --json`. alwaysRun: a gate that can skip itself
+// is not a gate. errorsFromJson: the receipt carries one error per failing file.
+// suffix is '' for the first gate, then '-after-repair' / '-after-rerun'.
+function tierGate(phaseName, tierDir, suffix) {
+  return pyStep('validate', {
+    phase: phaseName, label: 'validate-' + tierDir + suffix,
+    cliArgs: '--tier ' + tierDir + ' --json',
+    alwaysRun: true, errorsFromJson: true,
+    outputs: 'tier ' + tierDir + ' records (read-only gate)',
+  });
+}
+
+// Canonicalize the whole run (idempotent; alwaysRun, as before the first gate), then
+// gate the tier again under labels that carry the stage suffix. Returns the receipt.
+function regate(phaseName, tierDir, suffix) {
+  pyStep('canonicalize', {
+    phase: 'canonicalize', label: 'canonicalize-' + tierDir + suffix,
+    outputs: 'canonicalized lens records under ' + runDir,
+    alwaysRun: true,
+  });
+  const gate = tierGate(phaseName, tierDir, suffix);
+  bailIfInterrupted(gate, phaseName);
+  return gate;
+}
+
+// A red gate: one repair agent per failing file -> canonicalize + gate -> re-run the
+// lenses that own the files still red -> canonicalize + gate -> halt if still red.
+// Returns when the tier is green. Throws when it cannot get it green.
+function repairTierGate(phaseName, tierDir, lenses, gate) {
+  bailIfInterrupted(gate, phaseName);
+  if (!isErr(gate)) { return; }
+  const byFile = failingFiles(gate, tierDir);
+  const files = Object.keys(byFile);
+  if (!files.length) {
+    throw new Error('tier gate ' + tierDir + ' FAILED with no attributable file: ' + errorText(gate));
+  }
+  log('tier ' + tierDir + ': gate failed; repairing ' + files.length + ' file(s).');
+  parallel(files.map(function (f) {
+    return function () {
+      return agent(repairPrompt(f, byFile[f]), {
+        schema: RECEIPT, phase: phaseName, label: 'repair-' + tierDir + '-' + baseName(f),
+      });
+    };
+  }));
+  gate = regate(phaseName, tierDir, '-after-repair');
+  if (!isErr(gate)) { return; }
+  const rerun = lensesOf(Object.keys(failingFiles(gate, tierDir)), lenses);
+  log('tier ' + tierDir + ': still failing after repair; re-running lens(es) ' + rerun.join(', ') + '.');
+  parallel(rerun.map(function (lens) {
+    return function () {
+      return llmStep('apd-' + lens,
+        'Re-run the ' + lens + ' lens from scratch and overwrite ' + tierDir + '/' + lens +
+        '.findings.yaml and ' + tierDir + '/' + lens + '.capabilities.yaml; the previous ' +
+        'output still failed validation after a repair attempt.',
+        { phase: phaseName, label: lens + '-rerun' });
+    };
+  }));
+  gate = regate(phaseName, tierDir, '-after-rerun');
+  if (isErr(gate)) {
+    throw new Error('tier gate ' + tierDir + ' FAILED after repair and lens re-run: ' + errorText(gate) +
+      '. Fix the records under ' + runDir + '/' + tierDir + ', then re-invoke the runner ' +
+      '(resume-plan skips completed steps).');
+  }
+}
+
+// ===========================================================================
+// Tier helper: parallel lens dispatch + per-lens 2-retry + blocking tier gate with repair.
 // ===========================================================================
 function runTier(phaseName, tierDir, lenses) {
   phase(phaseName);
@@ -550,16 +698,10 @@ function runTier(phaseName, tierDir, lenses) {
     outputs: 'canonicalized lens records under ' + runDir,
     alwaysRun: true,
   });
-  // Tier-end gate. --tier SKIPS cross-file Pass 3; the full pre-Phase-5 gate covers that.
-  // The CLI joins --tier to the run dir (target = run_dir / tier), so the gate
-  // invocation is `validate runs/<id> --tier <tierDir> --errors-only` and the
-  // guard's own validate is `validate --schema-only --errors-only runs/<id> --tier <tierDir>`.
-  pyStep('validate', {
-    phase: phaseName, label: 'validate-' + tierDir,
-    cliArgs: '--tier ' + tierDir + ' --errors-only',
-    outputs: 'tier ' + tierDir + ' records (read-only gate)',
-    validateScope: runDir, validateFlags: '--tier ' + tierDir,
-  });
+  // Tier-end gate: blocking. A red gate is repaired file by file, then the owning
+  // lenses are re-run once, then the run halts naming the files (see above).
+  const gate = tierGate(phaseName, tierDir, '');
+  repairTierGate(phaseName, tierDir, lenses, gate);
 }
 
 // ===========================================================================

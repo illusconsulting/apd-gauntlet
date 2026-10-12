@@ -38,3 +38,8 @@ def read_schema(filename: str) -> dict[str, Any]:
     """Parse one packaged schema, e.g. ``read_schema("domain.schema.json")``."""
     text = (schemas_dir() / filename).read_text(encoding="utf-8")
     return cast("dict[str, Any]", json.loads(text))
+
+
+def read_prompt(name: str) -> str:
+    """Read one packaged prompt template, e.g. ``read_prompt("repair")``."""
+    return (data_dir() / "prompts" / f"{name}.md").read_text(encoding="utf-8")

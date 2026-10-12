@@ -120,6 +120,17 @@ All notable changes to this project will be documented in this file. Format base
   `apd-gauntlet` to 1.7.1, when the installed engine is older than the plugin and
   has no `resume-plan` command. Any other `resume-plan` failure is logged and the
   workflow runs every agent step.
+- **Tier gates now block, and a failing tier is repaired before its lenses are
+  re-run.** The per-tier validate gate used to discard its result, so a failing
+  tier was caught only by the whole-run gate before synthesis, with no repair
+  step. The gate now always runs and reports each failing file. A failing file
+  gets one repair by a repair agent, whose prompt is the new packaged template
+  `tools/apd_gauntlet/data/prompts/repair.md` (read with
+  `resources.read_prompt`). If the tier is still invalid, the lenses that own the
+  files that are still failing are re-run once. If it is still invalid after
+  that, the run halts and names the files. Dispatch failures still retry the lens
+  twice, as before. The `plan-run` tier-gate rows and the troubleshooting docs
+  describe the same path.
 
 ## v1.7.0 — 2026-06-09
 

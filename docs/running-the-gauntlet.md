@@ -539,9 +539,16 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 - Finding cited the wrong artifact section; correct the citation.
 - Both are partially right; the contradiction notes the disagreement and is annotated `Reviewer determine`.
 
-### Specialist hit two retries and was dropped
+### A tier gate failed
 
-The runner allows up to two retries per agent when validation fails. If a specialist still fails after two retries, the runner surfaces the failure and proceeds without that agent's output for the affected record. This is rare; investigate the agent's input (sometimes the tech plan section it's being asked about is genuinely undecidable).
+After each tier's lenses finish and `canonicalize` runs, the runner validates the tier with `apd-gauntlet validate <run-dir> --tier <tier-dir>`. That gate blocks the run: a failing tier never flows on to synthesis.
+
+- A lens whose dispatch fails (an agent error or an interrupted subagent) is retried up to twice before the gate runs.
+- A schema or semantic failure at the gate gets one repair per failing file. A repair agent receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.
+- If the tier still fails after the repairs, the lenses that own the files that are still failing are re-run from scratch, once.
+- If the tier still fails after the re-run, the runner halts and names the failing files and their first errors.
+
+To recover from a halt, fix the named files under `runs/<run-id>/<tier-dir>/`, check them with `apd-gauntlet validate runs/<run-id> --tier <tier-dir>`, then re-invoke the runner. It skips the agent steps that are already complete and runs the gate again. Investigate the agent's input too: sometimes the tech plan section a lens is asked about is genuinely undecidable, and no repair can fix that.
 
 ## Local accuracy benchmark (out-of-band)
 

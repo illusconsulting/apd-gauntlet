@@ -69,3 +69,10 @@ def test_validate_domain_pbm(venv_bin: Path, tmp_path: Path) -> None:
     # (tasks A1-A4).
     r = _run([str(venv_bin / "apd-gauntlet"), "validate-domain", "pbm"], cwd=tmp_path)
     assert r.returncode == 0, r.stderr
+
+
+def test_repair_prompt_ships_in_wheel(venv_bin: Path, tmp_path: Path) -> None:
+    code = "from apd_gauntlet.resources import read_prompt; print(read_prompt('repair'))"
+    r = _run([str(venv_bin / "python"), "-c", code], cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert "{{FILE}}" in r.stdout

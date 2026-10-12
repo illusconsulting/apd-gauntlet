@@ -114,7 +114,9 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         plan.append(
             _step(tier_dir, "CLI", f"validate {run_dir} --tier {tier_dir} --errors-only",
                   f"tier {tier_dir} records (read-only gate)",
-                  gate=f"validate {run_dir} --tier {tier_dir} --errors-only")
+                  gate=(f"validate {run_dir} --tier {tier_dir} --errors-only; on failure repair "
+                        "each failing file (tools/apd_gauntlet/data/prompts/repair.md), "
+                        "re-run the lens if repair fails, then halt"))
         )
 
     # 9 — full pre-Phase-5 cross-file gate
