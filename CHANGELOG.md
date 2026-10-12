@@ -144,6 +144,14 @@ All notable changes to this project will be documented in this file. Format base
   `deduped-capabilities.yaml` and writes every finding to the single file
   `40-threat-model/threat-model.findings.yaml` (root key `finding`). The workflow
   instruction and `docs/threat-modeling.md` name the same paths.
+- **The attack-path analyzer drops two obsolete passages.** It no longer hedges on
+  a report template that already exists (`templates/attack-path-report.template.md`),
+  and no longer asks for a manual schema check of its four output files on the
+  grounds that `validate` covers three of them vacuously. `validate` schema-checks
+  the three graph files and every `attack-path.findings.yaml` record and checks
+  edge integrity, so the analyzer runs `apd-gauntlet validate` and fixes errors in
+  those four files. It leaves errors in other agents' files alone: the
+  threat-model evaluator runs in parallel and its records have no ids yet.
 
 ## v1.7.0 — 2026-06-09
 

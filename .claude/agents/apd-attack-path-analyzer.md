@@ -100,27 +100,14 @@ capabilities. Activation-gated:
    `templates/attack-path-report.template.md`. Embed Mermaid diagrams
    inline (the CLI's mermaid module produces them; pull from a temporary
    output or call the renderer via a Python one-liner from a Bash step).
-   If `templates/attack-path-report.template.md` does not yet exist (it
-   ships in Task C-22), generate the report inline with the following
-   sections: Executive Summary; Asset Graph Overview (node/edge counts,
-   sources used, embedded Mermaid diagram); Top Attack Paths (sorted by
-   `severity_sum` descending, ties broken by `hop_count` ascending);
-   Bottleneck Edge Analysis (per-edge D3FEND overlay and gap-finding
-   summary); D3FEND Defensive Overlay (the `defense-graph.yaml` rendered
-   as a markdown table); and References (cross-links to `apath-*` findings
-   and the dedup'd specialist findings whose edges contributed).
-6. **Validate.** Run `apd-gauntlet validate <run_dir>` for the cross-file
-   passes it currently covers. Note: until Task C-21 wires the four C-15
-   artifacts (`asset-graph.yaml`, `attack-paths.yaml`, `defense-graph.yaml`,
-   `attack-path.findings.yaml`) into the validator's glob set and
-   `SYNTHESIS_ROLLUPS` map, three of the four emitted files pass `validate`
-   vacuously. Until that lands, run a direct schema check on each emitted
-   file — `asset-graph.yaml` against `schemas/asset-graph.schema.json`,
-   `attack-paths.yaml` against `schemas/attack-path.schema.json`,
-   `defense-graph.yaml` against `schemas/defense-graph.schema.json`, and
-   each record in `attack-path.findings.yaml` against
-   `schemas/finding.schema.json`. If any artifact fails its schema, fix it
-   before declaring success.
+6. **Validate.** Run `apd-gauntlet validate <run_dir>`. It schema-checks the
+   three graph files (`asset-graph.yaml`, `attack-paths.yaml`,
+   `defense-graph.yaml`) and every record in `attack-path.findings.yaml`,
+   and checks the asset graph's edge integrity. Fix any error it reports in
+   those four files before declaring success. `validate` covers the whole
+   run, and `apd-threat-model-evaluator` runs in parallel with you and its
+   records have no ids yet, so an error in any other file is
+   not yours to fix.
 
 ## Required reading
 
