@@ -1450,3 +1450,21 @@ def test_gate_helpers_are_defined_before_run_tier() -> None:
         assert f"function {name}(" in t, name
         assert t.index(f"function {name}(") < t.index("function runTier("), name
     assert t.index("const REPAIR_TEMPLATE") < t.index("function runTier(")
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 4 — the read-only validate gates always run the command. The guard runs only
+# `validate --schema-only`, so a run with only semantic or cross-file errors made these
+# gates return a skip receipt.
+# ---------------------------------------------------------------------------
+
+READ_ONLY_GATES = ("intake-schema-gate", "validate-full-prephase5", "validate-final")
+
+
+def test_read_only_gates_always_run() -> None:
+    t = _text()
+    for label in READ_ONLY_GATES:
+        at = t.index(f"label: '{label}'")
+        block = t[t.rindex("pyStep('validate'", 0, at):t.index("});", at)]
+        assert "alwaysRun: true" in block, label
+        assert "validateScope" not in block and "validateFlags" not in block, label

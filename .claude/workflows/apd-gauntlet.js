@@ -448,12 +448,13 @@ pyStep('assemble-inventory', {
 // or malformed context-brief frontmatter) surfaces HERE, in the intake phase —
 // not 9 specialists later at the pre-Phase-5 whole-run gate. Only 00-context
 // exists at this point, so a whole-run --schema-only pass is effectively the
-// 00-context schema gate. Read-only receipt, mirroring the tier gates.
+// 00-context schema gate. Read-only receipt, mirroring the tier gates: alwaysRun, so
+// the command is never skipped by a guard.
 pyStep('validate', {
   phase: 'intake', label: 'intake-schema-gate',
   cliArgs: '--schema-only --errors-only',
   outputs: runDir + '/00-context schema gate (asset-inventory + brief frontmatter)',
-  validateScope: runDir,
+  alwaysRun: true,
 });
 
 // ===========================================================================
@@ -717,12 +718,14 @@ runTier('tier-3', '30-auditability', ['authenticity', 'non-repudiation', 'immuta
 // unassigned, making this whole-run schema/cross-file gate advisory. A
 // dict-scope capability (or any schema violation) makes `validate --errors-only`
 // exit 1, which pyStep surfaces as status:'error' -> isErr true. Blocking here
-// stops a poisoned corpus from reaching Phase-5 synthesis.
+// stops a poisoned corpus from reaching Phase-5 synthesis. alwaysRun: the guard
+// checks only --schema-only, so on a run whose only errors are semantic or
+// cross-file it would return a skip receipt and this gate would never fire.
 const vfull = pyStep('validate', {
   phase: 'tier-3', label: 'validate-full-prephase5',
   cliArgs: '--errors-only',
   outputs: 'whole-run cross-file clean (read-only gate)',
-  validateScope: runDir,
+  alwaysRun: true,
 });
 if (isErr(vfull)) {
   log('validate-full-prephase5: status:error — whole-run corpus not schema/cross-file clean — HALT before Phase-5 synthesis.');
@@ -1067,5 +1070,5 @@ pyStep('summarize', { phase: 'closeout', label: 'summarize',
   outputs: runDir + ' run summary (read-only)' });
 pyStep('validate', { phase: 'closeout', label: 'validate-final',
   cliArgs: '--errors-only', outputs: 'whole-run final clean (read-only assertion)',
-  validateScope: runDir });
+  alwaysRun: true });
 log('apd-gauntlet runner: complete for ' + args.run_id + '.');

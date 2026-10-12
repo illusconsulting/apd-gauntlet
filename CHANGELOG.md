@@ -131,6 +131,11 @@ All notable changes to this project will be documented in this file. Format base
   that, the run halts and names the files. Dispatch failures still retry the lens
   twice, as before. The `plan-run` tier-gate rows and the troubleshooting docs
   describe the same path.
+- **The read-only validate gates can no longer skip themselves.** The intake
+  schema gate, the pre-synthesis whole-run gate and the final validate now always
+  run the full validation. Previously a schema-only guard could skip them on runs
+  with only semantic or cross-file errors, so the pre-synthesis halt can now fire
+  on errors it used to miss.
 
 ## v1.7.0 — 2026-06-09
 
