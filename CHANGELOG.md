@@ -205,6 +205,18 @@ All notable changes to this project will be documented in this file. Format base
   The code-architecture-brief and authored-threat-model templates no longer show
   ids: the brief's lens table lists `qualified_name:Lx-Ly` code anchors and the
   authored render labels entries `<letter>/<surface>`.
+- **`validate` checks that an evidence excerpt appears verbatim in the input it
+  cites.** A model that paraphrased instead of quoting went unnoticed, because only
+  the artifact name was checked. For each excerpt that cites a file under the run's
+  `inputs/` directory, `apd-gauntlet validate` now reports
+  `evidence[N].excerpt not found verbatim in artifact '<file>'`, in the whole-run
+  pass and at tier gates (`--tier`). It is a warning by default and an error with
+  the new `--strict-excerpts` flag. Whitespace, backticks and `*` are ignored, `...`
+  or `…` joins fragments that must appear in order, an excerpt wholly in parentheses
+  (an absence marker such as `(absent in supplied TM)`) is skipped, and so are
+  run-internal artifacts, unresolvable paths and files that are not UTF-8. The
+  workflow's gates ignore warnings, so on 1.7.1 the warning shows in a manual
+  `apd-gauntlet validate <run-dir>` run only.
 
 ## v1.7.0 — 2026-06-09
 

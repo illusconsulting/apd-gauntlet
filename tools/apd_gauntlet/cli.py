@@ -31,6 +31,7 @@ from .summary import render_summary, summarize_run
 from .threat_model.author import build_skeleton_from_inventory_file
 from .validate import (
     ValidationReport,
+    add_excerpt_violations,
     build_registry,
     run_cross_file_pass,
     run_schema_pass,
@@ -69,7 +70,17 @@ def main() -> None:
         "skips the cross-file pass and 00-context/40-synthesis rollup checks."
     ),
 )
-def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--strict-excerpts",
+    is_flag=True,
+    help=(
+        "Make an evidence excerpt that is not verbatim in its cited inputs/ file an "
+        "ERROR (a WARNING by default). Ignored with --schema-only."
+    ),
+)
+def validate(  # type: ignore[no-untyped-def]
+    run_dir, schema_only, strict, as_json, errors_only, tier, strict_excerpts
+) -> None:
     target = run_dir / tier if tier else run_dir
     if tier and not target.is_dir():
         raise click.ClickException(f"--tier subdir not found: {target}")
@@ -85,9 +96,12 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
             files_seen=max(schema_rep.files_seen, semantic_rep.files_seen),
             records_seen=schema_rep.records_seen,
         )
+        add_excerpt_violations(
+            merged, run_dir, records_dir=target, strict_excerpts=strict_excerpts
+        )
     else:
         semantic_rep = run_semantic_pass(target)
-        cross_file_rep = run_cross_file_pass(target)
+        cross_file_rep = run_cross_file_pass(target, strict_excerpts=strict_excerpts)
         merged = ValidationReport(
             errors=schema_rep.errors + semantic_rep.errors + cross_file_rep.errors,
             warnings=schema_rep.warnings + semantic_rep.warnings + cross_file_rep.warnings,

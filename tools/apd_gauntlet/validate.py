@@ -4,6 +4,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import pathlib
+import re
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -207,6 +208,163 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
     "40-synthesis/deduped-findings.yaml",     # threat-model evaluator + attack-path analyzer
     "40-synthesis/deduped-capabilities.yaml",  # threat-model evaluator + attack-path analyzer
 })
+
+_ELLIPSIS = re.compile(r"\.\.\.|\u2026")  # "..." or the single character U+2026
+_STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
+
+
+def normalize_excerpt_text(text: str) -> str:
+    """Drop the Markdown inline markers (backtick, ``*``) and collapse whitespace.
+
+    Applied to both the excerpt and the artifact text, so an excerpt quoted from
+    rendered Markdown still matches the source that carries the markers, and
+    re-wrapped lines still match.
+    """
+    return " ".join(text.replace("`", "").replace("*", "").split())
+
+
+def excerpt_fragments(excerpt: str) -> list[str]:
+    """Split an excerpt at every ``...`` and ``…``; normalize each piece, drop the
+    empty ones. An excerpt with no ellipsis is a single fragment."""
+    pieces = (normalize_excerpt_text(piece) for piece in _ELLIPSIS.split(excerpt))
+    return [piece for piece in pieces if piece]
+
+
+def _is_parenthesized(text: str) -> bool:
+    """True when one pair of parentheses wraps all of ``text`` (an absence marker
+    such as ``(absent in supplied TM)``); ``(1) a (see b)`` is not."""
+    text = text.strip()
+    if not (text.startswith("(") and text.endswith(")")):
+        return False
+    depth = 0
+    for i, ch in enumerate(text):
+        depth += (ch == "(") - (ch == ")")
+        if depth <= 0:
+            return depth == 0 and i == len(text) - 1
+    return False
+
+
+def _string_scalars(node: Any) -> Iterator[str]:
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for key, value in node.items():
+            yield from _string_scalars(key)
+            yield from _string_scalars(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _string_scalars(item)
+
+
+def _excerpt_haystacks(path: pathlib.Path) -> list[str] | None:
+    """Normalized texts an excerpt may be found in: the whole file and, for a
+    YAML or JSON input, each parsed string scalar (so a quoted or escaped value
+    matches what it means, not how it is spelled). ``None`` when the file cannot
+    be read as UTF-8 text; a parse error leaves only the whole-file text."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    haystacks = [normalize_excerpt_text(text)]
+    suffix = path.suffix.lower()
+    if suffix in _STRUCTURED_INPUT_SUFFIXES:
+        try:
+            docs = [json.loads(text)] if suffix == ".json" else list(yaml.safe_load_all(text))
+        except (ValueError, yaml.YAMLError):
+            return haystacks
+        haystacks.extend(normalize_excerpt_text(s) for doc in docs for s in _string_scalars(doc))
+    return haystacks
+
+
+def _fragments_in_order(fragments: list[str], haystack: str) -> bool:
+    pos = 0
+    for fragment in fragments:
+        found = haystack.find(fragment, pos)
+        if found < 0:
+            return False
+        pos = found + len(fragment)
+    return True
+
+
+def _resolve_input(
+    run_dir: pathlib.Path, inputs_dir: pathlib.Path, artifact: str
+) -> pathlib.Path | None:
+    """The file a citation names under the run's ``inputs/``, or ``None``.
+
+    Tries ``run_dir/inputs/<artifact>`` then ``run_dir/<artifact>``; a candidate
+    counts only when it is a file whose resolved path (symlinks and ``..``
+    followed) is inside ``inputs_dir``. Run-internal artifacts (``00-context/``,
+    ``40-synthesis/``, the tier dirs) therefore resolve to nothing here.
+    """
+    for base in (run_dir / "inputs", run_dir):
+        try:
+            candidate = (base / artifact).resolve()
+            if candidate.is_file() and candidate.is_relative_to(inputs_dir):
+                return candidate
+        except (OSError, RuntimeError, ValueError):
+            continue
+    return None
+
+
+def check_excerpts_verbatim(
+    run_dir: pathlib.Path, *, records_dir: pathlib.Path | None = None
+) -> list[Violation]:
+    """Flag each evidence excerpt that is not verbatim in the input file it cites.
+
+    Checks the records under ``records_dir`` (default ``run_dir``), resolving
+    artifacts against ``run_dir``. Only citations of files under
+    ``run_dir/inputs/`` are checked; run-internal artifacts, unresolvable or
+    escaping paths, non-UTF-8 files and excerpts wholly in parentheses (absence
+    markers) are skipped silently. Whitespace, backticks and ``*`` are ignored,
+    and an ellipsis joins fragments that must each appear, in order, in the
+    artifact's text or, for a YAML or JSON input, in one of its string scalars.
+    """
+    inputs_dir = (run_dir / "inputs").resolve()
+    cache: dict[pathlib.Path, list[str] | None] = {}
+    violations: list[Violation] = []
+    for path, _kind, record in _iter_records(records_dir if records_dir is not None else run_dir):
+        if "_parse_error" in record:
+            continue
+        evidence = record.get("evidence")
+        for i, ev in enumerate(evidence if isinstance(evidence, list) else []):
+            if not isinstance(ev, dict):
+                continue
+            artifact, excerpt = ev.get("artifact"), ev.get("excerpt")
+            if not isinstance(artifact, str) or not isinstance(excerpt, str):
+                continue
+            fragments = excerpt_fragments(excerpt)
+            if not fragments or _is_parenthesized(excerpt):
+                continue
+            source = _resolve_input(run_dir, inputs_dir, artifact)
+            if source is None:
+                continue
+            if source not in cache:
+                cache[source] = _excerpt_haystacks(source)
+            haystacks = cache[source]
+            if haystacks is not None and not any(
+                _fragments_in_order(fragments, h) for h in haystacks
+            ):
+                violations.append(Violation(
+                    path,
+                    record.get("id"),
+                    f"evidence[{i}].excerpt not found verbatim in artifact '{artifact}'",
+                ))
+    return violations
+
+
+def add_excerpt_violations(
+    report: ValidationReport,
+    run_dir: pathlib.Path,
+    *,
+    records_dir: pathlib.Path | None = None,
+    strict_excerpts: bool = False,
+) -> None:
+    """Run ``check_excerpts_verbatim`` and append its violations to ``report.warnings``,
+    or to ``report.errors`` when ``strict_excerpts``. The one severity rule for the
+    check, shared by the tier gate and the whole-run pass."""
+    found = check_excerpts_verbatim(run_dir, records_dir=records_dir)
+    (report.errors if strict_excerpts else report.warnings).extend(found)
+
 
 # FW-3: 00-context generated run-context artifacts. Specialists — especially
 # the tier-4 threat-model evaluator (which MUST cite the normalized threat
@@ -810,8 +968,14 @@ def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> No
             ])
 
 
-def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
-    """Pass 3: cross-file ID and artifact resolution."""
+def run_cross_file_pass(
+    run_dir: pathlib.Path, *, strict_excerpts: bool = False
+) -> ValidationReport:
+    """Pass 3: cross-file ID and artifact resolution.
+
+    The verbatim-excerpt check (``check_excerpts_verbatim``) lands in ``warnings``,
+    or in ``errors`` when ``strict_excerpts``.
+    """
     report = ValidationReport()
     _check_record_file_locations(run_dir, report)
     brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
@@ -973,5 +1137,6 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     _validate_context_ids(run_dir, report)
     _validate_report_data_cross_refs(run_dir, report)
     _validate_domain_improvements_cross_refs(run_dir, report)
+    add_excerpt_violations(report, run_dir, strict_excerpts=strict_excerpts)
     report.files_seen = len(seen_files)
     return report
