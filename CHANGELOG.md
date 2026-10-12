@@ -184,6 +184,27 @@ All notable changes to this project will be documented in this file. Format base
   canonicalized, and `canonicalize` reports an unparseable context file instead of
   raising. The CLI summary adds `N context ids minted` when it minted any
   ([ADR-0020](docs/adrs/0020-tooling-authored-derived-fields.md) Amendment v1.7.1).
+- **The code recon and threat-model agents emit content only, and the runner mints
+  their ids.** `apd-code-recon` told the model to compute a `cev-` id for every
+  index entry, `apd-threat-model-author` and `apd-threat-model-recon` a `tm-`
+  `entry_id` for every threat-model entry, and both are hashes an LLM cannot
+  compute reliably. The three prompts now say not to emit them. The author also
+  drops the `entry_id` from each cell it copies out of the skeleton, because that
+  id hashes the skeleton's stub threat and would no longer match the grounded
+  one. The author and the recon agent keep setting `inferred_apd_goals`;
+  `canonicalize` fills it only when they leave it out. The workflow now runs
+  `canonicalize` after code-recon, before the author reads the index, and again
+  after the threat-model phase, before the lenses cite the entries; `plan-run`
+  lists the same two steps. Two prompt examples were wrong and are fixed. The
+  `c4-recon.yaml` example used a `provenance.source` the schema rejects, and told
+  the model to cite a `cev-` id that does not exist yet when that file is written.
+  Containers and edges now cite `file_path:Lstart-Lend` (or a `CROSS_*` edge's
+  `<caller_qn> -> <callee_qn>` pair), as the `apd-c4-discipline` skill asks. The
+  code recon prompt also says to keep provenance in fields such as `notes:`, not
+  YAML comments, because `canonicalize` rewrites the index and drops comments.
+  The code-architecture-brief and authored-threat-model templates no longer show
+  ids: the brief's lens table lists `qualified_name:Lx-Ly` code anchors and the
+  authored render labels entries `<letter>/<surface>`.
 
 ## v1.7.0 — 2026-06-09
 

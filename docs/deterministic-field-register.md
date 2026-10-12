@@ -51,6 +51,9 @@ their IDs:
 - **intake phase** — `assemble-inventory` after intake emits and before the
   `00-context` schema-gate (so the gate sees the canonical, id-bearing form), and
   well before specialists cite inventory IDs.
+- **after code-recon and after the threat-model phase** — `canonicalize` mints the
+  `cev-` ids of the code-evidence index and the `tm-` entry ids of the normalized
+  threat models, before the threat-model author and the lenses cite them.
 - **per tier** — `canonicalize` after the tier's specialists and before the tier
   validate gate.
 - **after the tmeval/apath barrier** — `canonicalize` before `rollup` (which

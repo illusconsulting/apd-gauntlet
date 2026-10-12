@@ -207,3 +207,34 @@ def test_plan_run_tier_gates_name_the_repair_path(tmp_path):
     )
     gates = [s for s in plan if s["ref"].startswith("validate ") and "--tier" in s["ref"]]
     assert len(gates) == 3 and all("repair.md" in s["gate"] and "halt" in s["gate"] for s in gates)
+
+
+def _plan(tmp_path, cfg):
+    run_dir = _write_run(tmp_path, cfg)
+    return json.loads(CliRunner().invoke(main, ["plan-run", "--json", str(run_dir)]).output)
+
+
+def test_plan_run_mints_context_ids_before_tier_1(tmp_path):
+    plan = _plan(tmp_path, FULL_CFG)
+    canon = [i for i, s in enumerate(plan) if s["phase"] == "canonicalize"]
+    first_lens = next(i for i, s in enumerate(plan) if s["ref"] == "apd-confidentiality")
+    assert len(canon) == 2 and max(canon) < first_lens
+
+
+def test_plan_run_without_code_recon_mints_tm_ids_only(tmp_path):
+    plan = _plan(tmp_path, dict(BASE_CFG, code_recon="disabled"))
+    assert sum(1 for s in plan if s["phase"] == "canonicalize") == 1
+
+
+def test_plan_run_context_canonicalize_rows_follow_their_producers(tmp_path):
+    plan = _plan(tmp_path, dict(FULL_CFG, threat_model="inputs/tm.md"))
+    refs = [s["ref"] for s in plan]
+    rows = [i for i, s in enumerate(plan) if s["phase"] == "canonicalize"]
+    assert [plan[i]["ref"] for i in rows] == ["canonicalize runs/apd-test-full"] * 2
+    assert refs.index("apd-code-recon") + 1 == rows[0]
+    assert rows[0] < refs.index("author-threat-model runs/apd-test-full")
+    assert refs.index("apd-threat-model-recon") + 1 == rows[1]
+    plan = _plan(tmp_path, FULL_CFG)  # no supplied TM: the row follows the author
+    refs = [s["ref"] for s in plan]
+    last = max(i for i, s in enumerate(plan) if s["phase"] == "canonicalize")
+    assert refs.index("apd-threat-model-author") + 1 == last

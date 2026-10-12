@@ -419,7 +419,10 @@ It:
    complete (none, on a fresh run), then builds the `apd-domain` skill from the
    active pack(s) and validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
-   agents when their preconditions are met).
+   agents when their preconditions are met). The code-recon and threat-model
+   agents emit entries without ids, so the runner runs `canonicalize` after
+   code-recon and again after the threat-model phase to mint the `cev-` and `tm-`
+   ids before anything reads them.
 3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
    each tier's validate gate, the runner runs `canonicalize` (idempotent
    structural canonicalizer: normalizes envelopes, recomputes deterministic IDs,

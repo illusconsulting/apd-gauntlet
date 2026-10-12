@@ -107,18 +107,25 @@ For each skeleton cell, do exactly one of:
 
 Never fabricate a threat to fill an applicable-but-ungrounded matrix cell.
 
-### Step 4 — Compute entry IDs and APD goals
+### Step 4 — Leave ids to the assembler; set APD goals
 
-For every entry compute `entry_id = "tm-" + sha8(asset + threat + source_locator)`
-(the same convention the recon path uses). Derive `inferred_apd_goals` by
-inverting the canonical mapping tables in
-`tools/apd_gauntlet/threat_model/mappings.py` (mirrored in the
+Do NOT emit `entry_id` on any entry, and drop the `entry_id` from every cell you
+copy out of the skeleton: it hashes the skeleton's stub `threat`, so it would
+not match the threat you ground. `apd-gauntlet canonicalize` mints
+`entry_id` (`tm-` plus a hash of `asset + threat + source_locator`) right after
+the tm-recon phase, so write those three fields exactly.
+
+You still set `inferred_apd_goals`. Derive it by inverting the canonical mapping
+tables in `tools/apd_gauntlet/threat_model/mappings.py` (mirrored in the
 `apd-threat-model-methodologies` skill): for STRIDE use `stride_letter_to_apd_goals`
 (S -> authenticity, T -> integrity, R -> non_repudiation, I -> confidentiality,
 D -> availability, E -> authenticity + integrity); for LINDDUN use
 `linddun_letter_to_apd_goals` keyed on the COMPOUND enum values verbatim (`L`,
 `I`, `N_repudiation`, `D_etectability`, `D_isclosure`, `U`, `N_compliance`) —
-never a bare letter.
+never a bare letter; for MAESTRO use the layer -> APD-goal table in the same
+skill. `apd-gauntlet canonicalize` fills `inferred_apd_goals` from the STRIDE or
+LINDDUN letter only when you leave it out, and an entry with no letter (MAESTRO)
+would get `[]`; a value you wrote, even `[]`, is never replaced.
 
 ### Step 5 — Methodology selection
 
@@ -152,7 +159,7 @@ Confirm:
 - [ ] `generated_by: threat_model_author`
 - [ ] every entry has a non-null `source_locator` tracing to a skeleton cell
 - [ ] every blocked entry has a non-empty `prerequisite_evidence`
-- [ ] every `entry_id` recomputes from `asset + threat + source_locator`
+- [ ] no entry carries `entry_id`
 - [ ] no surface appears that was absent from the skeleton
 - [ ] `00-context/threat-model-authored.md` exists
 

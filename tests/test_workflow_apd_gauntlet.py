@@ -1481,3 +1481,41 @@ def test_tmeval_instruction_names_canonical_inputs_and_output() -> None:
         "40-synthesis/threat-model-coverage.yaml",
     ):
         assert path in call
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 10 — context ids are minted by canonicalize before their consumers read them.
+# ---------------------------------------------------------------------------
+
+
+def test_context_ids_minted_before_their_consumers() -> None:
+    t = _text()
+    assert (
+        t.index("llmStep('apd-code-recon'")
+        < t.index("label: 'canonicalize-code-evidence'")
+        < t.index("phase('threat-model-author')")
+    )
+    assert (
+        t.index("phase('tm-recon')")
+        < t.index("label: 'canonicalize-threat-model'")
+        < t.index("function runTier")
+    )
+
+
+def _canonicalize_block(t: str, label: str) -> str:
+    at = t.index(f"label: '{label}'")
+    return t[t.rindex("pyStep('canonicalize'", 0, at):t.index("});", at)]
+
+
+def test_context_canonicalize_steps_always_run_in_the_canonicalize_phase() -> None:
+    t = _text()
+    for label in ("canonicalize-code-evidence", "canonicalize-threat-model"):
+        block = _canonicalize_block(t, label)
+        assert "alwaysRun: true" in block and "phase: 'canonicalize'" in block, label
+
+
+def test_code_evidence_canonicalize_sits_inside_the_code_recon_branch_after_the_halt() -> None:
+    t = _text()
+    halt = t.index("throw new Error('Phase 1.5 code-recon failed")
+    mint = t.index("label: 'canonicalize-code-evidence'")
+    assert halt < mint < t.index("log('code-recon: disabled")

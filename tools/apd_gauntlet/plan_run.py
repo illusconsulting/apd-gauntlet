@@ -38,6 +38,8 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
     Gates honored (mirroring apd-gauntlet.js):
       - code-recon: present unless cfg["code_recon"] == "disabled".
       - tm-recon: only when cfg["threat_model"] is truthy.
+      - canonicalize (context ids): after code-recon (same condition) and after the
+        tm-recon block (always).
       - apath: only when cfg["crown_jewels"] is a non-empty list.
       - tmeval: ALWAYS (the always-on authored baseline TM always exists).
     """
@@ -82,6 +84,11 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
                   "00-context/code-evidence-index.yaml "
                   "(multi-repo: per-repo passes + cross-repo edges when repos[] declared)")
         )
+        # 3b — canonicalize mints the cev- ids code-recon no longer emits
+        plan.append(
+            _step("canonicalize", "CLI", f"canonicalize {run_dir}",
+                  "cev- ids minted in 00-context/code-evidence-index.yaml")
+        )
 
     # 4 — threat-model-author (always-on)
     plan.append(
@@ -99,6 +106,14 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
             _step("tm-recon", "AGENT", "apd-threat-model-recon",
                   "00-context/threat-model-supplied-normalized.yaml")
         )
+
+    # 5b — canonicalize mints the tm- entry ids the author and recon no longer emit
+    # (always: the authored baseline always exists)
+    plan.append(
+        _step("canonicalize", "CLI", f"canonicalize {run_dir}",
+              "tm- entry ids minted in 00-context/threat-model-normalized.yaml "
+              "(and threat-model-supplied-normalized.yaml when a TM was supplied)")
+    )
 
     # 6/7/8 — the three parallel lens tiers, each canonicalize + tier gate.
     for tier_dir, lenses in _TIERS:

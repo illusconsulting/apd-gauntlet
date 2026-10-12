@@ -476,6 +476,15 @@ if (args.code_recon && args.code_recon !== 'disabled') {
     throw new Error('Phase 1.5 code-recon failed with code_recon=enabled; aborting run — ' +
       'fix CBM availability or set code_recon to auto/disabled.');
   }
+  // Code-recon emits entries without ids: canonicalize mints each cev- id from
+  // qualified_name + line_range before anything reads the index (the author reads it next,
+  // then the lenses cite it). alwaysRun: the command is idempotent, and a run with no
+  // index (code_recon=auto and CBM unreachable) is a no-op.
+  pyStep('canonicalize', {
+    phase: 'canonicalize', label: 'canonicalize-code-evidence',
+    outputs: 'cev- ids minted in ' + runDir + '/00-context/code-evidence-index.yaml',
+    alwaysRun: true,
+  });
 } else {
   log('code-recon: disabled — skipping Phase 1.5.');
 }
@@ -523,6 +532,17 @@ if (args.threat_model) {
 } else {
   log('tm-recon: no threat_model supplied — skipping Phase 1.6 (the authored baseline always exists).');
 }
+
+// The author and recon emit entries without entry_id: canonicalize mints each tm- id (and
+// fills an absent inferred_apd_goals) in the authored baseline and in the supplied sibling
+// when it exists, before the lenses cite them and tmeval grades them. alwaysRun: the
+// command is idempotent, and it runs whether or not a threat model was supplied.
+pyStep('canonicalize', {
+  phase: 'canonicalize', label: 'canonicalize-threat-model',
+  outputs: 'tm- entry ids minted in ' + runDir + '/00-context/threat-model-normalized.yaml' +
+    ' and threat-model-supplied-normalized.yaml',
+  alwaysRun: true,
+});
 
 // ===========================================================================
 // Tier gate repair. A tier gate BLOCKS the run. A red gate gets ONE repair attempt

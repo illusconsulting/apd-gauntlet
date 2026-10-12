@@ -8,6 +8,7 @@ and the report renderer rely on so the contract cannot silently drift.
 from __future__ import annotations
 
 import pathlib
+import re
 
 TEMPLATE = (
     pathlib.Path(__file__).resolve().parent.parent
@@ -47,3 +48,15 @@ def test_template_documents_supplied_vs_authored_delta() -> None:
 
 def test_template_companion_artifact_is_the_normalized_yaml() -> None:
     assert "threat-model-normalized.yaml" in _text()
+
+
+def test_template_carries_no_tm_ids() -> None:
+    assert re.search(r"tm-[0-9a-f]{8}", _text()) is None
+    assert "TM entry IDs" not in _text()
+
+
+def test_template_labels_entries_by_letter_and_surface() -> None:
+    # Ids live only in the YAML; the render names an entry <letter>/<surface>.
+    text = _text()
+    assert "### R/audit-log-writer" in text
+    assert "`I/phi-store`" in text
