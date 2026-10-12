@@ -778,14 +778,14 @@ def _context_entries(
 
 
 def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> None:
-    """Require the fields ``canonicalize`` mints in ``00-context``: ``id`` on each
+    """Require the fields ``canonicalize`` fills in ``00-context``: ``id`` on each
     code-evidence-index entry; ``entry_id`` and ``inferred_apd_goals`` on each entry
     of the normalized threat models. One ERROR per entry missing any of them.
 
-    The schemas treat these fields as optional-at-emission (agents no longer author
-    them), so this is the backstop that a run was canonicalized. Presence only: an
-    existing id is never compared with the hash, because older runs carry
-    hand-assigned ids that findings and ``c4-recon.yaml`` already cite.
+    The schemas treat these fields as optional-at-emission (agents no longer emit the
+    ids and may omit the goals), so this is the backstop that a run was canonicalized.
+    Presence only: an existing id is never compared with the hash, because older runs
+    carry hand-assigned ids that findings and ``c4-recon.yaml`` already cite.
     """
     from .canonicalize import THREAT_MODEL_CONTEXT_FILES  # canonicalize imports this module
 

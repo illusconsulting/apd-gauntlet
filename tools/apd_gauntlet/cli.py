@@ -1290,8 +1290,8 @@ def canonicalize_cmd(run_dir: Path) -> None:
     unwraps per-record wrappers, injects schema_version), recomputes every
     deterministic id (tooling is authoritative), and rewrites cross_references.
     Also mints the 00-context ids agents no longer emit (cev- on code-evidence-index
-    entries; tm- and inferred_apd_goals on normalized threat-model entries), only
-    where absent: an existing id is never rewritten.
+    entries; tm- on normalized threat-model entries, plus an absent
+    inferred_apd_goals), only where absent: an existing value is never rewritten.
     Structural only — never edits titles, excerpts, or evidence.
     """
     from .canonicalize import CanonicalizeCollision, canonicalize_run

@@ -120,6 +120,29 @@ def test_linddun_maestro_and_authored_goals(tmp_path):
     assert goals == [linddun_letter_to_apd_goals("L"), [], ["integrity", "availability"]]
 
 
+def test_authored_goals_are_never_replaced_by_the_letter_mapping(tmp_path):
+    # The recon agent sets goals by judgement (PBM N_compliance override, attack-tree,
+    # MAESTRO, free-form); an authored value, even [], must survive a STRIDE letter.
+    authored = dict(TM, entry_id="tm-0badc0de", inferred_apd_goals=[])
+    p = _tm(tmp_path, [authored])
+    before = p.read_bytes()
+    assert canonicalize_run(tmp_path).context_ids_minted == 0
+    assert p.read_bytes() == before
+    p = _tm(tmp_path, [dict(TM, inferred_apd_goals=[]),
+                       dict(TM, threat="t2", inferred_apd_goals=["integrity"])])
+    assert canonicalize_run(tmp_path).context_ids_minted == 2
+    entries = _entries(p)
+    assert [e["inferred_apd_goals"] for e in entries] == [[], ["integrity"]]
+    assert all(e["entry_id"].startswith("tm-") for e in entries)
+
+
+def test_inferred_apd_goals_is_agent_authorable_in_the_schema():
+    props = read_schema("threat-model-normalized.schema.json")["properties"]["entries"]["items"]
+    assert "readOnly" not in props["properties"]["inferred_apd_goals"]
+    assert props["properties"]["entry_id"]["readOnly"] is True
+    assert "inferred_apd_goals" not in props["required"]
+
+
 def test_supplied_sibling_is_minted_too(tmp_path):
     p = _tm(tmp_path, [dict(TM)], name="threat-model-supplied-normalized.yaml",
             generated_by="threat_model_recon")

@@ -31,8 +31,8 @@ above they are minted ONLY WHEN ABSENT and an existing one is never rewritten
 1.7.1 carry hand-assigned ids that do not match the hash):
   - ``code-evidence-index.yaml`` — ``id`` (``cev-<sha8>``) on each entry;
   - ``threat-model-normalized.yaml`` and ``threat-model-supplied-normalized.yaml``
-    — ``entry_id`` (``tm-<sha8>``) and the derived ``inferred_apd_goals`` on each
-    entry.
+    — ``entry_id`` (``tm-<sha8>``) on each entry, and ``inferred_apd_goals`` (from
+    the STRIDE/LINDDUN letter) when the agent authored none.
 A context file is rewritten only when a field was filled; one that does not parse
 is left untouched and reported in ``parse_errors`` / ``context_parse_errors``.
 """
@@ -366,8 +366,10 @@ def _mint_code_evidence_ids(
 
 
 def _inferred_apd_goals(entry: dict[str, Any]) -> list[str]:
-    """APD goals for a normalized-TM entry: from its ``stride_letter``, else its
-    ``linddun_letter``, else ``[]`` (other methodologies carry no letter)."""
+    """Fallback APD goals for a normalized-TM entry: from its ``stride_letter``, else its
+    ``linddun_letter``, else ``[]``. Only the letter mapping is derivable; attack-tree,
+    MAESTRO and free-form entries and domain overrides are authored by the agent, and
+    callers use this only when the entry has no ``inferred_apd_goals``."""
     refs = entry.get("framework_refs")
     refs = refs if isinstance(refs, dict) else {}
     stride = _nonempty_str(refs.get("stride_letter"))
@@ -381,8 +383,8 @@ def _inferred_apd_goals(entry: dict[str, Any]) -> list[str]:
 def _mint_threat_model_ids(
     run_dir: Path, parse_errors: list[tuple[str, str]] | None = None
 ) -> int:
-    """Mint ``tm-<sha8>`` ``entry_id`` and fill ``inferred_apd_goals`` on each entry of
-    ``THREAT_MODEL_CONTEXT_FILES`` that lacks them.
+    """Mint ``tm-<sha8>`` ``entry_id`` and fill an absent ``inferred_apd_goals`` on each
+    entry of ``THREAT_MODEL_CONTEXT_FILES``.
 
     ``entry_id`` is the entry's first key and hashes ``asset + threat +
     source_locator`` (an absent ``source_locator`` hashes as ``""``); an entry

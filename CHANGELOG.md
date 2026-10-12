@@ -171,10 +171,13 @@ All notable changes to this project will be documented in this file. Format base
 - **`canonicalize` mints the `cev-` and `tm-` ids agents were asked to compute.**
   The code-evidence-index `id` (`cev-<sha8(qualified_name|line_range)>`,
   repo-qualified when the index declares `repos`) and the normalized threat-model
-  `entry_id` (`tm-<sha8(asset + threat + source_locator)>`) with its derived
-  `inferred_apd_goals` were hashed or derived by LLM agents, which cannot do either
-  reliably. `canonicalize` now fills each one that is absent, and the schemas make
-  them optional-at-emission. An id that is already present is never rewritten, so
+  `entry_id` (`tm-<sha8(asset + threat + source_locator)>`) were hashed by LLM
+  agents, which cannot do that reliably. `canonicalize` now mints each one that is
+  absent, and the schemas make them optional-at-emission. It also fills an absent
+  `inferred_apd_goals` from the entry's STRIDE or LINDDUN letter; that field stays
+  agent-authorable, because attack-tree, MAESTRO and free-form entries and the PBM
+  `N_compliance` override are set by judgement, and an authored value is never
+  replaced. An id that is already present is never rewritten, so
   the hand-assigned ids in older runs and in the committed Home Assistant example,
   which findings and `c4-recon.yaml` cite, stay byte-identical. `validate` reports
   `context id missing: <file>: entries[<n>] ...` for an entry that was never

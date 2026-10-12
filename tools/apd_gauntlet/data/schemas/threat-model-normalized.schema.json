@@ -64,7 +64,7 @@
           "inferred_apd_goals": {
             "type": "array",
             "items": { "$ref": "_defs.schema.json#/$defs/apd_goal" },
-            "readOnly": true
+            "description": "Optional at emission. canonicalize fills an absent value from stride_letter / linddun_letter (else []) and never replaces an authored one, so the agent still authors it for attack-tree, MAESTRO and free-form entries and for domain overrides."
           }
         }
       }
