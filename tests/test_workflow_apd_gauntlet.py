@@ -1295,3 +1295,114 @@ def test_c4_short_edge_label_helper_present():
         REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
     ).read_text(encoding="utf-8")
     assert "c4ShortEdgeLabel" in bundle
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 2 — the runner resumes from `apd-gauntlet resume-plan`; agent (llmStep)
+# prompts carry no idempotency-guard text. pyStep prompts keep their guard.
+# ---------------------------------------------------------------------------
+
+LENSES = {"confidentiality", "integrity", "availability", "distributed", "resilient",
+          "ephemeral", "authenticity", "non-repudiation", "immutability"}
+
+
+def _fn_body(text: str, name: str) -> str:
+    return text.split(f"function {name}(", 1)[1].split("\nfunction ", 1)[0]
+
+
+def _llmstep_calls(text: str) -> list[str]:
+    # The comma requirement skips the header comment's "llmStep('apd-threat-model-author')";
+    # on today's file this yields the 14 real call sites.
+    return re.findall(r"llmStep\('[^'\n]*'(?: \+ \w+)?,.*?\}\);", text, re.DOTALL)
+
+
+def test_llmstep_call_sites_are_all_found() -> None:
+    # Guards the regex above: if it silently matched fewer calls, the no-guard-options
+    # test would pass vacuously.
+    assert len(_llmstep_calls(_text())) == 14
+
+
+def test_llmstep_prompt_has_no_guard() -> None:
+    body = _fn_body(_text(), "llmStep")
+    assert "guard(" not in body and "IDEMPOTENCY" not in body
+
+
+def test_llmstep_skips_steps_resume_plan_marks_complete() -> None:
+    body = _fn_body(_text(), "llmStep")
+    assert "RESUME_DONE" in body and "'.skipped'" in body
+
+
+def test_llmstep_calls_carry_no_guard_options() -> None:
+    for call in _llmstep_calls(_text()):
+        assert "validateScope" not in call and "validateFlags" not in call, call[:80]
+
+
+def test_llmstep_calls_carry_no_outputs_option() -> None:
+    # The guard was the only reader of opts.outputs; the instructions name the outputs.
+    for call in _llmstep_calls(_text()):
+        assert not re.search(r"\boutputs:", call), call[:80]
+
+
+def test_resume_done_declared_next_to_run_dir() -> None:
+    t = _text()
+    assert "let RESUME_DONE = {};" in t
+    assert t.index("const runDir =") < t.index("let RESUME_DONE = {};") < t.index("function guard(")
+
+
+def test_resume_plan_is_first_setup_step() -> None:
+    t = _text()
+    assert t.index("phase('setup')") < t.index("pyStep('resume-plan'") < t.index(
+        "label: 'validate-scaffold'"
+    )
+
+
+def test_resume_plan_precedes_every_dispatch() -> None:  # Review Focus 1: halt before dispatch
+    t = _text()
+    before = t[t.index("phase('setup')"):t.index("pyStep('resume-plan'")]
+    code = "\n".join(ln for ln in before.splitlines() if not ln.lstrip().startswith("//"))
+    assert "pyStep(" not in code and "llmStep(" not in code and "agent(" not in code
+
+
+def test_resume_plan_refusal_halts_and_failure_falls_back() -> None:  # Review Focus 1 and 5
+    t = _text()
+    block = t[t.index("pyStep('resume-plan'"):t.index("label: 'validate-scaffold'")]
+    # exit 3: the run is from another framework major -> halt before any dispatch.
+    assert "/exit=3/" in block and "refusing to resume" in block
+    # click's "No such command": an older (1.7.0) engine -> halt, tell the user to upgrade.
+    assert "/No such command/" in block
+    assert "older than this plugin" in block and "upgrade apd-gauntlet to 1.7.1" in block
+    # exactly those two branches throw; every other failure logs and runs every agent step.
+    assert block.count("throw new Error(") == 2
+    assert "resume-plan unavailable" in block and "running every agent step" in block
+
+
+def test_receipt_carries_resume_plan() -> None:
+    block = re.search(r"const RECEIPT\s*=.*?^\};", _text(), re.DOTALL | re.MULTILINE).group(0)
+    for key in ("resume_plan", "engine_version", "steps", "complete", "reason"):
+        assert key in block
+
+
+def test_receipt_resume_plan_mirrors_schema() -> None:
+    schema = json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8"))["properties"]["resume_plan"]
+    block = re.search(r"const RECEIPT\s*=.*?^\};", _text(), re.DOTALL | re.MULTILINE).group(0)
+    rp = block[block.index("resume_plan:"):]
+    assert "additionalProperties: false" in rp
+    assert set(re.findall(r"required: \[([^\]]*)\]", rp)) == {
+        "'engine_version', 'steps'", "'label', 'complete', 'reason'",
+    }
+    assert schema["required"] == ["engine_version", "steps"]
+    assert schema["properties"]["steps"]["items"]["required"] == ["label", "complete", "reason"]
+
+
+def test_pystep_lifts_resume_plan_json_verbatim() -> None:
+    body = _fn_body(_text(), "pyStep")
+    assert "opts.resumePlan" in body and "VERBATIM" in body
+
+
+def test_resumable_labels_match_workflow_llmstep_labels() -> None:
+    from apd_gauntlet.resume_plan import RESUMABLE_STEPS
+
+    quoted = {m for c in _llmstep_calls(_text()) for m in re.findall(r"label:\s*'([^']+)'", c)}
+    first = {lb for lb in quoted if "retry" not in lb and "build-fix" not in lb
+             and not lb.endswith("-")}
+    assert {s.label for s in RESUMABLE_STEPS} == first | LENSES

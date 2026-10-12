@@ -46,7 +46,7 @@ A twenty-first file, `apd-orchestrator.md`, remains in [.claude/agents/](../.cla
 
 ## Execution model: foreground / in-session
 
-The runner is **interactive**: every specialist it dispatches runs as a subagent of the live Claude Code session that launched the run. Drive it in the **foreground / in-session** — either by prompting Claude to run the `apd-gauntlet` workflow, or via the explicit `apd-gauntlet plan-run` drive checklist. A background (`run_in_background`) or headless launch can interrupt the specialist dispatches mid-flight, cancelling the subagents and leaving an empty or partial run directory. The runner is resumable: re-invoke it in the foreground and idempotency guards replay completed phases. See [Running the gauntlet](running-the-gauntlet.md) for the operator-facing foreground statement and the preflight checklist.
+The runner is **interactive**: every specialist it dispatches runs as a subagent of the live Claude Code session that launched the run. Drive it in the **foreground / in-session** — either by prompting Claude to run the `apd-gauntlet` workflow, or via the explicit `apd-gauntlet plan-run` drive checklist. A background (`run_in_background`) or headless launch can interrupt the specialist dispatches mid-flight, cancelling the subagents and leaving an empty or partial run directory. The runner is resumable: re-invoke it in the foreground and the runner calls `apd-gauntlet resume-plan` once and skips every agent step whose outputs are already present and valid. See [Running the gauntlet](running-the-gauntlet.md) for the operator-facing foreground statement and the preflight checklist.
 
 ## Tier topology
 

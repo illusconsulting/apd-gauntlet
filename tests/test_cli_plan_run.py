@@ -172,6 +172,13 @@ def test_plan_run_phase_names_consistent_with_workflow(tmp_path):
     leftover = plan_phases - workflow_phases - tier_aliases
     assert not leftover, f"plan emitted phases not in the runner: {leftover}"
 
+    workflow_cmds = set(re.findall(r"pyStep\('([a-z][a-z0-9-]+)'", js))
+    plan_cmds = {s["ref"].split()[0] for s in plan if s["kind"] == "CLI"}
+    assert plan_cmds <= workflow_cmds, (
+        f"plan-run CLI steps the runner never runs: {plan_cmds - workflow_cmds}"
+    )
+    assert "resume-plan" in plan_cmds & workflow_cmds
+
 
 def test_plan_run_code_recon_step_mentions_cross_repo(tmp_path):
     """The code-recon step outputs string names the multi-repo cross-repo pass
@@ -184,3 +191,11 @@ def test_plan_run_code_recon_step_mentions_cross_repo(tmp_path):
     recon = [s for s in plan if s["ref"] == "apd-code-recon"]
     assert recon, "code-recon step must be present"
     assert "cross-repo" in recon[0]["outputs"], recon[0]["outputs"]
+
+
+def test_plan_run_starts_with_resume_plan(tmp_path):
+    plan = json.loads(
+        CliRunner().invoke(main, ["plan-run", "--json", str(_write_run(tmp_path, FULL_CFG))]).output
+    )
+    assert plan[0]["ref"] == "resume-plan runs/apd-test-full --json"
+    assert plan[0]["phase"] == "setup"

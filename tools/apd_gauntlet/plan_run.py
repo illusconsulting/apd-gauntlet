@@ -45,7 +45,13 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
     domains = " ".join(cfg.get("domains") or [])
     plan: list[dict[str, str]] = []
 
-    # 1 — setup
+    # 1 — setup. The runner's FIRST call is resume-plan: a read-only map of which
+    # agent steps already have complete outputs. An operator driving the plan by hand
+    # runs it first and skips the AGENT rows it marks complete.
+    plan.append(
+        _step("setup", "CLI", f"resume-plan {run_dir} --json",
+              "step completion map (read-only); skip AGENT steps marked complete")
+    )
     plan.append(
         _step("setup", "CLI", f"build-domain-skill {domains}".rstrip(),
               ".claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)")

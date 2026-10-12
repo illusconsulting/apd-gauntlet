@@ -105,6 +105,22 @@ All notable changes to this project will be documented in this file. Format base
   `framework_compat` check on the first pre-release. Stable versions are
   unaffected.
 
+### Fixed
+
+- **A resumed run decides agent skips from the new `apd-gauntlet resume-plan`
+  command, and agent prompts no longer carry a resume guard they cannot run.**
+  The read-only `apd-gauntlet resume-plan <run-dir> [--json]` reports, for each
+  first-attempt agent step, whether its outputs are present and valid (a lens
+  interrupted between its findings and capabilities files is not complete and
+  re-runs). The workflow calls it once in setup and skips every complete agent
+  step without dispatching it. CLI steps keep their own guard; retries and
+  report-writer remediation passes always run. `resume-plan` refuses a run
+  directory created by another framework major (exit 3) and the workflow halts
+  before dispatching anything. The workflow also halts, telling you to upgrade
+  `apd-gauntlet` to 1.7.1, when the installed engine is older than the plugin and
+  has no `resume-plan` command. Any other `resume-plan` failure is logged and the
+  workflow runs every agent step.
+
 ## v1.7.0 — 2026-06-09
 
 ### Added

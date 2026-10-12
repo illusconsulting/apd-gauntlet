@@ -19,16 +19,22 @@
 //    requirement is a DISTINCT opts.label per logical dispatch (retries and
 //    remediate attempts use label suffixes so the cache does not replay a
 //    prior failure).
-//  - Cross-session (fresh chat, cache gone): correctness rests on the
-//    agent-internal IDEMPOTENCY GUARD embedded verbatim in every step prompt —
-//    each agent checks whether its outputs already exist AND validate, and
-//    returns an ok+skip receipt cheaply if so. Conservatism: a missing /
-//    schema-invalid / half-written file is treated as NOT-DONE.
+//  - Cross-session (fresh chat, cache gone): setup makes ONE `apd-gauntlet
+//    resume-plan <runDir> --json` call (read-only). It reports, per first-attempt
+//    agent step, whether that step's outputs are present AND valid; the script
+//    records the complete ones in RESUME_DONE and llmStep() skips them WITHOUT
+//    dispatching. Conservatism: a missing / schema-invalid / half-written file is
+//    NOT complete, so the step re-runs. Retries and report-writer remediation
+//    passes carry labels resume-plan never reports, so they always run. CLI steps
+//    (pyStep) keep their own idempotency guard. resume-plan refuses a run
+//    directory from another framework major (setup throws before any dispatch).
 //
-// SKIP CONVENTION: agent-receipt.schema.json has no 'skipped' status. An
-// idempotent skip returns status:'ok' with every expected output marked
-// schema_valid:true PLUS a sentinel {path:'<phase>.skipped', schema_valid:true}.
-// The script does not need to distinguish skip from fresh — both are ok.
+// SKIP CONVENTION: agent-receipt.schema.json has no 'skipped' status. A resume
+// skip returns status:'ok' with a sentinel output {path:'<label>.skipped',
+// schema_valid:true} — llmStep() synthesizes it for a step resume-plan marked
+// complete; a pyStep worker that short-circuits on its guard returns the same
+// sentinel form. The script does not need to distinguish skip from fresh — both
+// are ok.
 
 export const meta = {
   name: 'apd-gauntlet',
@@ -100,6 +106,30 @@ const RECEIPT = {
         editorial_failed: { type: 'integer', minimum: 0 },
       },
     },
+    // The `apd-gauntlet resume-plan --json` output, copied verbatim by the
+    // resume-plan worker (pyStep opts.resumePlan) so setup can read which agent
+    // steps are already complete. Optional — only that one receipt carries it.
+    resume_plan: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['engine_version', 'steps'],
+      properties: {
+        engine_version: { type: 'string' },
+        steps: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['label', 'complete', 'reason'],
+            properties: {
+              label: { type: 'string' },
+              complete: { type: 'boolean' },
+              reason: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -131,9 +161,16 @@ if (!Array.isArray(args.domains) || args.domains.length === 0) {
 // String concat only — no FS.
 const runDir = 'runs/' + args.run_id;
 
+// Agent steps `apd-gauntlet resume-plan` reported complete: label -> reason.
+// Filled once in setup, read by llmStep(). It stays empty when resume-plan is
+// unavailable (a failure other than a refusal), so every agent step runs.
+let RESUME_DONE = {};
+
 // ---------------------------------------------------------------------------
 // IDEMPOTENCY GUARD text — embedded verbatim as the FIRST instruction of every
-// step prompt (the cross-session resume guard; design §6/§13).
+// pyStep (CLI step) prompt. Agent (llmStep) prompts do NOT carry it: an agent
+// step that is already complete is skipped by llmStep() via RESUME_DONE, before
+// any dispatch (design §6/§13).
 // ---------------------------------------------------------------------------
 // validateScope carries ONLY the positional run/subdir PATH; validateFlags
 // carries any trailing option(s) (e.g. '--tier 10-trustworthiness'). guard()
@@ -172,6 +209,9 @@ function guard(outputsList, validateScope, validateFlags) {
 // opts.validateScope / opts.validateFlags: the guard's positional path and any
 //   trailing option (e.g. '--tier 10-trustworthiness'); never embed flags in
 //   the scope string (I1).
+// opts.resumePlan: the command prints one line of JSON on stdout; the worker
+//   copies that object into the receipt as resume_plan, VERBATIM (setup reads it
+//   to fill RESUME_DONE). Only the resume-plan step sets it.
 function pyStep(cmd, opts) {
   opts = opts || {};
   const outputs = opts.outputs || ('expected ' + cmd + ' outputs under ' + runDir + '/40-synthesis/');
@@ -206,6 +246,14 @@ function pyStep(cmd, opts) {
         '`audit-report: <status> (... structural_failed=<S> editorial_failed=<E>)` and ' +
         'set report_audit:{structural_failed:<S>, editorial_failed:<E>} (integers) in the receipt'
       : null,
+    // The resume-plan worker lifts the command's stdout JSON into the receipt so the
+    // script (which has no shell) can read the step-completion map.
+    opts.resumePlan
+      ? '  resume_plan: the command printed ONE line of JSON on stdout ' +
+        '({"engine_version": ..., "steps": [{"label", "complete", "reason"}, ...]}); ' +
+        'copy that JSON object into the receipt as resume_plan VERBATIM — do not edit, ' +
+        'reorder, drop or add any key or step'
+      : null,
     'NEVER summarize the file contents in prose — return the receipt only.',
   ].filter(Boolean).join('\n');
   return agent(prompt, {
@@ -216,16 +264,29 @@ function pyStep(cmd, opts) {
 }
 
 // ---------------------------------------------------------------------------
-// llmStep — dispatch a repo agentType behind the guard, returning a RECEIPT.
+// llmStep — dispatch a repo agentType, returning a RECEIPT. The prompt is the
+// instruction plus the receipt contract and nothing else: whether a step is
+// already done is decided HERE, from resume-plan, not by asking the agent to
+// check its own outputs.
+// opts carries only phase and label. When the label is a step resume-plan
+// reported complete (RESUME_DONE), nothing is dispatched: the returned receipt is
+// the skip sentinel (see SKIP CONVENTION above). Labels resume-plan never reports
+// (retries, report-writer remediation passes) are never in RESUME_DONE, so those
+// always run.
 // ---------------------------------------------------------------------------
 function llmStep(agentType, instruction, opts) {
   opts = opts || {};
-  const outputs = opts.outputs || ('the ' + agentType + ' output files under ' + runDir);
-  const scope = opts.validateScope || runDir;
-  const flags = opts.validateFlags || '';
+  const label = opts.label || agentType;
+  if (Object.prototype.hasOwnProperty.call(RESUME_DONE, label)) {
+    log('resume: skipping ' + label + ' (' + RESUME_DONE[label] + ').');
+    return {
+      agent: agentType,
+      status: 'ok',
+      outputs: [{ path: label + '.skipped', schema_valid: true }],
+      counts: {},
+    };
+  }
   const prompt = [
-    guard(outputs, scope, flags),
-    '',
     instruction,
     'The run directory is ' + runDir + '. Return ONLY a receipt conforming to',
     'schemas/agent-receipt.schema.json as your final message — never prose.',
@@ -234,7 +295,7 @@ function llmStep(agentType, instruction, opts) {
     agentType: agentType,
     schema: RECEIPT,
     phase: opts.phase,
-    label: opts.label || agentType,
+    label: label,
   });
 }
 
@@ -246,15 +307,16 @@ function isErr(r) { return !r || r.status === 'error'; }
 // headlessly via the background Workflow primitive (foreground dispatches are not
 // interrupted). It is DISTINCT from a genuine CLI/agent error, which returns a
 // receipt with status:'error'. The run is NOT lost: every finished phase is on
-// disk and re-invoking the runner replays completed phases via the per-agent
-// idempotency guards. See docs/running-the-gauntlet.md Step 2.
+// disk, and re-invoking the runner resumes from `apd-gauntlet resume-plan`, which
+// skips the agent steps whose outputs are already complete. See
+// docs/running-the-gauntlet.md Step 2.
 function isInterrupted(r) { return r === null || r === undefined; }
 function bailIfInterrupted(r, phaseName) {
   if (!isInterrupted(r)) return;
   throw new Error(
     'apd-gauntlet: run interrupted at phase "' + phaseName + '" — a dispatched subagent ' +
     'did not complete. The run is NOT lost: finished phases are on disk under ' + runDir +
-    '. RE-INVOKE the runner to resume (idempotency guards replay completed phases). If the ' +
+    '. RE-INVOKE the runner to resume (resume-plan skips completed agent steps). If the ' +
     'background Workflow primitive keeps interrupting dispatches, drive the run in the ' +
     'FOREGROUND: `apd-gauntlet plan-run ' + runDir + '` (docs/running-the-gauntlet.md Step 2).');
 }
@@ -268,9 +330,47 @@ log('apd-gauntlet runner: setup for ' + args.run_id + ' (domains=' + args.domain
 // run is ALREADY scaffolded (runs/<id>/inputs/ + .apd-run.yaml exist) BEFORE the
 // workflow is invoked. init-run takes a BARE run_id positional + a REQUIRED
 // --inputs and CREATES the run dir, so dispatching it here would be a
-// chicken-and-egg with the idempotency guard (which validates the run that
-// init-run would create). Instead, setup VALIDATES the existing scaffold and
-// (re)builds the domain skill.
+// chicken-and-egg with the pyStep idempotency guard (which validates the run that
+// init-run would create). Instead, setup first asks resume-plan which agent steps
+// are already complete, then VALIDATES the existing scaffold and (re)builds the
+// domain skill.
+//
+// 0-pre — resume-plan: ONE read-only `apd-gauntlet resume-plan <runDir> --json`
+// call, before any other dispatch. The worker lifts its stdout JSON into the
+// receipt (opts.resumePlan); every step it marks complete goes into RESUME_DONE
+// and llmStep then skips that agent step without dispatching.
+//  - exit 3: the run directory was created by another framework MAJOR — HALT here,
+//    before anything is dispatched or written (stderr names both versions).
+//  - "No such command": the installed engine is OLDER than this plugin (a 1.7.0
+//    engine has no resume-plan) — HALT with an upgrade message. Falling back would
+//    hide a plugin/engine version skew behind a full, wasteful re-run.
+//  - any OTHER failure (another non-zero exit, unparseable output): log it and run
+//    every agent step, exactly as a fresh run would.
+// alwaysRun: resume-plan is read-only and is the thing that decides skips, so it
+// cannot sit behind the idempotency guard.
+const rp = pyStep('resume-plan', {
+  phase: 'setup', label: 'resume-plan', cliArgs: '--json',
+  alwaysRun: true, resumePlan: true,
+  outputs: 'none (read-only step-completion map)',
+});
+bailIfInterrupted(rp, 'setup');
+const rpErr = rp.status === 'error' && rp.errors && rp.errors[0] ? rp.errors[0].message : '';
+if (/exit=3/.test(rpErr)) {
+  throw new Error('apd-gauntlet: refusing to resume ' + runDir + ' — ' + rpErr);
+}
+if (/No such command/.test(rpErr)) {
+  throw new Error('apd-gauntlet: the installed apd-gauntlet engine is older than this plugin — ' +
+    'it has no resume-plan command (' + rpErr + '). Please upgrade apd-gauntlet to 1.7.1 ' +
+    '(`pip install --upgrade apd-gauntlet`) and re-run; nothing was dispatched.');
+}
+if (rp.status === 'ok' && rp.resume_plan && Array.isArray(rp.resume_plan.steps)) {
+  rp.resume_plan.steps.forEach(function (s) { if (s.complete) { RESUME_DONE[s.label] = s.reason; } });
+  log('resume-plan: engine ' + rp.resume_plan.engine_version + '; ' +
+      Object.keys(RESUME_DONE).length + ' agent step(s) already complete.');
+} else {
+  log('resume-plan unavailable (' + (rpErr || 'no resume_plan in receipt') +
+      ') — running every agent step.');
+}
 //
 // 0a — validate the pre-existing scaffold (schema-only; confirms .apd-run.yaml +
 // inputs/ are present and the run dir is well-formed). This pyStep targets the
@@ -317,8 +417,7 @@ const intakeReceipt = llmStep('apd-intake',
   'crown_jewels are declared in the run-config or the apd-domain skill, otherwise emit a schema-valid ' +
   'EMPTY inventory {schema_version:1, generated_by:intake, assets:[], identities:[], trust_boundaries:[]} ' +
   '— the rollup and HTML-report build read it as a required input).',
-  { phase: 'intake', label: 'intake', validateScope: runDir + '/00-context',
-    outputs: runDir + '/00-context/context-brief.md, ' + runDir + '/00-context/asset-inventory.yaml' });
+  { phase: 'intake', label: 'intake' });
 bailIfInterrupted(intakeReceipt, 'intake');
 
 // FW: assemble the asset inventory — mint deterministic asset-/idn-/tb- ids from
@@ -353,9 +452,7 @@ if (args.code_recon && args.code_recon !== 'disabled') {
   const cr = llmStep('apd-code-recon',
     'Run code reconnaissance for the run; emit 00-context/code-evidence-index.yaml ' +
     'OR (when code_recon==auto and CBM is unreachable) 00-context/code-recon-skipped.md.',
-    { phase: 'code-recon', label: 'code-recon',
-      validateScope: runDir + '/00-context',
-      outputs: runDir + '/00-context/code-evidence-index.yaml (or code-recon-skipped.md)' });
+    { phase: 'code-recon', label: 'code-recon' });
   // disposition mirrors the orchestrator: enabled -> HALT on error; auto -> tolerate skip.
   // HALT is via a THROWN Error (not a bare top-level `return;`, which is a
   // SyntaxError in an ES module unless the harness happens to wrap the body —
@@ -392,10 +489,7 @@ llmStep('apd-threat-model-author',
   'internally to (re)build 00-context/threat-model-skeleton.yaml, then ground or BLOCK ' +
   'each skeleton cell and emit the canonical 00-context/threat-model-normalized.yaml ' +
   '(generated_by: threat_model_author) PLUS the human-readable 00-context/threat-model-authored.md.',
-  { phase: 'threat-model-author', label: 'threat-model-author',
-    validateScope: runDir + '/00-context',
-    outputs: runDir + '/00-context/threat-model-normalized.yaml, ' +
-      runDir + '/00-context/threat-model-authored.md' });
+  { phase: 'threat-model-author', label: 'threat-model-author' });
 
 // ===========================================================================
 // PHASE 1.6 — tm-recon (gate on args.threat_model)
@@ -412,9 +506,7 @@ if (args.threat_model) {
     '00-context/threat-model-supplied-normalized.yaml as your agent contract specifies); ' +
     'emit 00-context/threat-model-supplied-normalized.yaml. Do NOT touch the canonical ' +
     'threat-model-normalized.yaml — the apd-threat-model-author agent owns it.',
-    { phase: 'tm-recon', label: 'tm-recon',
-      validateScope: runDir + '/00-context',
-      outputs: runDir + '/00-context/threat-model-supplied-normalized.yaml' });
+    { phase: 'tm-recon', label: 'tm-recon' });
 } else {
   log('tm-recon: no threat_model supplied — skipping Phase 1.6 (the authored baseline always exists).');
 }
@@ -433,9 +525,7 @@ function runTier(phaseName, tierDir, lenses) {
       return llmStep('apd-' + lens,
         'Analyze the ' + lens + ' lens; emit ' + tierDir + '/' + lens +
         '.findings.yaml and ' + tierDir + '/' + lens + '.capabilities.yaml.',
-        { phase: phaseName, label: lens,
-          validateScope: runDir, validateFlags: '--tier ' + tierDir,
-          outputs: tierDir + '/' + lens + '.findings.yaml, ' + tierDir + '/' + lens + '.capabilities.yaml' });
+        { phase: phaseName, label: lens });
     };
   }));
   // Inspect each receipt after the barrier; null or error -> up to 2 retries.
@@ -446,9 +536,7 @@ function runTier(phaseName, tierDir, lenses) {
       r = llmStep('apd-' + lens,
         'Retry the ' + lens + ' lens; emit ' + tierDir + '/' + lens + '.findings.yaml and ' +
         tierDir + '/' + lens + '.capabilities.yaml.',
-        { phase: phaseName, label: lens + '-retry-' + k,
-          validateScope: runDir, validateFlags: '--tier ' + tierDir,
-          outputs: tierDir + '/' + lens + '.findings.yaml, ' + tierDir + '/' + lens + '.capabilities.yaml' });
+        { phase: phaseName, label: lens + '-retry-' + k });
     }
   });
   // Canonicalize the whole run (idempotent, structural-only) so the tier gate
@@ -525,8 +613,7 @@ if (!fellBack) {
   let adj = llmStep('apd-cluster-adjudicator',
     'Read ONLY 40-synthesis/cluster-candidates.yaml; emit 40-synthesis/cluster-decisions.yaml ' +
     '(with the _members map keyed by group_id).',
-    { phase: 'synthesis-adjudicate', label: 'adjudicate',
-      outputs: runDir + '/40-synthesis/cluster-decisions.yaml' });
+    { phase: 'synthesis-adjudicate', label: 'adjudicate' });
   if (isErr(adj)) { adjudicateErrStreak = 1; }
 
   // 5c apply-clusters (Python) — typed signal AdjudicationMissing == exit 2.
@@ -541,8 +628,7 @@ if (!fellBack) {
     const adj2 = llmStep('apd-cluster-adjudicator',
       'Re-emit 40-synthesis/cluster-decisions.yaml (with the _members map). The prior attempt ' +
       'did not produce a valid decisions file.',
-      { phase: 'synthesis-adjudicate', label: 'adjudicate-retry-1',
-        outputs: runDir + '/40-synthesis/cluster-decisions.yaml' });
+      { phase: 'synthesis-adjudicate', label: 'adjudicate-retry-1' });
     if (isErr(adj2)) { adjudicateErrStreak = 2; }
     ap = pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-1',
       outputs: runDir + '/40-synthesis/deduped-findings.yaml' });
@@ -619,8 +705,7 @@ parallel([
       'exists, run the supplied-vs-authored comparator (emit omission findings + the ' +
       'supplied_vs_authored delta block); otherwise apply the baseline-only carve-out. Emit ' +
       '40-synthesis/threat-model-coverage.yaml + tmeval findings.',
-      { phase: 'tmeval', label: 'tmeval',
-        outputs: runDir + '/40-synthesis/threat-model-coverage.yaml' });
+      { phase: 'tmeval', label: 'tmeval' });
   },
   function () {
     if (Array.isArray(args.crown_jewels) && args.crown_jewels.length) {
@@ -629,8 +714,7 @@ parallel([
         'exit 0 even on BuilderBlocked -> writes a disposition:blocked finding); emit the ' +
         '40-synthesis/asset-graph.yaml / attack-paths.yaml / defense-graph.yaml / ' +
         'attack-path.findings.yaml set.',
-        { phase: 'apath', label: 'apath',
-          outputs: runDir + '/40-synthesis/attack-path.findings.yaml' });
+        { phase: 'apath', label: 'apath' });
     }
     log('apath: crown_jewels empty/absent — Phase 5.6 disabled.');
     return null;
@@ -699,8 +783,7 @@ llmStep('apd-report-writer',
   'Read 40-synthesis/metrics.yaml + deduped-findings.yaml + attack-path.findings.yaml (apath-*, when present) + ' +
   'the COMPACT rollups + contradictions/severity-disagreements; rank the headline findings across ' +
   'BOTH the deduped and apath sets; emit 40-synthesis/advisory-report.md + 40-synthesis/report-data.yaml.',
-  { phase: 'synthesis-report', label: 'report-writer-attempt-0',
-    outputs: runDir + '/40-synthesis/report-data.yaml, advisory-report.md' });
+  { phase: 'synthesis-report', label: 'report-writer-attempt-0' });
 
 phase('synthesis-build');
 let build = pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-0',
@@ -710,8 +793,7 @@ if (isErr(build) && !fellBack) {
   log('build-report: error — regenerating report-data via report-writer once.');
   llmStep('apd-report-writer',
     'Regenerate 40-synthesis/report-data.yaml + advisory-report.md (the prior build failed).',
-    { phase: 'synthesis-report', label: 'report-writer-attempt-build-fix',
-      outputs: runDir + '/40-synthesis/report-data.yaml' });
+    { phase: 'synthesis-report', label: 'report-writer-attempt-build-fix' });
   build = pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-build-fix',
     outputs: runDir + '/40-synthesis/report-html/data.js' });
   if (isErr(build)) {
@@ -787,8 +869,7 @@ for (let i = 0; i <= 2; i++) {
     'klass is "editorial" by regenerating 40-synthesis/report-data.yaml + advisory-report.md ' +
     '(exec_summary paragraphs, posture_summary, headline_findings, next_steps). ALSO address ' +
     'this semantic critique. CRITIQUE: ' + critique,
-    { phase: 'synthesis-report', label: 'report-writer-attempt-' + (i + 1),
-      outputs: runDir + '/40-synthesis/report-data.yaml' });
+    { phase: 'synthesis-report', label: 'report-writer-attempt-' + (i + 1) });
   pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-' + (i + 1),
     outputs: runDir + '/40-synthesis/report-html/data.js' });
 }
@@ -824,9 +905,7 @@ llmStep('apd-domain-auditor',
   '40-synthesis/domain-improvements.yaml (an empty-but-valid {schema_version:1, ' +
   'generated_by:domain-auditor, examined_domains:[...], improvements:[]} when there ' +
   'are no opportunities). ADVISORY — this never gates the run.',
-  { phase: 'domain-improvements', label: 'domain-auditor',
-    validateScope: runDir + '/40-synthesis',
-    outputs: runDir + '/40-synthesis/domain-improvements.yaml' });
+  { phase: 'domain-improvements', label: 'domain-auditor' });
 
 // 5h-iii canonicalize — mint dimpr-<sha8> ids from the domain-auditor's records
 // (it now emits content only; the assembler is the sole id author). Runs before

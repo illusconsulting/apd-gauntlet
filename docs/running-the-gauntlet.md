@@ -387,10 +387,12 @@ not meant to be driven headlessly.
 > launch can interrupt the specialist dispatches mid-flight (the subagents are
 > cancelled and no phase output is written), leaving an empty or partial run
 > directory. If a run is interrupted, **re-invoke it in the foreground**; the
-> runner is resumable and idempotency guards replay completed phases.
+> runner is resumable: the runner calls `apd-gauntlet resume-plan` once and skips
+> every agent step whose outputs are already present and valid.
 >
 > For the explicit foreground drive, run the deterministic CLI phases yourself
-> (`build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
+> (`resume-plan` first, whose step map tells you which agent steps to skip, then
+> `build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
 > `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the LLM
 > specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
 > the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
@@ -413,7 +415,9 @@ The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
 run end-to-end and branches only on the receipts its dispatched agents return.
 It:
 
-1. Builds the `apd-domain` skill from the active pack(s) and validates them.
+1. Calls `apd-gauntlet resume-plan` once to learn which agent steps are already
+   complete (none, on a fresh run), then builds the `apd-domain` skill from the
+   active pack(s) and validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
    agents when their preconditions are met).
 3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
@@ -430,8 +434,15 @@ It:
 5. Returns the final summary at closeout.
 
 The runner is resumable: re-running it against the same directory replays
-completed steps from cache, and each agent re-checks whether its outputs already
-exist and validate, so a partially completed run picks up where it left off.
+completed steps from cache within a session. In a fresh session the runner calls
+`apd-gauntlet resume-plan` once and skips every agent step whose outputs are
+already present and valid, so a partially completed run picks up where it left
+off. A step whose outputs are missing, truncated or schema-invalid is not
+complete and runs again, and report-writer remediation passes always run. The
+runner stops before dispatching anything when the run directory was created by
+another framework major (`resume-plan` exits 3: resume it with the matching
+engine) or when the installed engine is older than the plugin and has no
+`resume-plan` command (upgrade `apd-gauntlet` to 1.7.1).
 
 ## Step 3: Read the advisory report
 
