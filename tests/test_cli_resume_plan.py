@@ -120,6 +120,30 @@ def test_refuses_run_from_another_major(tmp_path):  # Review Focus 1
     assert "2.0.0" in r.stderr and __version__ in r.stderr and "apd-gauntlet 2.x engine" in r.stderr
 
 
+def _config_run(tmp_path, **config) -> Path:
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / ".apd-run.yaml").write_text(yaml.safe_dump(
+        {"run_id": "run", "domains": ["pbm"], **config}))
+    return run
+
+
+def test_other_major_with_a_key_this_schema_lacks_exits_3(tmp_path):  # Review Focus 1
+    run = _config_run(tmp_path, framework_version="2.0.0", key_added_in_2x={"x": 1})
+    before = _snapshot(run)
+    r = CliRunner().invoke(main, ["resume-plan", str(run), "--json"])
+    assert r.exit_code == 3 and r.stdout == ""
+    assert "2.0.0" in r.stderr and "apd-gauntlet 2.x engine" in r.stderr
+    assert _snapshot(run) == before
+
+
+def test_same_major_with_a_key_this_schema_lacks_exits_2(tmp_path):
+    run = _config_run(tmp_path, framework_version="1.7.1", key_added_in_2x={"x": 1})
+    r = CliRunner().invoke(main, ["resume-plan", str(run), "--json"])
+    assert r.exit_code == 2 and r.stdout == ""
+    assert "key_added_in_2x" in r.stderr
+
+
 def test_accepts_older_run_on_same_major(tmp_path):
     assert _plan(_run(tmp_path, "1.6.0"))["engine_version"] == __version__
 

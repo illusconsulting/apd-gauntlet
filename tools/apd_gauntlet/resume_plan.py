@@ -18,9 +18,10 @@ Labels are the workflow's first-attempt ``llmStep`` labels (``.claude/workflows/
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -31,6 +32,7 @@ from .plan_run import _TIERS
 from .validate import parse_intake_brief, schema_errors_for_file
 
 _CONTEXT_BRIEF = "00-context/context-brief.md"
+_SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")  # run-config.schema.json framework_version
 _REASON_ERROR_LIMIT = 200  # keep a step's reason one short line; the receipt carries it
 
 
@@ -92,39 +94,48 @@ class EngineMismatch(Exception):
     """The run was created by a different framework major than this engine."""
 
 
-def load_run_config(run_dir: Path) -> dict[str, Any]:
-    """Return the run's validated ``.apd-run.yaml``, or raise ``RunConfigError``."""
-    config_path = run_dir / ".apd-run.yaml"
+def _read_run_config(config_path: Path) -> Any:
+    """Parse ``.apd-run.yaml``; raise ``RunConfigError`` when it is missing or unparseable."""
     if not config_path.is_file():
-        raise RunConfigError(f"resume-plan: No .apd-run.yaml under {run_dir}")
+        raise RunConfigError(f"resume-plan: No .apd-run.yaml under {config_path.parent}")
     try:
-        cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        return yaml.safe_load(config_path.read_text(encoding="utf-8"))
     except (yaml.YAMLError, UnicodeDecodeError) as e:
         raise RunConfigError(f"resume-plan: cannot parse {config_path}: {e}") from e
+
+
+def _check_run_config_schema(config_path: Path, cfg: Any) -> None:
     validator = Draft202012Validator(_resources.read_schema("run-config.schema.json"))
     problems = [err.message for err in validator.iter_errors(cfg)]
     if problems:
         raise RunConfigError(
             f"resume-plan: {config_path} fails run-config validation: {'; '.join(problems)}"
         )
-    return cast("dict[str, Any]", cfg)
 
 
 def check_engine_compat(run_dir: Path) -> None:
-    """Raise ``EngineMismatch`` when the run's framework major is not this engine's.
+    """Refuse a run from another framework major; otherwise require a valid run config.
 
-    Raises ``RunConfigError`` first when the run config itself is unusable. Runs from an
+    Raises ``RunConfigError`` when ``.apd-run.yaml`` is missing or unparseable, or when it
+    fails this engine's run-config schema, and ``EngineMismatch`` when the run's framework
+    major is not this engine's. The major is checked BEFORE the schema: a run from another
+    major may legitimately carry keys this engine's schema does not know, and it must be
+    told to use the matching engine, not be rejected as a malformed config. Runs from an
     older release on the same major are accepted.
     """
-    framework_version = str(load_run_config(run_dir)["framework_version"])
-    run_major = int(framework_version.split(".")[0])
-    if run_major != int(FRAMEWORK_VERSION.split(".")[0]):
-        raise EngineMismatch(
-            f"resume-plan: refusing to resume {run_dir}: it was created by framework "
-            f"{framework_version} and this engine is {__version__} "
-            f"(framework {FRAMEWORK_VERSION}). Resume it with an apd-gauntlet "
-            f"{run_major}.x engine."
-        )
+    config_path = run_dir / ".apd-run.yaml"
+    cfg = _read_run_config(config_path)
+    framework_version = cfg.get("framework_version") if isinstance(cfg, dict) else None
+    if isinstance(framework_version, str) and _SEMVER.fullmatch(framework_version):
+        run_major = int(framework_version.split(".")[0])
+        if run_major != int(FRAMEWORK_VERSION.split(".")[0]):
+            raise EngineMismatch(
+                f"resume-plan: refusing to resume {run_dir}: it was created by framework "
+                f"{framework_version} and this engine is {__version__} "
+                f"(framework {FRAMEWORK_VERSION}). Resume it with an apd-gauntlet "
+                f"{run_major}.x engine."
+            )
+    _check_run_config_schema(config_path, cfg)
 
 
 def _one_line(text: str) -> str:
