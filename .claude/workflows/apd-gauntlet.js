@@ -29,12 +29,14 @@
 //    (pyStep) keep their own idempotency guard. resume-plan refuses a run
 //    directory from another framework major (setup throws before any dispatch).
 //
-// SKIP CONVENTION: agent-receipt.schema.json has no 'skipped' status. A resume
-// skip returns status:'ok' with a sentinel output {path:'<label>.skipped',
-// schema_valid:true} — llmStep() synthesizes it for a step resume-plan marked
-// complete; a pyStep worker that short-circuits on its guard returns the same
-// sentinel form. The script does not need to distinguish skip from fresh — both
-// are ok.
+// SKIP CONVENTION: agent-receipt.schema.json has no 'skipped' status; every skip
+// returns status:'ok'. llmStep() synthesizes, for a step resume-plan marked complete,
+// a receipt whose only output is the sentinel {path:'<label>.skipped',
+// schema_valid:true}. A guarded pyStep worker whose outputs are already present and
+// valid returns one output entry per expected output PLUS the sentinel
+// {path:'<phase>.skipped', schema_valid:true} (see guard()). An alwaysRun pyStep has
+// no skip at all: its worker always runs the command. The script does not need to
+// distinguish skip from fresh — both are ok.
 
 export const meta = {
   name: 'apd-gauntlet',
@@ -168,9 +170,10 @@ let RESUME_DONE = {};
 
 // ---------------------------------------------------------------------------
 // IDEMPOTENCY GUARD text — embedded verbatim as the FIRST instruction of every
-// pyStep (CLI step) prompt. Agent (llmStep) prompts do NOT carry it: an agent
-// step that is already complete is skipped by llmStep() via RESUME_DONE, before
-// any dispatch (design §6/§13).
+// guarded pyStep (CLI step) prompt. An alwaysRun pyStep carries a no-skip line
+// instead. Agent (llmStep) prompts carry neither: an agent step that is already
+// complete is skipped by llmStep() via RESUME_DONE, before any dispatch
+// (design §6/§13).
 // ---------------------------------------------------------------------------
 // validateScope carries ONLY the positional run/subdir PATH; validateFlags
 // carries any trailing option(s) (e.g. '--tier 10-trustworthiness'). guard()
@@ -209,6 +212,10 @@ function guard(outputsList, validateScope, validateFlags) {
 // opts.validateScope / opts.validateFlags: the guard's positional path and any
 //   trailing option (e.g. '--tier 10-trustworthiness'); never embed flags in
 //   the scope string (I1).
+// opts.alwaysRun: the step has no idempotency check and no skip. Its prompt says so
+//   and omits the guard, the GUARD CHECK wording and the skip sentinel, so a worker
+//   cannot short-circuit it: a tier gate always validates, resume-plan always reads
+//   the run, canonicalize always runs. Guarded pySteps (alwaysRun unset) keep the guard.
 // opts.resumePlan: the command prints one line of JSON on stdout; the worker
 //   copies that object into the receipt as resume_plan, VERBATIM (setup reads it
 //   to fill RESUME_DONE). Only the resume-plan step sets it.
@@ -231,23 +238,28 @@ function pyStep(cmd, opts) {
     (cliArgs ? ' ' + cliArgs : '')).replace(/\s+/g, ' ').trim();
   const prompt = [
     opts.alwaysRun
-      ? 'NO IDEMPOTENT SKIP for this setup step — always perform the WORK COMMAND below (the command is itself idempotent).'
+      ? 'Always run this command; this step has no idempotency check and no skip.'
       : guard(outputs, scope, flags),
     '',
     'You are a python-step worker for the apd-gauntlet workflow.',
-    'WORK COMMAND (distinct from the GUARD CHECK above — run this ONLY if the guard determined NOT-DONE) — via Bash, run:',
+    opts.alwaysRun
+      ? 'WORK COMMAND — via Bash, run:'
+      : 'WORK COMMAND (distinct from the GUARD CHECK above — run this ONLY if the guard determined NOT-DONE) — via Bash, run:',
     '  ' + invocation,
     'Capture the exit code and the last lines of stderr.',
     'Return ONLY a receipt conforming to schemas/agent-receipt.schema.json with:',
     '  agent: "pystep:' + cmd + '"',
     '  status: "ok" if exit==0, else "error"',
-    '  outputs: one {path, schema_valid:true} per file the command wrote (or the skip sentinel if you short-circuited)',
+    opts.alwaysRun
+      ? '  outputs: one {path, schema_valid:true} per file the command wrote'
+      : '  outputs: one {path, schema_valid:true} per file the command wrote (or the skip sentinel if you short-circuited)',
     '  counts: {} (or blocked:N if the command reported blocked findings)',
     opts.errorsFromJson
       ? '  errors: on nonzero exit, read the JSON the command printed on stdout ' +
         '({"errors": [{"file", "id", "message", "path"}, ...], ...}) and return one ' +
         '{path:<file>, message:"<id> <path>: <message>"} per entry of its "errors" array ' +
-        '(leave out an empty or null id or path), at most 50 entries, in the order printed; ' +
+        '(when id is null or path is empty, leave that part out of the message; never drop an entry), ' +
+        'at most 50 entries, in the order printed; ' +
         'if stdout is not that JSON, return [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}] instead'
       : '  errors: on nonzero exit, [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}]',
     // F3: the audit-report worker ALSO lifts the per-class completeness counts the
@@ -373,7 +385,7 @@ if (/exit=3/.test(rpErr)) {
 if (/No such command/.test(rpErr)) {
   throw new Error('apd-gauntlet: the installed apd-gauntlet engine is older than this plugin — ' +
     'it has no resume-plan command (' + rpErr + '). Please upgrade apd-gauntlet to 1.7.1 ' +
-    '(`pip install --upgrade apd-gauntlet`) and re-run; nothing was dispatched.');
+    '(`pip install --upgrade "apd-gauntlet>=1.7.1,<2"`) and re-run; no agent step was dispatched.');
 }
 if (rp.status === 'ok' && rp.resume_plan && Array.isArray(rp.resume_plan.steps)) {
   rp.resume_plan.steps.forEach(function (s) { if (s.complete) { RESUME_DONE[s.label] = s.reason; } });

@@ -1368,6 +1368,10 @@ def test_resume_plan_refusal_halts_and_failure_falls_back() -> None:  # Review F
     # click's "No such command": an older (1.7.0) engine -> halt, tell the user to upgrade.
     assert "/No such command/" in block
     assert "older than this plugin" in block and "upgrade apd-gauntlet to 1.7.1" in block
+    # the advice stays on the 1.x line (an unpinned upgrade resolves to 2.x after 2.0 GA),
+    # and only agent steps are undispatched: the resume-plan worker itself ran.
+    assert '`pip install --upgrade "apd-gauntlet>=1.7.1,<2"`' in block
+    assert "no agent step was dispatched" in block and "nothing was dispatched" not in block
     # exactly those two branches throw; every other failure logs and runs every agent step.
     assert block.count("throw new Error(") == 2
     assert "resume-plan unavailable" in block and "running every agent step" in block
@@ -1439,6 +1443,11 @@ def test_tier_gate_halts_when_repair_and_rerun_fail() -> None:
 def test_pystep_maps_validate_json_errors() -> None:
     body = _fn_body(_text(), "pyStep")
     assert "opts.errorsFromJson" in body and "at most 50" in body
+    # A YAML parse error has id null and path "": the worker keeps the entry, because an
+    # empty error list halts the run with "no attributable file" instead of repairing it.
+    assert "(when id is null or path is empty, leave that part out of the message; " in body
+    assert "never drop an entry)" in body
+    assert "leave out an empty or null" not in body
 
 
 def test_gate_helpers_are_defined_before_run_tier() -> None:
@@ -1519,3 +1528,83 @@ def test_code_evidence_canonicalize_sits_inside_the_code_recon_branch_after_the_
     halt = t.index("throw new Error('Phase 1.5 code-recon failed")
     mint = t.index("label: 'canonicalize-code-evidence'")
     assert halt < mint < t.index("log('code-recon: disabled")
+
+
+# ---------------------------------------------------------------------------
+# WS1 final review — an always-run pyStep prompt has no guard, no sentinel and no skip.
+# ---------------------------------------------------------------------------
+
+
+def _render_pystep_prompts(tmp_path: pathlib.Path, calls: list[tuple[str, dict]]) -> list[str]:
+    """Run the runner's real guard() and pyStep() under node with a stub agent() and
+    return the prompt each call dispatches. Skipped where node is absent (GitHub-hosted
+    runners ship node, so CI enforces it)."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not available")
+    t = _text()
+    fns = "\n".join(f"function {name}(" + _fn_body(t, name) for name in ("guard", "pyStep"))
+    script = (
+        "const runDir = 'runs/r1';\nconst RECEIPT = {};\nconst captured = [];\n"
+        "function agent(prompt, opts) { captured.push(prompt); return { status: 'ok' }; }\n"
+        + fns + "\n"
+        + "\n".join(f"pyStep({json.dumps(cmd)}, {json.dumps(opts)});" for cmd, opts in calls)
+        + "\nconsole.log(JSON.stringify(captured));\n"
+    )
+    path = tmp_path / "pystep_prompts.js"
+    path.write_text(script, encoding="utf-8")
+    proc = subprocess.run([node, str(path)], capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_always_run_pystep_prompt_offers_no_skip(tmp_path: pathlib.Path) -> None:
+    always, guarded = _render_pystep_prompts(tmp_path, [
+        ("validate", {"alwaysRun": True, "errorsFromJson": True,
+                      "cliArgs": "--tier 10-trustworthiness --json"}),
+        ("validate", {"validateScope": "runs/r1", "outputs": "the scaffold"}),
+    ])
+    assert "Always run this command; this step has no idempotency check and no skip." in always
+    assert "WORK COMMAND \u2014 via Bash, run:" in always
+    assert "apd-gauntlet validate runs/r1 --tier 10-trustworthiness --json" in always
+    for phrase in ("GUARD CHECK", "short-circuited", "IDEMPOTENCY GUARD", "NOT-DONE",
+                   ".skipped", "skip sentinel", "setup"):
+        assert phrase not in always, phrase
+    # A guarded step keeps the guard, the NOT-DONE condition and the sentinel clause.
+    for phrase in ("IDEMPOTENCY GUARD", "GUARD CHECK", "NOT-DONE", "short-circuited"):
+        assert phrase in guarded, phrase
+    assert "Always run this command" not in guarded
+
+
+def test_always_run_prompt_keeps_the_gate_error_contract(tmp_path: pathlib.Path) -> None:
+    (always,) = _render_pystep_prompts(tmp_path, [
+        ("validate", {"alwaysRun": True, "errorsFromJson": True, "cliArgs": "--json"}),
+    ])
+    assert "never drop an entry" in always and "at most 50 entries" in always
+
+
+def test_pystep_always_run_branch_is_pinned_in_the_source() -> None:
+    # The node test above is skipped where node is absent; this keeps the wording pinned.
+    t = _text()
+    body = _fn_body(t, "pyStep")
+    assert "'Always run this command; this step has no idempotency check and no skip.'" in body
+    assert "'WORK COMMAND \u2014 via Bash, run:'" in body
+    assert "NO IDEMPOTENT SKIP" not in t
+    # The skip sentinel clause and the GUARD CHECK wording sit on the guarded side only.
+    assert body.count("short-circuited") == 1 and body.count("GUARD CHECK") == 1
+    assert body.index("opts.alwaysRun") < body.index("short-circuited")
+
+
+def test_skip_convention_comment_describes_the_pystep_sentinel() -> None:
+    t = _text()
+    comment = t[t.index("// SKIP CONVENTION"):t.index("export const meta")]
+    # guard() asks for one outputs entry per expected output plus the sentinel.
+    assert "one output entry per expected output" in comment
+    assert "{path:'<phase>.skipped', schema_valid:true}" in comment
+    assert "An alwaysRun pyStep has\n// no skip at all" in comment
+    assert "returns the same\n// sentinel form" not in comment
