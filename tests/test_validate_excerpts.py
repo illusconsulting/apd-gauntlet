@@ -271,6 +271,19 @@ def _laughs(payload: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _scalar_alias_fan_out(payload: str) -> str:
+    """One 10 KB anchored string, aliased 20,000 times (a ~90 KB file)."""
+    big = json.dumps("word " * 2_000)
+    return f"note: {json.dumps(payload)}\ns: &s {big}\nl: [{', '.join(['*s'] * 20_000)}]\n"
+
+
+def _merge_key_chain(payload: str) -> str:
+    """3,000 anchors, each merging the previous one (PyYAML flattens these quadratically)."""
+    lines = [f"note: {json.dumps(payload)}", "m0: &m0 {k0: v0}"]
+    lines += [f"m{n}: &m{n} {{<<: *m{n - 1}, k{n}: v{n}}}" for n in range(1, 3_000)]
+    return "\n".join(lines) + "\n"
+
+
 def _nested(depth: int):
     return lambda payload: "[" * depth + json.dumps(payload) + "]" * depth
 
@@ -284,7 +297,17 @@ PATHOLOGICAL = {
     "deep-json-100000": ("deep.json", _nested(100_000)),
     "deep-flow-yaml-3000": ("deep.yaml", _nested(3_000)),
     "alias-fan-out": ("laughs.yaml", _laughs),
+    "scalar-alias-fan-out": ("scalar-aliases.yaml", _scalar_alias_fan_out),
+    "merge-key-chain": ("merge-chain.yaml", _merge_key_chain),
 }
+# The YAML cases the alias/depth scan must keep away from the constructor.
+UNPARSED_YAML_CASES = (
+    "recursive-anchor",
+    "alias-fan-out",
+    "scalar-alias-fan-out",
+    "merge-key-chain",
+    "deep-flow-yaml-3000",
+)
 
 
 def _run_structured(tmp_path, filename: str, body: str) -> Path:
@@ -389,3 +412,49 @@ def test_input_above_the_size_cap_is_skipped_without_being_read(tmp_path, monkey
     monkeypatch.setattr(Path, "read_text", spy)
     assert check_excerpts_verbatim(run) == []  # a read would find only NULs and warn
     assert huge.resolve() not in read
+
+
+@pytest.mark.parametrize("case", UNPARSED_YAML_CASES)
+def test_yaml_with_aliases_or_deep_nesting_is_searched_as_plain_text_only(
+    tmp_path, parse_calls, case
+):
+    name, build = PATHOLOGICAL[case]
+    run = _run_structured(tmp_path, name, build("unrelated text"))
+    started = time.perf_counter()
+    assert len(check_excerpts_verbatim(run)) == 2
+    assert time.perf_counter() - started < TIME_BOUND_S
+    assert parse_calls == []  # never constructed: aliases amplify, deep nesting is slow to scan
+
+
+def test_small_aliased_yaml_matches_only_through_its_whole_text(tmp_path, parse_calls):
+    run = _run(tmp_path, CAP_EX)
+    (run / "inputs/aliased.yaml").write_text('x: &x "caf\\u00e9 ok"\ny: *x\n')
+    _cite(run, "aliased.yaml")
+    _set_excerpt(run, "café ok")  # the parsed value; the file spells it with an escape
+    assert len(check_excerpts_verbatim(run)) == 1
+    _set_excerpt_from(run, "café ok", "x: &x")  # a whole-text match still works
+    assert check_excerpts_verbatim(run) == []
+    assert parse_calls == []
+
+
+def test_anchor_free_yaml_is_still_parsed_for_scalars(parse_calls):
+    body = (
+        'a: "caf\\u00e9 \\"quoted\\" ok"\n'
+        "b: 'it''s replicated: factor 3'\n"
+        "---\n"
+        "c: [x, {d: 'second ''document'''}]\n"
+    )
+    source = validate_mod._ExcerptInput(body, parse_as=".yaml")
+    for excerpt in ('café "quoted" ok', "it's replicated: factor 3", "second 'document'"):
+        assert source.contains(excerpt_fragments(excerpt)), excerpt
+    assert not source.contains(excerpt_fragments("not present anywhere"))
+    assert parse_calls == ["yaml"]  # parsed once, then reused
+
+
+def test_string_scalars_dedupes_a_shared_string_and_caps_total_characters():
+    big = "x" * 1_000
+    assert validate_mod._string_scalars([big] * 500, 10_000) == [big]
+    distinct = [str(i) * 10 for i in range(100)]
+    found = validate_mod._string_scalars(distinct, 10_000, max_chars=50)
+    assert 0 < len(found) < 100
+    assert sum(map(len, found)) < 50 + max(map(len, distinct))

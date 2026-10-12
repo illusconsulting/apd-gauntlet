@@ -216,8 +216,13 @@ _STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
 _MAX_EXCERPT_INPUT_BYTES = 20 * 1024 * 1024
 # A YAML or JSON input larger than this is searched as plain text only (never parsed).
 _MAX_STRUCTURED_PARSE_BYTES = 1024 * 1024
-# At most this many string scalars of one parsed input become haystacks.
+# At most this many string scalars, and this many characters in all, of one parsed input
+# become haystacks.
 _MAX_SCALAR_HAYSTACKS = 100_000
+_MAX_SCALAR_HAYSTACK_CHARS = 4 * 1024 * 1024
+# A YAML input nesting deeper than this is searched as plain text only: PyYAML's scanner
+# spends about 2 ms per level, so a megabyte of "[" would otherwise pin a gate for minutes.
+_MAX_YAML_DEPTH = 100
 
 
 def normalize_excerpt_text(text: str) -> str:
@@ -251,34 +256,63 @@ def _is_parenthesized(text: str) -> bool:
     return False
 
 
-def _string_scalars(root: Any, limit: int) -> list[str]:
-    """Up to ``limit`` string scalars (mapping keys included) of a parsed document.
+def _string_scalars(
+    root: Any, limit: int, max_chars: int = _MAX_SCALAR_HAYSTACK_CHARS
+) -> list[str]:
+    """String scalars (mapping keys included) of a parsed document, at most ``limit`` of
+    them and, once ``max_chars`` characters are collected, no more.
 
-    Iterative, so nesting depth cannot overflow the stack, and each container is
-    visited once, so a YAML alias cycle or fan-out costs one visit per container.
+    Iterative, so nesting depth cannot overflow the stack. Each container and each string
+    object is visited once, so a YAML alias cycle, or one large anchored string aliased
+    many times, costs one visit and one copy.
     """
     found: list[str] = []
+    chars = 0
     seen: set[int] = set()
     pending = [root]
-    while pending and len(found) < limit:
+    while pending and len(found) < limit and chars < max_chars:
         node = pending.pop()
+        if not isinstance(node, (str, dict, list)) or id(node) in seen:
+            continue
+        seen.add(id(node))
         if isinstance(node, str):
             found.append(node)
-        elif isinstance(node, (dict, list)) and id(node) not in seen:
-            seen.add(id(node))
-            if isinstance(node, dict):
-                pending.extend(node.keys())
-                pending.extend(node.values())
-            else:
-                pending.extend(node)
+            chars += len(node)
+        elif isinstance(node, dict):
+            pending.extend(node.keys())
+            pending.extend(node.values())
+        else:
+            pending.extend(node)
     return found
+
+
+def _yaml_is_plain_tree(text: str) -> bool:
+    """True when ``text`` can be safely constructed: no alias anywhere and nesting within
+    ``_MAX_YAML_DEPTH``. Reads the event stream, which builds nothing.
+
+    An alias is what amplifies construction (a fan-out of one big string, a chain of merge
+    keys, a cycle), so any alias sends the input to whole-text matching. Raises on a YAML
+    error; the caller's guard turns that into whole-text matching as well.
+    """
+    depth = 0
+    for event in yaml.parse(text, Loader=yaml.SafeLoader):
+        if isinstance(event, yaml.AliasEvent):
+            return False
+        if isinstance(event, (yaml.SequenceStartEvent, yaml.MappingStartEvent)):
+            depth += 1
+            if depth > _MAX_YAML_DEPTH:
+                return False
+        elif isinstance(event, (yaml.SequenceEndEvent, yaml.MappingEndEvent)):
+            depth -= 1
+    return True
 
 
 class _ExcerptInput:
     """One cited input, read once. Matching tries the whole normalized text first;
     for a YAML or JSON input small enough to parse, the parsed string scalars are
     built only on a miss (so a quoted or escaped value matches what it means, not
-    how it is spelled), and any failure to parse or walk leaves the whole text."""
+    how it is spelled). A YAML input with an alias or deep nesting, and any failure
+    to parse or walk, leaves the whole text."""
 
     def __init__(self, text: str, *, parse_as: str | None) -> None:
         self._whole = normalize_excerpt_text(text)
@@ -298,7 +332,12 @@ class _ExcerptInput:
         if raw is None:
             return []
         try:
-            docs = [json.loads(raw)] if self._parse_as == ".json" else list(yaml.safe_load_all(raw))
+            if self._parse_as == ".json":
+                docs = [json.loads(raw)]
+            elif _yaml_is_plain_tree(raw):
+                docs = list(yaml.safe_load_all(raw))
+            else:
+                return []
             return [
                 normalize_excerpt_text(scalar)
                 for scalar in _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
@@ -365,8 +404,9 @@ def check_excerpts_verbatim(
     and an ellipsis joins fragments that must each appear, in order, in the
     artifact's text or, for a YAML or JSON input, in one of its string scalars.
     Inputs are untrusted: a file over ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread,
-    one over ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, and the check never raises
-    on a malformed or hostile YAML or JSON input.
+    one over ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, a YAML input with an alias
+    or nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, and the check
+    never raises on a malformed or hostile YAML or JSON input.
     """
     inputs_dir = (run_dir / "inputs").resolve()
     cache: dict[pathlib.Path, _ExcerptInput | None] = {}
