@@ -152,6 +152,12 @@ All notable changes to this project will be documented in this file. Format base
   edge integrity, so the analyzer runs `apd-gauntlet validate` and fixes errors in
   those four files. It leaves errors in other agents' files alone: the
   threat-model evaluator runs in parallel and its records have no ids yet.
+- **The confidentiality lens no longer asks for an id in its self-check.** Item 10
+  of its pre-emit checklist said the id should be "computed deterministically per
+  the schema rule", which contradicts the contract earlier in the same prompt:
+  lenses emit no `id`, and `apd-gauntlet canonicalize` mints it. The item is gone,
+  and a test keeps the self-check sections of all nine lens agents free of id
+  items.
 
 ## v1.7.0 — 2026-06-09
 
