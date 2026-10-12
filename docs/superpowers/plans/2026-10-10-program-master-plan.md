@@ -68,7 +68,7 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 | WS7 | IaC: Terraform, OpenTofu, Atmos | `next` | `2026-10-10-iac-plan{1,2,3,4}-*.md` (14, 8, 10 and 6 tasks) | LA1 (consent), LA2 (runner phases), LA3 (doctor hook), WS2 (IAC4) |
 | WS8 | Code-flow layer, plus infrastructure-to-code join | `next` (2.1) | CF1–CF4, written after spec approval | WS7, WS2 |
 | WS9 | 2.0.0 GA | both | RELEASING.md "2.0.0 GA" | M6 |
-| WS10 | Threat catalog integration | `next` | CAT1–CAT4, written after spec approval | WS2 (CAT1, CAT4), WS1 and LA2 (CAT2), WS5 Task 8 (CAT3) |
+| WS10 | Threat catalog integration | `next` | `2026-10-11-cat1-catalog-data-loader-editions.md`, `-cat2-scope-and-tm-author.md`, `-cat3-lenses-evaluator-paths-report.md`, `-cat4-evaluation.md` (14, 10, 15 and 12 tasks) | WS2 (CAT1, CAT4), WS1 and LA2 (CAT2), WS5 Task 8 (CAT3) |
 
 ## Milestones and releases
 
@@ -121,10 +121,11 @@ Every detailed plan uses these exact names. A plan that needs a new shared name 
 | `decide <task> <run-dir>` | LA1 | Task registry `apd_gauntlet.decide.tasks`. LA1 owns `finding-qa`. WS6 adds `cluster-pairs`, `report-claims`, `tm-screen`, `asset-match`, `intake-score`, `input-screen` and `iac-triage`. |
 | `iac run <run-dir>` / `iac consent <run-dir>` | IAC1 | Per the IaC spec. |
 | `code-flow run <run-dir>` | CF1 | Per the code-flow spec. |
-| `refresh-threat-catalog [--version X.Y.Z] [--dry-run]` | CAT1 | Refreshes `data/threat-catalog/open.json` and its schema from a catalog release; verifies, validates and checks `compat.yaml`. |
+| `refresh-threat-catalog [--version X.Y.Z] [--dry-run] [--out-dir DIR] [--token-env NAME]` | CAT1 | Refreshes `data/threat-catalog/open.json` and its schema from a catalog release; verifies, validates and checks `compat.yaml`. |
 | `catalog scope <run-dir>` | CAT2 | Writes `00-context/threat-scope.yaml`. Exits 0 and writes nothing when `threat_catalog` is `off`; exits 1 without an inventory. |
 | `catalog shortlists <run-dir>` | CAT3 | Writes `00-context/threat-shortlists/<goal>.md` for the nine goals. |
 | `catalog export-gaps <run-dir>… --out <file>` | CAT3 | Merges `catalog-gaps.yaml` across runs, stripping evidence, names and paths. Local only. |
+| `catalog gates <corpus.yaml> --set dev\|heldout [--gates eval/gates.yaml] [--record <file>] [--strict] [--json]` | CAT4 | Evaluates the catalog gates across `off` and `open` run sets; `--record` writes the default decision. `eval label-template` gains `--kind findings\|threats`, `--sample N` and `--merge`. |
 
 ### R2. Shared Python modules
 
@@ -144,7 +145,7 @@ The workflow's `meta.phases` and `runner.flow.PHASES` stay equal at every commit
 - `iac`, after `setup` and before `intake` (IAC1);
 - `code-flow`, after `code-recon` and before `threat-model-author` (CF1).
 
-WS3 renames no phase. The `setup` phase runs `prepare-run`. WS10 adds no phase: `catalog-scope` is the first step and `catalog-shortlists` the last step of `threat-model-author`.
+WS3 renames no phase. The `setup` phase runs `prepare-run`. WS10 adds no phase: `catalog-scope` is the first step of `threat-model-author`, and `catalog-shortlists` runs in the `canonicalize` phase right after WS1's `canonicalize-threat-model`, before tier 1. The workflow mirrors the Python default as `CATALOG_DEFAULT_EDITION` with `catalogEdition()`; a parity test keeps the two equal.
 
 ### R4. Run-config keys (all optional, additive)
 
@@ -198,6 +199,10 @@ LA1's `has_consent` and `record_consent` read and write the `decision_model` sub
 | `asset-graph`, `attack-path` | Edges gain `threat_refs`; paths gain `tactic_sequence` | CAT3 |
 | `catalog-coverage`, `catalog-gaps`, `catalog-silence-dismissals` | New | CAT3 |
 | `eval-labels` | Gains kind `threats` | CAT4 |
+| `_defs` | Gains `catalog_threat_id` (CAT1), `catalog_system_type` and `catalog_family_code` (CAT2) | CAT1, CAT2 |
+| `threat-model-normalized` | Skeleton-only optional `catalog_candidates`; the validator warns if it appears in the authored TM | CAT2 |
+| `owasp-coverage`; `owasp_*.json` KBs | Entries gain `edition`, `edition_names`, `crosswalked`, `crosswalked_from`; KBs gain `edition` and `seed_source` | CAT1 |
+| `defense-graph`, `metrics` | `candidate_d3fend[].source`; `catalogThreatsByStatus` | CAT3 |
 
 Each change gets a dated entry in `docs/schema-evolution.md`.
 
@@ -206,7 +211,7 @@ Each change gets a dated entry in `docs/schema-evolution.md`.
 - `tools/apd_gauntlet/data/decide/thresholds.yaml` (WS2 writes; LA1, WS6 read)
 - `tools/apd_gauntlet/data/iac/` (WS7)
 - `tools/apd_gauntlet/data/codeflow/` (WS8)
-- `tools/apd_gauntlet/data/threat-catalog/` (WS10): `open.json`, `open.schema.json`, `open.provenance.json`, `compat.yaml`, `selection.yaml`, `system-types.yaml`, `apd-goals.yaml`, `taxonomy-map.yaml`, `owasp-crosswalks.yaml`. The full catalog is never committed.
+- `tools/apd_gauntlet/data/threat-catalog/` (WS10): `open.json`, `open.schema.json`, `open.provenance.json`, `compat.yaml`, `selection.yaml`, `system-types.yaml`, `apd-goals.yaml`, `taxonomy-map.yaml`, `owasp-crosswalks.yaml`. No full-edition schema is vendored, and the full catalog is never committed (`.gitignore` guards `threat-catalog-full-*.json`). Also `00-context/threat-scope.yaml`, `00-context/threat-candidates.md`, `00-context/threat-shortlists/<goal-stem>.md`, `40-synthesis/catalog-coverage.yaml`, `40-synthesis/catalog-gaps.yaml`, `40-threat-model/catalog-silence-dismissals.yaml`, `eval/catalog/decision.yaml` (committed aggregates, ADR-0028) and `eval/local/catalog/` (gitignored). WS2's `TUNABLE_GLOBS` gains `data/threat-catalog/selection.yaml` and `data/threat-catalog/system-types.yaml`.
 - `eval/` at the repo root, not packaged: corpora manifests, labels, gates and local results (results are gitignored)
 
 ### R9. Additions settled by the detailed plans
@@ -410,10 +415,11 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 ## Task 8: M6 — evaluation, calibration, tiering; `v2.0.0b1` and feature freeze
 
-- [ ] **Step 1:** Execute IAC4. Label the development and held-out corpora, run the 1.7 raw-read baseline and the new path, then tune and freeze the context parameters. Expected: held-out recall of labelled issues ≥ baseline.
+- [ ] **Step 0: One shared freeze.** IAC4 context parameters, CAT4 selection parameters and the WS2 `calibrate` thresholds are all tuned on development data first; then a single `eval freeze`; then every held-out run. Tuning after the freeze needs `eval freeze --new-heldout-set`.
+- [ ] **Step 1:** Execute IAC4. Label the development and held-out corpora, run the 1.7 raw-read baseline and the new path, then tune the context parameters (frozen in Step 0's shared freeze). Expected: held-out recall of labelled issues ≥ baseline.
 - [ ] **Step 2:** Run `calibrate` for `finding-qa` and each WS6 task on the development labels, with target precision 0.98. Then enable tasks one at a time: finding QA first, then `cluster-pairs`, `report-claims`, `asset-match`, `tm-screen`, `intake-score`, `input-screen`, `iac-triage`. Run `compare-runs` after each. Expected: gates pass.
 - [ ] **Step 3:** Execute the Wave 3 part of WS5, one tier of lenses at a time, report writer last, with `compare-runs` after each. Expected: gates pass, or the tier reverts to its previous model.
-- [ ] **Step 3a:** Execute CAT4: label threats, tune selection on development data, freeze, measure once on held-out. Expected: every catalog gate passes and `threat_catalog` defaults to `open`; otherwise the default stays `off` for 2.0.
+- [ ] **Step 3a:** Execute CAT4: label threats, tune selection on development data before the shared freeze, measure once on held-out. Expected: every catalog gate passes and `threat_catalog` defaults to `open`; otherwise the default stays `off` for 2.0.
 - [ ] **Step 4:** Cut `v2.0.0b1`. Feature freeze on `next` until GA.
 
 ## Task 9: M7 — release candidate and 2.0.0 GA
@@ -485,6 +491,8 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 | IaC held-out repositories (a public OpenTofu repository plus Atmos repositories), with licences checked at pinned commits | Chosen during IAC4 Task 1 | M6 |
 | How aggressive the domain consumer map is (pbm drops 55% against the audit's 45%) | Packs' stated consumers | WS5 Task 9 |
 | Match parameters (title similarity 0.5; at least 10 predicted positives for `calibrate`) | Confirmed or adjusted by WS2 Task 14's noise check | M2 |
+| Open catalog release: public download or token, and its licence (for NOTICE) | Anonymous download; `GITHUB_TOKEN` when the release is private | CAT1 Task 14 |
+| CAT4 held-out systems | Two private systems: one with PHI-classified assets, one using the `agentic-ai` pack | M6 |
 
 ## Size
 
@@ -497,9 +505,9 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 | WS5 | 23 |
 | WS6 | 13 |
 | IAC1–IAC4 | 38 |
-| **Total for 1.7.1 and 2.0** | **135** |
+| CAT1–CAT4 | 51 |
+| **Total for 1.7.1 and 2.0** | **186** |
 | CF1–CF4 (2.1, after spec approval) | To be planned |
-| CAT1–CAT4 (2.0, after spec approval) | To be planned |
 
 Each behaviour-changing PR group also needs about 8 gauntlet runs (4 configurations × 2) for its comparison. That operator time, not coding, is the long pole.
 

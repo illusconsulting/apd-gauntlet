@@ -110,7 +110,8 @@ threat-catalog repo ──release──▶ threat-catalog-open-<v>.json ──ve
                          catalog-scope ◀───────────────────────────────────┤  00-context/threat-scope.yaml
                          author-threat-model (candidates per cell) ◀───────┤  skeleton gains catalog_candidates
                          apd-threat-model-author (grounds: catalog_refs)   │
-                         catalog-shortlists ◀──────────────────────────────┤  00-context/threat-shortlists/<goal>.md
+ [canonicalize phase]    canonicalize-threat-model                         │
+                         catalog-shortlists ◀──────────────────────────────┤  00-context/threat-shortlists/<goal-stem>.md
  tiers 1–3: lenses cite threat_refs ─▶ canonicalize derives catalog_mappings
  tier 4: tm-candidates gains catalog_silence ─▶ evaluator (catalog_silence findings)
          attack paths: edges carry threat_refs, paths carry a tactic sequence
@@ -118,8 +119,10 @@ threat-catalog repo ──release──▶ threat-catalog-open-<v>.json ──ve
  report: "Threat coverage" section
 ```
 
-No phase is added. Two CLI steps join the `threat-model-author` phase; the
-others extend existing steps. With `threat_catalog: off`, none of them runs
+No phase is added. `catalog-scope` is the first step of the
+`threat-model-author` phase; `catalog-shortlists` runs right after WS1's
+`canonicalize-threat-model` in the `canonicalize` phase, before tier 1. The
+other changes extend existing steps. With `threat_catalog: off`, none of them runs
 and every new field is absent.
 
 ## 6. Catalog data and distribution
@@ -131,8 +134,10 @@ the source YAML, the build and validation scripts, and two release assets per
 version `X.Y.Z`:
 
 - `threat-catalog-open-X.Y.Z.json`, licensed for redistribution, with
-  `threat-catalog-open.schema.json`;
+  `threat-catalog-open.schema.json` and `SHA256SUMS`, on tag `vX.Y.Z`;
 - `threat-catalog-full-X.Y.Z.json`, attached to a private release only.
+
+No full-edition schema is published to or vendored by the gauntlet (§12.1).
 
 **Open-edition stub rule.** For every threat with `source: HITRUST`, the open
 file keeps `id`, `name`, `aliases`, `family`, `family_name`, `abstraction`,
@@ -153,7 +158,7 @@ editions.
 | `open.json` | The pinned open release asset, byte-identical to the download |
 | `open.provenance.json` | `source` (release asset URL), `source_sha256`, `fetched_at`, `version` |
 | `open.schema.json` | The open schema from the same release |
-| `compat.yaml` | `catalog_compat: ">=X.Y,<X+1"` — the catalog versions this gauntlet release accepts |
+| `compat.yaml` | `catalog_compat: ">=1.0.0,<2.0.0"` — the catalog versions this gauntlet release accepts |
 | `selection.yaml` | Versioned selection parameters (§8.1–8.3) |
 | `system-types.yaml` | Asset type and identity type to candidate catalog system types; domain pack and IaC resource-type hints (§8.1) |
 | `apd-goals.yaml` | Catalog family to APD goals, completing the STRIDE and LINDDUN mapping (§8.4) |
@@ -170,7 +175,9 @@ stays byte-identical and its hash checkable.
 the open asset and its schema from the catalog repo's release, verifies the
 release's published SHA-256, validates the file (§12.1), checks the version
 against `compat.yaml`, and rewrites `open.json`, `open.schema.json` and
-`open.provenance.json`. `--dry-run` prints the diff summary (threats added, removed and
+`open.provenance.json`. With `--token-env NAME` (default `GITHUB_TOKEN`) set,
+the token is sent only to `github.com`, `api.github.com` and
+`objects.githubusercontent.com`; otherwise the download is anonymous. `--dry-run` prints the diff summary (threats added, removed and
 changed by id; mapping counts per key) and writes nothing. It follows the
 existing `refresh-*` pattern: a fetcher module, a golden fixture under
 `tests/fixtures/kb_golden/threat_catalog/`, and no network in tests.
@@ -300,12 +307,16 @@ Two filters run before the cut:
 the floor also writes LINDDUN cells: one per LINDDUN code that has an eligible
 threat, each with `methodology: linddun`, `framework_refs.linddun_letter` in
 the gauntlet's encoding, and candidates ranked the same way. With `agentic-ai`
-active, it writes MAESTRO cells: one per layer id among the eligible threats'
-`maestro` mappings, with `methodology: maestro` and the layer in the stub
+active, it writes MAESTRO cells: one per layer id (`L1`–`L7`, and `CL` for
+cross-layer) among the eligible threats' `maestro` mappings, with `methodology: maestro` and the layer in the stub
 threat text (`(MAESTRO <layer> on <asset>: to be grounded)`), since
 `framework_refs` has no MAESTRO slot. The prose-only augments in the agent's
 Step 5 become grounding of these cells. LINDDUN adds at most seven cells per
-PHI or PII surface, and the token gate (§14) watches the cost.
+PHI or PII surface (`phi_subset` counts as PHI), and the token gate (§14)
+watches the cost. LINDDUN stubs read `(LINDDUN <code> on <asset>: to be
+grounded)` so their ids never collide with STRIDE `I` cells. Candidate text for
+the agent goes to `00-context/threat-candidates.md`; the skeleton carries only
+`{id, rank_reason}`.
 
 ### 8.3 TM author agent
 
@@ -327,8 +338,8 @@ described in §12.2.
 
 ### 8.4 Goals and shortlists (`apd-gauntlet catalog shortlists <run-dir>`, step `catalog-shortlists`)
 
-Runs last in the `threat-model-author` phase, after the TM is canonicalized,
-so grounded threats rank first.
+Runs in the `canonicalize` phase, right after WS1's
+`canonicalize-threat-model` and before tier 1, so grounded threats rank first.
 
 A threat's APD goals are the union of:
 
@@ -372,9 +383,10 @@ Lens agents read their shortlist with the rest of their context.
 **`catalog_mappings` on findings.** For each finding with `threat_refs`, the
 derived field is built as follows:
 
-- **Sources:** the primary mappings of the cited threats, for taxonomies in
-  `taxonomy-map.yaml` that the run has active, plus `nist_800_53r5` from the
-  threats' `controls.nist_800_53`.
+- **Sources:** the primary mappings of the cited threats. `mitre_attack` and
+  `nist_800_53r5` (from `controls.nist_800_53`) are always derived, as lens
+  ATT&CK and NIST always are; every other taxonomy in `taxonomy-map.yaml` only
+  when the run's `taxonomies` activates it (`mitre_atlas` activates `atlas`).
 - **Validation:** each id must exist in the gauntlet's KB for that taxonomy.
   An id that does not is dropped and counted in `catalog-gaps.yaml` as
   `unverified_mapping`.
@@ -414,7 +426,8 @@ is not, canonicalize fills it from the cited threats' primary ATT&CK mappings
 - a `threat_refs` or `catalog_refs` id that is not in the loaded catalog;
 - `threat_refs` when `threat_catalog` is `off`;
 - a grounded TM entry with neither `catalog_refs` nor `catalog_gap_reason`
-  while a scope file exists.
+  whose skeleton cell (same asset and cell key) had candidates. Agent-built
+  data flows and cells without candidates are exempt.
 
 The tier repair loop fixes them as it fixes schema errors.
 
@@ -511,7 +524,8 @@ threats. The report writer's metrics input gains the status counts.
 
 `40-synthesis/catalog-gaps.yaml`, written at rollup, holds:
 
-- **`off_catalog_threat`**: TM entries with `catalog_gap_reason`;
+- **`off_catalog_threat`**: grounded TM entries with `catalog_gap_reason`
+  (exempt entries are never counted);
 - **`unmapped_finding`**: findings with no `threat_refs` whose lens mappings
   match no in-scope threat's mappings;
 - **`unsupported_mapping`**;
@@ -598,12 +612,16 @@ The catalog id pattern `^TC-[A-Z]{2}-\d{3}$` goes into `_defs.schema.json`.
 
 1. the size is at most 20 MB;
 2. the file is JSON;
-3. it validates against the edition's schema;
-4. ids are unique and well formed, and `parent`, `children` and `related`
+3. for a full file, the top-level `hitrust_crosswalk` and every threat's
+   `hitrust` key are dropped before anything else reads the data;
+4. it validates against the vendored open schema; a full file is checked in
+   full mode, where no threat may be a stub and every threat needs `summary`,
+   `description` and `example`;
+5. ids are unique and well formed, and `parent`, `children` and `related`
    resolve;
-5. the version is within `compat.yaml`;
-6. for the vendored file, the SHA-256 matches `open.provenance.json`;
-7. for the open edition, no `source: HITRUST` threat carries any field the
+6. the version is within `compat.yaml`;
+7. for the vendored file, the SHA-256 matches `open.provenance.json`;
+8. for the open edition, no `source: HITRUST` threat carries any field the
    stub rule removes, and no `hitrust` block or `hitrust_crosswalk` exists.
 
 A failure in the vendored file fails CI, because the same checks run as a
@@ -620,7 +638,7 @@ handling protects against an edited local file.
 
 ### 12.3 Licensing guards
 
-- **CI:** the stub rule test (§12.1, item 7) runs on the vendored file.
+- **CI:** the stub rule test (§12.1, item 8) runs on the vendored file.
 - **CI:** every committed example run under `examples/` has no scope file or
   one with `edition` `open`.
 - **Report:** HITRUST-sourced threats show id and name only.
