@@ -13,13 +13,13 @@ apd-threat-model-author agent enriches/blocks each cell downstream.
 """
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from ..linters import compute_tm_entry_id
 from .mappings import stride_letter_to_apd_goals
 
 # Element-type -> applicable STRIDE categories (canonical Shostack matrix).
@@ -48,14 +48,9 @@ _ASSET_TYPE_TO_ELEMENT: Mapping[str, str] = {
 }
 
 
-def _sha8(*parts: str) -> str:
-    """sha256 of the concatenated parts, truncated to 8 hex chars."""
-    return hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:8]
-
-
 def entry_id_for(asset: str, threat: str, source_locator: str) -> str:
     """entry_id = 'tm-' + sha8(asset + threat + source_locator)."""
-    return "tm-" + _sha8(asset, threat, source_locator)
+    return compute_tm_entry_id(asset, threat, source_locator)
 
 
 def _locator_of(record: dict[str, Any]) -> str:

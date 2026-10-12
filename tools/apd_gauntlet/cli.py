@@ -1289,6 +1289,9 @@ def canonicalize_cmd(run_dir: Path) -> None:
     Idempotent, whole-run: normalizes the record envelope (singular root key,
     unwraps per-record wrappers, injects schema_version), recomputes every
     deterministic id (tooling is authoritative), and rewrites cross_references.
+    Also mints the 00-context ids agents no longer emit (cev- on code-evidence-index
+    entries; tm- and inferred_apd_goals on normalized threat-model entries), only
+    where absent: an existing id is never rewritten.
     Structural only — never edits titles, excerpts, or evidence.
     """
     from .canonicalize import CanonicalizeCollision, canonicalize_run
@@ -1303,6 +1306,11 @@ def canonicalize_cmd(run_dir: Path) -> None:
     click.echo(
         f"canonicalize: {result.records_canonicalized} records recanonicalized, "
         f"{result.cross_refs_rewritten} cross-refs rewritten"
+        + (
+            f", {result.context_ids_minted} context ids minted"
+            if result.context_ids_minted
+            else ""
+        )
         + (
             f", {len(result.parse_errors)} files skipped (unparseable)"
             if result.parse_errors

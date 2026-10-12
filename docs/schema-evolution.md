@@ -74,6 +74,15 @@ When a field or behavior is deprecated:
 2. Keep the deprecated surface working through at least one minor release.
 3. Remove in a major bump.
 
+## v1.7.1 — Context ids minted by canonicalize
+
+Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-authored-derived-fields.md) (Amendment v1.7.1) and [deterministic-field-register.md](deterministic-field-register.md).
+
+- **Two more id families are optional-at-emission** (removed from `required`, marked `readOnly`): `id` on `code-evidence-index.schema.json` entries (`cev-<sha8>`), and `entry_id` (`tm-<sha8>`) and `inferred_apd_goals` on `threat-model-normalized.schema.json` entries. `apd-gauntlet canonicalize` is now the sole author of all three; `apd-code-recon`, `apd-threat-model-author` and `apd-threat-model-recon` emit entries without them. A present-but-malformed id is still rejected (the patterns are retained).
+- **Minted only when absent.** Unlike the v1.7.0 id families, which `canonicalize` recomputes and overwrites, a `cev-` or `tm-` id that is already present is never rewritten, so runs from before 1.7.1 keep the hand-assigned ids their findings and `c4-recon.yaml` cite. `validate` checks presence only (the backstop for a run that was not canonicalized) and never compares an id with its hash.
+
+Packs and consumers need no changes: every change is a relaxation, and a canonicalized run carries the same id forms as before.
+
 ## v1.7.0 — Tooling-authored derived fields (id ownership)
 
 Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-authored-derived-fields.md) and [deterministic-field-register.md](deterministic-field-register.md).

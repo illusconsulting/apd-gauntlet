@@ -53,6 +53,12 @@ The ID algorithms themselves are unchanged from ADR-0005 (and the `dimpr-` 4-tup
 - **Keep emit-then-overwrite, just document it as non-authoritative.** Rejected: retains the fabricated-hash class and the misleading intermediate IDs; the agent work stays pure waste.
 - **Have agents emit a human-readable local slug as a handle.** Considered for debuggability, but there are no within-emission ID references today (cross-references are synthesizer-authored post-assembly), so a slug would buy little. The one place a pre-assembly reference exists — trust-boundary `crosses` — uses the asset *name*, which agents already author. Adopted that narrowly rather than a general slug scheme.
 
+## Amendment (v1.7.1)
+
+The v1.7.1 release extends the decision to two more id families in `00-context`: the `cev-` ids on code-evidence-index entries and the `tm-` entry ids on the normalized threat models, together with the derived `inferred_apd_goals` on those entries. They join the families the assembler owns: `apd-gauntlet canonicalize` mints them (`linters.compute_cev_id`, `linters.compute_tm_entry_id`), the schemas make them optional-at-emission and `readOnly`, `validate` requires their presence after assembly, and agents no longer emit them. In a 1.7.1 run every `cev-` and `tm-` id is therefore Python-minted.
+
+For these two families, unlike the families above, an id is minted only when absent, and an existing id is never rewritten. The reason is back-compatibility with the committed examples and with older runs. Their hand-assigned `cev-` ids (0 of 46 match the hash in the Home Assistant example) and `tm-` ids are already cited by findings, `c4-recon.yaml` and tmeval keys, and rewriting them would orphan those references. The formulas are the ones the agents were told to compute (`qualified_name|line_range`; `asset + threat + source_locator`), with the repository added to the `cev-` input when a multi-repo index declares `repos`, so the ids of a run that was minted rather than hand-assigned all match their hash.
+
 ## References
 
 - [ADR-0005: Deterministic Finding and Capability IDs](0005-deterministic-finding-ids.md) (amended by this ADR)

@@ -168,6 +168,19 @@ All notable changes to this project will be documented in this file. Format base
   and every file it includes, and the skip requires that hash to match as well.
   A skill built before this fix has no hash and is rebuilt once on its next run,
   including the committed `.claude/skills/apd-domain/`.
+- **`canonicalize` mints the `cev-` and `tm-` ids agents were asked to compute.**
+  The code-evidence-index `id` (`cev-<sha8(qualified_name|line_range)>`,
+  repo-qualified when the index declares `repos`) and the normalized threat-model
+  `entry_id` (`tm-<sha8(asset + threat + source_locator)>`) with its derived
+  `inferred_apd_goals` were hashed or derived by LLM agents, which cannot do either
+  reliably. `canonicalize` now fills each one that is absent, and the schemas make
+  them optional-at-emission. An id that is already present is never rewritten, so
+  the hand-assigned ids in older runs and in the committed Home Assistant example,
+  which findings and `c4-recon.yaml` cite, stay byte-identical. `validate` reports
+  `context id missing: <file>: entries[<n>] ...` for an entry that was never
+  canonicalized, and `canonicalize` reports an unparseable context file instead of
+  raising. The CLI summary adds `N context ids minted` when it minted any
+  ([ADR-0020](docs/adrs/0020-tooling-authored-derived-fields.md) Amendment v1.7.1).
 
 ## v1.7.0 — 2026-06-09
 

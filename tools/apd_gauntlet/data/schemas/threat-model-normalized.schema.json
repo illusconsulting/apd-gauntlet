@@ -33,10 +33,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["entry_id", "asset", "threat", "extraction_confidence", "methodology", "framework_refs", "inferred_apd_goals"],
+        "required": ["asset", "threat", "extraction_confidence", "methodology", "framework_refs"],
         "additionalProperties": false,
         "properties": {
-          "entry_id":              { "type": "string", "pattern": "^tm-[0-9a-f]{8}$" },
+          "entry_id":              { "type": "string", "pattern": "^tm-[0-9a-f]{8}$", "readOnly": true },
           "asset":                 { "type": "string", "minLength": 1 },
           "threat":                { "type": "string", "minLength": 1 },
           "mitigation":            { "type": ["string", "null"] },
@@ -63,7 +63,8 @@
           },
           "inferred_apd_goals": {
             "type": "array",
-            "items": { "$ref": "_defs.schema.json#/$defs/apd_goal" }
+            "items": { "$ref": "_defs.schema.json#/$defs/apd_goal" },
+            "readOnly": true
           }
         }
       }

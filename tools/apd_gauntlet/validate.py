@@ -756,6 +756,60 @@ def _check_record_file_locations(
                 )
 
 
+def _context_entries(
+    run_dir: pathlib.Path, filename: str, root_key: str | None
+) -> Iterator[tuple[pathlib.Path, int, dict[str, Any]]]:
+    """Yield ``(path, index, entry)`` for each mapping in ``entries`` of one
+    ``00-context`` file, whose list sits under ``root_key`` (or at the top when
+    ``None``). A file that is absent, does not parse or is not shaped that way yields
+    nothing; the schema pass reports it."""
+    path = run_dir / "00-context" / filename
+    if not path.is_file():
+        return
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+        return
+    body = doc.get(root_key) if root_key and isinstance(doc, dict) else doc
+    entries = body.get("entries") if isinstance(body, dict) else None
+    for i, entry in enumerate(entries if isinstance(entries, list) else []):
+        if isinstance(entry, dict):
+            yield path, i, entry
+
+
+def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> None:
+    """Require the fields ``canonicalize`` mints in ``00-context``: ``id`` on each
+    code-evidence-index entry; ``entry_id`` and ``inferred_apd_goals`` on each entry
+    of the normalized threat models. One ERROR per entry missing any of them.
+
+    The schemas treat these fields as optional-at-emission (agents no longer author
+    them), so this is the backstop that a run was canonicalized. Presence only: an
+    existing id is never compared with the hash, because older runs carry
+    hand-assigned ids that findings and ``c4-recon.yaml`` already cite.
+    """
+    from .canonicalize import THREAT_MODEL_CONTEXT_FILES  # canonicalize imports this module
+
+    def flag(path: pathlib.Path, index: int, missing: list[str]) -> None:
+        if missing:
+            report.errors.append(Violation(
+                path, None,
+                f"context id missing: {path.relative_to(run_dir).as_posix()}: "
+                f"entries[{index}] has no {' and '.join(missing)}; "
+                "run 'apd-gauntlet canonicalize'",
+            ))
+
+    for path, i, entry in _context_entries(
+        run_dir, CODE_EVIDENCE_INDEX_FILENAME, "code_evidence_index"
+    ):
+        flag(path, i, [] if entry.get("id") else ["id"])
+    for filename in THREAT_MODEL_CONTEXT_FILES:
+        for path, i, entry in _context_entries(run_dir, filename, None):
+            flag(path, i, [
+                *([] if entry.get("entry_id") else ["entry_id"]),
+                *([] if entry.get("inferred_apd_goals") is not None else ["inferred_apd_goals"]),
+            ])
+
+
 def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     """Pass 3: cross-file ID and artifact resolution."""
     report = ValidationReport()
@@ -916,6 +970,7 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
                     )
                 )
 
+    _validate_context_ids(run_dir, report)
     _validate_report_data_cross_refs(run_dir, report)
     _validate_domain_improvements_cross_refs(run_dir, report)
     report.files_seen = len(seen_files)
