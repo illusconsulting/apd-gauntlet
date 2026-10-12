@@ -442,10 +442,11 @@ completed steps from cache within a session. In a fresh session the runner calls
 already present and valid, so a partially completed run picks up where it left
 off. A step whose outputs are missing, truncated or schema-invalid is not
 complete and runs again, and report-writer remediation passes always run. The
-runner stops before dispatching anything when the run directory was created by
-another framework major (`resume-plan` exits 3: resume it with the matching
+runner stops before dispatching any other step when the run directory was created
+by another framework major (`resume-plan` exits 3: resume it with the matching
 engine) or when the installed engine is older than the plugin and has no
-`resume-plan` command (upgrade `apd-gauntlet` to 1.7.1).
+`resume-plan` command (upgrade `apd-gauntlet` to 1.7.1 with
+`pip install --upgrade "apd-gauntlet>=1.7.1,<2"`).
 
 ## Step 3: Read the advisory report
 
@@ -530,7 +531,7 @@ Read the error message carefully — it cites the file, the record id, and the s
 
 - **Schema validation**: missing required fields, wrong enum values, malformed IDs. Fix the agent output; re-validate.
 - **Excerpt too long (semantic lint)**: trim the evidence excerpt to ≤ 25 whitespace-separated tokens.
-- **Excerpt not found verbatim**: a `WARNING` (an `ERROR` with `--strict-excerpts`) saying `evidence[N].excerpt not found verbatim in artifact '<file>'`. It means the excerpt is not in the input file the evidence cites, usually because the model paraphrased instead of quoting. Only citations of files under the run's `inputs/` directory are checked, in the whole-run pass and at tier gates; run-internal artifacts such as `00-context/` files are not. Whitespace, backticks and `*` are ignored on both sides, and `...` or `…` joins fragments that must each appear in the file, in order. An excerpt wholly in parentheses, such as `(absent in supplied TM)`, marks an absence and is not checked. A file over 20 MiB is skipped, and a YAML or JSON input over 1 MiB, or a YAML input that uses anchors or aliases or nests more than 100 levels, is searched as plain text only (its parsed values are not tried). On 1.7.1 the warning is visible in a manual `apd-gauntlet validate <run-dir>` run; the workflow's gates ignore warnings (they run `--errors-only`, and tier gates act only on errors), so the warning does not appear during a workflow run. To see it as an error, run `apd-gauntlet validate <run-dir> --strict-excerpts`. Fix the excerpt by copying the exact words from the cited file. The 2.0 release (WS3) makes this an error by default.
+- **Excerpt not found verbatim**: a `WARNING` (an `ERROR` with `--strict-excerpts`) saying `evidence[N].excerpt not found verbatim in artifact '<file>'`. It means the excerpt is not in the input file the evidence cites, usually because the model paraphrased instead of quoting. Only citations of files under the run's `inputs/` directory are checked, in the whole-run pass and at tier gates; run-internal artifacts such as `00-context/` files are not. Whitespace, backticks and `*` are ignored on both sides, and `...` or `…` joins fragments that must each appear in the file, in order. An excerpt wholly in parentheses, such as `(absent in supplied TM)`, marks an absence and is not checked. A file over 20 MiB is skipped, and a YAML or JSON input over 1 MiB, or a YAML input that uses aliases or nests more than 100 levels, is searched as plain text only (its parsed values are not tried). On 1.7.1 the warning is visible in a manual `apd-gauntlet validate <run-dir>` run; the workflow's gates ignore warnings (they run `--errors-only`, and tier gates act only on errors), so the warning does not appear during a workflow run. To see it as an error, run `apd-gauntlet validate <run-dir> --strict-excerpts`. Fix the excerpt by copying the exact words from the cited file. A later release makes this an error by default.
 - **ID mismatch (semantic lint)**: the deterministic ID didn't match the recomputed hash. Either the title or the first evidence locator changed; recompute and update.
 - **Unknown artifact**: the evidence cites an artifact that isn't in the intake brief's frontmatter. Either fix the citation or update the brief.
 - **maturity ≥ implemented without non-tech-plan evidence**: either downgrade to `designed` or add evidence from a non-tech-plan artifact (IaC, code, test report, runbook).
@@ -548,7 +549,7 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 After each tier's lenses finish and `canonicalize` runs, the runner validates the tier with `apd-gauntlet validate <run-dir> --tier <tier-dir>`. That gate blocks the run: a failing tier never flows on to synthesis.
 
 - A lens whose dispatch fails (an agent error or an interrupted subagent) is retried up to twice before the gate runs.
-- A schema or semantic failure at the gate gets one repair per failing file. A repair agent receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.
+- A schema or semantic failure at the gate gets one repair per failing file. A repair agent (`apd-tier-repair`, which has only the Read and Edit tools) receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.
 - If the tier still fails after the repairs, the lenses that own the files that are still failing are re-run from scratch, once.
 - If the tier still fails after the re-run, the runner halts and names the failing files and their first errors.
 
