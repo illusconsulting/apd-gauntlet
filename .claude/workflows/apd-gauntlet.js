@@ -846,10 +846,13 @@ parallel([
     // runs the baseline-only carve-out (contradiction + specialist corroboration).
     return llmStep('apd-threat-model-evaluator',
       'Evaluate the run against the authored baseline 00-context/threat-model-normalized.yaml ' +
-      '(generated_by: threat_model_author). If 00-context/threat-model-supplied-normalized.yaml ' +
-      'exists, run the supplied-vs-authored comparator (emit omission findings + the ' +
-      'supplied_vs_authored delta block); otherwise apply the baseline-only carve-out. Emit ' +
-      '40-synthesis/threat-model-coverage.yaml + tmeval findings.',
+      '(generated_by: threat_model_author). Read the settled corpus from ' +
+      '40-synthesis/deduped-findings.yaml and 40-synthesis/deduped-capabilities.yaml. If ' +
+      '00-context/threat-model-supplied-normalized.yaml exists, run the supplied-vs-authored ' +
+      'comparator (emit omission findings + the supplied_vs_authored delta block); otherwise ' +
+      'apply the baseline-only carve-out. Write ALL tmeval findings to the single file ' +
+      '40-threat-model/threat-model.findings.yaml (root key finding, a list), and emit ' +
+      '40-synthesis/threat-model-coverage.yaml + 40-synthesis/threat-model-coverage-report.md.',
       { phase: 'tmeval', label: 'tmeval' });
   },
   function () {

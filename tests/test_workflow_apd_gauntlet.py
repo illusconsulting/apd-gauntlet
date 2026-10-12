@@ -1468,3 +1468,16 @@ def test_read_only_gates_always_run() -> None:
         block = t[t.rindex("pyStep('validate'", 0, at):t.index("});", at)]
         assert "alwaysRun: true" in block, label
         assert "validateScope" not in block and "validateFlags" not in block, label
+
+
+def test_tmeval_instruction_names_canonical_inputs_and_output() -> None:
+    match = re.search(r"llmStep\('apd-threat-model-evaluator'.*?\}\);", _text(), re.DOTALL)
+    assert match is not None
+    call = match.group(0)
+    for path in (
+        "40-synthesis/deduped-findings.yaml",
+        "40-synthesis/deduped-capabilities.yaml",
+        "40-threat-model/threat-model.findings.yaml",
+        "40-synthesis/threat-model-coverage.yaml",
+    ):
+        assert path in call

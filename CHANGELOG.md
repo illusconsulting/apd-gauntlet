@@ -136,6 +136,14 @@ All notable changes to this project will be documented in this file. Format base
   run the full validation. Previously a schema-only guard could skip them on runs
   with only semantic or cross-file errors, so the pre-synthesis halt can now fire
   on errors it used to miss.
+- **The threat-model evaluator reads and writes the paths the engine reads.** Its
+  prompt told it to read `20-findings/**` and `10-capabilities/**` (neither
+  exists) and to write one `tmeval-<sha8>.yaml` file per finding under
+  `20-findings/40-threat-model/`, a path `validate` rejects and the report loader
+  never reads. It now reads `40-synthesis/deduped-findings.yaml` and
+  `deduped-capabilities.yaml` and writes every finding to the single file
+  `40-threat-model/threat-model.findings.yaml` (root key `finding`). The workflow
+  instruction and `docs/threat-modeling.md` name the same paths.
 
 ## v1.7.0 — 2026-06-09
 

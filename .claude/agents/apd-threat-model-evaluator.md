@@ -6,7 +6,8 @@ description: |
   three finding flavors (coverage gap, contradiction, silence) per the
   discipline rules in apd-threat-model-methodologies, plus a per-surface
   coverage report at 40-synthesis/threat-model-coverage-report.md + machine-
-  readable 40-synthesis/threat-model-coverage.yaml. Findings use
+  readable 40-synthesis/threat-model-coverage.yaml. All findings go in the one
+  file 40-threat-model/threat-model.findings.yaml and use
   agent: threat_model_evaluator; id is minted by apd-gauntlet from tmeval_key.
 tools:
   - Read
@@ -41,8 +42,10 @@ coverage/contradiction/silence evaluation.
 
 When activated, emits:
 
-1. **Findings** as YAML files under `20-findings/40-threat-model/` (one file
-   per finding, named `tmeval-<sha8>.yaml`). All findings have:
+1. **Findings** in the single file `40-threat-model/threat-model.findings.yaml`,
+   under the root key `finding:` as a list (the list form in
+   `apd-finding-schema`). Every finding you emit is one entry of that list. All
+   findings have:
    - `agent: threat_model_evaluator`
    - `tmeval_key` (flavor + components) — Do NOT emit `id`; `apd-gauntlet
      canonicalize` mints `tmeval-<sha8>` from the key at assembly time.
@@ -63,8 +66,12 @@ When activated, emits:
 Read:
 
 - `00-context/threat-model-normalized.yaml` (the TM)
-- All `20-findings/**/*.yaml` files (dedup'd by synthesizer)
-- All `10-capabilities/**/*.yaml` files
+- `00-context/threat-model-supplied-normalized.yaml`, when present (the supplied
+  sibling that Step 2c compares against the authored baseline)
+- `40-synthesis/deduped-findings.yaml` (the deduped specialist findings; root
+  key `finding`)
+- `40-synthesis/deduped-capabilities.yaml` (the deduped capabilities; root key
+  `capability`)
 
 Build in-memory indices:
 
@@ -360,7 +367,8 @@ Step 6. Validate against `schemas/threat-model-coverage.schema.json`.
 
 ### Step 10 — Self-check before exit
 
-- [ ] All emitted finding files validate against `schemas/finding.schema.json`
+- [ ] Every entry in `40-threat-model/threat-model.findings.yaml` validates
+      against `schemas/finding.schema.json`
 - [ ] Every contradiction finding has a non-empty `cross_references` array
 - [ ] Every finding has at least one evidence entry pointing at the TM
 - [ ] No invented threats (every finding traces back to a real specialist

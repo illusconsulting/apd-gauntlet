@@ -144,7 +144,7 @@ and field semantics.
 `apd-threat-model-evaluator` (tier-4, activation-gated on the normalized YAML
 existing) emits:
 
-- Finding files at `20-findings/40-threat-model/tmeval-*.yaml`
+- All findings in `40-threat-model/threat-model.findings.yaml` (root key `finding`)
 - `40-synthesis/threat-model-coverage-report.md` (human-readable)
 - `40-synthesis/threat-model-coverage.yaml` (machine-readable)
 
