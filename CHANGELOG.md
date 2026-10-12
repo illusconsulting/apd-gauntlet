@@ -158,6 +158,16 @@ All notable changes to this project will be documented in this file. Format base
   lenses emit no `id`, and `apd-gauntlet canonicalize` mints it. The item is gone,
   and a test keeps the self-check sections of all nine lens agents free of id
   items.
+- **The domain skill rebuilds when a pack file changes, not only when a pack
+  version or the framework version does.** `build-domain-skill` skipped the
+  rebuild whenever `metadata.packs` and `framework_version` matched, so editing a
+  pack's `severity-rubric.md`, `common-patterns/` or `domain.yaml` without
+  bumping its version left the previous `apd-domain` skill and `by-goal/`
+  sidecars in place. The full skill's frontmatter now records
+  `metadata.content_sha256`, a SHA-256 over each selected pack's `domain.yaml`
+  and every file it includes, and the skip requires that hash to match as well.
+  A skill built before this fix has no hash and is rebuilt once on its next run,
+  including the committed `.claude/skills/apd-domain/`.
 
 ## v1.7.0 — 2026-06-09
 
