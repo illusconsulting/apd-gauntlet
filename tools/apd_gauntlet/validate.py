@@ -1,9 +1,10 @@
 """Validation engine — Pass 1 (schema), Pass 2 (semantic lints), Pass 3 (cross-file)."""
 from __future__ import annotations
 
+import fnmatch
 import json
 import pathlib
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -300,11 +301,81 @@ CONTEXT_ROLLUPS: dict[str, str] = {
     # C-21: Phase C intake artifact (emitted by the intake step).
     "asset-inventory.yaml":         "asset-inventory.schema.json",
     # C4: grounded C4 input authored by code-recon. OPTIONAL (presence-gated,
-    # like asset-graph) — _validate_context_rollups silently skips it when
+    # like asset-graph) — _validate_rollups silently skips it when
     # absent; the deterministic assemble-c4 step consumes it into
     # 40-synthesis/c4-model.yaml.
     "c4-recon.yaml":                "c4-recon.schema.json",
 }
+
+
+CODE_EVIDENCE_INDEX_SCHEMA = "code-evidence-index.schema.json"
+
+# Run subdir -> its whole-document rollup table. The one place the subdir -> table
+# routing lives; ``schema_for_run_file`` and the rollup validators both read it.
+_ROLLUP_TABLES: dict[str, dict[str, str]] = {
+    "00-context": CONTEXT_ROLLUPS,
+    "40-synthesis": SYNTHESIS_ROLLUPS,
+}
+
+
+def schema_for_run_file(rel: str) -> tuple[str, str | None] | None:
+    """The single file -> schema lookup shared by ``validate`` and ``resume-plan``.
+
+    ``rel`` is a run-relative POSIX path. Returns ``(schema filename, record kind)``
+    or ``None`` when no schema applies:
+
+    - ``*.findings.yaml`` / ``*.capabilities.yaml`` (any depth, as ``_iter_records``
+      discovers them) -> the ``RECORD_KINDS`` schema and that kind; every extracted
+      record is validated against it.
+    - ``00-context/code-evidence-index.yaml`` -> its own schema, whole document.
+    - ``00-context/<name>`` / ``40-synthesis/<name>`` listed in ``CONTEXT_ROLLUPS`` /
+      ``SYNTHESIS_ROLLUPS`` -> that schema, whole document.
+    """
+    parts = pathlib.PurePosixPath(rel).parts
+    if not parts:
+        return None
+    name = parts[-1]
+    for kind, (schema, _root_key, glob) in RECORD_KINDS.items():
+        if fnmatch.fnmatchcase(name, glob):
+            return schema, kind
+    if len(parts) != 2:
+        return None
+    subdir = parts[0]
+    if subdir == "00-context" and name == CODE_EVIDENCE_INDEX_FILENAME:
+        return CODE_EVIDENCE_INDEX_SCHEMA, None
+    rollup_schema = _ROLLUP_TABLES.get(subdir, {}).get(name)
+    return (rollup_schema, None) if rollup_schema else None
+
+
+def _schema_violations(
+    path: pathlib.Path,
+    schema_name: str,
+    record_kind: str | None,
+    registry: Registry,
+) -> list[Violation]:
+    """YAML-parse ``path`` and schema-validate it; the envelope check is not applied.
+
+    ``record_kind`` None validates the whole document against ``schema_name``;
+    otherwise every ``extract_records`` record is validated against it.
+    """
+    schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        return [Violation(path, None, f"YAML parse error: {e}")]
+    validator = Draft202012Validator(schema, registry=registry)
+    if record_kind is None:
+        return [
+            Violation(path, None, err.message, "/".join(map(str, err.path)))
+            for err in validator.iter_errors(data)
+        ]
+    if not isinstance(data, dict):
+        return [Violation(path, None, f"expected a YAML mapping, got {type(data).__name__}")]
+    return [
+        Violation(path, record.get("id"), err.message, "/".join(map(str, err.path)))
+        for record in extract_records(data, RECORD_KINDS[record_kind][1])
+        for err in validator.iter_errors(record)
+    ]
 
 
 def _code_evidence_index_path(run_dir: pathlib.Path) -> pathlib.Path:
@@ -319,7 +390,7 @@ def _validate_code_evidence_index(
     if not path.exists():
         return
     schema = json.loads(
-        (SCHEMAS_DIR / "code-evidence-index.schema.json").read_text(encoding="utf-8")
+        (SCHEMAS_DIR / CODE_EVIDENCE_INDEX_SCHEMA).read_text(encoding="utf-8")
     )
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -355,72 +426,41 @@ def _validate_code_evidence_index(
                 )
 
 
-def _validate_synthesis_rollups(
+def _rollup_files(run_dir: pathlib.Path, subdir: str) -> Iterator[tuple[pathlib.Path, str]]:
+    """Yield ``(path, schema filename)`` for each rollup present under ``run_dir/subdir``.
+
+    Table order; absent directories and files are silent (these files are
+    optional). The schema is chosen by ``schema_for_run_file``, so ``validate`` and
+    ``resume-plan`` cannot disagree about which schema a file gets.
+    """
+    directory = run_dir / subdir
+    if not directory.exists():
+        return
+    for filename in _ROLLUP_TABLES[subdir]:
+        path = directory / filename
+        found = schema_for_run_file(f"{subdir}/{filename}")
+        if found is not None and path.exists():
+            yield path, found[0]
+
+
+def _validate_rollups(
     run_dir: pathlib.Path,
+    subdir: str,
     report: ValidationReport,
     registry: Registry,
     seen_files: set[pathlib.Path],
 ) -> None:
-    """Schema-validate each present coverage rollup under 40-synthesis/.
+    """Schema-validate each present whole-document rollup under ``subdir``.
 
-    Walks ``SYNTHESIS_ROLLUPS`` so the validator catches malformed CWE / OWASP /
-    D3FEND coverage rollups the same way it catches malformed findings. Missing
-    rollups are silent (these files are optional). Discovered files are added
-    to ``seen_files`` so ``files_seen`` reflects them.
+    ``subdir`` is ``00-context`` (``CONTEXT_ROLLUPS``: threat-model rollups, the
+    asset inventory, c4-recon) or ``40-synthesis`` (``SYNTHESIS_ROLLUPS``: the
+    coverage rollups and other synthesis artifacts), so the validator catches a
+    malformed rollup the same way it catches malformed findings. Discovered files
+    are added to ``seen_files`` so ``files_seen`` reflects them.
     """
-    synthesis_dir = run_dir / "40-synthesis"
-    if not synthesis_dir.exists():
-        return
-    for filename, schema_name in SYNTHESIS_ROLLUPS.items():
-        path = synthesis_dir / filename
-        if not path.exists():
-            continue
+    for path, schema_name in _rollup_files(run_dir, subdir):
         seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError as e:
-            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
-            continue
-        validator = Draft202012Validator(schema, registry=registry)
-        for err in validator.iter_errors(data):
-            report.errors.append(
-                Violation(path, None, err.message, "/".join(map(str, err.path)))
-            )
-
-
-def _validate_context_rollups(
-    run_dir: pathlib.Path,
-    report: ValidationReport,
-    registry: Registry,
-    seen_files: set[pathlib.Path],
-) -> None:
-    """Schema-validate each present rollup under 00-context/.
-
-    Walks ``CONTEXT_ROLLUPS`` so the validator catches malformed threat-model
-    rollups the same way it catches malformed findings. Missing rollups are
-    silent (these files are optional). Discovered files are added to
-    ``seen_files`` so ``files_seen`` reflects them.
-    """
-    context_dir = run_dir / "00-context"
-    if not context_dir.exists():
-        return
-    for filename, schema_name in CONTEXT_ROLLUPS.items():
-        path = context_dir / filename
-        if not path.exists():
-            continue
-        seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError as e:
-            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
-            continue
-        validator = Draft202012Validator(schema, registry=registry)
-        for err in validator.iter_errors(data):
-            report.errors.append(
-                Violation(path, None, err.message, "/".join(map(str, err.path)))
-            )
+        report.errors.extend(_schema_violations(path, schema_name, None, registry))
 
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
@@ -448,11 +488,28 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
     _validate_code_evidence_index(run_dir, report, registry)
-    _validate_context_rollups(run_dir, report, registry, seen_files)
-    _validate_synthesis_rollups(run_dir, report, registry, seen_files)
+    _validate_rollups(run_dir, "00-context", report, registry, seen_files)
+    _validate_rollups(run_dir, "40-synthesis", report, registry, seen_files)
     _check_envelopes(run_dir, report)
     report.files_seen = len(seen_files)
     return report
+
+
+def schema_errors_for_file(run_dir: pathlib.Path, rel: str) -> list[str]:
+    """YAML-parse one run file and validate it against the schema ``validate`` applies.
+
+    ``rel`` is a run-relative path to an existing file. The schema comes from
+    ``schema_for_run_file``; ``[]`` is returned when none applies (so a clean result
+    does not by itself prove the file is YAML). A parse failure is a single
+    ``YAML parse error: ...`` entry. Only the schema checks run: the envelope check is
+    skipped because ``canonicalize`` normalizes envelopes.
+    """
+    found = schema_for_run_file(rel)
+    if found is None:
+        return []
+    schema_name, record_kind = found
+    violations = _schema_violations(run_dir / rel, schema_name, record_kind, build_registry())
+    return [f"{v.path}: {v.message}" if v.path else v.message for v in violations]
 
 
 def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:

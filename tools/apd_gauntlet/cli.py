@@ -397,6 +397,43 @@ def plan_run_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
         click.echo(render_markdown(plan, cfg))
 
 
+@main.command("resume-plan")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+@click.option("--json", "as_json", is_flag=True, help="Emit the plan as one line of JSON.")
+def resume_plan_cmd(run_dir: pathlib.Path, as_json: bool) -> None:
+    """Report which agent steps of a run are already complete (read-only).
+
+    A step is complete when every file of one of its output sets is present, non-empty
+    and schema-valid; the runner resumes from this and skips the complete steps. Writes
+    nothing. Exits 2 when RUN_DIR/.apd-run.yaml is missing, unparseable or invalid, and 3
+    when the run was created by a different framework major than this engine.
+    """
+    from .resume_plan import (
+        EngineMismatch,
+        RunConfigError,
+        build_resume_plan,
+        check_engine_compat,
+    )
+
+    try:
+        check_engine_compat(run_dir)
+    except RunConfigError as e:
+        click.echo(str(e), err=True)
+        raise SystemExit(2) from e
+    except EngineMismatch as e:
+        click.echo(str(e), err=True)
+        raise SystemExit(3) from e
+
+    plan = build_resume_plan(run_dir)
+    if as_json:
+        click.echo(_stdjson.dumps(plan))
+        return
+    click.echo(f"engine {plan['engine_version']}")
+    for step in plan["steps"]:
+        state = "complete" if step["complete"] else "pending"
+        click.echo(f"{state}  {step['label']}  {step['reason']}")
+
+
 @main.command("manual-audit-prompts")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
 def manual_audit_prompts_cmd(run_dir) -> None:  # type: ignore[no-untyped-def]

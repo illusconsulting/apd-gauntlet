@@ -45,6 +45,7 @@ apd-gauntlet build-domain-skill <pack...>        # compile one or more packs int
 apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
 apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml against the schema
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
+apd-gauntlet resume-plan <run-dir> [--json]      # which agent steps are already complete (read-only; the runner resumes from it)
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
