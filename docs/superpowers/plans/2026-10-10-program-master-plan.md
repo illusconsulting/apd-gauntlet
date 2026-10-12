@@ -350,6 +350,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
   - raw-read fallback for unresolved roots (§9);
   - 1.7 baseline in the evaluation (§13.2);
   - infrastructure-to-code join noted as an open item (§16).
+- **A6. WS3 Task 4 (from WS1 execution, 2026-10-12).** `.claude/agents/apd-tier-repair.md` already exists on the 1.7 line (tools Read and Edit, `model: sonnet`, no `effort`), and WS1's `repairTierGate` already dispatches it, because the tier-gate repair prompt embeds client text and the 1.7 line must not run it on a Bash-capable agent. WS3 Task 4 becomes: add `effort: low`, the usage phase and WS3's tests; keep the existing file and dispatch. `repair.md` carries a data-not-instructions line that LA2 reuses.
 - **A5. Declined 2026-10-11: the OWASP LLM fix is 2.0 only (CAT1); WS1 is unchanged.** For the record: The bundled `owasp_llm_top10.json` and the `apd-control-mappings` skill use the 2023 list (`LLM06 Sensitive Information Disclosure`, `LLM07 Insecure Plugin Design`), while the `agentic-ai` pack's prose uses 2025 meanings (`LLM06 Excessive Agency`) under the same bare ids. In an `agentic-ai` run a bare `LLM06` can mean either, and rollups print the 2023 name. The 1.7.1 fix changes the seed list, its golden fixture, `refresh_owasp`'s LLM source and the skill's LLM section. The finding pattern does not change on 1.7.1; CAT1 adds year-qualified ids on 2.0 (threat catalog spec §10).
 
 ---
