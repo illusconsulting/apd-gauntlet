@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from .attack_path.enumerate import Path as APath
     from .attack_path.graph import Edge, Graph, Node
 
-from . import __version__
+from . import FRAMEWORK_VERSION, __version__
 from . import resources as _resources
 from .build_domain_skill import build_domain_skill
 from .init_run import scaffold_run
@@ -138,7 +138,7 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
     type=click.Path(file_okay=False, path_type=pathlib.Path),
     default=pathlib.Path(".claude/skills/apd-domain"),
 )
-@click.option("--framework-version", default=__version__)
+@click.option("--framework-version", default=FRAMEWORK_VERSION)
 @click.option(
     "--full-only",
     is_flag=True,

@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning per [SemVer](https://semver.org/).
 
+## Unreleased — 2.0 line (`next`)
+
+The 2.0 line adds optional decision models and local CLI, TUI and web apps. The
+design and implementation plans are in
+`docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md`
+and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
+
+### Changed
+
+- **Version stays `1.7.0` for now.** The first 2.0 pre-release (`2.0.0a1`,
+  plugin `2.0.0-alpha.1`) has not been cut. When it is, it publishes to PyPI as
+  a pre-release (`pip install --pre apd-gauntlet`) and to the
+  `apd-security-next` plugin marketplace from the `next` branch.
+- **Domain packs accept framework 2.x.** All six bundled packs now declare
+  `framework_compat: ">=1.0.0,<3.0.0"`. The 2.0 changes leave the pack format
+  untouched. Third-party packs that declare `<2.0.0` need the same change
+  before they will build against a 2.0 engine.
+
 ## [Unreleased]
 
 ### Added
@@ -90,6 +108,20 @@ All notable changes to this project will be documented in this file. Format base
   authors `crosses` by name) no longer author derived fields; the assembler is the
   sole author. Finding/capability/domain-improvement/asset-inventory schemas
   relaxed accordingly (permissive — existing valid records still validate).
+- **Two release lines.** `main` keeps shipping the stable 1.7 line; `next`
+  carries the 2.0 pre-releases. A new release gate
+  (`tools/check_release_tag.py`) runs first in the `release` workflow. It
+  refuses a tag that does not match the package version or that sits on the
+  wrong branch for its kind of version, and it flags pre-releases on GitHub so
+  that only the highest stable version is marked Latest. CI now also runs on
+  `next` and `release/**`. See [RELEASING.md](RELEASING.md).
+- **Pre-release engines stamp a release framework version.** `init-run` and
+  `build-domain-skill` now use `FRAMEWORK_VERSION`, which is the package version
+  with any pre-release, dev or post suffix removed (`2.0.0a1` → `2.0.0`).
+  Stamping `__version__` directly would have written a `framework_version` that
+  `run-config.schema.json` rejects, and it would have crashed the
+  `framework_compat` check on the first pre-release. Stable versions are
+  unaffected.
 
 ## v1.7.0 — 2026-06-09
 
