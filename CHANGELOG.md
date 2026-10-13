@@ -11,8 +11,9 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 
 ### Changed
 
-- **Version `2.0.0a1`** (plugin `2.0.0-alpha.1`). Pre-releases publish to PyPI
-  as pre-releases (`pip install --pre apd-gauntlet`) and to the
+- **Version stays `1.7.0` for now.** The first 2.0 pre-release (`2.0.0a1`,
+  plugin `2.0.0-alpha.1`) has not been cut. When it is, it publishes to PyPI as
+  a pre-release (`pip install --pre apd-gauntlet`) and to the
   `apd-security-next` plugin marketplace from the `next` branch.
 - **Domain packs accept framework 2.x.** All six bundled packs now declare
   `framework_compat: ">=1.0.0,<3.0.0"`. The 2.0 changes leave the pack format
