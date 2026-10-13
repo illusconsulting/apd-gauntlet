@@ -51,6 +51,8 @@ apd-gauntlet --version        # confirms the CLI is on your PATH
 
 The `apd-gauntlet` PyPI package (step above) must be on your PATH first — the plugin ships agents and skills; the workflow runner shells out to the CLI for deterministic passes. Once installed, the gauntlet runs via `/apd-gauntlet:run` (foreground, interactive — same discipline as the natural-language invocation).
 
+**Versions.** `pip install apd-gauntlet` and the `apd-security` marketplace give you the stable 1.7 line. A 2.0 line is in development on the `next` branch and ships as pre-releases that pip skips unless you ask for them. To stay on 1.x after 2.0 is released, pin the engine with `pip install "apd-gauntlet>=1.7,<2"`. [RELEASING.md](RELEASING.md#release-lines) covers both lines, including how to try a 2.0 pre-release.
+
 **Optional: code_recon via codebase-memory-mcp (CBM)**
 
 `codebase-memory-mcp` is an **optional** external MCP server. With `code_recon: auto` (the default) the gauntlet degrades gracefully to prose-only analysis when CBM is absent; `code_recon: enabled` requires it and hard-fails if unreachable. See the code-grounding note below and the [full guide](https://github.com/illusconsulting/apd-gauntlet/blob/main/docs/running-the-gauntlet.md).

@@ -7,7 +7,7 @@ import shutil
 
 import yaml
 
-from . import __version__
+from . import FRAMEWORK_VERSION
 
 SUBDIRS = [
     "inputs", "00-context", "10-trustworthiness",
@@ -80,7 +80,7 @@ def scaffold_run(
     config_text = (
         f"run_id: {run_id}\n"
         f"{domains_block}"
-        f"framework_version: {__version__}\n"
+        f"framework_version: {FRAMEWORK_VERSION}\n"
         f"code_recon: auto\n"
         "# code_recon: enabled  # hard-fail if CBM not reachable\n"
         "# code_recon: disabled # skip code-recon entirely\n"

@@ -90,6 +90,20 @@ All notable changes to this project will be documented in this file. Format base
   authors `crosses` by name) no longer author derived fields; the assembler is the
   sole author. Finding/capability/domain-improvement/asset-inventory schemas
   relaxed accordingly (permissive — existing valid records still validate).
+- **Two release lines.** `main` keeps shipping the stable 1.7 line; `next`
+  carries the 2.0 pre-releases. A new release gate
+  (`tools/check_release_tag.py`) runs first in the `release` workflow. It
+  refuses a tag that does not match the package version or that sits on the
+  wrong branch for its kind of version, and it flags pre-releases on GitHub so
+  that only the highest stable version is marked Latest. CI now also runs on
+  `next` and `release/**`. See [RELEASING.md](RELEASING.md).
+- **Pre-release engines stamp a release framework version.** `init-run` and
+  `build-domain-skill` now use `FRAMEWORK_VERSION`, which is the package version
+  with any pre-release, dev or post suffix removed (`2.0.0a1` → `2.0.0`).
+  Stamping `__version__` directly would have written a `framework_version` that
+  `run-config.schema.json` rejects, and it would have crashed the
+  `framework_compat` check on the first pre-release. Stable versions are
+  unaffected.
 
 ## v1.7.0 — 2026-06-09
 
