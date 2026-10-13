@@ -1,7 +1,7 @@
 {
-  "name": "apd-security",
+  "name": "apd-security-next",
   "owner": { "name": "APD Gauntlet contributors" },
-  "description": "APD security architecture review framework — agents, skills, and the gauntlet workflow.",
+  "description": "APD security architecture review framework — agents, skills, and the gauntlet workflow. 2.0 pre-release line (next branch); for the stable line use the apd-security marketplace.",
   "metadata": { "description": "APD security architecture review framework marketplace." },
   "plugins": [
     {

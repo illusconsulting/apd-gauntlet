@@ -1,5 +1,14 @@
 # APD Gauntlet
 
+> **This is the 2.0 pre-release line (the `next` branch).** It is published as
+> PyPI pre-releases (`pip install --pre apd-gauntlet`) and as the
+> `apd-security-next` plugin marketplace
+> (`/plugin marketplace add illusconsulting/apd-gauntlet#next`, then
+> `/plugin install apd-gauntlet@apd-security-next`). Install only one line's
+> plugin at a time. For the stable 1.7 line, use the
+> [`main` branch](https://github.com/illusconsulting/apd-gauntlet/tree/main).
+> [RELEASING.md](RELEASING.md) explains both lines.
+
 **Multi-agent security architecture review for technical plans and running systems.** You give it a tech plan plus whatever supporting artifacts you have (PRD, source code, IaC, diagrams, threat models, ADRs); nine specialist agents — orchestrated by Claude Code — review it through nine independent security lenses; a synthesizer dedups across lenses, surfaces contradictions, and emits an advisory report with an interactive HTML view.
 
 The output is **structured advisory input for an architect — not a gate.** It doesn't approve or block changes; it makes the human review better-informed and harder to bypass.
@@ -50,6 +59,8 @@ apd-gauntlet --version        # confirms the CLI is on your PATH
 ```
 
 The `apd-gauntlet` PyPI package (step above) must be on your PATH first — the plugin ships agents and skills; the workflow runner shells out to the CLI for deterministic passes. Once installed, the gauntlet runs via `/apd-gauntlet:run` (foreground, interactive — same discipline as the natural-language invocation).
+
+**Versions.** `pip install apd-gauntlet` and the `apd-security` marketplace give you the stable 1.7 line. A 2.0 line is in development on the `next` branch and ships as pre-releases that pip skips unless you ask for them. To stay on 1.x after 2.0 is released, pin the engine with `pip install "apd-gauntlet>=1.7,<2"`. [RELEASING.md](RELEASING.md#release-lines) covers both lines, including how to try a 2.0 pre-release.
 
 **Optional: code_recon via codebase-memory-mcp (CBM)**
 

@@ -1,7 +1,7 @@
 name: mobile-applications
 display_name: "Mobile Application Security (OWASP MAS)"
 version: 1.0.0
-framework_compat: ">=1.0.0,<2.0.0"
+framework_compat: ">=1.0.0,<3.0.0"
 description: "Security-architecture calibration for native and hybrid mobile applications (Android + iOS; including React Native, Flutter, and Capacitor/Cordova hybrid apps whose JavaScript/Dart bundle ships application logic and may be hot-updated over the air outside store review) where trust is split between an adversary-controlled client — a binary in the attacker's hands, on a possibly rooted or jailbroken device — and a backend. Translates OWASP Mobile Application Security testing concerns into design-altitude findings across the nine APD goals, treats the client as partially adversarial, and reframes every client-side measure as defense-in-depth behind a server-side invariant. Anchored to OWASP MASVS 2.1.0, the OWASP MASWE weakness catalog (Beta), the OWASP MASTG 1.7.0 testing guide and MAS Checklist, MITRE ATT&CK Mobile, NIST SP 800-53r5, and NIST SP 800-163r1 (the mobile-app vetting lifecycle — planning, app testing, and app approval/rejection against organization-defined security requirements); privacy obligations anchored to GDPR, the Apple App Store privacy requirements, and Google Play Data Safety. Client-focused by design — compose with the api-security and identity-security packs in a multi-domain run for the backend the app fronts."
 includes:
   - severity-rubric.md
