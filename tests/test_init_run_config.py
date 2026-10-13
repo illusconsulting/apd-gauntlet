@@ -6,7 +6,7 @@ import pathlib
 
 import pytest
 import yaml
-from apd_gauntlet import __version__
+from apd_gauntlet import FRAMEWORK_VERSION, __version__, release_of
 from apd_gauntlet.init_run import scaffold_run
 from jsonschema import Draft202012Validator
 
@@ -27,7 +27,7 @@ def test_scaffold_run_emits_valid_run_config(tmp_path):
     data = yaml.safe_load(config_path.read_text())
     assert data["run_id"] == "run-001"
     assert data["domains"] == ["pbm"]
-    assert data["framework_version"] == __version__
+    assert data["framework_version"] == FRAMEWORK_VERSION
     assert data["code_recon"] == "auto"
 
     # Must also schema-validate.
@@ -36,10 +36,10 @@ def test_scaffold_run_emits_valid_run_config(tmp_path):
 
 
 def test_scaffold_run_writes_live_framework_version(tmp_path):
-    """scaffold_run must stamp the LIVE package __version__ into .apd-run.yaml, not a
-    hardcoded literal. A stale literal (a) records the wrong version on every run and
-    (b) spuriously fails build_domain_skill's framework_compat gate if any pack floor
-    ever rises above it."""
+    """scaffold_run must stamp the LIVE package version (its X.Y.Z release, see
+    FRAMEWORK_VERSION) into .apd-run.yaml, not a hardcoded literal. A stale literal
+    (a) records the wrong version on every run and (b) spuriously fails
+    build_domain_skill's framework_compat gate if any pack floor ever rises above it."""
     inputs = tmp_path / "in"
     inputs.mkdir()
     (inputs / "tech_plan.md").write_text("# Plan\n")
@@ -47,10 +47,33 @@ def test_scaffold_run_writes_live_framework_version(tmp_path):
     run_dir = scaffold_run("run-fv", inputs, ["pbm"], tmp_path / "runs")
 
     cfg = yaml.safe_load((run_dir / ".apd-run.yaml").read_text())
-    assert cfg["framework_version"] == __version__
+    assert cfg["framework_version"] == FRAMEWORK_VERSION == release_of(__version__)
     assert cfg["framework_version"] != "1.1.0", (
         "scaffold must not emit the stale hardcoded 1.1.0"
     )
+
+
+@pytest.mark.parametrize(
+    ("version", "release"),
+    [
+        ("1.7.0", "1.7.0"),
+        ("2.0.0a1", "2.0.0"),
+        ("2.0.0b2", "2.0.0"),
+        ("2.0.0rc1", "2.0.0"),
+        ("2.0.0.dev0", "2.0.0"),
+        ("1.7.0.post1", "1.7.0"),
+        ("2.0.0-alpha.1", "2.0.0"),
+    ],
+)
+def test_release_of_strips_prerelease_parts(version, release):
+    """A pre-release engine must still stamp a schema-valid X.Y.Z framework_version and
+    pass build_domain_skill's integer X.Y.Z framework_compat parse."""
+    assert release_of(version) == release
+
+
+def test_release_of_rejects_non_release_versions():
+    with pytest.raises(ValueError, match="X.Y.Z"):
+        release_of("2.0")
 
 
 def test_scaffold_run_rejects_traversal_run_id(tmp_path):
