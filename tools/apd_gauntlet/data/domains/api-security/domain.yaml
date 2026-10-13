@@ -1,7 +1,7 @@
 name: api-security
 display_name: "API Security (OWASP API Top 10)"
 version: 1.0.0
-framework_compat: ">=1.0.0,<2.0.0"
+framework_compat: ">=1.0.0,<3.0.0"
 description: "API-security-specialized severity rubric and pattern library for API-backed production systems handling PII, payment card data, credentials, and session tokens. Anchored to the OWASP API Security Top 10 (2023), OWASP ASVS 4.0, PCI-DSS 4.0, GDPR, NIST SP 800-63B, and SOC 2 Trust Services Criteria."
 includes:
   - severity-rubric.md

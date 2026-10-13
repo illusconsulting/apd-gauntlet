@@ -233,8 +233,16 @@ PLUGIN_MANIFEST = REPO / ".claude-plugin" / "plugin.json"
 
 
 def test_plugin_manifest_version_matches_pyproject() -> None:
-    """plugin.json, pyproject.toml, and tools/apd_gauntlet/__init__ must agree (no skew)."""
+    """plugin.json, pyproject.toml, and tools/apd_gauntlet/__init__ must agree (no skew).
+
+    pyproject and __init__ use the same canonical PEP 440 string (2.0.0a1). The
+    plugin manifest may spell a pre-release the SemVer way (2.0.0-alpha.1); PEP
+    440 normalises that to the same version, so the comparison goes through
+    packaging.Version (a pytest dependency). See RELEASING.md.
+    """
     import re
+
+    from packaging.version import Version
 
     manifest = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8"))
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
@@ -242,7 +250,10 @@ def test_plugin_manifest_version_matches_pyproject() -> None:
     init_text = (REPO / "tools" / "apd_gauntlet" / "__init__.py").read_text(encoding="utf-8")
     init_version = re.search(r'__version__ = "([^"]+)"', init_text).group(1)
 
-    assert manifest["version"] == py_version, (
+    assert str(Version(py_version)) == py_version, (
+        f"pyproject version {py_version!r} is not canonical PEP 440"
+    )
+    assert Version(manifest["version"]) == Version(py_version), (
         f"plugin.json version is {manifest['version']!r}; pyproject is {py_version!r}"
     )
     assert init_version == py_version, (

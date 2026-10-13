@@ -1,7 +1,7 @@
 name: identity-security
 display_name: "Identity Security (IdP / SSO / OAuth-OIDC-SAML)"
 version: 1.0.0
-framework_compat: ">=1.0.0,<2.0.0"
+framework_compat: ">=1.0.0,<3.0.0"
 description: "Identity-provider-specialized severity rubric and pattern library for SSO/IdP platforms, OAuth 2.0 / OIDC authorization servers, SAML 2.0 identity providers, LDAP/AD-backed directories, federation hubs, and credential-management services (authentik, Keycloak, Authelia, Ory Hydra, ZITADEL, Dex, Casdoor, Auth0/Okta-equivalent self-hosted deployments). Anchored to NIST SP 800-63B (Authenticator and Lifecycle Management), NIST SP 800-63C (Federation and Assertions), the OAuth 2.0 Security Best Current Practice (RFC 9700), the OAuth 2.1 draft, OIDC Core 1.0 Security Considerations, the SAML 2.0 Security Considerations profile, FIDO2 / WebAuthn Level 2, SOC 2, GDPR, and FedRAMP Moderate."
 includes:
   - severity-rubric.md

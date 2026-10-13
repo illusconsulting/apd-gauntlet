@@ -5,8 +5,9 @@ description: Run the APD security gauntlet against a prepared run directory
 You are driving the APD gauntlet. Do this in order:
 
 1. **Preflight the engine.** Run `apd-gauntlet --version` in the shell. If the command
-   is missing, STOP and tell the user: "Install the engine first: `pip install apd-gauntlet`
-   (or `pipx install apd-gauntlet`)." The plugin and CLI are released in lockstep — if the
+   is missing, STOP and tell the user: "This is the 2.0 pre-release plugin. Install the
+   matching pre-release engine first: `pip install --pre apd-gauntlet` (or
+   `pipx install --pip-args=--pre apd-gauntlet`)." The plugin and CLI are released in lockstep — if the
    reported version's major.minor differs from this plugin's, warn that they should match.
 
 2. **Confirm the run is scaffolded** — a `runs/<run-id>/` directory containing `inputs/`

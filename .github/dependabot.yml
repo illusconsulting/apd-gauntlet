@@ -6,6 +6,18 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
+  # 2.0 line: next carries dependencies main does not (the [decide], [runner],
+  # [tui], [web] extras). Shared bumps reach next by the main→next merge-forward
+  # described in RELEASING.md; this entry covers the 2.0-only ones. Remove it
+  # when next merges into main at 2.0.0 GA.
+  - package-ecosystem: pip
+    directory: /
+    target-branch: next
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "2.0-line"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
