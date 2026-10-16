@@ -487,7 +487,7 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 
 | Decision | Default | Blocks |
 |---|---|---|
-| Where Clef runs for SmithRx reviews (Workers AI only if SmithRx's Cloudflare agreements cover it, otherwise self-hosted) | No decision model on SmithRx reviews until confirmed | WS6 and finding QA on SmithRx reviews |
+| Where Clef runs for reviews of PHI-handling systems (Workers AI only if the client's Cloudflare agreements cover it, otherwise self-hosted) | No decision model on reviews of PHI-handling systems until confirmed | WS6 and finding QA on reviews of PHI-handling systems |
 | Approve the code-flow spec and its release target | 2.1, after GA | M8 |
 | IaC held-out repositories (a public OpenTofu repository plus Atmos repositories), with licences checked at pinned commits | Chosen during IAC4 Task 1 | M6 |
 | How aggressive the domain consumer map is (pbm drops 55% against the audit's 45%) | Packs' stated consumers | WS5 Task 9 |
@@ -525,7 +525,7 @@ Each behaviour-changing PR group also needs about 8 gauntlet runs (4 configurati
 
   All local, per ADR-0017.
 - **Live fixture recording** for decision providers (LA1 Task 9) needs real keys.
-- **Hosting decision for Clef** on SmithRx reviews: Workers AI only if SmithRx's Cloudflare agreements cover it, otherwise self-hosted. Needed before any decision task runs on a SmithRx review.
+- **Hosting decision for Clef** on reviews of PHI-handling systems: Workers AI only if the client's Cloudflare agreements cover it, otherwise self-hosted. Needed before any decision task runs on a PHI review.
 - **Repository administration:** branch protection and the tag ruleset (Task 3).
 - **Threat catalog release:** publish `illusconsulting/threat-catalog` 1.0.0 with the open asset, its schema and the private full asset, before CAT1 vendors it.
 
