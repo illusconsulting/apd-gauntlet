@@ -240,6 +240,13 @@ All notable changes to this project will be documented in this file. Format base
   or more than 100 levels of nesting, is searched as plain text only, and a malformed or
   hostile one never makes the check fail. The workflow's gates ignore warnings, so on
   1.7.1 the warning shows in a manual `apd-gauntlet validate <run-dir>` run only.
+- **`init-run` refuses input links that point outside the inputs folder.** It used
+  to follow them, so a link such as `inputs/keys -> ~/.ssh` copied the files it
+  pointed at into the run, where the agents read them. `init-run` now checks every
+  link first, whether it points at a file, a directory or nothing. If any points
+  outside the inputs folder, it exits 1, names each link and its target, and
+  creates nothing. Links that stay inside are copied as links, and absolute ones
+  become relative links, so the run never points back at the original folder.
 
 ## v1.7.0 — 2026-06-09
 

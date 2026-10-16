@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from . import FRAMEWORK_VERSION, __version__
 from . import resources as _resources
 from .build_domain_skill import build_domain_skill
-from .init_run import scaffold_run
+from .init_run import UnsafeInputsError, scaffold_run
 from .lint_agents import lint_agents_dir
 from .lint_skills import lint_skills_dir
 from .linters import check_capability_id, check_finding_id
@@ -231,15 +231,19 @@ def init_run_cmd(run_id, inputs, domains, root, taxonomies, threat_model, method
     parsed = (
         [t.strip() for t in taxonomies.split(",") if t.strip()] if taxonomies else None
     )
-    target = scaffold_run(
-        run_id,
-        inputs,
-        list(domains),
-        root,
-        taxonomies=parsed,
-        threat_model=threat_model,
-        methodology_hint=methodology_hint,
-    )
+    try:
+        target = scaffold_run(
+            run_id,
+            inputs,
+            list(domains),
+            root,
+            taxonomies=parsed,
+            threat_model=threat_model,
+            methodology_hint=methodology_hint,
+        )
+    except UnsafeInputsError as e:
+        click.echo(f"init-run: {e}", err=True)
+        raise SystemExit(1) from None
     click.echo(f"Run scaffolded at {target}")
 
 

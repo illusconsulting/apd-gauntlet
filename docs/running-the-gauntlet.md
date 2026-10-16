@@ -86,6 +86,8 @@ apd-gauntlet init-run apd-20260601-claim-event-bus \
 
 This creates `runs/apd-20260601-claim-event-bus/` with subdirectories for each phase output, copies your artifacts into `inputs/`, and records the active domain.
 
+Links inside the inputs folder are copied as links. If any link points outside it, `init-run` exits 1, names each such link, and creates nothing; copy the files it points at into the folder instead.
+
 To review a change against more than one domain pack, repeat the `--domain` flag:
 
 ```bash
