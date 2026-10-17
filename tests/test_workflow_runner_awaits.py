@@ -9,12 +9,16 @@ and the run dies at the report-audit gate with a misleading STRUCTURAL error.
 Two kinds of test pin the fix:
   - node tests execute the REAL, WHOLE runner against a stub runtime whose agent()
     resolves on a later macrotask, and check what the runner dispatches, in what order,
-    and how many dispatches are in flight at once. They are skipped where node is absent
-    (GitHub-hosted runners ship node, so CI enforces them), like _render_pystep_prompts
-    in tests/test_workflow_apd_gauntlet.py;
-  - a static test over the runner source (comments stripped, string contents blanked)
-    checks that every dispatch call is awaited, or is the returned expression of a
-    function whose own callers await it, so it holds where node is absent too.
+    and which dispatches are in flight together. Each dispatch records the labels that
+    were still in flight when it went out, and every such overlap must fall inside one
+    of the parallel groups listed by hand below (a tier's lenses, a red tier's
+    repairs). The tests also bound the maximum number in flight at once. They are
+    skipped where node is absent (GitHub-hosted runners ship node, so CI enforces
+    them), like _render_pystep_prompts in tests/test_workflow_apd_gauntlet.py;
+  - static tests over the runner source (comments stripped, string contents blanked)
+    check that every dispatch call is awaited, or is the returned expression of a
+    function whose own callers await it, and that no callback is async (a
+    forEach(async ...) callback is never awaited), so they hold where node is absent too.
 """
 from __future__ import annotations
 
@@ -92,6 +96,23 @@ EXPECTED_GREEN_LABELS = [
     "summarize", "validate-final",
 ]
 
+# The groups the runner dispatches in parallel, by label, written out by hand. Two
+# dispatches may be in flight together only when both belong to one group. The
+# tmeval/apath pair is not listed: apath dispatches nothing without crown jewels, so
+# tmeval runs alone. A tier's lens re-runs only happen when its repairs did not help.
+LENS_GROUPS = [
+    ["confidentiality", "integrity", "availability"],
+    ["distributed", "resilient", "ephemeral"],
+    ["authenticity", "non-repudiation", "immutability"],
+]
+# The repairs the red-gate test drives: one per failing file, in failing-file order.
+REPAIR_GROUP = [
+    "repair-10-trustworthiness-confidentiality.findings.yaml",
+    "repair-10-trustworthiness-integrity.capabilities.yaml",
+]
+# The most dispatches a run here has in flight at once: one tier's lens fan-out.
+LARGEST_PARALLEL_GROUP = 3
+
 # The stub runtime. __RESPONDER__, __ARGS__ and __BODY__ are filled in by _run_runner.
 _HARNESS = r"""'use strict';
 const dispatches = [];
@@ -110,18 +131,25 @@ function parallel(thunks) {
     })();
   }));
 }
-// Like the runtime: returns a Promise, resolved on a later macrotask.
+// The labels of the dispatches that are in flight, in dispatch order.
+const live = [];
+// Like the runtime: returns a Promise, resolved on a later macrotask. Each dispatch
+// records `overlap`: the labels that were still in flight when it went out.
 function agent(prompt, opts) {
   opts = opts || {};
   const n = dispatches.length;
+  const label = opts.label === undefined ? null : opts.label;
   dispatches.push({
-    label: opts.label === undefined ? null : opts.label,
+    label: label,
     agentType: opts.agentType === undefined ? null : opts.agentType,
+    overlap: live.slice(),
   });
+  live.push(label);
   inFlight += 1;
   if (inFlight > maxInFlight) { maxInFlight = inFlight; }
   return new Promise(function (resolve, reject) {
     setTimeout(function () {
+      live.splice(live.indexOf(label), 1);
       inFlight -= 1;
       resolvedCount += 1;
       try { resolve(respond(prompt, opts, n)); } catch (e) { reject(e); }
@@ -165,13 +193,20 @@ def _text() -> str:
     return RUNNER.read_text(encoding="utf-8")
 
 
-def _responder(by_label: dict[str, dict[str, Any]] | None = None) -> str:
+def _responder(
+    by_label: dict[str, dict[str, Any]] | None = None, reject: tuple[str, ...] = ()
+) -> str:
     """JS source of a responder: the receipt for a dispatch's label, else GENERIC_OK.
+    A label in `reject` throws instead, so that dispatch's Promise rejects.
     Every answer is a fresh copy, so the runner cannot share state between receipts."""
     return (
         "function (prompt, opts, n) {\n"
         f"  const byLabel = {json.dumps(by_label or {})};\n"
         f"  const fallback = {json.dumps(GENERIC_OK)};\n"
+        f"  const reject = {json.dumps(list(reject))};\n"
+        "  if (reject.indexOf(opts.label) !== -1) {\n"
+        "    throw new Error('stub agent failed: ' + opts.label);\n"
+        "  }\n"
         "  const has = Object.prototype.hasOwnProperty.call(byLabel, opts.label);\n"
         "  return JSON.parse(JSON.stringify(has ? byLabel[opts.label] : fallback));\n"
         "}"
@@ -184,7 +219,8 @@ def _run_runner(tmp_path: pathlib.Path, responder: str) -> dict[str, Any]:
     The script is read as-is; only the `export` keyword of `export const meta` is dropped,
     and the body is wrapped in an async function so its top-level await and return work.
     The runner does not call pipeline(), so the stub runtime does not define it. Returns
-    the dispatches ({label, agentType}, in dispatch order), the log lines, the maximum
+    the dispatches ({label, agentType, overlap}, in dispatch order, where overlap lists
+    the labels still in flight when that dispatch went out), the log lines, the maximum
     number of dispatches in flight, and the outcome: whether the script finished, returned
     or threw (and the message), with the dispatch counts at the moment it finished."""
     node = shutil.which("node")
@@ -215,19 +251,40 @@ def _labels(result: dict[str, Any]) -> list[str]:
     return [d["label"] for d in result["dispatches"]]
 
 
-def _largest_parallel_group(text: str) -> int:
-    """The largest group a green run dispatches in parallel: the per-tier lens fan-out.
-    The tmeval/apath pair is two thunks (and apath dispatches nothing without crown
-    jewels); the repair and re-run fan-outs only happen when a tier gate is red."""
-    tiers = re.findall(r"runTier\('tier-\d', '[^']+', \[([^\]]*)\]\)", text)
-    assert len(tiers) == 3, "runTier('tier-N', '<dir>', [...]) calls not found"
-    return max(len(re.findall(r"'[^']+'", lenses)) for lenses in tiers)
+def _assert_overlaps_within(result: dict[str, Any], groups: list[list[str]]) -> None:
+    """Every dispatch that went out while others were in flight belongs, with all of
+    them, to one of `groups`. Anything else ran alongside a step it should have waited
+    for: a missing await, or an async callback that nobody awaits."""
+    for d in result["dispatches"]:
+        if not d["overlap"]:
+            continue
+        together = {d["label"], *d["overlap"]}
+        assert any(together <= set(group) for group in groups), (
+            f"{d['label']} was dispatched while these were still in flight: "
+            + ", ".join(d["overlap"])
+        )
+
+
+def _overlap_of(result: dict[str, Any], label: str) -> list[str]:
+    matches = [d["overlap"] for d in result["dispatches"] if d["label"] == label]
+    assert len(matches) == 1, (label, len(matches))
+    overlap: list[str] = matches[0]
+    return overlap
 
 
 def test_harness_receipts_match_the_receipt_schema() -> None:
     schema = json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8"))
     jsonschema.validate(GENERIC_OK, schema)
     jsonschema.validate(RESUME_REFUSAL, schema)
+
+
+def test_listed_lens_groups_match_the_runner() -> None:
+    """Guard the hand-written groups: they are the lens lists the runner's three
+    runTier('tier-N', '<dir>', [...]) calls pass, in the same order."""
+    tiers = re.findall(r"runTier\('tier-\d', '[^']+', \[([^\]]*)\]\)", _text())
+    assert len(tiers) == 3, "runTier('tier-N', '<dir>', [...]) calls not found"
+    assert [re.findall(r"'([^']+)'", lenses) for lenses in tiers] == LENS_GROUPS
+    assert max(len(group) for group in LENS_GROUPS) == LARGEST_PARALLEL_GROUP
 
 
 def test_resume_plan_refusal_halts_before_any_other_dispatch(tmp_path: pathlib.Path) -> None:
@@ -243,17 +300,19 @@ def test_resume_plan_refusal_halts_before_any_other_dispatch(tmp_path: pathlib.P
 
 
 def test_green_run_dispatches_in_order_one_group_at_a_time(tmp_path: pathlib.Path) -> None:
-    largest = _largest_parallel_group(_text())
     result = _run_runner(tmp_path, _responder())
     outcome = result["outcome"]
     labels = _labels(result)
-    assert result["maxInFlight"] <= largest, (
+    assert labels == EXPECTED_GREEN_LABELS, labels
+    assert result["maxInFlight"] <= LARGEST_PARALLEL_GROUP, (
         f"{result['maxInFlight']} dispatches were in flight at once; the largest group the "
-        f"runner runs in parallel is {largest}"
+        f"runner runs in parallel is {LARGEST_PARALLEL_GROUP}"
     )
-    # The lens fan-out still runs concurrently: awaiting did not serialize it.
-    assert result["maxInFlight"] == largest, result["maxInFlight"]
-    assert labels[:len(EXPECTED_GREEN_LABELS)] == EXPECTED_GREEN_LABELS, labels
+    _assert_overlaps_within(result, LENS_GROUPS)
+    # Each tier's lens fan-out still runs concurrently: awaiting did not serialize it.
+    for first, second, third in LENS_GROUPS:
+        assert _overlap_of(result, third) == [first, second], result["dispatches"]
+    assert result["maxInFlight"] == LARGEST_PARALLEL_GROUP, result["maxInFlight"]
     assert outcome["finished"] and outcome["returned"] and not outcome["threw"], outcome
     # Every dispatch had resolved by the time the script finished: nothing was left behind.
     assert outcome["dispatchedAtFinish"] == outcome["resolvedAtFinish"] == len(labels), outcome
@@ -261,9 +320,31 @@ def test_green_run_dispatches_in_order_one_group_at_a_time(tmp_path: pathlib.Pat
 
 
 def test_failed_lens_is_retried_after_the_fan_out(tmp_path: pathlib.Path) -> None:
+    # The lens and its first retry both fail, so the second retry must wait for the
+    # first one, and canonicalize must wait for the second.
     failed = {"agent": "apd-integrity", "status": "error", "outputs": [], "counts": {}}
     jsonschema.validate(failed, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
-    result = _run_runner(tmp_path, _responder({"integrity": failed}))
+    result = _run_runner(
+        tmp_path, _responder({"integrity": failed, "integrity-retry-1": failed})
+    )
+    labels = _labels(result)
+    at = labels.index("confidentiality")
+    assert labels[at:at + 7] == [
+        "confidentiality", "integrity", "availability",
+        "integrity-retry-1", "integrity-retry-2",
+        "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
+    ], labels
+    assert "integrity-retry-3" not in labels, labels
+    assert result["maxInFlight"] <= LARGEST_PARALLEL_GROUP, result["maxInFlight"]
+    _assert_overlaps_within(result, LENS_GROUPS)
+    assert result["outcome"]["returned"], result["outcome"]
+
+
+def test_rejected_lens_dispatch_becomes_null_and_is_retried(tmp_path: pathlib.Path) -> None:
+    # The integrity dispatch rejects. parallel() maps it to null at its index, which
+    # isErr() reads as a failure, so the lens is retried after the fan-out and the run
+    # carries on instead of throwing.
+    result = _run_runner(tmp_path, _responder(reject=("integrity",)))
     labels = _labels(result)
     at = labels.index("confidentiality")
     assert labels[at:at + 6] == [
@@ -272,8 +353,10 @@ def test_failed_lens_is_retried_after_the_fan_out(tmp_path: pathlib.Path) -> Non
         "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
     ], labels
     assert "integrity-retry-2" not in labels, labels
-    assert result["maxInFlight"] <= _largest_parallel_group(_text())
-    assert result["outcome"]["returned"], result["outcome"]
+    assert "tier 10-trustworthiness: lens integrity failed; retry 1/2." in result["logs"]
+    _assert_overlaps_within(result, LENS_GROUPS)
+    outcome = result["outcome"]
+    assert outcome["finished"] and outcome["returned"] and not outcome["threw"], outcome
 
 
 def test_red_tier_gate_is_repaired_before_the_next_tier(tmp_path: pathlib.Path) -> None:
@@ -300,7 +383,10 @@ def test_red_tier_gate_is_repaired_before_the_next_tier(tmp_path: pathlib.Path) 
     ], labels
     repairs = [d for d in result["dispatches"] if d["label"].startswith("repair-")]
     assert {d["agentType"] for d in repairs} == {"apd-tier-repair"}
-    assert result["maxInFlight"] <= _largest_parallel_group(_text())
+    assert result["maxInFlight"] <= LARGEST_PARALLEL_GROUP, result["maxInFlight"]
+    _assert_overlaps_within(result, LENS_GROUPS + [REPAIR_GROUP])
+    # The repairs run in parallel with each other.
+    assert _overlap_of(result, REPAIR_GROUP[1]) == [REPAIR_GROUP[0]], result["dispatches"]
     assert result["outcome"]["returned"], result["outcome"]
 
 
@@ -439,3 +525,20 @@ def test_helpers_that_consume_a_dispatch_are_async() -> None:
         assert re.search(r"\basync\s+function\s+" + name + r"\s*\(", code), (
             f"{name}() reads a dispatch result, so it must be an async function"
         )
+
+
+def test_no_other_function_is_async() -> None:
+    """The four tier helpers are the only async functions. An async callback, such as
+    forEach(async function ...) or .map(async ...), returns a Promise its caller never
+    awaits, so the awaits inside it do not hold the run back: the next step goes out
+    while the callback's dispatch is still in flight."""
+    code = _code(_text())
+    uses = list(re.finditer(r"\basync\b", code))
+    names = []
+    for m in uses:
+        decl = re.match(r"async\s+function\s+([\w$]+)\s*\(", code[m.start():])
+        if decl is None:
+            line = _line(code, m.start())
+            pytest.fail(f"line {line}: async callback: {_text().splitlines()[line - 1].strip()}")
+        names.append(decl.group(1))
+    assert sorted(names) == sorted(ASYNC_HELPERS), names

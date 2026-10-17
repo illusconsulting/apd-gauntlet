@@ -19,10 +19,12 @@
 // an async context, so every dispatch is awaited. Call sites await agent(),
 // pyStep(), llmStep() and parallel(); the helpers that read a receipt (tierGate,
 // regate, repairTierGate, runTier) are async and awaited in turn. pyStep() and
-// llmStep() stay plain functions that return agent()'s Promise (or, for a step
-// resume-plan marked complete, a plain receipt), and a parallel() thunk returns
-// its dispatch's Promise to the barrier; their callers await it. An un-awaited
-// receipt is a pending Promise, which isErr() reads as success.
+// llmStep() stay plain functions. pyStep() always returns agent()'s Promise;
+// llmStep() returns it too, except for a step resume-plan marked complete, where
+// it returns a plain receipt. Their callers await the result. A parallel() thunk
+// returns its dispatch's Promise to the barrier, which awaits it. No callback is
+// async: forEach() and map() never wait for one. An un-awaited receipt is a
+// pending Promise, which isErr() reads as success.
 //
 // RESUME (design §6, two layers):
 //  - Same-session: Workflow({scriptPath, resumeFromRunId}) replays every
