@@ -247,6 +247,36 @@ All notable changes to this project will be documented in this file. Format base
   outside the inputs folder, it exits 1, names each link and its target, and
   creates nothing. Links that stay inside are copied as links, and absolute ones
   become relative links, so the run never points back at the original folder.
+- **The workflow runner now awaits every dispatch.** It was written for an older
+  Workflow runtime, where `agent()` returned the agent's result. On current Claude
+  Code, `agent()` and `parallel()` return Promises, and the runner awaited none of
+  them. Every receipt it checked was a pending Promise, which read as success, so
+  no agent ran to completion and every run failed at the report-audit gate with a
+  misleading `audit-report still FAILED a STRUCTURAL check` error. The runner now
+  awaits every dispatch, so each step finishes before the next one starts. Three
+  kinds of group still run in parallel: a tier's lenses; a red tier's repairs, and
+  then, if they did not fix it, its lens re-runs, each batch on its own; and the
+  threat-model evaluator with the attack-path analyzer. A `resume-plan` refusal now
+  halts the run before anything else is dispatched.
+- **`validate` resolves a capability's cross-references against capability ids.**
+  It resolved every `cross_references` and `merged_from` entry against finding ids, so a capability
+  that cross-referenced another capability (the form `capability.schema.json`
+  requires) was reported `cross_reference <id> not found`. That failed the
+  whole-run check and halted the gauntlet before synthesis. `cross_references` and
+  `merged_from` now resolve against the ids of the record's own kind, including
+  merged capability ids (`cap-merged-*`, from
+  `40-synthesis/deduped-capabilities.yaml`) after synthesis. Every id in that file
+  now also resolves in the asset-graph `mitigated_by_capability` edge check and the
+  `contradictions.yaml` `capability_id` check. Every whole-run check that reads
+  `deduped-findings.yaml` or `deduped-capabilities.yaml` (the `cross_references` /
+  `merged_from` check and the `report-data.yaml` and `domain-improvements.yaml`
+  checks) now reads a malformed or unreadable one as holding no ids and reports the references
+  left unresolved. Each of them used to crash on a malformed
+  `deduped-findings.yaml`, and the `report-data.yaml` check on a malformed
+  `deduped-capabilities.yaml` too. They all read the deduped files the same way
+  now, so the `report-data.yaml` check also accepts a deduped file with a plural
+  root key (`findings:`, `capabilities:`) or a single-record mapping, and the
+  `domain-improvements.yaml` check does the same for `deduped-findings.yaml`.
 
 ## v1.7.0 — 2026-06-09
 

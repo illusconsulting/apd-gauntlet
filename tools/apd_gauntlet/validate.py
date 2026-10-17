@@ -851,21 +851,9 @@ def _validate_report_data_cross_refs(
     # filenames do NOT match the *.findings.yaml / *.capabilities.yaml globs, so
     # _iter_records never sees them. The report legitimately headlines such a
     # merged-* id, so it must resolve (mirrors _validate_domain_improvements_cross_refs).
-    for fname, idset in (
-        ("deduped-findings.yaml", finding_ids),
-        ("deduped-capabilities.yaml", capability_ids),
-    ):
-        deduped_path = run_dir / "40-synthesis" / fname
-        if not deduped_path.exists():
-            continue
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            continue  # the schema pass already complained
-        root_key = "finding" if "findings" in fname else "capability"
-        for rec in deduped.get(root_key) or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                idset.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
     for entry in data.get("headline_findings") or []:
         rid = entry.get("id")
@@ -912,8 +900,8 @@ def _validate_domain_improvements_cross_refs(
     # unioned:
     #   (a) _iter_records — globs *.findings.yaml (the per-lens / attack-path /
     #       (legacy) merged.findings.yaml files), the synthesizer-fallback path.
-    #   (b) 40-synthesis/deduped-findings.yaml (root key 'finding') — the DEDUPED
-    #       corpus. Its filename does NOT match the *.findings.yaml glob, so
+    #   (b) 40-synthesis/deduped-findings.yaml (read by _deduped_record_ids) — the
+    #       DEDUPED corpus. Its filename does NOT match the *.findings.yaml glob, so
     #       _iter_records never sees it; yet a multi-member cluster minted by
     #       apply.py gets a 'merged-<sha8>' id that exists ONLY here in a decomposed
     #       run (the decomposed apply path writes no merged.findings.yaml). The
@@ -925,15 +913,8 @@ def _validate_domain_improvements_cross_refs(
             continue
         if kind == "finding":
             finding_ids.add(rec["id"])
-    deduped_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_path.exists():
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            deduped = {}
-        for rec in deduped.get("finding") or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
 
     # Real asset/identity/boundary ids in the inventory.
     inv_path = run_dir / "00-context" / "asset-inventory.yaml"
@@ -1055,6 +1036,36 @@ def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> No
             ])
 
 
+def _deduped_record_ids(run_dir: pathlib.Path, kind: str) -> set[str]:
+    """Return the record ids in ``40-synthesis/deduped-<plural>.yaml`` for
+    ``kind`` (``finding`` or ``capability``), for id resolution only.
+
+    The file is written by ``synthesis/apply.py`` or, on the fallback path, by
+    the synthesizer agent, so it may be malformed. A missing or unreadable file
+    (not a regular file, not UTF-8), a YAML error, a document that is not a
+    mapping or a root value that is not a list or a record all give no ids
+    instead of raising; any ref that needed one is then
+    reported "not found" as usual. Records come from the shared
+    ``extract_records`` rule (singular or plural root key, per-record wrappers).
+    """
+    root_key = RECORD_KINDS[kind][1]
+    path = run_dir / "40-synthesis" / f"deduped-{_PLURAL_ROOT[root_key]}.yaml"
+    if not path.is_file():
+        return set()
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+        return set()
+    if not isinstance(doc, dict):
+        return set()
+    ids: set[str] = set()
+    for rec in extract_records(doc, root_key):
+        rid = rec.get("id")
+        if isinstance(rid, str) and rid:
+            ids.add(rid)
+    return ids
+
+
 def run_cross_file_pass(
     run_dir: pathlib.Path, *, strict_excerpts: bool = False
 ) -> ValidationReport:
@@ -1109,22 +1120,18 @@ def run_cross_file_pass(
     # Pre-synthesis the file is absent, so this is a no-op and the raw-set gate
     # is unchanged. (Resolution-only: these records are not schema-validated
     # here, and adding ids can only clear false "not found" errors.)
-    deduped_findings_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_findings_path.exists():
-        try:
-            deduped_doc = yaml.safe_load(
-                deduped_findings_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError:
-            deduped_doc = {}
-        deduped_recs = deduped_doc.get("finding") or deduped_doc.get("findings") or []
-        for rec in deduped_recs:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
+    # The same for capabilities: a merged capability's 'cap-merged-<sha8>' id
+    # exists only in 40-synthesis/deduped-capabilities.yaml (not matched by the
+    # ``*.capabilities.yaml`` glob), and capability.schema.json allows a
+    # capability's cross_references / merged_from to name it.
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
-    # Verify cross_references, merged_from, and evidence artifacts.
+    # Verify cross_references, merged_from, and evidence artifacts. Both name ids
+    # of the record's OWN kind (finding.schema.json: finding ids;
+    # capability.schema.json: capability ids), so resolve against that kind's set.
     seen_files: set[pathlib.Path] = set()
-    for path, _kind, record in _iter_records(run_dir):
+    for path, kind, record in _iter_records(run_dir):
         if "_parse_error" in record:
             continue
         seen_files.add(path)
@@ -1135,11 +1142,12 @@ def run_cross_file_pass(
                 report.errors.append(
                     Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief")
                 )
+        own_kind_ids = finding_ids if kind == "finding" else capability_ids
         for ref in record.get("cross_references", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"cross_reference {ref} not found"))
         for ref in record.get("merged_from", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"merged_from {ref} not found"))
 
     # Re-run the maturity-vs-evidence lint with the real tech-plan set.
