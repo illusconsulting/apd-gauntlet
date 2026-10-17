@@ -7,6 +7,7 @@
 ADR-0019 (multi-repo recon), ADR-0023 (two-channel distribution), the 2.0
 local-apps spec (`2026-10-10-local-apps-and-decision-models-design.md`, PR #29),
 and GRAML (Li, Tian, Qu, Jiang, arXiv 2610.09605, 7 Oct 2026).
+**Amended:** 2026-10-17 per the amendments register (A13.5, A15.20)
 
 ## 1. Problem
 
@@ -470,7 +471,7 @@ Schema `iac-evidence-index.schema.json`, modelled on `code-evidence-index`:
 ```yaml
 iac_evidence_index:
   generated_at: 2026-10-10T12:00:00Z
-  tools: {atmos: 1.231.0, tofu: 1.10.6, trivy: 0.70.0, checkov: 3.3.26}
+  tools: {atmos: 1.231.0, tofu: 1.13.1, trivy: 0.70.0, checkov: 3.3.26}
   context_params_version: 1
   roots:
     - {id: atmos:platform, kind: atmos, path: platform, engine: opentofu}
@@ -721,7 +722,7 @@ Each unit degrades on its own, and the run never crashes on IaC input:
   before held-out runs: edge weights, score coefficients, K, reliability
   weights, and decision thresholds. A tunable changed after a held-out run
   means a new held-out set.
-- **Baseline.** Every metric is also computed for 1.7's raw-read path on the
+- **Baseline.** Every metric is also computed for 1.7.1's raw-read path on the
   same corpus and labels, so the evaluation reports a before-and-after delta,
   not only an absolute score. A release that lowers recall of labelled issues
   against that baseline does not ship.
@@ -765,22 +766,29 @@ caught all three scanner and engine gaps in §4.
 
 - **`[iac]` extra:** `python-hcl2>=7,<8`. Version 8 changed the API and lost
   line numbers.
-- **External tools,** found on `PATH` with minimum versions recorded in
-  `data/iac/tools.yaml`:
+- **External tools,** found on `PATH` with minimum and tested versions
+  recorded in `data/iac/tools.yaml`:
 
-  | Tool | Minimum | Required for |
-  |---|---|---|
-  | Atmos | 1.231.0 | Atmos roots |
-  | OpenTofu | 1.8.0 (`.tofu` support) | Module fetch only |
-  | Trivy | 0.70.0 | Baseline scanning |
-  | Checkov | 3.3.26 | Relationship checks |
-  | ShellCheck | 0.9 | Script checks (optional) |
+  | Tool | Minimum | Tested | Required for |
+  |---|---|---|---|
+  | Atmos | 1.231.0 | 1.232.0 | Atmos roots |
+  | OpenTofu | 1.12.6 (`.tofu` support since 1.8.0) | 1.13.1 | Module fetch only |
+  | Trivy | 0.71.1 | 0.75.0 | Baseline scanning |
+  | Checkov | 3.3.26 | 3.3.29 | Relationship checks |
+  | ShellCheck | 0.9 | 0.11.0 | Script checks (optional) |
+
+  The OpenTofu floor closes GHSA-q7j3-v8qv-22vq (arbitrary file read during
+  git operations; affects < 1.11.10, < 1.12.3 and all 1.10.x); 1.12.6 also
+  fixes credential resend on redirect. The Trivy floor closes CVE-2026-54448
+  (Helm tar bomb, < 0.71.0) and CVE-2026-55092 (path traversal, < 0.71.1).
+  CI keeps Atmos 1.231.0 until the probes pass on 1.232.0.
 
   Checkov stays outside the package's dependencies because its dependency
   tree is heavy; `pipx install checkov` is the documented path.
 - **The Terraform binary is never invoked.**
-- **`doctor`** reports each tool's presence and version against its minimum.
-  **`setup`** prints install commands per platform.
+- **`doctor`** reports each tool's presence and version against its minimum,
+  and warns when a version is above the tested one. **`setup`** prints install
+  commands per platform.
 - **Records:**
   - ADR-0027 records the decisions in §3;
   - `docs/schema-evolution.md` gets a 2.0.0 entry: run-config

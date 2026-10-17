@@ -14,6 +14,10 @@
 - Cost and token audit: "Defects that cost tokens and threaten accuracy" (seven rows), "Where it doesn't go" (verbatim-excerpt check), "Rollout" step 1, "Protecting accuracy".
 - `RELEASING.md` from PR #27 (`origin/chore/two-line-releases`): "Version lockstep", "The release gate", "Cutting a stable 1.7.x release (from `main`)".
 
+**Executed and released as v1.7.1** (#49–#52; register A8, A15).
+
+**Amended 2026-10-17** per the amendments register (A8.1, A8.2, A8.3, A8.4, A8.5, A8.7, A8.8, A15.2, A15.5, A15.6, A15.7, A15.8).
+
 ## Global Constraints
 
 - Every task lands on `main`, on branches cut from `main` after PR #27 merges (so `FRAMEWORK_VERSION`, `release_of()` and `tools/check_release_tag.py` exist). The release is `1.7.1`, tag `v1.7.1`.
@@ -35,7 +39,7 @@
 2. **A run interrupted mid-lens** (the findings file is valid, its capabilities sibling is missing or truncated). That lens is not complete and re-runs. Pinned in Task 1 (`test_truncated_sibling_is_not_complete`, `test_missing_sibling_is_not_complete`).
 3. **A 1.7.0 run directory canonicalized by 1.7.1.** Its hand-assigned `cev-`/`tm-` ids do not match the hash, and findings and `c4-recon.yaml` cite them. Every `00-context` file stays byte-identical. Pinned in Task 9 (`test_existing_context_ids_are_never_rewritten`).
 4. **Faithful excerpts that are not character-identical:** quoted from Markdown with inline code or emphasis, shortened with an ellipsis, or written as absence markers such as `(absent in supplied TM)`. None raises a false warning, while out-of-order ellipsis fragments still do. Pinned in Task 11 (`test_markdown_inline_markup_is_ignored`, `test_ellipsis_fragments_must_appear_in_order`, `test_absence_marker_is_not_checked`).
-5. **The 1.7.1 plugin driving an older 1.7.0 engine** that has no `resume-plan` command. The workflow logs and runs every agent step instead of halting. Pinned in Task 2 (`test_resume_plan_refusal_halts_and_failure_falls_back`).
+5. **The 1.7.1 plugin driving an older 1.7.0 engine** that has no `resume-plan` command. The workflow logs and runs every agent step instead of halting. Pinned in Task 2 (`test_resume_plan_refusal_halts_and_failure_falls_back`). Record (register A8.5): on 1.7.1 the workflow halts with an upgrade message when the engine has no `resume-plan` command (`.claude/workflows/apd-gauntlet.js`, the `resume-plan` refusal branch; pinned by `tests/test_workflow_apd_gauntlet.py::test_resume_plan_refusal_halts_and_failure_falls_back`); the plan described a fallback.
 
 ---
 
@@ -76,6 +80,8 @@
 | E — Python-minted context ids | 9, 10 | yes (Task 10) | Task 10 |
 | F — verbatim excerpts | 11 | no | — |
 | G — release 1.7.1 | 12 | no | — |
+
+Amended (register A8.3): WS1 was executed as one branch (`fix/ws1-1.7.1`, 19 commits), not PR groups A–G. Open one PR to `main` and merge with a merge commit. Done: #49 (register A15.5).
 
 Each CHANGELOG bullet in Tasks 2–11 goes under `## [Unreleased]` → `### Fixed`. The first task to land creates that subsection after `### Changed`.
 
@@ -123,7 +129,7 @@ Test snippets show only the new code. Add any import a module lacks (`re`, `shut
 | `report-writer-attempt-0` | (`40-synthesis/report-data.yaml`, `40-synthesis/advisory-report.md`) |
 | `domain-auditor` | (`40-synthesis/domain-improvements.yaml`) |
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 FIX = Path(__file__).resolve().parent / "fixtures"
@@ -218,21 +224,21 @@ def test_text_mode_lists_labels(tmp_path):
     assert r.exit_code == 0 and "intake" in r.stdout and "domain-auditor" in r.stdout
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_cli_resume_plan.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.resume_plan`)
 
-- [ ] **Step 3: Implement `resume_plan.py`, `schema_errors_for_file`, the command and the receipt property**
+- [x] **Step 3: Implement `resume_plan.py`, `schema_errors_for_file`, the command and the receipt property**
 
 Per-file status, checked in order: absent gives `missing <rel>`; whitespace-only content gives `empty <rel>`; `context-brief.md` with no parseable frontmatter (`parse_intake_brief` returns `{}`) gives `no frontmatter in <rel>`; for `.yaml`, a `YAML parse error` from `schema_errors_for_file` gives `unparseable <rel>: <error>`, and any other first error gives `schema-invalid <rel>: <error>`. A step's reason is `outputs present and valid` when complete, otherwise the first failing file's reason in its first alternative. `schema_errors_for_file` picks the schema the way `run_schema_pass` does: `*.findings.yaml` / `*.capabilities.yaml` validate each `extract_records` record, `00-context/<name>` uses `CONTEXT_ROLLUPS` or `code-evidence-index.schema.json`, `40-synthesis/<name>` uses `SYNTHESIS_ROLLUPS`. The envelope check is skipped, because canonicalize normalizes envelopes. `EngineMismatch` text: `resume-plan: refusing to resume {run_dir}: it was created by framework {fv} and this engine is {__version__} (framework {FRAMEWORK_VERSION}). Resume it with an apd-gauntlet {run_major}.x engine.` JSON goes to stdout as `json.dumps(plan)` on one line. Text mode prints `engine <version>` and then one `complete|pending  <label>  <reason>` line per step. Add `apd-gauntlet resume-plan <run-dir> [--json]  # which agent steps are already complete (read-only; the runner resumes from it)` to the docs CLI list.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_cli_resume_plan.py tests/test_agent_receipt_schema.py -v && mypy tools/`
 Expected: PASS; mypy clean
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/apd_gauntlet/resume_plan.py tools/apd_gauntlet/validate.py tools/apd_gauntlet/cli.py tools/apd_gauntlet/data/schemas/agent-receipt.schema.json docs/running-the-gauntlet.md tests/test_cli_resume_plan.py
@@ -240,6 +246,8 @@ git commit -m "feat(cli): add read-only resume-plan step-completion map"
 ```
 
 ### Task 2: The workflow resumes from `resume-plan`; agent prompts lose the guard
+
+2026-10-17 (register A15.2): the JS this task quotes is history; the shipped code is the awaited form.
 
 **Files:**
 
@@ -258,7 +266,7 @@ git commit -m "feat(cli): add read-only resume-plan step-completion map"
   - `RECEIPT.properties.resume_plan`, mirroring the Task 1 schema property.
   - plan-run's first row: `{"phase": "setup", "kind": "CLI", "ref": "resume-plan runs/<id> --json", "outputs": "step completion map (read-only); skip AGENT steps marked complete", "gate": ""}`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 LENSES = {"confidentiality", "integrity", "availability", "distributed", "resilient",
@@ -327,12 +335,12 @@ Extend `test_plan_run_phase_names_consistent_with_workflow`, after its phase ass
     assert "resume-plan" in plan_cmds & workflow_cmds
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py -v`
 Expected: FAIL on nine of the ten new or extended tests. `test_resumable_labels_match_workflow_llmstep_labels` already passes, because it pins Task 1's table against labels the workflow already uses. Every other test still passes.
 
-- [ ] **Step 3: Implement the workflow and plan-run changes**
+- [x] **Step 3: Implement the workflow and plan-run changes**
 
 The `resume-plan` step is the first call after `phase('setup')`:
 
@@ -356,12 +364,12 @@ if (rp.status === 'ok' && rp.resume_plan && Array.isArray(rp.resume_plan.steps))
 
 `llmStep` builds its prompt from `instruction` plus the existing two receipt lines only. `guard()` stays, because pySteps still use it. Remove `outputs`, `validateScope` and `validateFlags` from every `llmStep` call site; the instructions already name each step's outputs. Rewrite the header's two-layer resume note: same-session resume still replays the harness cache, and cross-session resume now comes from one `resume-plan` call that skips agent steps whose outputs are present and valid, while CLI steps keep pyStep's guard. Make the `bailIfInterrupted` text read `(resume-plan skips completed agent steps)`. In both docs, replace "idempotency guards replay completed phases" with "the runner calls `apd-gauntlet resume-plan` once and skips every agent step whose outputs are already present and valid". CHANGELOG bullet: agents no longer receive a resume guard they cannot run; the runner decides skips from `apd-gauntlet resume-plan`, refuses run directories from another major engine, and report-writer remediation passes always run.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/test_cli_resume_plan.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/workflows/apd-gauntlet.js tools/apd_gauntlet/plan_run.py docs/running-the-gauntlet.md docs/architecture.md CHANGELOG.md tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py
@@ -370,10 +378,14 @@ git commit -m "fix(workflow): resume from resume-plan and drop guard text from a
 
 - [ ] **Step 6: Operator — compare PR group A against the 1.7.0 baseline**
 
+Not run: replaced by A8.1's substitute gate; no 1.7.0 live run can exist (A15.1).
+
 Run the master plan Task 1 set twice on this branch (telemetry on). From a `next` checkout with WS2 merged, run `apd-gauntlet compare-runs <baseline> <candidate> --gates eval/gates.yaml` for each pair. Also interrupt one run during tier-2 and re-invoke it in a fresh session; the log must show `resume-plan: … agent step(s) already complete` and tier-1 lenses must not be re-dispatched.
 Expected: exit 0 for every pair. `compare-runs` exists only once WS2 lands on `next`; until then keep the candidate run directories and finish this step before Task 12. The same procedure closes groups B (Task 4), C (Task 7) and E (Task 10).
 
 ### Task 3: Tier gates repair, re-run, then halt
+
+2026-10-17 (register A15.2): the JS this task quotes is history; the shipped code is the awaited form.
 
 **Files:**
 
@@ -419,7 +431,7 @@ Return ONLY a receipt conforming to schemas/agent-receipt.schema.json:
   errors: one {path: "{{FILE}}", message: <the error line>} per error you could not fix
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tests/test_resources.py
@@ -476,12 +488,12 @@ def test_repair_prompt_ships_in_wheel(venv_bin: Path, tmp_path: Path) -> None:
     assert "{{FILE}}" in r.stdout
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_resources.py tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py -v`
 Expected: FAIL (`read_prompt` missing; `tierGate` and `repairTierGate` absent)
 
-- [ ] **Step 3: Implement the template, `read_prompt`, and the gate repair loop**
+- [x] **Step 3: Implement the template, `read_prompt`, and the gate repair loop**
 
 `runTier` keeps its lens dispatch, retries and canonicalize step, then calls `const gate = tierGate(phaseName, tierDir, ''); repairTierGate(phaseName, tierDir, lenses, gate);`. `tierGate` is the existing validate pyStep with `cliArgs: '--tier ' + tierDir + ' --json'`, `alwaysRun: true` (a gate that can skip itself is not a gate) and `errorsFromJson: true`. The repair loop:
 
@@ -519,12 +531,12 @@ function repairTierGate(phaseName, tierDir, lenses, gate) {
 
 `failingFiles` keeps the receipt errors whose `path` contains `/<tierDir>/` and ends in `.findings.yaml` or `.capabilities.yaml`, grouping their messages by path. `lensesOf` maps a path ending `/<lens>.findings.yaml` or `/<lens>.capabilities.yaml` to a lens in `lenses`. `errorText` joins the receipt's first five error messages with `'; '`. `repairPrompt` substitutes the placeholders with `split(...).join(...)`. The plan-run tier gate `gate` becomes `validate {run_dir} --tier {tier_dir} --errors-only; on failure repair each failing file (tools/apd_gauntlet/data/prompts/repair.md), re-run the lens if repair fails, then halt`. The docs section says a dispatch failure still retries the lens twice, and a schema or semantic failure at the tier gate now gets one repair per file, then one lens re-run, then a halt that names the files. CHANGELOG bullet: tier gates now block, with repair before re-run.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_resources.py tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py -v && pytest -m wheel tests/integration -v`
 Expected: PASS (the wheel test skips only where `uv` is absent)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/apd_gauntlet/data/prompts/repair.md tools/apd_gauntlet/resources.py pyproject.toml .claude/workflows/apd-gauntlet.js tools/apd_gauntlet/plan_run.py docs/running-the-gauntlet.md CHANGELOG.md tests/test_resources.py tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/integration/test_wheel_install_smoke.py
@@ -544,7 +556,7 @@ git commit -m "fix(workflow): make tier gates blocking with a repair agent befor
 - Consumes: `pyStep`'s `alwaysRun` option (`:187-189`), which replaces `guard()` with "always perform the WORK COMMAND".
 - Produces: those three `pyStep('validate', …)` calls carry `alwaysRun: true` and no `validateScope`/`validateFlags`. Their `cliArgs`, the pre-Phase-5 `isErr` throw (`:497-503`) and every other gate behaviour stay as they are. The guard runs only `validate --schema-only`, so a run with only semantic or cross-file errors made these gates return a skip receipt; now they run the full command every time. The tier gates got the same treatment in Task 3 (`tierGate`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 READ_ONLY_GATES = ("intake-schema-gate", "validate-full-prephase5", "validate-final")
@@ -558,21 +570,21 @@ def test_read_only_gates_always_run() -> None:
         assert "validateScope" not in block and "validateFlags" not in block, label
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_workflow_apd_gauntlet.py -k read_only_gates -v`
 Expected: FAIL (`intake-schema-gate`)
 
-- [ ] **Step 3: Set `alwaysRun: true` on the three gates and drop their guard-only options**
+- [x] **Step 3: Set `alwaysRun: true` on the three gates and drop their guard-only options**
 
 CHANGELOG bullet: the intake schema gate, the pre-synthesis whole-run gate and the final validate now always run the full validation. Previously a schema-only guard could skip them on runs with only semantic or cross-file errors, so the pre-synthesis halt can now fire on errors it used to miss.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/workflows/apd-gauntlet.js CHANGELOG.md tests/test_workflow_apd_gauntlet.py
@@ -580,6 +592,8 @@ git commit -m "fix(workflow): stop read-only validate gates from skipping themse
 ```
 
 - [ ] **Step 6: Operator — compare PR group B against the 1.7.0 baseline**
+
+Not run: replaced by A8.1's substitute gate; no 1.7.0 live run can exist (A15.1).
 
 Same procedure as Task 2 Step 6. Also, in a copy of a finished run, break one lens file by putting an unquoted colon in a title. Re-invoke and confirm that one `repair-…` dispatch fixes it and no lens re-runs. Then, in another copy, add a `cross_references` entry that names an unknown id, and confirm the run halts at `validate-full-prephase5`.
 Expected: exit 0 for every pair; the retry count is no worse than baseline.
@@ -598,7 +612,7 @@ Expected: exit 0 for every pair; the retry count is no worse than baseline.
 - Consumes: the paths the code reads: `validate.CANONICAL_RECORD_DIRS` (includes `40-threat-model`), `report/loader.py:613` and `synthesis/audit.py:116` (`40-threat-model/threat-model.findings.yaml`, root key `finding`), and the decomposed and fallback synthesis outputs `40-synthesis/deduped-findings.yaml` and `deduped-capabilities.yaml`.
 - Produces: none (prompt contract only).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tests/test_tmeval_agent_contract.py
@@ -630,21 +644,21 @@ def test_tmeval_instruction_names_canonical_inputs_and_output() -> None:
         assert path in call
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_tmeval_agent_contract.py tests/test_workflow_apd_gauntlet.py -k "evaluator or tmeval or canonical_dir or threat_modeling_doc" -v`
 Expected: FAIL on four new tests. `test_canonical_dir_is_what_the_validator_accepts` passes already, because it pins the code's truth. The existing tests in the selection pass.
 
-- [ ] **Step 3: Rewrite the stale passages**
+- [x] **Step 3: Rewrite the stale passages**
 
 Output contract item 1: all findings go in the single file `40-threat-model/threat-model.findings.yaml` under the root key `finding:` as a list (the finding-schema list form). Step 1 reads `00-context/threat-model-normalized.yaml`, `40-synthesis/deduped-findings.yaml` and `40-synthesis/deduped-capabilities.yaml`, plus the supplied sibling when present. The self-check names the same file. In the workflow instruction, add the two deduped inputs and the single output file next to the coverage YAML and report; keep both `00-context/…normalized.yaml` names (pinned by `test_tmeval_gate_widened_to_tm_present`). In the doc, line 147 names the canonical file. CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_tmeval_agent_contract.py tests/test_workflow_apd_gauntlet.py tests/test_evaluator_agent_authoring.py tests/test_lint_agents.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/agents/apd-threat-model-evaluator.md .claude/workflows/apd-gauntlet.js docs/threat-modeling.md CHANGELOG.md tests/test_tmeval_agent_contract.py tests/test_workflow_apd_gauntlet.py
@@ -663,7 +677,7 @@ git commit -m "fix(agents): point the threat-model evaluator at the deduped corp
 - Consumes: `validate.SYNTHESIS_ROLLUPS` (`asset-graph.yaml`, `attack-paths.yaml`, `defense-graph.yaml`) and `RECORD_KINDS` (`*.findings.yaml` matches `attack-path.findings.yaml`); `templates/attack-path-report.template.md` (exists).
 - Produces: none.
 
-- [ ] **Step 1: Pin the validator coverage the deletion relies on**
+- [x] **Step 1: Pin the validator coverage the deletion relies on**
 
 ```python
 @pytest.mark.parametrize("name, body", [
@@ -682,7 +696,7 @@ def test_validate_schema_checks_each_attack_path_artifact(tmp_path, name, body):
 Run: `pytest tests/test_validate_cross_file.py -k each_attack_path_artifact -v`
 Expected: PASS (four cases). This confirms `validate` already covers all four files. If any case fails, stop and report: Step 6 must not be deleted.
 
-- [ ] **Step 2: Write the failing agent-text tests**
+- [x] **Step 2: Write the failing agent-text tests**
 
 ```python
 def test_agent_has_no_obsolete_template_hedge() -> None:
@@ -701,16 +715,16 @@ def test_agent_has_no_manual_schema_check_passage() -> None:
 Run: `pytest tests/test_lint_agent_apd_attack_path_analyzer.py -v`
 Expected: FAIL on the two new tests
 
-- [ ] **Step 3: Delete both passages**
+- [x] **Step 3: Delete both passages**
 
 Step 5 keeps only "Render `40-synthesis/attack-path-report.md` from `templates/attack-path-report.template.md`" plus the Mermaid sentence. Step 6 becomes: run `apd-gauntlet validate <run_dir>`, which schema-checks the three graph files and every record in `attack-path.findings.yaml` and checks edge integrity; fix any reported error before declaring success. CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_lint_agent_apd_attack_path_analyzer.py tests/test_validate_cross_file.py tests/test_lint_agents.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/agents/apd-attack-path-analyzer.md CHANGELOG.md tests/test_lint_agent_apd_attack_path_analyzer.py tests/test_validate_cross_file.py
@@ -729,7 +743,7 @@ git commit -m "fix(agents): drop the attack-path analyzer's obsolete template he
 - Consumes: `LENS_AGENTS` in the test module.
 - Produces: none. A scan of the other eight lenses' `## Self-check before emitting` sections found no id item; the new test keeps all nine clean.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 def test_lens_self_checks_never_ask_for_an_id():
@@ -742,19 +756,19 @@ def test_lens_self_checks_never_ask_for_an_id():
     assert offenders == [], f"self-check asks the lens to author an id: {offenders}"
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_agent_prompt_id_contract.py -v`
 Expected: FAIL (`apd-confidentiality.md`)
 
-- [ ] **Step 3: Delete item 10** (the list ends at item 9) and add the CHANGELOG bullet.
+- [x] **Step 3: Delete item 10** (the list ends at item 9) and add the CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_agent_prompt_id_contract.py tests/test_lint_agents.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/agents/apd-confidentiality.md CHANGELOG.md tests/test_agent_prompt_id_contract.py
@@ -762,6 +776,8 @@ git commit -m "fix(agents): drop the confidentiality self-check item that asked 
 ```
 
 - [ ] **Step 6: Operator — compare PR group C (Tasks 5–7) against the 1.7.0 baseline**
+
+Not run: replaced by A8.1's substitute gate; no 1.7.0 live run can exist (A15.1).
 
 Same procedure as Task 2 Step 6. Also confirm that no candidate has a file under `20-findings/` and that each candidate's tmeval findings are in `40-threat-model/threat-model.findings.yaml`.
 Expected: exit 0 for every pair.
@@ -782,7 +798,7 @@ Expected: exit 0 for every pair.
   - `_existing_pack_signature(out_path) -> tuple[list[tuple[str, str]], str | None, str | None] | None` (packs, framework_version, content_sha256)
   - Full-skill frontmatter key `metadata.content_sha256: <64 hex>` (indented two spaces, like `framework_version`), on the line directly after `framework_version`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def _copied_pack(tmp_path) -> pathlib.Path:
@@ -822,21 +838,21 @@ def test_legacy_skill_without_hash_is_rebuilt_once(tmp_path):
 
 The existing `test_idempotent_no_rewrite_when_pack_set_unchanged` must stay green unchanged.
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_build_domain_skill.py -v`
 Expected: FAIL on the four new tests
 
-- [ ] **Step 3: Implement the hash and the three-part signature**
+- [x] **Step 3: Implement the hash and the three-part signature**
 
 Compute the hash before the freshness check and compare against `(requested, framework_version, content_hash)`. Do not regenerate the committed `.claude/skills/apd-domain/`: its frontmatter has no hash, so the first run's setup rebuilds it. In the docs, line 189 says the staleness guard compares `metadata.packs`, `framework_version` and `metadata.content_sha256`, so an edit without a version bump still rebuilds. CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_build_domain_skill.py tests/test_build_domain_skill_pruning.py tests/test_lint_skills.py -v && mypy tools/`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/apd_gauntlet/build_domain_skill.py docs/adapting-to-other-domains.md CHANGELOG.md tests/test_build_domain_skill.py
@@ -869,7 +885,7 @@ git commit -m "fix(domain-skill): rebuild when pack content changes without a ve
   - `validate._validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> None`: one ERROR per `00-context` entry with no `id`, no `entry_id` or no `inferred_apd_goals`; the message ends `run 'apd-gauntlet canonicalize'`.
   - Rules: fill a field only when it is absent and never rewrite an existing one, because findings, `c4-recon.yaml` and tmeval keys may already cite it. Use the repo-qualified `cev-` input only when the index declares top-level `repos` and the entry has `repo`. Derive goals from `stride_letter`, else `linddun_letter`, else `[]`. Rewrite a file only when a field was filled; a minted `id` becomes the entry's first key. A YAML parse failure is appended to `parse_errors`, not raised.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 ENTRY = {"qualified_name": "svc.auth.verify", "kind": "function", "file_path": "src/auth.py",
@@ -988,21 +1004,21 @@ def test_adr_0020_records_the_mint_when_absent_amendment():
 
 `REPO = Path(__file__).resolve().parent.parent` and `FIX = REPO / "tests" / "fixtures"`, as in the sibling suites.
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_canonicalize_context_ids.py -v`
 Expected: FAIL (`ImportError: compute_cev_id`)
 
-- [ ] **Step 3: Implement the helpers, the two minting passes, the schema relaxations, the presence check and the docs**
+- [x] **Step 3: Implement the helpers, the two minting passes, the schema relaxations, the presence check and the docs**
 
 `canonicalize_run` calls `_mint_code_evidence_ids` and `_mint_threat_model_ids` before Pass 1 and adds their counts to `context_ids_minted`. The CLI summary appends `, {n} context ids minted` only when `n > 0`, so existing outputs are unchanged. In both schemas, drop the fields from `required`, keep their patterns and add `"readOnly": true`. Register rows: `cev-*` (`linters.compute_cev_id` via `canonicalize._mint_code_evidence_ids`; `qualified_name|line_range`, repo-qualified in multi-repo indexes; enforced by `validate._validate_context_ids`; the agent emits no `id`) and `tm-*` (`linters.compute_tm_entry_id` via `canonicalize._mint_threat_model_ids`; also derives `inferred_apd_goals` from `framework_refs`). Both rows note "minted only when absent; an existing id is never rewritten". The `tm-*` row also notes that the deterministic parsers keep their own pipe-joined variant. Schema-evolution section `## v1.7.1 — Context ids minted by canonicalize`, worded like the v1.7.0 id-ownership entry. The ADR-0020 amendment says three things. `cev-` and `tm-` join the families the assembler owns. For these two families an id is minted only when absent, and an existing id is never rewritten. The reason is back-compatibility with committed examples and older runs, whose hand-assigned `cev-` ids (0 of 46 match the hash in the Home Assistant example) and `tm-` ids are already cited by findings, `c4-recon.yaml` and tmeval keys; rewriting them would orphan those references. Agents no longer emit either id, so in a 1.7.1 run every one is Python-minted. CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_canonicalize_context_ids.py tests/test_canonicalize.py tests/test_cli_canonicalize.py tests/test_register_consistency.py tests/test_code_evidence_index_schema.py tests/test_other_schemas.py tests/test_author_threat_model.py tests/test_validate_example_run.py -v && mypy tools/`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/apd_gauntlet/linters.py tools/apd_gauntlet/threat_model/author.py tools/apd_gauntlet/canonicalize.py tools/apd_gauntlet/cli.py tools/apd_gauntlet/validate.py tools/apd_gauntlet/data/schemas/code-evidence-index.schema.json tools/apd_gauntlet/data/schemas/threat-model-normalized.schema.json docs/deterministic-field-register.md docs/schema-evolution.md docs/adrs/0020-tooling-authored-derived-fields.md CHANGELOG.md tests/test_canonicalize_context_ids.py
@@ -1030,7 +1046,7 @@ git commit -m "feat(canonicalize): mint missing cev- and tm- ids in Python"
   - Two plan-run `CLI` rows `canonicalize runs/<id>` with phase `canonicalize`: one after the code-recon row (same condition), one after the tm-recon block (always).
   - Contract text: code recon emits entries without `id` and cites edges in `c4-recon.yaml` as `code:<qualified_name>:<line_range>`. The TM author emits no `entry_id`, and no `inferred_apd_goals` for STRIDE or LINDDUN entries, even on cells copied from the skeleton. The TM recon emits no `entry_id` for free-form or MAESTRO entries.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tests/test_agent_prompt_id_contract.py
@@ -1094,21 +1110,21 @@ def test_plan_run_without_code_recon_mints_tm_ids_only(tmp_path):
     assert sum(1 for s in plan if s["phase"] == "canonicalize") == 1
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_agent_prompt_id_contract.py tests/test_lint_agent_apd_code_recon.py tests/test_lint_agent_apd_threat_model_author.py tests/test_skill_apd_threat_model_methodologies_authoring.py tests/test_threat_model_authored_template.py tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py -v`
 Expected: FAIL on the nine new tests
 
-- [ ] **Step 3: Rewrite the contracts and wire the two steps**
+- [x] **Step 3: Rewrite the contracts and wire the two steps**
 
 Code recon: drop `id: cev-<sha8>` from the shape, and replace the "`id` is deterministic" rule with "Do NOT emit `id` on entries: `apd-gauntlet canonicalize` mints `cev-` ids right after this phase." The c4-recon example locator and the `uses_edges` rule cite `code:<qualified_name>:<line_range>`, which satisfies the c4-discipline skill's "points at that edge". Self-check item 7: no entry carries an `id`. TM author Step 4 becomes "Leave ids and goals to the assembler": "Do NOT emit `entry_id`", and for STRIDE and LINDDUN entries do not emit `inferred_apd_goals` either (also drop both from cells copied from the skeleton); `apd-gauntlet canonicalize` mints `tm-` from `asset + threat + source_locator` and derives goals with `threat_model/mappings.py`; MAESTRO entries still carry agent-set `inferred_apd_goals` from the layer table. The self-check line becomes "no entry carries `entry_id`". TM recon line 123 becomes "Do NOT emit `entry_id`: `apd-gauntlet canonicalize` mints it after this phase." Skill rule 6 says both fields are minted by `apd-gauntlet canonicalize` and still names `entry_id` and `source_locator`. Templates: the brief's column becomes "Code anchors (`qualified_name:Lx-Ly`)"; the authored template drops the `TM entry IDs:` lines and labels entries `<letter>/<surface>`, because ids live only in the YAML. CHANGELOG bullet.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest -q && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
 Expected: all pass; 0 lint errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/agents/apd-code-recon.md .claude/agents/apd-threat-model-author.md .claude/agents/apd-threat-model-recon.md .claude/skills/apd-threat-model-methodologies/SKILL.md templates/code-architecture-brief.template.md templates/threat-model-authored.template.md .claude/workflows/apd-gauntlet.js tools/apd_gauntlet/plan_run.py CHANGELOG.md tests
@@ -1116,6 +1132,8 @@ git commit -m "fix(agents): code recon and threat-model agents emit content; can
 ```
 
 - [ ] **Step 6: Operator — compare PR group E (Tasks 9–10) against the 1.7.0 baseline**
+
+Not run: replaced by A8.1's substitute gate; no 1.7.0 live run can exist (A15.1).
 
 Same procedure as Task 2 Step 6. Also confirm in each candidate that `apd-gauntlet validate <run>` reports no `has no id` errors, and that rerunning `apd-gauntlet canonicalize <run>` prints no `context ids minted`, which shows every id was minted once.
 Expected: exit 0 for every pair.
@@ -1141,7 +1159,7 @@ Expected: exit 0 for every pair.
   - Scope: only an artifact that resolves, as `run_dir/inputs/<artifact>` or `run_dir/<artifact>`, to a file inside `(run_dir / "inputs").resolve()`. Run-internal artifacts (`00-context/`, `40-synthesis/`, the tier dirs, `code-evidence-index.yaml`) are skipped silently, as are excerpts wholly in parentheses (absence markers such as `(absent in supplied TM)`), unresolvable paths, paths that escape `inputs/`, and files that are not UTF-8.
   - Matching: every fragment must appear, in order, in one haystack: each fragment is searched from the end of the previous match. The haystacks are the artifact's whole normalized text and, for `.yaml`, `.yml` and `.json` inputs, each normalized parsed string scalar.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 FINDING_EX = "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
@@ -1244,12 +1262,12 @@ def test_schema_only_skips_the_check(tmp_path):
     assert "not found verbatim" not in _validate(run, "--schema-only").output
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `pytest tests/test_validate_excerpts.py -v`
 Expected: FAIL (`ImportError: check_excerpts_verbatim`)
 
-- [ ] **Step 3: Implement the check, the flag and the docs**
+- [x] **Step 3: Implement the check, the flag and the docs**
 
 Read each artifact once per call (dict cache). A `UnicodeDecodeError` skips the artifact; a parse error on a `.yaml`/`.yml`/`.json` input leaves only the whole-text haystack. The docs validate line becomes `apd-gauntlet validate <run-dir> [--strict-excerpts]   # three-pass validation`. The troubleshooting bullet covers:
 
@@ -1260,17 +1278,65 @@ Read each artifact once per call (dict cache). A `UnicodeDecodeError` skips the 
 
 CHANGELOG bullet: the new check warns by default and `--strict-excerpts` makes it an error.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `pytest tests/test_validate_excerpts.py tests/test_validate_cross_file.py tests/test_validate_tier.py tests/test_validate_example_run.py tests/test_examples.py -v && mypy tools/`
 Expected: PASS. The three committed examples print no excerpt warnings, because their `inputs/` directory sits beside `expected/`, not inside it. Pointed at those sibling inputs during planning, the same rules gave 0, 1 and 24 warnings (claim-event-bus, acme mobile banking, Home Assistant), so a run with its own `inputs/` should expect a small count like these.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/apd_gauntlet/validate.py tools/apd_gauntlet/cli.py docs/running-the-gauntlet.md CHANGELOG.md tests/test_validate_excerpts.py
 git commit -m "feat(validate): warn when an evidence excerpt is not verbatim in its artifact"
 ```
+
+### Task 11b: `init-run` refuses links that escape `inputs/`
+
+(Consolidated plan task N1.)
+
+Executed 2026-10-16 as commit `5bb52ec`, merged in #49 (register A8.8, A15.5).
+
+**Files:**
+
+- Modify: `tools/apd_gauntlet/init_run.py` (`scaffold_run`, new helpers)
+- Modify: `tools/apd_gauntlet/cli.py` (`init_run_cmd`)
+- Create: `tests/test_init_run_symlinks.py`
+- Modify: `docs/running-the-gauntlet.md` (one sentence under the `init-run` section), `CHANGELOG.md` (Fixed)
+
+**Interfaces:**
+
+- Produces (`init_run.py`): `class UnsafeInputsError(ValueError)`; `def find_escaping_links(inputs_src: pathlib.Path) -> list[str]` — walks with `os.walk(followlinks=False)`, returns sorted POSIX paths relative to `inputs_src` of every symlink (file, directory or dangling) whose `os.path.realpath` is not `inputs_src.resolve()` or below it; `scaffold_run(...)` raises `UnsafeInputsError` **before creating any directory**, with the message `inputs contain links that point outside the inputs folder: <rel> -> <target>; …`.
+- Copy rule: directories with `shutil.copytree(item, target, symlinks=True, dirs_exist_ok=True)`; top-level links with `shutil.copy2(item, target, follow_symlinks=False)`; after copying, any link whose target is absolute is rewritten to `os.path.relpath(<realpath mapped into the run's inputs/>, <link's parent>)`, so the run stays self-contained.
+- Consumed by: LA3 Task 1 `check_inputs` (calls `find_escaping_links`).
+
+- [x] **Step 1: Write the failing tests** in `tests/test_init_run_symlinks.py` (use `click.testing.CliRunner` and `tmp_path`):
+
+```python
+def test_escaping_dir_link_refused(tmp_path):
+    outside = tmp_path / "outside"; outside.mkdir(); (outside / "id_rsa").write_text("SECRET")
+    inputs = tmp_path / "in"; inputs.mkdir(); (inputs / "plan.md").write_text("x")
+    (inputs / "keys").symlink_to(outside, target_is_directory=True)
+    r = CliRunner().invoke(main, ["init-run", "r1", "--inputs", str(inputs), "--root", str(tmp_path / "runs")])
+    assert r.exit_code == 1 and "keys" in r.output
+    assert not (tmp_path / "runs" / "r1").exists()
+
+def test_escaping_file_link_refused(tmp_path): ...  # inputs/key-file -> outside/id_rsa; exit 1; no file under runs/ contains "SECRET"
+def test_nested_escaping_link_refused(tmp_path): ...  # inputs/docs/deep -> outside; exit 1; "docs/deep" in output
+def test_dangling_outside_link_refused(tmp_path): ...  # link to a missing path outside inputs; exit 1
+def test_internal_link_kept_relative(tmp_path):
+    # inputs/a.md and inputs/alias.md -> <absolute path of inputs/a.md>
+    run = scaffold_run("r2", inputs, ["pbm"], tmp_path / "runs")
+    link = run / "inputs" / "alias.md"
+    assert link.is_symlink() and not os.path.isabs(os.readlink(link))
+    assert link.resolve() == (run / "inputs" / "a.md").resolve()
+def test_find_escaping_links_sorted_relative(tmp_path):
+    assert find_escaping_links(inputs) == ["b/link", "keys"]
+```
+
+- [x] **Step 2:** `pytest tests/test_init_run_symlinks.py -v`. Expected: FAIL (`ImportError: cannot import name 'find_escaping_links'`; the CLI test exits 0).
+- [x] **Step 3:** Implement `UnsafeInputsError`, `find_escaping_links` and the copy rule in `init_run.py`; in `init_run_cmd`, catch `UnsafeInputsError` → `click.echo(f"init-run: {e}", err=True)` and `raise SystemExit(1)`.
+- [x] **Step 4:** `pytest tests/test_init_run_symlinks.py tests/test_init_run*.py -v` then QG. Expected: PASS; the full suite still passes.
+- [x] **Step 5:** Commit: `fix(init-run): refuse input links that point outside the inputs folder`.
 
 ### Task 12: Release 1.7.1
 
@@ -1285,30 +1351,38 @@ git commit -m "feat(validate): warn when an evidence excerpt is not verbatim in 
 - Consumes: Tasks 1–11 merged on `main`; the compare-runs steps for PR groups A, B, C and E passed (M1 exit gate); PR #27's `tools/check_release_tag.py`.
 - Produces: tag `v1.7.1`; PyPI `apd-gauntlet==1.7.1`; plugin `1.7.1`; `FRAMEWORK_VERSION == "1.7.1"`.
 
-- [ ] **Step 1: Confirm the preconditions**
+- [x] **Step 1: Confirm the preconditions**
 
 Run: `git switch main && git pull && python -c "from apd_gauntlet import FRAMEWORK_VERSION; print(FRAMEWORK_VERSION)" && git switch -c chore/release-1.7.1`
 Expected: prints `1.7.0`. Confirm the recorded `compare-runs` results for PR groups A (Task 2), B (Task 4), C (Task 7) and E (Task 10) all exited 0. If any is missing or failing, stop.
 
-- [ ] **Step 2: Move the version-floor test first**
+The `compare-runs` check: not run: replaced by A8.1's substitute gate; no 1.7.0 live run can exist (A15.1). Amended (register A8.1, as amended by A15.6): `compare-runs` exists on neither line, so the recorded `compare-runs` results for PR groups A, B, C and E are replaced by the 1.7.1 substitute gate: the offline example regression (consolidated plan Task 1.4, Appendix 1: `validate`, `canonicalize`, `build-report`, `audit-report`, `resume-plan` on the three committed examples, each identical to the 1.7.0 engine's output) plus one live run of `examples/apd-20260601-claim-event-bus/inputs` with the `metrics.yaml` comparison (Task 1.5). Keep the 1.7.1 run directory `runs/apd-20261016-ws1-gate` for WS2 (it has no telemetry); no 1.7.0 live run exists (A15.1). A 1.7.1 defect found later ships as 1.7.2. The 1.7.1 substitute gate: the offline regression passed (consolidated Task 1.4); the live run completed clean (Task 1.5 Steps 1–4); its metrics comparison (Step 6) was inconclusive against the 1.4.0-era example (A15.9); 1.7.1 was released on that basis (DEC-1).
+
+- [x] **Step 2: Move the version-floor test first**
 
 Change the literal in `test_plugin_manifest_version_matches_pyproject` to `assert py_version == "1.7.1"`.
 Run: `pytest tests/test_workflow_apd_gauntlet.py::test_plugin_manifest_version_matches_pyproject -v`
 Expected: FAIL (`pyproject reports '1.7.0'`)
 
-- [ ] **Step 3: Bump the lockstep places and write the changelog section**
+Amended (register A8.2): change the literal at `tests/test_workflow_apd_gauntlet.py` (`assert py_version == "1.7.1", (`) **and** the message on the next line ("expected the 1.7.1 release version"). Also bump `docs/QUICKSTART.md` (`# should print 1.7.1`; `framework_version: 1.7.1`). Done in #51.
+
+- [x] **Step 3: Bump the lockstep places and write the changelog section**
 
 Set `1.7.1` in `pyproject.toml`, `__init__.py`, `plugin.json` and the marketplace entry, and update the QUICKSTART lines to `should print 1.7.1` and `framework_version: 1.7.1`. Then rework `CHANGELOG.md` in two moves:
 
 1. **Housekeeping (1.7.0-era bullets).** Every `[Unreleased]` bullet that was already under `[Unreleased]` at tag `v1.7.0` (check with `git show v1.7.0:CHANGELOG.md`) moves into the existing `## v1.7.0 — 2026-06-09` section. Those are `### Added`: Two-channel distribution; Derived cross-framework views; ATT&CK detection overlay; Compliance projection layer; the per-finding attack-path hop-strip; Deterministic assembler owns all derived ids. And `### Changed`: Agents emit content only. Each one is appended after the existing bullets of the matching v1.7.0 subsection, with its text unchanged.
 2. **1.7.1.** Add `## v1.7.1 — YYYY-MM-DD` (the tag date) directly above `## v1.7.0`. Under `### Changed` go PR #27's two bullets ("Two release lines.", "Pre-release engines stamp a release framework version."); under `### Fixed` go every bullet Tasks 2–11 added. `## [Unreleased]` stays as an empty heading.
 
-- [ ] **Step 4: Run the full gates**
+Amended (register A8.7): New `## v1.7.1 — <date>`, every new bullet ending with its PR number, for example `(#9)`: Added — #7 (Quickstart guide); Changed — PR #27's two bullets, #10 (loader-contract test, `lint-skills`, pinned `claude plugin validate`), #44/#45 (report bundle rebuilt with cytoscape 3.34.3, react 19.3.0, cytoscape-dagre 4.0.1); Fixed — the 12 WS1 bullets and N1 (symlinks) with the WS1 PR number, #8 (plugin `skills` point at directories), #9 (freshness gate: hash parity and rebuild-diff). Move the six "Added" bullets and "Agents emit content only" that were under `[Unreleased]` at tag `v1.7.0` into `## v1.7.0`, and add the never-logged #104 bullet there (W0 `SerializationIntegrityError`, dict `scope` rejection, blocking prephase-5 gate; W1a `infrastructure.{mode,static}` and `manual-audit-prompts`; W1b `repos[]` and the zero-entry warning, ADR-0019; `kb_fetch.fetch_pinned` and `tools/check_kb_cache_freshness.py`). Keep an empty `## [Unreleased]`. Check: the consolidated plan's N2 loop prints nothing.
+
+Done (register A15.8): #51 wrote the `## v1.7.1` CHANGELOG section per A8.7 and N2.
+
+- [x] **Step 4: Run the full gates**
 
 Run: `pytest -q && ruff check tools/ tests/ && mypy tools/ && markdownlint-cli2 "docs/**/*.md" "!docs/superpowers/plans/**" ".claude/**/*.md" "tools/apd_gauntlet/data/domains/**/*.md" README.md CONTRIBUTING.md CHANGELOG.md CODE_OF_CONDUCT.md`
 Expected: all pass; 0 lint errors
 
-- [ ] **Step 5: Commit, open the PR against `main`, merge**
+- [x] **Step 5: Commit, open the PR against `main`, merge**
 
 ```bash
 git add pyproject.toml tools/apd_gauntlet/__init__.py .claude-plugin/plugin.json .claude-plugin/marketplace.json tests/test_workflow_apd_gauntlet.py CHANGELOG.md docs/QUICKSTART.md
@@ -1317,15 +1391,19 @@ git commit -m "chore(release): 1.7.1"
 
 Expected: CI green on the PR; merged with a merge commit.
 
-- [ ] **Step 6: Tag, check the gate locally, push the tag**
+Amended (register A8.3): Merge the release PR and push `v1.7.1` in the same session: the 1.7.1 workflow halts on any engine without `resume-plan`, and the marketplace serves `main` HEAD. Done: the release PR is #51, merged after #49 and #50 (register A15.5).
+
+- [x] **Step 6: Tag, check the gate locally, push the tag**
 
 Run: `git switch main && git pull && git tag v1.7.1 <merge-sha> && python tools/check_release_tag.py --tag v1.7.1 && git push origin v1.7.1`
 Expected: `release gate: ok — version=1.7.1, prerelease=false, make_latest=true`. The release workflow then publishes 1.7.1 to PyPI and creates a GitHub Release marked Latest.
 
-- [ ] **Step 7: Merge `main` into `next`, keeping `next`'s versions**
+- [x] **Step 7: Merge `main` into `next`, keeping `next`'s versions**
 
 Run: `git switch next && git pull && git merge --no-ff main`. Resolve conflicts by keeping `next`'s values in the five version places (`2.0.0aN`, plugin `2.0.0-alpha.N`) and in `docs/QUICKSTART.md`. In `CHANGELOG.md`, keep `next`'s `## Unreleased — 2.0 line`, add the `## v1.7.1 — YYYY-MM-DD` section under its own heading, and take `main`'s v1.7.0 housekeeping. Then push.
 Expected: CI green on `next`, including `test_plan_run_phase_names_consistent_with_workflow`.
+
+Done in #52 (register A15.7), with A8.4's text as the record: While `next` has no 2.0 pre-release, `git merge --no-ff main` into `next` is conflict-free and takes 1.7.1 in all five version places; keep them. In the same merge commit, reword next's CHANGELOG bullet "Version stays `1.7.0` for now" to "Version tracks the stable line (1.7.1) until the first 2.0 pre-release", and delete the empty `## [Unreleased]` heading that comes from `main`. "Keep next's values" applies only once `2.0.0aN` is on `next`. The 1.7.1 release PR adds that rule to RELEASING.md step 5: "(While `next` has no 2.0 pre-release, take `main`'s version values.)"
 
 ---
 

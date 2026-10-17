@@ -10,10 +10,12 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md` §14 (except the metamorphic suite, which CAT2 owns), §3 ("Default" row), §7 (absent key), §9 (`eval-labels` row), §11, §12.3, §15 (CAT4 row and operator work); master plan `docs/superpowers/plans/2026-10-10-program-master-plan.md` R1, R2, R7 (`eval-labels` gains kind `threats`), R8, R9, R10, Task 8 Step 3a, M6; WS2 plan `docs/superpowers/plans/2026-10-10-ws2-measurement-and-evaluation.md` Tasks 5, 6, 8–11 and 14, and its ADR-0028; IAC4 plan `docs/superpowers/plans/2026-10-10-iac-plan4-evaluation.md` (precedent for a labels kind, evaluators, freeze and runbook); the CAT brief's fixed cross-plan interfaces.
 
+**Amended 2026-10-17** per the amendments register (A7.50, A15.12, A15.21, A15.27).
+
 ## Global Constraints
 
 - Ships on `next` (2.0 line); CHANGELOG entries go under ``## Unreleased — 2.0 line (`next`)``.
-- "Measured with the WS2 harness, on the master plan Task 1 set plus labelled development and held-out corpora (ADR-0017: local only; labels and results never committed)." (spec §14)
+- "Measured with the WS2 harness, on the master plan Task 1 set plus labelled development and held-out corpora (ADR-0017: local only; labels and results never committed)." (spec §14) Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
 - Labels, corpus manifests and results for this plan live under the gitignored `eval/local/catalog/` and `eval/results/`, including labels for the committed examples (the spec is stricter than ADR-0028's labels clause, and the spec wins).
 - The only committed evaluation artefact is `eval/catalog/decision.yaml`: aggregate gate values, entry and run counts, and SHA-256 digests. It never holds entry ids, run names, threat ids or labels. This is ADR-0028's narrow exception ("aggregate calibration statistics carry no subject data"), which Task 10 amends to name the file.
 - "Each corpus system is run twice with `off` and twice with `open`, plus `full` locally." (spec §14). Runs are named `<prefix>-off-r1`, `<prefix>-off-r2`, `<prefix>-open-r1`, `<prefix>-open-r2`, and optionally `<prefix>-full-r1`, so WS2's `resolve_side` and `compare-runs` find them.
@@ -27,7 +29,7 @@
 - Unmeasured gates (coordinator, 2026-10-12): with zero `catalog_silence` findings, the silence gate reads `not_available` with the reason "no silence findings produced" and counts as passing. Any other `not_available` gate means `off`.
 - Tokens per run are the sum of the four `usage.yaml` token counters (input, output, cache read, cache creation). `cost_usd` is reported alongside, never gated.
 - Labelling every off-run TM entry on labelled surfaces is accepted (coordinator, 2026-10-12). The later WS6 decision task `threat-match` (spec §16) could pre-fill those rows.
-- No HITRUST lineage: CAT4 never reads a threat's `hitrust` block or `hitrust_crosswalk`, and no CAT4 output carries catalog prose.
+- CAT4 reads no catalog prose, and no CAT4 output carries any.
 - **CI never touches the network** (ADR-0017). Tests use synthetic run directories only.
 - Quality gates: `ruff check tools/ tests/`, `mypy tools/` (strict on `tools/apd_gauntlet`), `pytest` (coverage `fail_under = 85`), and `markdownlint-cli2` on the linted globs all pass on every PR.
 - Every schema change `$ref`s `_defs.schema.json#/$defs/<name>` for goal and severity (`tests/test_schema_vocab_centralized.py`).
@@ -1320,7 +1322,7 @@ Expected: exit 0 or 1, and `Decision: open -> eval/catalog/decision.yaml` or `De
   - `CHANGELOG.md`;
   - `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md` (line 4, the status line);
   - `RELEASING.md` (the `v2.0.0b1` checklist IAC4 adds under "Cutting a 2.0 pre-release");
-  - open branch only: `tools/apd_gauntlet/catalog/config.py` (`DEFAULT_EDITION`), `.claude/workflows/apd-gauntlet.js` (`CATALOG_DEFAULT_EDITION`, CAT2 Task 9), `docs/running-the-gauntlet.md` (CAT1's `### Threat catalog (v2.0+)`), `docs/adrs/0030-threat-catalog-enrichment-layer.md` (CAT1), `tests/test_catalog_config.py` (CAT1's `test_absent_is_off_by_default`), and test fixtures that relied on an absent key meaning `off`.
+  - open branch only: `tools/apd_gauntlet/catalog/config.py` (`DEFAULT_EDITION`), `.claude/workflows/apd-gauntlet.js` (`CATALOG_DEFAULT_EDITION`, CAT2 Task 9), `docs/running-the-gauntlet.md` (CAT1's `### Threat catalog (v2.0+)`), `docs/adrs/0030-threat-catalog-enrichment-layer.md` (CAT1), `tests/test_catalog_config.py` (CAT1's `test_absent_is_off_by_default`), `tests/test_workflow_runner_awaits.py` (`EXPECTED_GREEN_LABELS`, or the harness `ARGS`; register A15.27), and test fixtures that relied on an absent key meaning `off`.
 - Test: `tests/catalog_eval/test_decision.py::test_repository_default_matches_decision`
 
 **Interfaces:**
@@ -1340,6 +1342,7 @@ Expected: `open` or `off`. The test pins the branch the next step takes.
 Make these edits:
 
 - In `tools/apd_gauntlet/catalog/config.py` set `DEFAULT_EDITION: Literal["off", "open"] = "open"`, and in `.claude/workflows/apd-gauntlet.js` set `const CATALOG_DEFAULT_EDITION = 'open';`, keeping CAT2's comment.
+- In `tests/test_workflow_runner_awaits.py`, the harness `ARGS` set no `threat_catalog`, and CAT2's `catalogEdition(a)` returns `CATALOG_DEFAULT_EDITION` when the key is absent, so the green run now dispatches `catalog-scope` (first in `threat-model-author`, before `author-threat-model-floor`) and `catalog-shortlists` (right after `canonicalize-threat-model`, as CAT3 Task 5 pins). Add both to `EXPECTED_GREEN_LABELS` at those positions in this commit, or set `threat_catalog: 'off'` in the harness `ARGS` (register A15.21, A15.27).
 - Under ``## Unreleased — 2.0 line (`next`)`` `### Changed`, add a bullet beginning with `CHANGELOG_OPEN`, followed by: "The held-out evaluation passed every threat catalog gate (`eval/catalog/decision.yaml`). Set `threat_catalog: off` to keep 1.7 behaviour."
 - Replace the spec's status line with `spec_status_line(record)`.
 - In `docs/running-the-gauntlet.md` `### Threat catalog (v2.0+)`, change the sentence about the absent key's default to say `open`. In ADR-0030, add a dated line under Consequences: "CAT4's held-out gates passed; `DEFAULT_EDITION` is `open` (`eval/catalog/decision.yaml`)."

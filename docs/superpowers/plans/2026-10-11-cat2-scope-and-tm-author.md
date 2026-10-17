@@ -13,14 +13,16 @@
 - `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md`: §5, §7 (`threat_profile`), §8.1, §8.2, §8.3, §8.4 (goal derivation only), §8.6 (LINDDUN table; TM-entry validator rules; `threat-scope.yaml` registration), §9 (rows `domain`, `threat-scope`, `threat-model-normalized`), §11, §12.2, §13, §14 (metamorphic suite).
 - Program master plan `docs/superpowers/plans/2026-10-10-program-master-plan.md`: R1 (`catalog scope`), R2 (`apd_gauntlet.catalog`), R3, R7 (CAT2 rows), R8, R9 (labels `catalog-scope`), Task 7 Step 2a.
 - CAT brief fixed interfaces (CAT1 names consumed, CAT2 names produced).
-- Dependencies: WS1 (`2026-10-10-ws1-defect-fixes-1.7.1.md` Tasks 2, 9, 10), WS2 (`2026-10-10-ws2-measurement-and-evaluation.md` Task 13, `tests/conftest.py`), WS3 (`2026-10-10-ws3-cost-wave1-quick-wins.md` Tasks 1 and 3: `tests/js/workflow_dispatch_trace.mjs`, `trace`, `CLI_LABELS`, `HA_SHAPED`), LA2 (`/home/claude/illusconsulting/apd-gauntlet/docs/superpowers/plans/2026-10-10-local-apps-plan2-agent-sdk-runner.md` Tasks 1, 6, 7: `bundle --sync`, `Runner`, `scenario()`), IAC1 (`2026-10-10-iac-plan1-resolution-and-workspaces.md` Task 11: index root key `iac_evidence_index`, entry `address`).
+- Dependencies: WS1 (`2026-10-10-ws1-defect-fixes-1.7.1.md` Tasks 2, 9, 10), WS2 (`2026-10-10-ws2-measurement-and-evaluation.md` Task 13, `tests/conftest.py`), WS3 (`2026-10-10-ws3-cost-wave1-quick-wins.md` Tasks 1 and 3: `tests/js/workflow_dispatch_trace.mjs`, `trace`, `CLI_LABELS`, `HA_SHAPED`), LA2 (`docs/superpowers/plans/2026-10-10-local-apps-plan2-agent-sdk-runner.md` Tasks 1, 6, 7: `bundle --sync`, `Runner`, `scenario()`), IAC1 (`2026-10-10-iac-plan1-resolution-and-workspaces.md` Task 11: index root key `iac_evidence_index`, entry `address`).
+
+**Amended 2026-10-17** per the amendments register (A7.39, A7.40, A7.41, A7.42, A7.53, A7.54, A7.55, A7.56, A7.59, A7 anchors after WS1, A15.3, A15.12, A15.21, A15.27, A15.28).
 
 ## Global Constraints
 
 - Lands on `next` after CAT1, WS1 (merged forward), WS2, WS3 and LA2. Only Task 9 edits `.claude/workflows/apd-gauntlet.js` and `runner/flow.py`; that PR merges alone (master plan "merges one PR at a time").
 - R1, verbatim: "`catalog scope <run-dir>` — Writes `00-context/threat-scope.yaml`. Exits 0 and writes nothing when `threat_catalog` is `off`; exits 1 without an inventory."
 - `catalog scope` exits non-zero only for an invalid vendored catalog or a missing inventory. A broken `full` file falls back to `open` with a warning (CAT1), and "vendored catalog not installed" exits 0 with `catalog: null`, after which downstream steps behave as `off`. The workflow and runner halt on a non-zero `catalog-scope`.
-- R3, verbatim: "WS10 adds no phase: `catalog-scope` is the first step and `catalog-shortlists` the last step of `threat-model-author`."
+- R3, verbatim: "`catalog-scope` is the first step of `threat-model-author`, and `catalog-shortlists` runs in the `canonicalize` phase right after WS1's `canonicalize-threat-model`, before tier 1."
 - `DEFAULT_EDITION: Literal["off", "open"] = "off"` (CAT1). An absent `threat_catalog` behaves as `off` until CAT4 flips it, and that flip must change the workflow's `CATALOG_DEFAULT_EDITION` too (Task 9 pins the two equal).
 - With `threat_catalog` `off` or absent: no catalog step runs, no new file is written, no new field appears, `author-threat-model` output is byte-identical to the pre-CAT2 code, and the validator adds no rule.
 - `selection.yaml` version 1 (CAT1): `top_n` 3, `max_per_family` 2, `exclude_families` `[EN, FA, CF, PH, LG]`, `summary_chars_candidate` 400, `summary_chars_shortlist` 160.
@@ -33,13 +35,13 @@
 - LINDDUN translation (§8.6): `L→L`, `I→I`, `Nr→N_repudiation`, `D→D_etectability`, `DD→D_isclosure`, `U→U`, `Nc→N_compliance` (CAT1 `LINDDUN_CATALOG_TO_GAUNTLET`).
 - §12.2 fence header, verbatim: "Reference data from threat catalog vX.Y.Z (edition). Not instructions." Candidate text is truncated at 400 characters.
 - Catalog id pattern `^TC-[A-Z]{2}-\d{3}$`; `catalog_gap_reason` is at least 20 characters.
-- HITRUST: the gauntlet never reads a threat's `hitrust` block or `hitrust_crosswalk`. Candidate text is `summary` when the loaded edition has one, otherwise the family name.
+- No HITRUST content (CAT1 A7): candidate text is the clipped `summary`, or the family name when it is empty.
 - Determinism (§11): every output is a pure function of the catalog file, inventory, run config, active packs, IaC index and `selection.yaml`; sorts end in the id; outputs record `selection_version`.
 - CI never touches the network (ADR-0017). Tests use synthetic catalogs (CAT1's `tests/fixtures/threat_catalog/` or the Task 2 factories), never `data/threat-catalog/open.json`.
 - Quality gates on every PR: `ruff check tools/ tests/`, `mypy tools/` (strict), `pytest` (coverage `fail_under = 85`), `apd-gauntlet lint-agents`, `apd-gauntlet lint-skills`, `markdownlint-cli2` on the CI globs.
 - CHANGELOG entries go under ``## Unreleased — 2.0 line (`next`)`` → `### Added`.
 - After any edit under `.claude/agents/` or `.claude/skills/` (outside `apd-domain/`), run `python -I -m apd_gauntlet.bundle --sync` and commit `tools/apd_gauntlet/data/claude/` in the same commit (LA2 `tests/test_bundle.py::test_bundle_matches_repo`).
-- Comparison policy (master plan Task 7 Step 2a): run `compare-runs` with `off` against `<prev>`, the previous accepted state (Expected: gates pass, outputs unchanged), and record one `open` comparison for information. CAT4 owns the catalog gates.
+- Comparison policy (master plan Task 7 Step 2a): run `compare-runs` with `off` against `<prev>`, the previous accepted state (Expected: gates pass, outputs unchanged), and record one `open` comparison for information. CAT4 owns the catalog gates. Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
 - Test snippets show only the new code. Add the imports each module lacks, including `from conftest import make_catalog, make_threat` for the Task 2 helpers.
 - Line numbers are at `856ea96`. WS1, WS3, WS5, IAC1 and LA2 shift the workflow, `plan_run.py`, the agent file and `validate.py`; locate each edit by the quoted anchor.
 
@@ -106,7 +108,7 @@
 - Consumes: CAT1 `apd_gauntlet.catalog.config.{CATALOG_SYSTEM_TYPES, CATALOG_FAMILY_CODES}` (CAT1 Task 1) and `_defs.schema.json#/$defs/catalog_threat_id` (CAT1 Task 7); `resources.domains_dir`, `resources.read_schema`.
 - Produces:
   - `_defs.schema.json#/$defs/catalog_system_type` (`{"type": "string", "enum": CATALOG_SYSTEM_TYPES}`) and `#/$defs/catalog_family_code` (`{"type": "string", "enum": CATALOG_FAMILY_CODES}`), both in CAT1's order. `threat-scope.schema.json` (Task 4) and the TM schema (Tasks 6–7) `$ref` them and CAT1's `catalog_threat_id`.
-  - `domain.schema.json` `threat_profile`: an object with `additionalProperties: false` and four optional `uniqueItems` arrays: `system_types`, `emphasize_families`, `include_families` and `exclude_families`. The enums are inlined, not `$ref`'d, because `domain.yaml` is validated without a registry at `cli.py:254`, `build_domain_skill.py:89`, `synthesis/draft.py:119` and in several tests.
+  - `domain.schema.json` `threat_profile`: an object with `additionalProperties: false` and four optional `uniqueItems` arrays: `system_types`, `emphasize_families`, `include_families` and `exclude_families`. The enums are inlined, not `$ref`'d, because `domain.yaml` is validated without a registry at `cli.py:254/268`, `build_domain_skill.py:99`, `synthesis/draft.py:132` and in several tests.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -179,7 +181,7 @@ git commit -m "feat(domain): add threat_profile and catalog vocabularies"
 
 - Modify: `tools/apd_gauntlet/data/threat-catalog/apd-goals.yaml` (CAT1 Task 6 writes all 25 keys, the four §8.4 rows and `[]` elsewhere; this task fills the 21 empty rows)
 - Create: `tools/apd_gauntlet/catalog/goals.py`
-- Modify: `tests/conftest.py` (plain helpers `make_threat`, `make_catalog`)
+- Modify: `tests/conftest.py` (plain helpers `make_threat`, `make_catalog`, and fixtures of the same names)
 - Test: `tests/test_catalog_goals.py`
 
 **Interfaces:**
@@ -190,8 +192,9 @@ git commit -m "feat(domain): add threat_profile and catalog vocabularies"
   - `def load_family_goals(path: Path | None = None) -> Mapping[str, tuple[str, ...]]`: `None` reads `catalog_data_dir() / FAMILY_GOALS_FILE` and is cached with `functools.lru_cache`. Each value is sorted. A goal outside the nine raises `ValueError` naming the family.
   - `def threat_goals(threat: Threat) -> tuple[str, ...]`: the sorted union of `stride_letter_to_apd_goals` over `threat.stride`, `linddun_letter_to_apd_goals` over the translated `threat.linddun` (unknown codes skipped), `load_family_goals()[threat.family]` (an unknown family adds nothing), and `availability` when `"availability" in threat.impacts`.
   - `tests/conftest.py` plain helpers, imported by test modules with `from conftest import make_catalog, make_threat`. Their signature and defaults are the ones CAT3's plan declares, so CAT3 reuses them instead of adding its own:
-    - `make_threat(threat_id: str = "TC-AC-001", **overrides: Any) -> Threat`, with defaults name `f"Threat {threat_id}"`, family `threat_id[3:5]`, family_name `"Family"`, abstraction `technique`, kind `event`, source `added`, stub `False`, summary `f"Summary of {threat_id}"`, parent `None`, system_types `("api",)`, stride `("T",)`, impacts `("integrity",)`, and empty children, linddun, related, mappings, controls and attack_tactics;
+    - `make_threat(threat_id: str = "TC-AC-001", **overrides: Any) -> Threat`, with defaults name `f"Threat {threat_id}"`, family `threat_id[3:5]`, family_name `"Family"`, abstraction `technique`, kind `event`, summary `f"Summary of {threat_id}"`, parent `None`, system_types `("api",)`, stride `("T",)`, impacts `("integrity",)`, and empty children, linddun, related, mappings, controls and attack_tactics;
     - `make_catalog(threats: Sequence[Threat], *, edition: str = "open", version: str = "1.0.0", frameworks: Mapping[str, Any] | None = None, sha256: str = "0" * 64, fallback_from: str | None = None, warnings: tuple[str, ...] = ()) -> Catalog`, with `threats` keyed by id.
+  - `tests/conftest.py` keeps the plain helpers and also registers `@pytest.fixture(name="make_threat")`, returning `lambda *, id="TC-AC-001", **kw: make_threat(id, **kw)`, and `@pytest.fixture(name="make_catalog")`, returning `make_catalog`. There is one default summary, `Summary of <id>` (register A7.54).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -262,7 +265,7 @@ git commit -m "feat(catalog): derive APD goals for catalog threats"
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/threat_model/author.py:33-48` (add `element_for` below `_ASSET_TYPE_TO_ELEMENT`)
+- Modify: `tools/apd_gauntlet/threat_model/author.py:35-48` (add `element_for` below `_ASSET_TYPE_TO_ELEMENT`)
 - Modify: `tools/apd_gauntlet/threat_model/mappings.py:37-45` (`MAESTRO_TO_APD_GOALS` gains `CL`; add `MAESTRO_LAYERS`), `.claude/skills/apd-threat-model-methodologies/SKILL.md:85-94` (MAESTRO table gains the `CL` row, lockstep with `mappings.py`), `tools/apd_gauntlet/data/claude/` (bundle sync), `CHANGELOG.md`
 - Create: `tools/apd_gauntlet/catalog/scope.py`
 - Test: `tests/test_catalog_scope_surfaces.py`, `tests/test_threat_model_mappings.py:58-74` (extend)
@@ -283,7 +286,7 @@ git commit -m "feat(catalog): derive APD goals for catalog threats"
   - `@dataclass(frozen=True) class SystemTypeHints: asset_types: Mapping[str, TypeHint]; identity_types: Mapping[str, TypeHint]; iac_rules: tuple[tuple[str, tuple[str, ...]], ...]` (`(pattern, system_types)` per `iac_resource_types` row, in file order)
   - `def load_system_type_hints(path: Path | None = None) -> SystemTypeHints` (default `catalog_data_dir() / "system-types.yaml"`, cached)
   - `def resource_type_of(address: str | None) -> str | None`: strips `[...]` index suffixes, drops leading `module.<name>` pairs and a leading `data`, and returns the next segment
-  - `def load_packs(run_dir: Path, names: Sequence[str]) -> tuple[list[dict[str, Any]], list[str]]`: for each name, `run_dir/domains/<name>/domain.yaml` when it exists (as `attack_path/build.py:245-249` does), else the packaged pack. Returns packs plus warnings `domain pack '<name>' not found; its threat_profile is ignored`.
+  - `def load_packs(run_dir: Path, names: Sequence[str]) -> tuple[list[dict[str, Any]], list[str]]`: for each name, `run_dir/domains/<name>.yaml`, then `run_dir/domains/<name>/domain.yaml`, the first that exists (as `attack_path/build.py:245-249` does: it tries `domains/<id>.yaml` first, then `<id>/domain.yaml`; mirror both), else the packaged pack. Returns packs plus warnings `domain pack '<name>' not found; its threat_profile is ignored`.
   - `def run_system_types(run_cfg: Mapping[str, Any], packs: Sequence[Mapping[str, Any]], run_dir: Path, cfg: CatalogConfig) -> dict[str, tuple[str, ...]]` (CAT brief). The union is `threat_profile.system_types` with source `domain:<pack name>`, `cfg.system_types` with source `run_config`, and, when `run_dir/00-context/iac-evidence-index.yaml` exists, the `system_types` of every `iac_rules` row whose pattern matches (`fnmatch.fnmatchcase`) the resource type of an `iac_evidence_index.entries[].address`, with source `iac:<resource type>`. It then subtracts `cfg.exclude_system_types`. Keys and sources are sorted; `run_cfg` is accepted for the fixed interface and unused. An unparseable index raises `ScopeError`.
   - `def surface_types(kind: Literal["asset", "identity"], type_name: str, run_types: Mapping[str, tuple[str, ...]]) -> tuple[tuple[str, ...], bool] | None`: returns `(types, fell_back)`, or `None` for a type with no hint. `types` keeps hint order.
   - `def surfaces_from_inventory(inventory: Mapping[str, Any], run_types: Mapping[str, tuple[str, ...]]) -> tuple[Surface, ...]` (CAT brief). Identities come first, then assets, each in inventory order. Identities are `external_entity` with no LINDDUN and `crown_jewel=False`. Assets use `element_for`; a PHI or PII classification gives `linddun=PRIVACY_LINDDUN`, and a non-empty `realizes_crown_jewels` gives `crown_jewel=True`. Records with no name or no hint are skipped, and the first record wins per `(asset, element)`.
@@ -302,8 +305,8 @@ API = Surface("claims-api", "process", ("api",), ("S", "T", "R", "I", "D", "E"),
 
 def test_hint_table_pins_asset_and_identity_types():
     h = load_system_type_hints()
-    assert h.asset_types["service"] == TypeHint(("web_app", "api", "serverless", "saas"), "api")
-    assert h.asset_types["compute"] == TypeHint(("server", "cloud", "container_k8s", "serverless"), "server")
+    assert h.asset_types["service"] == TypeHint(("web_app", "api", "serverless", "saas", "ai_ml", "agentic_ai"), "api")
+    assert h.asset_types["compute"] == TypeHint(("server", "cloud", "container_k8s", "serverless", "ai_ml", "ci_cd"), "server")
     assert h.asset_types["queue"] == TypeHint(("b2b_integration", "cloud", "data_store"), "data_store")
     assert h.identity_types["workload_identity"] == TypeHint(("identity",), "identity")
     assert set(h.identity_types) == {"human_role", "service_account", "workload_identity", "external_party"}
@@ -442,8 +445,8 @@ git commit -m "feat(catalog): resolve run and surface system types and threat el
 
 - Create: `tools/apd_gauntlet/data/schemas/threat-scope.schema.json`, `tools/apd_gauntlet/catalog/candidates.py` (`load_scope` only)
 - Modify: `tools/apd_gauntlet/catalog/scope.py` (scope builder)
-- Modify: `tools/apd_gauntlet/cli.py` (new `catalog` group after `author_threat_model_cmd`, `:758-780`)
-- Modify: `tools/apd_gauntlet/validate.py:291-307` (`CONTEXT_ROLLUPS` + `"threat-scope.yaml": "threat-scope.schema.json"`). CAT3 adds it to `CONTEXT_DERIVED_STEMS` (`:221-228`), because only `catalog_silence` findings cite it (spec §8.6).
+- Modify: `tools/apd_gauntlet/cli.py` (new `catalog` group after `author_threat_model_cmd`, `:809-831`)
+- Modify: `tools/apd_gauntlet/validate.py:537-553` (`CONTEXT_ROLLUPS` + `"threat-scope.yaml": "threat-scope.schema.json"`). CAT3 adds it to `CONTEXT_DERIVED_STEMS` (`:467-474`), because only `catalog_silence` findings cite it (spec §8.6).
 - Modify: `tests/conftest.py` (fixtures `make_scope_run`, `patch_catalog_loader`; the name avoids CAT3's `catalog_run` fixture)
 - Modify: `docs/running-the-gauntlet.md:40-74` (CLI list), `docs/deterministic-field-register.md:31-36` ("Other derived fields" row), `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_cli_catalog_scope.py`
@@ -734,9 +737,9 @@ git commit -m "feat(catalog): rank catalog candidates per threat-model cell"
 **Files:**
 
 - Create: `tests/fixtures/threat_model/author-skeleton.golden.yaml` (captured in Step 1 from the unmodified code)
-- Modify: `tools/apd_gauntlet/threat_model/author.py:72-140` (`build_skeleton`, `build_skeleton_from_inventory_file`)
+- Modify: `tools/apd_gauntlet/threat_model/author.py:83-125`, `:128-133` (`build_skeleton`, `build_skeleton_from_inventory_file`)
 - Modify: `tools/apd_gauntlet/catalog/candidates.py` (`render_candidates_md`)
-- Modify: `tools/apd_gauntlet/cli.py:758-780` (`author_threat_model_cmd`)
+- Modify: `tools/apd_gauntlet/cli.py:809-831` (`author_threat_model_cmd`)
 - Modify: `tools/apd_gauntlet/data/schemas/threat-model-normalized.schema.json:38-67` (entry property `catalog_candidates`)
 - Modify: `docs/threat-modeling.md:75-104` (new subsection), `docs/deterministic-field-register.md` ("Other derived fields"), `docs/schema-evolution.md` (CAT2 section), `CHANGELOG.md`
 - Test: `tests/test_author_threat_model.py` (append), `tests/test_author_catalog_cells.py`, `tests/test_doc_threat_model_authoring.py` (append)
@@ -942,7 +945,7 @@ None for this task alone: no run step writes `threat-scope.yaml` until Task 9, a
 **Files:**
 
 - Modify: `tools/apd_gauntlet/data/schemas/threat-model-normalized.schema.json:38-67` (entry properties `catalog_refs`, `catalog_gap_reason`)
-- Modify: `tools/apd_gauntlet/validate.py` (new `_validate_tm_catalog_fields`, called from `run_schema_pass`, `:426-455`, after `_validate_context_rollups`), `tools/apd_gauntlet/catalog/candidates.py` (`cell_key`)
+- Modify: `tools/apd_gauntlet/validate.py` (new `_validate_tm_catalog_fields`, called from `run_schema_pass`, `:711-738`, right after `_validate_rollups(run_dir, "00-context", …)` (`validate.py:736`); WS1 removed `_validate_context_rollups`), `tools/apd_gauntlet/catalog/candidates.py` (`cell_key`)
 - Modify: `docs/schema-evolution.md` (CAT2 section), `CHANGELOG.md`
 - Test: `tests/test_validate_tm_catalog.py`
 
@@ -961,6 +964,7 @@ None for this task alone: no run step writes `threat-scope.yaml` until Task 9, a
     - WARNING `entries[{i}] carries catalog_candidates, a skeleton-only field; drop it from the authored threat model`
     - ERROR `threat catalog failed to load: {e}` on `CatalogError`, and the `ScopeError` text on a malformed scope.
   - The catalog comes from `catalog_for_run(run_cfg, run_dir)`, with `run_cfg` read from `run_dir/.apd-run.yaml` (absent means off).
+  - Each new reference resolves against the ids of the record kind it names (`catalog_refs` against the loaded catalog's threat ids). Deduped finding or capability ids are read only through `_deduped_record_ids(run_dir, kind)`, the shared reader of `40-synthesis/deduped-findings.yaml` and `deduped-capabilities.yaml`. Locate the edit by function name (`run_schema_pass` `:711`, `_validate_rollups` `:691`), not by line (register A15.3).
   - The rules run in the schema pass so `validate --schema-only` reports them. The TM author runs that command (Task 8). `--tier` runs never reach them, because their target has no `00-context`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1099,7 +1103,7 @@ None for this task alone: the rules are inert until a run has a scope or `catalo
 
 **Files:**
 
-- Modify: `.claude/agents/apd-threat-model-author.md`: `### Step 1` (`:63-78`), `### Step 2` (`:80-88`), `### Step 3` (`:90-108`), `### Step 5` (`:123-137`), `### Step 6` (`:139-145`), `### Step 7` (`:147-159`), `## Discipline reminders` (`:161-172`). Locate each by its heading, because WS1 Task 10 and WS5 Task 3 rewrite Steps 4 and 6.
+- Modify: `.claude/agents/apd-threat-model-author.md`: `### Step 1` (`:63-78`), `### Step 2` (`:80-88`), `### Step 3` (`:90-108`), `### Step 5` (`:130-144`), `### Step 6` (`:146-152`), `### Step 7` (`:154-166`), `## Discipline reminders` (`:168-179`). Locate each by its heading, because WS1 Task 10 and WS5 Task 3 rewrite Steps 4 and 6.
 - Modify: `.claude/skills/apd-threat-model-methodologies/SKILL.md:318-322` (rule 4), after `:332` (new rule 7), `:346-351` (matrix note)
 - Modify: `docs/threat-modeling.md` (the Task 6 subsection), `CHANGELOG.md`
 - Sync: `tools/apd_gauntlet/data/claude/` via `python -I -m apd_gauntlet.bundle --sync`
@@ -1200,8 +1204,8 @@ Expected: exit 0 for every system; no candidate run contains `00-context/threat-
 
 **Files:**
 
-- Modify: `.claude/workflows/apd-gauntlet.js`: add `CATALOG_DEFAULT_EDITION` and `catalogEdition` after `const runDir` (`:131-132`); insert the step right after `phase('threat-model-author');` (`:384`), before `pyStep('author-threat-model'` (`:385-389`).
-- Modify: `tools/apd_gauntlet/plan_run.py:80-88` (the `# 4 — threat-model-author` rows)
+- Modify: `.claude/workflows/apd-gauntlet.js`: add `CATALOG_DEFAULT_EDITION` and `catalogEdition` after `const runDir`; insert the step right after `phase('threat-model-author');`, before `await pyStep('author-threat-model'` (locate by these anchors; register A15.28).
+- Modify: `tools/apd_gauntlet/plan_run.py:93-100` (the `# 4 — threat-model-author` rows)
 - Modify: `tools/apd_gauntlet/runner/flow.py` (LA2 Task 6 `threat-model-author` row)
 - Modify: `CHANGELOG.md`
 - Test: `tests/test_workflow_apd_gauntlet.py`, `tests/test_workflow_dispatch_trace.py`, `tests/test_cli_plan_run.py`, `tests/runner/test_flow_pre_synthesis.py`, `tests/runner/test_flow_parity.py` (append to each)
@@ -1218,7 +1222,7 @@ The workflow step, inserted right after `phase('threat-model-author');`:
 
 ```js
 if (catalogEdition(args) !== 'off') {
-  const cs = pyStep('catalog', { phase: 'threat-model-author', label: 'catalog-scope',
+  const cs = await pyStep('catalog', { phase: 'threat-model-author', label: 'catalog-scope',
     positional: 'scope ' + runDir, alwaysRun: true, outputs: runDir + '/00-context/threat-scope.yaml' });
   bailIfInterrupted(cs, 'threat-model-author');
   if (isErr(cs)) {
@@ -1354,7 +1358,7 @@ git commit -m "feat(workflow): run catalog scope first in the threat-model-autho
 Run the master plan Task 1 set twice on this branch with `threat_catalog: off` (`runs/<x>-cat2-off-r1`, `-r2`). Then run `apd-gauntlet compare-runs <prev> runs/<x>-cat2-off --gates eval/gates.yaml` for each system.
 Expected: exit 0 for each; `usage` shows no `catalog-scope` dispatch; no run contains `threat-scope.yaml`.
 
-Then run the set twice with a loadable catalog. Use `threat_catalog: open` once CAT1's operator task has vendored `open.json`, else `{edition: full, path: <local full file>}`, and record which. Name the runs `runs/<x>-cat2-cat-r1` and `-r2`. Run `apd-gauntlet compare-runs <prev> runs/<x>-cat2-cat --gates eval/gates.yaml --json > eval/local/cat2-<x>.json` for each system.
+Then run the set twice with a loadable catalog. Use `threat_catalog: open` once CAT1's operator task has vendored `open.json`, else `{edition: full, path: <the release's threat-catalog-1.1.0.json, outside any git tree>}`, and record which. Name the runs `runs/<x>-cat2-cat-r1` and `-r2`. Run `apd-gauntlet compare-runs <prev> runs/<x>-cat2-cat --gates eval/gates.yaml --json > eval/local/cat2-<x>.json` for each system.
 Expected: each run's `threat-scope.yaml` names the edition, STRIDE skeleton entries carry `catalog_candidates`, and `threat-model-normalized.yaml` validates. The `compare-runs` result is recorded for information, not gated (CAT4 owns the catalog gates).
 
 ### Task 10: Metamorphic suite `catalog`
@@ -1385,7 +1389,7 @@ Expected: each run's `threat-scope.yaml` names the edition, STRIDE skeleton entr
     - `c2-reorder-inventory`: reverses `identities` and `assets`; returns `{}`.
     - `c3-add-unrelated-asset`: appends `{name: mm-unrelated-network, asset_type: network, provenance: {source: artifact, locator: added}, confidence: low}`; returns `{"mm-unrelated-network": ""}`.
     - `c5-reorder-catalog-threats`: reverses `threats` in `catalog/open.json` and `catalog/full.json`, writes them with `json.dumps(doc, indent=2, ensure_ascii=False) + "\n"`, and rewrites `open.provenance.json` `source_sha256` to the new file's SHA-256; returns `{}`.
-    - `c6-open-to-full`: sets `threat_catalog` in `run-config.yaml` to `{edition: full, path: str(dst / "catalog" / "full.json")}`; returns `{}`.
+    - `c6-open-to-full`: sets `threat_catalog` in `run-config.yaml` to `{edition: full, path: str(dst / "catalog" / "full.json")}`; returns `{}`. `full.json` = `open.json` + `TC-OT-901`, eligible on no fixture surface (`pbm` and `agentic-ai` never yield `ot_ics`), so C6 holds.
   - `SUITE = Suite(name="catalog", fixtures=FIXTURES, transforms=…, extract=extract, normalise=normalise)`, registered at import. CAT3 extends `extract` with the C6 silence lists.
   - Fixture `run-config.yaml`: `{run_id: mm-catalog, domains: [pbm, agentic-ai], threat_catalog: open}`. Fixture inventory, schema-valid with distinct provenance locators: identities `claims-api` (`workload_identity`) and `member` (`human_role`); assets `claims-api` (`service`), `member-db` (`data_store`, `[phi]`, `realizes_crown_jewels: [phi_store]`), `claims-queue` (`queue`), `batch-worker` (`compute`) and `vendor-feed` (`external_dependency`, `[pii]`); `trust_boundaries: []`.
 

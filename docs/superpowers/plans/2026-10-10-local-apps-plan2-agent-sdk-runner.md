@@ -10,12 +10,14 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md` (§7 runner, §6.3 secret hygiene, §9 testing). Depends on Plan 1 (`config`, `credentials`, `decide`). Plan 2 of 3.
 
+**Amended 2026-10-17** per the amendments register (A2.1, A2.2, A2.3, A2.4, A2.5, A2.6, A2.7, A2.8, A2.9, A2.10, A2.11, A2.12, A2.13, A2.14, A2.15, A2.16, A2.17, A2.18, A10.8, A11.5, A12.8).
+
 ## Global Constraints
 
 - Everything in Plan 1's Global Constraints still applies.
-- Extra `runner = ["claude-agent-sdk>=<tested>,<next-minor>", "apd-gauntlet[decide]"]`; Task 5 fixes the bounds to the version its tests ran against.
+- Extra `runner = ["claude-agent-sdk>=0.2.167,<0.3", "apd-gauntlet[decide]"]` (register A11.5); Task 5 sets these bounds.
 - `runner.flow.PHASES` equals the workflow's `meta.phases` tuple, same order.
-- Step labels equal the workflow's `opts.label` strings, so ledgers from both channels read alike.
+- Step labels equal the workflow's `opts.label` strings on the WS1 + WS3 base, so ledgers from both channels read alike. Tests derive expected labels from WS3's `tests/js/workflow_dispatch_trace.mjs` (`trace`, `CLI_LABELS`), never hand-written lists.
 - Retry caps: lens retries 2; adjudicator re-dispatch 1; rollup retry 1; audit remediations 2 (3 attempts).
 - Agent SDK options for every dispatch: `setting_sources=[]`, `permission_mode="dontAsk"`, env `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`, `max_turns=80`, `cwd=<workspace>`.
 - Model precedence: `cfg.llm.model_overrides[agent]`, then frontmatter `model`, then `cfg.llm.default_model`.
@@ -23,6 +25,10 @@
 - State files: `runs/<id>/.apd-state/{ledger.json,events.jsonl,lock,consent.json,runner.log}`; JSON written atomically (temp file + `os.replace`).
 - Event fields never include file contents, prompts, agent text or secret values.
 - Default run budget `cfg.llm.run_budget_usd` = 100.0; `--budget` overrides per invocation.
+- Tier gate (WS1): one `apd-tier-repair` dispatch per failing file, prompt rendered by `resources.read_prompt("repair")`; then one re-run of the owning lenses; then halt.
+- Agent specs read `model` and `effort` from frontmatter (R5).
+- The runner calls `check_engine_compat(run_dir)` before any step; `EngineMismatch` → `RunHalted("setup")`, exit 3 (effective once `FRAMEWORK_VERSION` is 2.x).
+- The runner calls `measure.attempts.write_attempts` at closeout.
 
 ## Review Focus
 
@@ -218,7 +224,8 @@ git commit -m "feat(runner): add ledger, event log and run lock"
   - `def run_cli(args: list[str], *, cwd: Path, timeout_s: float = 3600.0) -> CliResult` — runs `[sys.executable, "-m", "apd_gauntlet", *args]`; a timeout yields `exit_code=124`
   - `def outputs_valid(run_dir: Path, scope: Path, flags: list[str] | None = None, *, cli: CliRunnerFn) -> bool` — `validate --schema-only --errors-only <scope> [flags]` exit 0 and every expected file present (caller passes the scope)
   - `def parse_audit_counts(stdout: str) -> tuple[int, int] | None` — reads `structural_failed=<S> editorial_failed=<E>` from the `audit-report:` line
-  - `def error_files(stdout: str, run_dir: Path) -> set[str]` — run-relative paths named on `ERROR` lines of `validate --errors-only`
+  - `def error_files(gate_json: str, run_dir: Path) -> dict[str, list[str]]` — parses `{"errors":[{"file","id","message","path"}]}` from `tier-gate --json` into run-relative file → error messages; keeps only `*.findings.yaml` and `*.capabilities.yaml` under the tier (as the workflow's `failingFiles` does)
+- Composites (DEC-16): the runner runs `prepare-run`, `tier-gate`, `post-tier4` and `closeout` as `apd-gauntlet <composite>` subprocesses; tests build the expected argv with WS3's `composite.*_steps` builders.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -228,19 +235,24 @@ def test_run_cli_exit_and_tail(tmp_path):
     assert r.exit_code != 0 and r.cmd == "validate-run-config"
 
 def test_parse_audit_counts():
-    out = "audit-report: FAIL (checks=12 structural_failed=1 editorial_failed=3)\n"
+    out = "audit-report: fail (12 checks, 4 failed; structural_failed=1 editorial_failed=3)\n"
     assert parse_audit_counts(out) == (1, 3) and parse_audit_counts("no line") is None
 
 def test_error_files():
-    out = "ERROR runs/x/10-trustworthiness/integrity.findings.yaml: 'scope' is not of type 'string'\n"
-    assert error_files(out, Path("runs/x")) == {"10-trustworthiness/integrity.findings.yaml"}
+    gate = json.dumps({"errors": [
+        {"file": "runs/x/10-trustworthiness/integrity.findings.yaml", "id": "intg-1",
+         "message": "'scope' is not of type 'string'", "path": "scope"},
+        {"file": "runs/x/00-context/inventory.yaml", "id": None, "message": "bad", "path": ""}]})
+    files = error_files(gate, Path("runs/x"))
+    assert set(files) == {"10-trustworthiness/integrity.findings.yaml"}
+    assert "'scope' is not of type 'string'" in files["10-trustworthiness/integrity.findings.yaml"][0]
 
 def test_outputs_valid_on_clean_fixture(tmp_path):
     run = shutil.copytree(FIX / "runs/clean-run", tmp_path / "run")
     assert outputs_valid(run, run / "10-trustworthiness", cli=lambda a: run_cli(a, cwd=tmp_path))
 ```
 
-Confirm the exact `audit-report` and `validate --errors-only` line formats against `synthesis/audit.py` and `validate.py` before fixing the regexes; the test strings must match what those modules print.
+Confirm the exact `audit-report` line format (printed by `cli.py`'s `audit-report`) and the `tier-gate --json` shape before fixing the regex and the parser; the test strings must match what the CLI prints.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -337,7 +349,7 @@ git commit -m "feat(runner): confine agent tool use to the run"
 **Files:**
 
 - Create: `tools/apd_gauntlet/runner/agents.py`, `tools/apd_gauntlet/runner/instructions.py`
-- Modify: `pyproject.toml` (extra `runner`; set the SDK bounds to the version installed for this task)
+- Modify: `pyproject.toml` (extra `runner` with `claude-agent-sdk>=0.2.167,<0.3`, register A11.5)
 - Test: `tests/runner/test_agents.py`
 
 **Interfaces:**
@@ -353,7 +365,7 @@ git commit -m "feat(runner): confine agent tool use to the run"
   - `class AgentExecutor(Protocol): async def run(self, spec: AgentSpec, instruction: str, *, label: str, run_dir: Path, budget_usd: float, structured: bool = True) -> AgentOutcome`
   - `class SdkAgentExecutor: def __init__(self, cfg: UserConfig, workspace: Path, ledger: Ledger, *, query: Callable[..., AsyncIterator[Any]] | None = None)` (default `claude_agent_sdk.query`)
   - `def build_options(spec: AgentSpec, cfg: UserConfig, *, workspace: Path, run_dir: Path, budget_usd: float, structured: bool) -> Any` (returns `ClaudeAgentOptions`)
-  - `instructions.py`: `INSTRUCTIONS: dict[str, str]` keyed by `"<agent>"` or `"<agent>:<variant>"` (`apd-<lens>:retry`, `apd-<lens>:repair`, `apd-cluster-adjudicator:retry`, `apd-report-writer:build-fix`, `apd-report-writer:remediate`, `apd-synthesizer:fallback`, `apd-synthesizer:rollup`, `apd-synthesizer:build`); `def instruction(key: str, **values: str) -> str` (values: `run_dir`, `tier_dir`, `lens`, `threat_model`, `errors`, `critique`). Text = the matching `llmStep`/`agent()` text in `apd-gauntlet.js`, minus the idempotency guard and the "return a receipt" line, which structured output replaces.
+  - `instructions.py`: `INSTRUCTIONS: dict[str, str]` keyed by `"<agent>"` or `"<agent>:<variant>"` (`apd-<lens>:retry`, `apd-<lens>:rerun`, `apd-tier-repair` (rendered from `repair.md`), `apd-cluster-adjudicator:retry`, `apd-report-writer:build-fix`, `apd-report-writer:remediate`, `apd-synthesizer:fallback`, `apd-synthesizer:rollup`, `apd-synthesizer:build`); `def instruction(key: str, **values: str) -> str` (values: `run_dir`, `tier_dir`, `lens`, `threat_model`, `errors`, `critique`). Text = the matching `llmStep`/`agent()` text in `apd-gauntlet.js`, minus the idempotency guard and the "return a receipt" line, which structured output replaces.
 
 `build_options` sets: `system_prompt=spec.prompt`, `model=resolve_model(...)`, `effort=spec.effort` when set, `max_turns=80`, `cwd=workspace`, `setting_sources=[]`, `env=sdk_env(cfg)`, `permission_mode="dontAsk"`, `allowed_tools` = spec tools with `Bash` replaced by `Bash(apd-gauntlet *)`, `max_budget_usd=budget_usd`, `output_format={"type": "json_schema", "schema": <agent-receipt schema>}` when `structured`, a `PreToolUse` hook that calls `check_tool_use`, emits `tool_used` and denies on a reason, and `mcp_servers` with only `codebase-memory-mcp` (from `cfg.mcp_servers`) when `spec.name == "apd-code-recon"`, with the SDK's strict-MCP option set.
 
@@ -362,14 +374,18 @@ git commit -m "feat(runner): confine agent tool use to the run"
 ```python
 def test_load_spec_comma_tools(materialized_ws):
     s = load_agent_spec(materialized_ws, "apd-confidentiality")
-    assert s.tools == ("Read", "Glob", "Grep", "Write") and s.model is None and s.prompt.startswith("# Confidentiality")
+    meta = yaml.safe_load((materialized_ws / ".claude/agents/apd-confidentiality.md").read_text().split("---")[1])
+    assert s.tools == ("Read", "Glob", "Grep", "Write") and s.prompt.startswith("# Confidentiality")
+    assert (s.model, s.effort) == (meta.get("model"), meta.get("effort"))   # WS3 adds effort; WS5 Task 23 requires model
 
 def test_model_precedence(materialized_ws):
     cfg = UserConfig(); s = load_agent_spec(materialized_ws, "apd-threat-model-author")   # frontmatter opus
     assert resolve_model(s, cfg) == "opus"
     cfg.llm.model_overrides = {"apd-threat-model-author": "sonnet"}
     assert resolve_model(s, cfg) == "sonnet"
-    assert resolve_model(load_agent_spec(materialized_ws, "apd-integrity"), UserConfig()) == "opus"
+    # Default path through a fixture agent without `model` (register A10.8: WS5 Task 16 gives the lenses a model).
+    (materialized_ws / ".claude/agents/apd-no-model.md").write_text("---\nname: apd-no-model\ntools: Read\n---\n# No model\n")
+    assert resolve_model(load_agent_spec(materialized_ws, "apd-no-model"), UserConfig()) == "opus"
 
 def test_options_lock_down(materialized_ws, tmp_path):
     o = build_options(load_agent_spec(materialized_ws, "apd-threat-model-recon"), UserConfig(),
@@ -383,8 +399,8 @@ def test_no_mcp_except_code_recon(materialized_ws): ...  # apd-intake → no mcp
 
 def test_executor_collects_receipt_and_cost(materialized_ws, tmp_path):
     async def fake_query(*, prompt, options):
-        yield ResultMessage(subtype="success", structured_output={"agent": "apd-integrity", "status": "ok", "outputs": [], "counts": {}},
-                            total_cost_usd=0.42, num_turns=7, is_error=False, result=None)
+        yield make_result(subtype="success", structured_output={"agent": "apd-integrity", "status": "ok", "outputs": [], "counts": {}},
+                          total_cost_usd=0.42, num_turns=7, is_error=False, result=None)
     ex = SdkAgentExecutor(UserConfig(), materialized_ws, Ledger(tmp_path), query=fake_query)
     out = asyncio.run(ex.run(load_agent_spec(materialized_ws, "apd-integrity"), "go", label="integrity",
                              run_dir=tmp_path, budget_usd=5))
@@ -399,7 +415,7 @@ def test_instructions_cover_workflow_agents():
     assert types <= {k.split(":")[0] for k in INSTRUCTIONS}
 ```
 
-Construct `ResultMessage` with the SDK's real class; if its constructor needs more fields, supply them in a `make_result(**kw)` test helper.
+Construct `ResultMessage` with the SDK's real class through a mandatory `make_result(**kw)` test helper: `claude-agent-sdk` 0.2.167's `ResultMessage` also requires `duration_ms`, `duration_api_ms` and `session_id`, which the helper supplies.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -437,19 +453,21 @@ git commit -m "feat(runner): build locked-down Agent SDK dispatches"
   - `TIERS = (("tier-1", "10-trustworthiness", ("confidentiality","integrity","availability")), ("tier-2", "20-scalability", ("distributed","resilient","ephemeral")), ("tier-3", "30-auditability", ("authenticity","non-repudiation","immutability")))`
   - `LENS_RETRIES = 2`, `AUDIT_REMEDIATIONS = 2`
   - `class RunHalted(Exception): phase: str; reason: str`
-  - `DecideFn = Callable[[str], Awaitable[None]]` (argument: tier dir)
+  - `DecideFn = Callable[[str], Awaitable[Path | None]]` (argument: tier dir; returns the decision record written, as `run_finding_qa` does). The ledger records the cost of each `decide` step: the record's `usage.cost_usd` becomes the `decide-finding-qa-<tier>` step's `cost_usd` (register A12.8)
   - `class Runner: def __init__(self, run_dir: Path, workspace: Path, cfg: UserConfig, executor: AgentExecutor, ledger: Ledger, *, cli: CliRunnerFn, decide: DecideFn | None = None, budget_usd: float | None = None, cancel: asyncio.Event | None = None); async def run(self, *, restart_from: str | None = None, stop_after: str | None = None) -> RunState` (`stop_after` ends the run after the named phase; tests use it)
 
 Phase behavior through `validate-full-prephase5` (labels in parentheses must match the workflow):
 
 | Phase | Steps | Conditions and failure handling |
 |---|---|---|
-| setup | `validate --schema-only --errors-only` (validate-scaffold); `build-domain-skill <domains>` (build-domain-skill, always runs); `validate-domain <domains>` (validate-domain) | |
+| setup | in-process `check_engine_compat` plus `build_resume_plan` (label `resume-plan`; steps it marks complete become `skipped`), then `prepare-run` (prepare-run, always) | |
 | intake | agent `apd-intake` (intake); `assemble-inventory` (always); `validate --schema-only --errors-only` (intake-schema-gate) | |
 | code-recon | agent `apd-code-recon` (code-recon) | Only when `code_recon` ≠ `disabled`. No `codebase-memory-mcp` in config: `auto` → write `00-context/code-recon-skipped.md` ("CBM is not configured for the local runner; code recon skipped.") and mark `skipped`; `enabled` → `RunHalted`. Agent error under `enabled` → `RunHalted` |
+| canonicalize | `canonicalize` (canonicalize-code-evidence, always) | Right after code recon, whenever `code_recon` ≠ `disabled` (also after an `auto` skip, when it is a no-op), as the workflow has it |
 | threat-model-author | `author-threat-model` (author-threat-model-floor); agent (threat-model-author) | |
 | tm-recon | agent `apd-threat-model-recon` (tm-recon) | Only when `threat_model` is set |
-| tier-1..3 | lens agents in parallel (`<lens>`), each with up to 2 retries (`<lens>-retry-<k>`); `canonicalize` (canonicalize-`<tier>`, always); `validate <run> --tier <tier> --errors-only` (validate-`<tier>`); then `decide(tier)` (decide-finding-qa-`<tier>`) when the run enables a decision model | Lens concurrency capped by `cfg.llm.max_parallel_agents`. Tier gate failure: one `:repair` dispatch per lens named in `error_files`, with the error lines as `errors`, then canonicalize-`<tier>`-r1 and validate-`<tier>`-r1; continue either way. A `decide` failure logs a `warning` and never halts |
+| canonicalize | `canonicalize` (canonicalize-threat-model, always) | After the tm-recon block, whether or not `threat_model` is set, as the workflow has it |
+| tier-1..3 | lens agents in parallel (`<lens>`), each with up to 2 retries (`<lens>-retry-<k>`); then (1) `tier-gate <run> --tier <tier> --json` (tier-gate-`<tier>`); (2) on red, one agent `apd-tier-repair` per failing file in `error_files` (repair-`<tier>`-`<basename>`); (3) `tier-gate` again (tier-gate-`<tier>`-after-repair); (4) on red, the lenses that own the files still red (`<lens>`-rerun); (5) `tier-gate` again (tier-gate-`<tier>`-after-rerun); (6) still red → `RunHalted`; (7) then `decide(tier)` (decide-finding-qa-`<tier>`), only when the tier is green and the run enables a decision model | Lens concurrency capped by `cfg.llm.max_parallel_agents`. A `decide` failure logs a `warning` and never halts |
 | tier-3 (end) | `validate --errors-only` (validate-full-prephase5) | Failure → `RunHalted("tier-3", "corpus not schema/cross-file clean")` |
 
 Resume and budget rules for every step:
@@ -463,14 +481,17 @@ Resume and budget rules for every step:
 
 ```python
 FULL = {"code_recon": "enabled", "threat_model": "inputs/tm.json", "crown_jewels": ["phi_store"]}
+# `trace` and `HA_SHAPED` come from WS3's tests/test_workflow_dispatch_trace.py (register A2.1).
 
 def test_happy_path_labels(tmp_path):
     r = scenario(tmp_path, cfg=FULL, cbm=True)
     asyncio.run(r.runner.run(stop_after="tier-3"))
-    assert r.labels[:10] == ["validate-scaffold", "build-domain-skill", "validate-domain", "intake",
-        "assemble-inventory", "intake-schema-gate", "code-recon", "author-threat-model-floor",
-        "threat-model-author", "tm-recon"]
-    assert set(r.labels[10:13]) == {"confidentiality", "integrity", "availability"}
+    t = [d["label"] for d in trace({**HA_SHAPED, **FULL})]
+    expected = t[:t.index("validate-full-prephase5") + 1]
+    assert r.labels[:11] == expected[:11] == ["resume-plan", "prepare-run", "intake", "assemble-inventory",
+        "intake-schema-gate", "code-recon", "canonicalize-code-evidence", "author-threat-model-floor",
+        "threat-model-author", "tm-recon", "canonicalize-threat-model"]
+    assert sorted(r.labels) == sorted(expected)          # lenses in a fan-out may finish in any order
     assert r.labels[-1] == "validate-full-prephase5"
 
 def test_lens_retries_then_continues(tmp_path):
@@ -478,11 +499,21 @@ def test_lens_retries_then_continues(tmp_path):
     asyncio.run(r.runner.run(stop_after="tier-1"))
     assert ["integrity-retry-1", "integrity-retry-2"] == [l for l in r.labels if l.startswith("integrity-retry")]
 
+BAD_GATE = json.dumps({"errors": [{"file": "runs/r/10-trustworthiness/integrity.findings.yaml", "id": None,
+                                   "message": "bad", "path": ""}]})
+
 def test_tier_gate_repair(tmp_path):
-    r = scenario(tmp_path, cli_outcomes={"validate-10-trustworthiness": (1, "ERROR runs/r/10-trustworthiness/integrity.findings.yaml: bad")})
+    r = scenario(tmp_path, cli_outcomes={"tier-gate-10-trustworthiness": (1, BAD_GATE)})
     asyncio.run(r.runner.run(stop_after="tier-1"))
-    assert "integrity-repair" in r.labels and "validate-10-trustworthiness-r1" in r.labels
-    assert "bad" in r.instructions["integrity-repair"]
+    assert "repair-10-trustworthiness-integrity.findings.yaml" in r.labels
+    assert "tier-gate-10-trustworthiness-after-repair" in r.labels
+    assert "bad" in r.instructions["repair-10-trustworthiness-integrity.findings.yaml"]
+
+def test_tier_gate_halts_after_rerun(tmp_path):
+    r = scenario(tmp_path, cli_outcomes={"tier-gate-10-trustworthiness" + s: (1, BAD_GATE)
+                                         for s in ("", "-after-repair", "-after-rerun")})
+    assert asyncio.run(r.runner.run()) == "failed" and r.ledger.state == "failed"
+    assert "integrity-rerun" in r.labels
 
 def test_prephase5_gate_halts(tmp_path):
     r = scenario(tmp_path, cli_outcomes={"validate-full-prephase5": (1, "ERROR …")})
@@ -551,16 +582,15 @@ git commit -m "feat(runner): run setup through the pre-synthesis gate"
 | Phase | Steps | Conditions and failure handling |
 |---|---|---|
 | synthesis-cluster | `cluster-candidates` (cluster-candidates), retry once (cluster-candidates-retry-1) | Two errors → fallback |
-| synthesis-adjudicate / apply | agent `apd-cluster-adjudicator` (adjudicate); `apply-clusters` (apply-clusters) | Exit 2 → re-dispatch (adjudicate-retry-1) and re-apply (apply-clusters-retry-1); exit 2 again → fallback; other error → apply-clusters-retry-1b, error again → fallback |
+| synthesis-adjudicate / apply | agent `apd-cluster-adjudicator` (adjudicate); `apply-clusters` (apply-clusters) | Exit 2 → re-dispatch (adjudicate-retry-1) and re-apply (apply-clusters-retry-1); exit 2 again → fallback; a non-exit-2 error there → apply-clusters-retry-2, error again → fallback; other error → apply-clusters-retry-1b, error again → fallback |
 | synthesis-fallback | the runner appends `{phase: synthesis, decision: synthesizer-fallback, reason: decomposed-pipeline-failed}` to `40-synthesis/run-state.yaml` itself; agent `apd-synthesizer` unstructured (synthesizer-fallback) | Only when a fallback was triggered |
 | tmeval, apath | agents `apd-threat-model-evaluator` (tmeval) and `apd-attack-path-analyzer` (apath) in parallel | apath only when `crown_jewels` is non-empty |
-| apath (cont.) | `assemble-c4` (always); `canonicalize` (canonicalize-tmeval, always) | |
-| synthesis-rollup | `rollup` (rollup), retry once (rollup-retry-1); second error → agent `apd-synthesizer:rollup` (synthesizer-fallback-rollup) | |
+| synthesis-rollup | `post-tier4` (post-tier4: `assemble-c4`, the tmeval `canonicalize` and `rollup`), with WS3's `stepFailed` rule: retry once (post-tier4-retry-1) only when the `rollup` constituent failed, then agent `apd-synthesizer:rollup` (synthesizer-fallback-rollup) | |
 | synthesis-report | agent `apd-report-writer` (report-writer-attempt-0) | |
 | synthesis-build | `build-report` (build-report-attempt-0); on error and no prior fallback: writer `:build-fix` (report-writer-attempt-build-fix), rebuild (build-report-attempt-build-fix); still error → `apd-synthesizer:build` (synthesizer-fallback-build), rebuild (build-report-attempt-postfallback) | |
 | synthesis-audit | for i in 0..2: `audit-report` (audit-report-attempt-i); agent `apd-report-auditor` unstructured (auditor-attempt-i). Pass when structural = 0, editorial = 0 and the auditor text matches `GATE:\s*pass`. Else, i < 2: writer `:remediate` with the critique (report-writer-attempt-i+1) and rebuild (build-report-attempt-i+1) | At i = 2: structural > 0 → `RunHalted("synthesis-audit", …)`; otherwise warning and continue |
-| domain-coverage-delta, domain-improvements | `domain-coverage-delta`; agent `apd-domain-auditor` (domain-auditor); `canonicalize` (canonicalize-dimpr, always) | Advisory: errors become warnings |
-| closeout | `summarize`; `validate --errors-only` (validate-final) | Final validate failure → state `failed` |
+| domain-coverage-delta, domain-improvements | `domain-coverage-delta`; agent `apd-domain-auditor` (domain-auditor) | Only when `domain_improvement_capture: true` (WS3), otherwise `skipped`; `canonicalize-dimpr` is removed because `closeout` canonicalizes. Advisory: errors become warnings |
+| closeout | `closeout --record-attempts <json>` (closeout) | Final validate failure → state `failed` |
 
 Successful completion sets state `completed` and emits `run_finished`.
 
@@ -571,11 +601,11 @@ def test_full_happy_path_tail(tmp_path):
     r = scenario(tmp_path, cfg=FULL, cbm=True, auditor_text="GATE: pass")
     assert asyncio.run(r.runner.run()) == "completed"
     tail = r.labels[r.labels.index("validate-full-prephase5") + 1:]
-    assert tail[:3] == ["cluster-candidates", "adjudicate", "apply-clusters"]
-    assert set(tail[3:5]) == {"tmeval", "apath"}
-    assert tail[5:] == ["assemble-c4", "canonicalize-tmeval", "rollup", "report-writer-attempt-0",
-        "build-report-attempt-0", "audit-report-attempt-0", "auditor-attempt-0", "domain-coverage-delta",
-        "domain-auditor", "canonicalize-dimpr", "summarize", "validate-final"]
+    t = [d["label"] for d in trace({**HA_SHAPED, **FULL})]   # WS3's harness (register A2.18)
+    expected = t[t.index("validate-full-prephase5") + 1:]
+    assert tail[:3] == expected[:3] == ["cluster-candidates", "adjudicate", "apply-clusters"]
+    assert set(tail[3:5]) == set(expected[3:5]) == {"tmeval", "apath"}
+    assert tail[5:] == expected[5:]
 
 def test_adjudication_missing_twice_falls_back(tmp_path):
     r = scenario(tmp_path, cli_outcomes={"apply-clusters": (2, ""), "apply-clusters-retry-1": (2, "")}, auditor_text="GATE: pass")
@@ -594,7 +624,7 @@ def test_structural_failure_blocks(tmp_path):
     r = scenario(tmp_path, cli_outcomes={f"audit-report-attempt-{i}": (1, out) for i in range(3)})
     assert asyncio.run(r.runner.run()) == "failed" and "build-report-attempt-2" in r.labels
 
-def test_no_apath_without_crown_jewels(tmp_path): ...       # cfg crown_jewels [] → "apath" not in agent_labels, "assemble-c4" still runs
+def test_no_apath_without_crown_jewels(tmp_path): ...       # cfg crown_jewels [] → "apath" not in agent_labels, "post-tier4" still runs
 def test_rollup_double_failure_uses_synthesizer(tmp_path): ...
 def test_domain_auditor_error_is_warning(tmp_path): ...      # → state completed, warning event
 ```
@@ -613,10 +643,10 @@ def test_retry_caps_match_workflow():
 
 def test_labels_exist_in_workflow():
     js = WORKFLOW_JS.read_text()
-    for label in ["validate-scaffold", "intake-schema-gate", "author-threat-model-floor", "validate-full-prephase5",
-                  "cluster-candidates-retry-1", "adjudicate-retry-1", "apply-clusters-retry-1b", "canonicalize-tmeval",
-                  "rollup-retry-1", "synthesizer-fallback-rollup", "report-writer-attempt-build-fix",
-                  "synthesizer-fallback-build", "build-report-attempt-postfallback", "canonicalize-dimpr", "validate-final"]:
+    for label in ["prepare-run", "intake-schema-gate", "author-threat-model-floor", "validate-full-prephase5",
+                  "cluster-candidates-retry-1", "adjudicate-retry-1", "apply-clusters-retry-1b", "apply-clusters-retry-2",
+                  "post-tier4", "post-tier4-retry-1", "synthesizer-fallback-rollup", "report-writer-attempt-build-fix",
+                  "synthesizer-fallback-build", "build-report-attempt-postfallback", "closeout"]:
         assert f"'{label}'" in js, label
 ```
 

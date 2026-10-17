@@ -7,6 +7,7 @@
   CLI, terminal UI (TUI) or browser UI without an interactive Claude Code
   session, and optionally call a decision model (Clef or Jev) through
   Cloudflare, TypeSafe or OpenRouter. Using no decision model stays the default.
+- **Amended:** 2026-10-17 per the amendments register (A12.1)
 
 ## 1. Problem
 
@@ -110,21 +111,22 @@ Output tokens are not billed. Clef accepts up to 4 images (PNG, JPEG or WebP,
 
 | Provider | Endpoint | Credential | Models | Context |
 |---|---|---|---|---|
-| Cloudflare Workers AI | `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/cloudflare/{model}` | `CLOUDFLARE_API_TOKEN` + account ID | `clef`, `clef-flash`, `clef-omni` | 64k, 24k, undocumented |
-| Cloudflare Workers AI (Jev) | `POST …/accounts/{account_id}/ai/run`, `"model": "typesafe/jev"` with the payload under `input` | same | `typesafe/jev` | 32k |
+| Cloudflare Workers AI | `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/cloudflare/{model}` | `CLOUDFLARE_API_TOKEN` + account ID | `clef`, `clef-flash`, `clef-omni` | 64k, 24k, 64,000 |
 | TypeSafe | `POST https://api.typesafe.ai/v1/systemone` | `TYPESAFE_API_KEY` | `jev-latest` | 32k |
 | OpenRouter | `POST https://openrouter.ai/api/v1/systemone` | `OPENROUTER_API_KEY` | `typesafe/jev-1.13`, `~typesafe/jev-latest` | 32k |
 
 Hosted prices per million input tokens: Clef $0.24, Clef-flash $0.038,
-Clef-omni $0.15, Jev on Cloudflare $0.042. OpenRouter reports cost per call in
+Clef-omni $0.15. OpenRouter reports cost per call in
 `usage.cost`. TypeSafe's direct price is not on its quickstart page. The catalog
 lives in `data/decision-models.json` with a `verified_on` date so stale figures
 are visible.
 
-Items to confirm against a live call during Plan 1, recorded as test fixtures:
-Workers AI's response envelope (`{"result": …, "success": …}`), the Jev `input`
-wrapper on Cloudflare, Clef-omni's context window, and the OpenRouter auth
-header (assumed `Authorization: Bearer`).
+Item to confirm against a live call during Plan 1, recorded as a test fixture:
+Workers AI's response envelope (`{"result": …, "success": …}`). The other three
+items were settled on 2026-10-14 (register A12.1): no Workers AI page lists a
+Jev route, so the Cloudflare Jev row and its `input` wrapper are gone;
+Clef-omni's context window is 64,000 tokens; OpenRouter takes
+`Authorization: Bearer`.
 
 ### 5.3 Client rules
 
@@ -503,8 +505,8 @@ runner), 0026 (local web UI security posture).
   systems, confirm each provider's agreement covers this data before enabling
   it. The default stays `none`, and the egress notice makes the
   choice explicit per run.
-- **Provider facts are unverified** in four places listed in §5.2. Plan 1's
-  first task records live fixtures; until then those adapters are marked
+- **Provider facts are unverified** in one place listed in §5.2. Plan 1's
+  first task records live fixtures; until then that adapter is marked
   experimental.
 - **Cost.** The local runner removes the per-step agent dispatches the plugin
   pays for, so a local run should cost less than a plugin run at the same models.

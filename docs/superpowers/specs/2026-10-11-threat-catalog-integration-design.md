@@ -8,7 +8,11 @@
 ADR-0022 (derived cross-framework views), the program master plan
 (`../plans/2026-10-10-program-master-plan.md`), the IaC spec
 (`2026-10-10-iac-terraform-opentofu-atmos-design.md`) and the threat catalog
-(367 threats in 25 families, built separately in claude.ai).
+(catalog 1.1.0: 367 threats in 25 families and about 9,800 mappings across 33
+frameworks, built separately in claude.ai; it carries no HITRUST content).
+**Amended:** 2026-10-17 per the amendments register (A7.1, A7.2, A7.3, A7.4,
+A7.5, A7.6, A7.7, A7.8, A7.9, A7.10, A7.11, A7.12, A7.13, A7.14, A7.15, A7.16,
+A7.17, A7.53, A14.4)
 
 ## 1. Problem
 
@@ -55,7 +59,9 @@ about 9,800 reviewed framework mappings.
   frameworks the gauntlet does not ask specialists to emit.
 - Align the gauntlet's KB editions with the catalog's and fix the existing
   OWASP LLM skew.
-- Keep HITRUST-derived content out of every public artifact.
+- Keep content the catalog may not redistribute out of every artifact. Catalog
+  1.1.0 carries no HITRUST content, and a load-time and CI guard keeps it that
+  way (§12.3).
 - Prove the change with the WS2 harness before it becomes the default.
 
 **Non-goals**
@@ -74,8 +80,8 @@ about 9,800 reviewed framework mappings.
 
 | Question | Decision | Rejected |
 |---|---|---|
-| Licensing | **Open subset plus local full.** A public open release in which HITRUST-sourced threats are stubs; the full catalog is loaded only from a local path. | Shipping the full catalog (HITRUST redistribution); shipping nothing (no default value). |
-| Source | **Own repo, pinned release.** `illusconsulting/threat-catalog` publishes versioned release assets; the gauntlet vendors one open file with provenance. | Git submodule; fetching at run time. |
+| Licensing | **Single vendored catalog, optional local file.** The whole release is vendored as `open`. `full` names an operator-supplied local file in the release schema (private extensions, or a release being trialled), loaded only from `threat_catalog.path`. | An open subset with HITRUST stubs (1.0.0 design, obsolete); dropping `full` (loses private extensions and pre-vendoring trials; changes R4, the workflow mirror and CAT4). |
+| Source | **Own repo, pinned release.** `illusconsulting/threat-catalog` publishes versioned release assets; the gauntlet vendors the release file and its schema with provenance. | Git submodule; fetching at run time. |
 | Approach | **A: enrichment layer.** The catalog feeds deterministic steps and agent context; the pipeline's shape and agents stay as they are. | B: catalog-driven TM (replaces the STRIDE skeleton); C: catalog-first lenses (per-threat checklists). Both multiply agent work and couple every lens to catalog quality. |
 | Default | `threat_catalog: open` on 2.0 only if the §14 gates pass; otherwise `off`. | — |
 
@@ -95,14 +101,14 @@ catalog's schema.
 | F7 | The catalog's LINDDUN codes are `L, I, Nr, D, DD, U, Nc`; the gauntlet's are `L, I, N_repudiation, D_etectability, D_isclosure, U, N_compliance`. | A fixed translation table, pinned by a test (§8.6). |
 | F8 | Catalog mapping keys include `attack_enterprise`, `attack_mobile`, `atlas`, `capec`, `cwe`, `maswe`, `owasp_top10`, `owasp_api`, `owasp_llm`, `owasp_llm_2025`, `owasp_agentic`, `owasp_nhi`, `owasp_cicd`, `owasp_k8s`, `maestro`, `csa_top_threats`, `hicp` and others; control keys are `nist_800_53`, `nist_csf2`, `cis_v8`, `d3fend`, `hicp`, `emb3d_mitigations`, `owasp_docker`. Each mapping has `fit: primary\|partial`. | One table maps catalog keys to gauntlet taxonomies (§8.6); everything else goes to the coverage view. |
 | F9 | Families include non-architecture sources (`EN` environmental, `FA` facility, `CF` conflict, `PH` physical, `LG` legal). Kinds include `consequence`; abstractions include `outcome`. | Default selection excludes those families, consequences and outcomes from candidates and shortlists; they still appear in the coverage view. |
-| F10 | The open release's HITRUST stubs have no `summary`, `description` or `example`, which the full schema requires. | The open edition has its own schema variant. Selection uses only fields both editions carry, so it is edition-invariant (§13). |
+| F10 | Catalog 1.1.0 removed every HITRUST field (`source`, `hitrust`, `hitrust_crosswalk`, `$defs.normalization`); `catalog.counts` is exactly `threats`, `families`, `mappings`; every threat carries `summary`, `description` and `example`. | One schema, the release's, validates the vendored file and any local file. The model has no `source` or `stub`. Selection reads the same fields from either file (§11). |
 | F11 | `run-config` already has `threat_model` (a supplied TM path) and `taxonomies` (opt-in emission). | The new key is `threat_catalog`; derived mappings follow `taxonomies`. |
 
 ## 5. Architecture
 
 ```text
-threat-catalog repo ──release──▶ threat-catalog-open-<v>.json ──vendored──▶ data/threat-catalog/open.json
-                                 threat-catalog-full-<v>.json ──local path─┐            │
+threat-catalog repo ──release──▶ threat-catalog-<v>.json ──vendored──▶ data/threat-catalog/open.json
+        operator's local catalog file ──threat_catalog.path (edition full)─┐            │
                                                                            ▼            ▼
                                                               apd_gauntlet.catalog (load, validate, index)
                                                                            │
@@ -129,25 +135,14 @@ and every new field is absent.
 
 ### 6.1 The catalog repo
 
-`illusconsulting/threat-catalog` (private repo, created by the operator) owns
-the source YAML, the build and validation scripts, and two release assets per
-version `X.Y.Z`:
+`illusconsulting/threat-catalog` owns the source YAML, the build and validation
+scripts, `LICENSE` and `NOTICE`. Per version `X.Y.Z`, on tag `vX.Y.Z`, it
+publishes `threat-catalog-X.Y.Z.json`, `threat-catalog.schema.json` and
+`SHA256SUMS`, plus optional `.md`, `coverage.md` and `.html` renders, which the
+gauntlet ignores.
 
-- `threat-catalog-open-X.Y.Z.json`, licensed for redistribution, with
-  `threat-catalog-open.schema.json` and `SHA256SUMS`, on tag `vX.Y.Z`;
-- `threat-catalog-full-X.Y.Z.json`, attached to a private release only.
-
-No full-edition schema is published to or vendored by the gauntlet (§12.1).
-
-**Open-edition stub rule.** For every threat with `source: HITRUST`, the open
-file keeps `id`, `name`, `aliases`, `family`, `family_name`, `abstraction`,
-`parent`, `children`, `kind`, `intent`, `actors`, `system_types`, `stride`,
-`linddun`, `impacts`, `related`, `mappings`, `controls` and `attack_tactics`,
-plus `"stub": true`. It removes `summary`, `description`, `example`,
-`scope_note`, `preconditions`, `indicators`, `mitigations`, `mapping_notes`,
-`references` and the whole `hitrust` block, and drops the top-level
-`hitrust_crosswalk`. Threats with `source: added` are complete in both
-editions.
+There is no private release, no full asset and no stub rule. The catalog repo's
+CI refuses any `hitrust` key or text.
 
 ### 6.2 What the gauntlet vendors
 
@@ -155,10 +150,10 @@ editions.
 
 | File | Content |
 |---|---|
-| `open.json` | The pinned open release asset, byte-identical to the download |
+| `open.json` | The pinned release asset `threat-catalog-<v>.json`, byte-identical |
 | `open.provenance.json` | `source` (release asset URL), `source_sha256`, `fetched_at`, `version` |
-| `open.schema.json` | The open schema from the same release |
-| `compat.yaml` | `catalog_compat: ">=1.0.0,<2.0.0"` — the catalog versions this gauntlet release accepts |
+| `open.schema.json` | The release's `threat-catalog.schema.json`, byte-identical; it also validates local files |
+| `compat.yaml` | `catalog_compat: ">=1.1.0,<2.0.0"` — the catalog versions this gauntlet release accepts |
 | `selection.yaml` | Versioned selection parameters (§8.1–8.3) |
 | `system-types.yaml` | Asset type and identity type to candidate catalog system types; domain pack and IaC resource-type hints (§8.1) |
 | `apd-goals.yaml` | Catalog family to APD goals, completing the STRIDE and LINDDUN mapping (§8.4) |
@@ -172,8 +167,9 @@ stays byte-identical and its hash checkable.
 ### 6.3 Refresh
 
 `apd-gauntlet refresh-threat-catalog [--version X.Y.Z] [--dry-run]` downloads
-the open asset and its schema from the catalog repo's release, verifies the
-release's published SHA-256, validates the file (§12.1), checks the version
+`threat-catalog-<v>.json` and `threat-catalog.schema.json` from the catalog
+repo's release, verifies the release's published SHA-256, validates the file
+(§12.1) including the HITRUST check, checks the version
 against `compat.yaml`, and rewrites `open.json`, `open.schema.json` and
 `open.provenance.json`. With `--token-env NAME` (default `GITHUB_TOKEN`) set,
 the token is sent only to `github.com`, `api.github.com` and
@@ -182,9 +178,11 @@ changed by id; mapping counts per key) and writes nothing. It follows the
 existing `refresh-*` pattern: a fetcher module, a golden fixture under
 `tests/fixtures/kb_golden/threat_catalog/`, and no network in tests.
 
-### 6.4 The full catalog
+### 6.4 The local catalog (`full`)
 
-The full file is never committed, vendored or copied into a run. It is loaded
+A local catalog is the operator's own file in the release schema: for example
+the vendored release plus private threats, numbered `TC-<FAMILY>-9NN` by
+convention, or a newer release being trialled. It is loaded
 from `threat_catalog.path` (§7). The loader refuses a path inside the
 installed package or the run directory, and warns when the path is inside a
 git working tree and not ignored. LA3's `doctor` gains a `threat-catalog`
@@ -200,7 +198,7 @@ threat_catalog: open            # off | open | full
 
 threat_catalog:
   edition: full                 # off | open | full
-  path: ~/threat-catalog/threat-catalog-full-1.0.0.json      # required for full
+  path: ~/threat-catalog/local-catalog.json  # required for full: an operator-supplied catalog file
   system_types: [api, cloud, b2b_integration]               # optional, added to the run's types
   exclude_system_types: [ot_ics]                            # optional
 ```
@@ -257,6 +255,8 @@ identity type a candidate list and a default. For example `service:
 {candidates: [server, cloud, container_k8s, serverless], default: server}`,
 `queue: {candidates: [b2b_integration, cloud, data_store], default:
 data_store}`, `workload_identity: {candidates: [identity], default: identity}`.
+CAT1 extends both the `service` and `compute` lists: `service` adds `ai_ml` and
+`agentic_ai`, and `compute` adds `ai_ml` and `ci_cd`.
 A surface's types are its candidates intersected with the run types, or the
 default when the intersection is empty.
 
@@ -275,7 +275,7 @@ default when the intersection is empty.
 ```yaml
 schema_version: 1
 generated_by: apd-gauntlet
-catalog: {edition: open, version: 1.0.0, sha256: "…", fallback_from: null}
+catalog: {edition: open, version: 1.1.0, sha256: "…", fallback_from: null}
 selection_version: 1
 system_types: [{type: api, sources: [domain:pbm, asset:claims-api]}]
 surfaces: [{asset: claims-api, element: process, system_types: [api], stride: [S, T, R, I, D, E], linddun: [I, D_isclosure]}]
@@ -358,9 +358,9 @@ number of TM entries citing them), then the §8.2 rank, then id, and capped at
 Each row holds:
 
 - id and name;
-- one line of at most 160 characters: the `summary` when the loaded edition
-  has one (every threat in full, `source: added` threats in open), otherwise
-  the family name;
+- one line of at most 160 characters: the `summary`, clipped to 160 characters
+  (every 1.1.0 threat has one); the family name when a local file's summary is
+  empty;
 - the surfaces it applies to;
 - its primary mappings in the run's active taxonomies.
 
@@ -401,9 +401,12 @@ derived field is built as follows:
 | `owasp_api` | `owasp_api_top10` | `owasp_api_top10.json` |
 | `owasp_llm_2025` | `owasp_llm_top10` | `owasp_llm_top10.json` (2025 after §10) |
 | `maswe` | `maswe` | `maswe.json` |
-| `capec` | (CAPEC bridge input) | `capec.json` |
+| `capec` | (not consumed by the CAPEC bridge in 2.0; CAT3 Task 11 excludes it) | `capec.json` |
 | controls `nist_800_53` | `nist_800_53r5` | `nist-controls.json` |
 | controls `d3fend` | (defense graph) | `d3fend.json` |
+
+Catalog-derived ATT&CK ids do not reach the detection overlay in 2.0
+(consolidated plan DEC-30).
 
 **LINDDUN translation:**
 
@@ -517,8 +520,8 @@ exists:
 - framework tables;
 - tactic sequences on the attack-path scene.
 
-Threat rows show id and name; summaries appear only for `source: added`
-threats. The report writer's metrics input gains the status counts.
+Threat rows show id, name and the clipped summary. The report writer's metrics
+input gains the status counts.
 
 ### 8.10 Gaps
 
@@ -593,9 +596,10 @@ The catalog id pattern `^TC-[A-Z]{2}-\d{3}$` goes into `_defs.schema.json`.
   packs, IaC index (when present), canonicalized records, and
   `selection.yaml`. Sorting uses stable keys only, ending in the id.
   `selection.yaml` carries `version`, and outputs record it.
-- **Edition invariance.** Selection uses only fields present in both editions,
-  so open and full at the same version produce identical scope, candidates and
-  silence lists. Only shortlist summaries differ.
+- **Same function, either file.** Selection reads only catalog fields. A local
+  file whose threats equal the vendored file's gives identical scope,
+  candidates and silence lists; its extra threats join only where eligible.
+  Only the recorded `edition` differs.
 - **Cost bounds.** Candidates are at most 3 per cell, shortlists at most 40
   rows (about 3k tokens) per lens, and silence candidates at most 15. Python
   does all joins. Tokens per run are measured against `off` (§14).
@@ -612,20 +616,17 @@ The catalog id pattern `^TC-[A-Z]{2}-\d{3}$` goes into `_defs.schema.json`.
 
 1. the size is at most 20 MB;
 2. the file is JSON;
-3. for a full file, the top-level `hitrust_crosswalk` and every threat's
-   `hitrust` key are dropped before anything else reads the data;
-4. it validates against the vendored open schema; a full file is checked in
-   full mode, where no threat may be a stub and every threat needs `summary`,
-   `description` and `example`;
-5. ids are unique and well formed, and `parent`, `children` and `related`
-   resolve;
+3. no HITRUST content: no key containing `hitrust` (any case, any depth), and
+   no per-threat `source` or `stub` key; for the vendored file, also no string
+   value containing `hitrust`;
+4. it validates against the vendored `open.schema.json`;
+5. ids are unique and well formed, `parent`, `children` and `related` resolve,
+   and `catalog.counts.threats` and `.families` equal the array lengths;
 6. the version is within `compat.yaml`;
-7. for the vendored file, the SHA-256 matches `open.provenance.json`;
-8. for the open edition, no `source: HITRUST` threat carries any field the
-   stub rule removes, and no `hitrust` block or `hitrust_crosswalk` exists.
+7. for the vendored file, the SHA-256 matches `open.provenance.json`.
 
 A failure in the vendored file fails CI, because the same checks run as a
-test. A failure in a full file falls back to open with a recorded warning.
+test. A failure in a local file falls back to open with a recorded warning.
 
 ### 12.2 Catalog text is data
 
@@ -638,18 +639,17 @@ handling protects against an edited local file.
 
 ### 12.3 Licensing guards
 
-- **CI:** the stub rule test (§12.1, item 8) runs on the vendored file.
-- **CI:** every committed example run under `examples/` has no scope file or
-  one with `edition` `open`.
-- **Report:** HITRUST-sourced threats show id and name only.
-- **No lineage anywhere:** the gauntlet never reads a threat's `hitrust` block
-  or the `hitrust_crosswalk`, in either edition. `model.py` does not load them,
-  and a test runs the catalog steps on a fixture full catalog and asserts that
-  no output contains a `hitrust` key or any of the fixture's HITRUST ids.
-- **Export:** `catalog export-gaps` never includes catalog prose.
-- **Run directories:** with `full`, a run's shortlists may contain HITRUST
-  prose. Run directories are local-only under ADR-0017, and the run log
-  records the edition.
+- **CI:** check 3 runs on the vendored file, and no file under
+  `data/threat-catalog/` or `tests/fixtures/threat_catalog/` contains
+  `hitrust` in any case.
+- **CI:** committed examples have no scope file, or `edition` `open`; a local
+  catalog's private prose must never be committed.
+- **Report and coverage:** id, name and clipped summary for every threat.
+- **Export:** no catalog prose.
+- **Run directories:** with `full`, they carry the operator's local prose;
+  they are local-only, and the log records the edition.
+- **NOTICE:** carries the catalog licence and points to the catalog NOTICE for
+  third-party terms.
 
 ## 13. Failure handling
 
@@ -709,7 +709,7 @@ run`):
 | C3 | Add an asset of an unrelated type | Other surfaces' candidates unchanged |
 | C4 | Change one asset's type | That surface's candidates change (sensitivity) |
 | C5 | Reorder threats in the catalog file | Byte-identical outputs |
-| C6 | Swap the open edition for a full file of the same version | Identical scope, candidates and silence lists |
+| C6 | Run through `edition: full` with a local file equal to the vendored catalog plus threats eligible on no surface | Identical scope, candidates and silence lists |
 
 ## 15. Delivery
 
@@ -727,8 +727,9 @@ ADR-0030; code-flow moves to 0031 onward.
 
 **Operator work.**
 
-- Publish catalog release `1.0.0` with both assets and the open schema.
-- Confirm the HITRUST position: open stubs keep names and mappings.
+- Publish the catalog repo (§6.1) `v1.1.0` with
+  `threat-catalog-1.1.0.json`, `threat-catalog.schema.json`, `SHA256SUMS`,
+  `LICENSE` and `NOTICE`, before CAT1 Task 7.
 - Label threats for the corpora (CAT4).
 
 ## 16. Risks and open questions
