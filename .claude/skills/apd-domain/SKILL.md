@@ -5,8 +5,9 @@ metadata:
   packs:
     - name: pbm
       version: 1.0.0
-  framework_version: 1.7.0
-  generated: 2026-06-25T02:15:55Z
+  framework_version: 1.7.1
+  content_sha256: e427120fbbfe6018f1d0650d536511f47dfb5688a946f0d4b7bb67c6b60c12c4
+  generated: 2026-10-17T04:32:21Z
 ---
 
 ## Domain: pbm — Source: `severity-rubric.md`

@@ -93,7 +93,8 @@ cut after 2.0.0 therefore never displaces 2.0 as Latest.
    `git tag v1.7.Z <merge-sha> && git push origin v1.7.Z`.
 4. The release workflow publishes to PyPI as the default version and creates a
    GitHub Release marked Latest.
-5. Merge `main` into `next`, keeping `next`'s version values.
+5. Merge `main` into `next`, keeping `next`'s version values. (While `next` has
+   no 2.0 pre-release, take `main`'s version values.)
 
 ## Cutting a 2.0 pre-release (from `next`)
 

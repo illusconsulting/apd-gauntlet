@@ -5,8 +5,8 @@ metadata:
   packs:
     - name: pbm
       version: 1.0.0
-  framework_version: 1.7.0
-  generated: 2026-06-25T02:15:55Z
+  framework_version: 1.7.1
+  generated: 2026-10-17T04:32:21Z
   pruned:
     scoped_to_goal: distributed
     retained_calibration:
