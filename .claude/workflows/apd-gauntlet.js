@@ -13,6 +13,19 @@
 // docs/running-the-gauntlet.md). Driving it headlessly via the background
 // Workflow tool can interrupt the specialist dispatches; run it in-session.
 //
+// AWAIT EVERY DISPATCH. agent(prompt, opts) returns a Promise of the agent's
+// result, and parallel(thunks) returns a Promise of the results array (a barrier
+// that never rejects; a failed thunk resolves to null). The script body runs in
+// an async context, so every dispatch is awaited. Call sites await agent(),
+// pyStep(), llmStep() and parallel(); the helpers that read a receipt (tierGate,
+// regate, repairTierGate, runTier) are async and awaited in turn. pyStep() and
+// llmStep() stay plain functions. pyStep() always returns agent()'s Promise;
+// llmStep() returns it too, except for a step resume-plan marked complete, where
+// it returns a plain receipt. Their callers await the result. A parallel() thunk
+// returns its dispatch's Promise to the barrier, which awaits it. No callback is
+// async: forEach() and map() never wait for one. An un-awaited receipt is a
+// pending Promise, which isErr() reads as success.
+//
 // RESUME (design §6, two layers):
 //  - Same-session: Workflow({scriptPath, resumeFromRunId}) replays every
 //    completed agent() call from the harness cache. The only script-side
@@ -372,7 +385,7 @@ log('apd-gauntlet runner: setup for ' + args.run_id + ' (domains=' + args.domain
 //    every agent step, exactly as a fresh run would.
 // alwaysRun: resume-plan is read-only and is the thing that decides skips, so it
 // cannot sit behind the idempotency guard.
-const rp = pyStep('resume-plan', {
+const rp = await pyStep('resume-plan', {
   phase: 'setup', label: 'resume-plan', cliArgs: '--json',
   alwaysRun: true, resumePlan: true,
   outputs: 'none (read-only step-completion map)',
@@ -399,7 +412,7 @@ if (rp.status === 'ok' && rp.resume_plan && Array.isArray(rp.resume_plan.steps))
 // 0a — validate the pre-existing scaffold (schema-only; confirms .apd-run.yaml +
 // inputs/ are present and the run dir is well-formed). This pyStep targets the
 // run dir as its positional (the default).
-pyStep('validate', {
+await pyStep('validate', {
   phase: 'setup', label: 'validate-scaffold',
   cliArgs: '--schema-only --errors-only',
   outputs: runDir + '/.apd-run.yaml + runDir/inputs/ (pre-existing scaffold)',
@@ -416,7 +429,7 @@ pyStep('validate', {
 // concatenating an absent value stringifies `undefined`, yielding the literal arg
 // `--framework-version undefined`, which crashes build_domain_skill at int('undefined').
 // When the key is absent, OMIT the flag so the CLI's own `default=__version__` applies.
-pyStep('build-domain-skill', {
+await pyStep('build-domain-skill', {
   phase: 'setup', label: 'build-domain-skill',
   noRunDir: true, positional: args.domains.join(' '),
   cliArgs: args.framework_version ? ('--framework-version ' + args.framework_version) : '',
@@ -424,7 +437,7 @@ pyStep('build-domain-skill', {
   validateScope: runDir, alwaysRun: true,
 });
 // 0c — validate-domain also takes a BARE domain_name positional (read-only check).
-pyStep('validate-domain', {
+await pyStep('validate-domain', {
   phase: 'setup', label: 'validate-domain',
   noRunDir: true, positional: args.domains.join(' '),
   outputs: 'domain pack ' + args.domains.join(',') + ' (read-only check)',
@@ -435,7 +448,7 @@ pyStep('validate-domain', {
 // PHASE 1 — intake
 // ===========================================================================
 phase('intake');
-const intakeReceipt = llmStep('apd-intake',
+const intakeReceipt = await llmStep('apd-intake',
   'Analyze ' + runDir + '/inputs and emit 00-context/context-brief.md PLUS ' +
   '00-context/asset-inventory.yaml (ALWAYS emit the inventory: populate it from the artifacts when ' +
   'crown_jewels are declared in the run-config or the apd-domain skill, otherwise emit a schema-valid ' +
@@ -449,7 +462,7 @@ bailIfInterrupted(intakeReceipt, 'intake');
 // minted asset ids. MUST run before specialists cite inventory ids (code-recon +
 // tier-1 onward), so ids are stable for the rest of the run; placed before the
 // 00-context schema-gate so the gate validates the canonical (id-bearing) form.
-pyStep('assemble-inventory', {
+await pyStep('assemble-inventory', {
   phase: 'intake', label: 'assemble-inventory',
   outputs: runDir + '/00-context/asset-inventory.yaml (asset-/idn-/tb- ids minted; crosses wired)',
   validateScope: runDir + '/00-context', alwaysRun: true,
@@ -462,7 +475,7 @@ pyStep('assemble-inventory', {
 // exists at this point, so a whole-run --schema-only pass is effectively the
 // 00-context schema gate. Read-only receipt, mirroring the tier gates: alwaysRun, so
 // the command is never skipped by a guard.
-pyStep('validate', {
+await pyStep('validate', {
   phase: 'intake', label: 'intake-schema-gate',
   cliArgs: '--schema-only --errors-only',
   outputs: runDir + '/00-context schema gate (asset-inventory + brief frontmatter)',
@@ -474,7 +487,7 @@ pyStep('validate', {
 // ===========================================================================
 phase('code-recon');
 if (args.code_recon && args.code_recon !== 'disabled') {
-  const cr = llmStep('apd-code-recon',
+  const cr = await llmStep('apd-code-recon',
     'Run code reconnaissance for the run; emit 00-context/code-evidence-index.yaml ' +
     'OR (when code_recon==auto and CBM is unreachable) 00-context/code-recon-skipped.md.',
     { phase: 'code-recon', label: 'code-recon' });
@@ -492,7 +505,7 @@ if (args.code_recon && args.code_recon !== 'disabled') {
   // qualified_name + line_range before anything reads the index (the author reads it next,
   // then the lenses cite it). alwaysRun: the command is idempotent, and a run with no
   // index (code_recon=auto and CBM unreachable) is a no-op.
-  pyStep('canonicalize', {
+  await pyStep('canonicalize', {
     phase: 'canonicalize', label: 'canonicalize-code-evidence',
     outputs: 'cev- ids minted in ' + runDir + '/00-context/code-evidence-index.yaml',
     alwaysRun: true,
@@ -513,12 +526,12 @@ if (args.code_recon && args.code_recon !== 'disabled') {
 // grounded baseline ALWAYS exists, so tmeval always has a TM to grade.
 // ===========================================================================
 phase('threat-model-author');
-pyStep('author-threat-model', {
+await pyStep('author-threat-model', {
   phase: 'threat-model-author', label: 'author-threat-model-floor',
   outputs: runDir + '/00-context/threat-model-skeleton.yaml',
   validateScope: runDir + '/00-context',
 });
-llmStep('apd-threat-model-author',
+await llmStep('apd-threat-model-author',
   'Author the grounded baseline threat model. Run apd-gauntlet author-threat-model ' +
   'internally to (re)build 00-context/threat-model-skeleton.yaml, then ground or BLOCK ' +
   'each skeleton cell and emit the canonical 00-context/threat-model-normalized.yaml ' +
@@ -534,7 +547,7 @@ if (args.threat_model) {
   // against the always-on authored baseline (the author owns the canonical
   // 00-context/threat-model-normalized.yaml). Recon runs its parse-threat-model
   // CLI with --output 00-context/threat-model-supplied-normalized.yaml.
-  llmStep('apd-threat-model-recon',
+  await llmStep('apd-threat-model-recon',
     'Parse + enrich the supplied threat model at ' + args.threat_model + ' (run apd-gauntlet ' +
     'parse-threat-model internally with --output ' +
     '00-context/threat-model-supplied-normalized.yaml as your agent contract specifies); ' +
@@ -549,7 +562,7 @@ if (args.threat_model) {
 // fills an absent inferred_apd_goals) in the authored baseline and in the supplied sibling
 // when it exists, before the lenses cite them and tmeval grades them. alwaysRun: the
 // command is idempotent, and it runs whether or not a threat model was supplied.
-pyStep('canonicalize', {
+await pyStep('canonicalize', {
   phase: 'canonicalize', label: 'canonicalize-threat-model',
   outputs: 'tm- entry ids minted in ' + runDir + '/00-context/threat-model-normalized.yaml' +
     ' and threat-model-supplied-normalized.yaml',
@@ -631,8 +644,8 @@ function repairPrompt(file, errorLines) {
 // `validate runs/<id> --tier <tierDir> --json`. alwaysRun: a gate that can skip itself
 // is not a gate. errorsFromJson: the receipt carries one error per failing file.
 // suffix is '' for the first gate, then '-after-repair' / '-after-rerun'.
-function tierGate(phaseName, tierDir, suffix) {
-  return pyStep('validate', {
+async function tierGate(phaseName, tierDir, suffix) {
+  return await pyStep('validate', {
     phase: phaseName, label: 'validate-' + tierDir + suffix,
     cliArgs: '--tier ' + tierDir + ' --json',
     alwaysRun: true, errorsFromJson: true,
@@ -642,13 +655,13 @@ function tierGate(phaseName, tierDir, suffix) {
 
 // Canonicalize the whole run (idempotent; alwaysRun, as before the first gate), then
 // gate the tier again under labels that carry the stage suffix. Returns the receipt.
-function regate(phaseName, tierDir, suffix) {
-  pyStep('canonicalize', {
+async function regate(phaseName, tierDir, suffix) {
+  await pyStep('canonicalize', {
     phase: 'canonicalize', label: 'canonicalize-' + tierDir + suffix,
     outputs: 'canonicalized lens records under ' + runDir,
     alwaysRun: true,
   });
-  const gate = tierGate(phaseName, tierDir, suffix);
+  const gate = await tierGate(phaseName, tierDir, suffix);
   bailIfInterrupted(gate, phaseName);
   return gate;
 }
@@ -656,7 +669,7 @@ function regate(phaseName, tierDir, suffix) {
 // A red gate: one repair agent per failing file -> canonicalize + gate -> re-run the
 // lenses that own the files still red -> canonicalize + gate -> halt if still red.
 // Returns when the tier is green. Throws when it cannot get it green.
-function repairTierGate(phaseName, tierDir, lenses, gate) {
+async function repairTierGate(phaseName, tierDir, lenses, gate) {
   bailIfInterrupted(gate, phaseName);
   if (!isErr(gate)) { return; }
   const byFile = failingFiles(gate, tierDir);
@@ -665,7 +678,7 @@ function repairTierGate(phaseName, tierDir, lenses, gate) {
     throw new Error('tier gate ' + tierDir + ' FAILED with no attributable file: ' + errorText(gate));
   }
   log('tier ' + tierDir + ': gate failed; repairing ' + files.length + ' file(s).');
-  parallel(files.map(function (f) {
+  await parallel(files.map(function (f) {
     return function () {
       return agent(repairPrompt(f, byFile[f]), {
         agentType: 'apd-tier-repair', schema: RECEIPT, phase: phaseName,
@@ -673,11 +686,11 @@ function repairTierGate(phaseName, tierDir, lenses, gate) {
       });
     };
   }));
-  gate = regate(phaseName, tierDir, '-after-repair');
+  gate = await regate(phaseName, tierDir, '-after-repair');
   if (!isErr(gate)) { return; }
   const rerun = lensesOf(Object.keys(failingFiles(gate, tierDir)), lenses);
   log('tier ' + tierDir + ': still failing after repair; re-running lens(es) ' + rerun.join(', ') + '.');
-  parallel(rerun.map(function (lens) {
+  await parallel(rerun.map(function (lens) {
     return function () {
       return llmStep('apd-' + lens,
         'Re-run the ' + lens + ' lens from scratch and overwrite ' + tierDir + '/' + lens +
@@ -686,7 +699,7 @@ function repairTierGate(phaseName, tierDir, lenses, gate) {
         { phase: phaseName, label: lens + '-rerun' });
     };
   }));
-  gate = regate(phaseName, tierDir, '-after-rerun');
+  gate = await regate(phaseName, tierDir, '-after-rerun');
   if (isErr(gate)) {
     throw new Error('tier gate ' + tierDir + ' FAILED after repair and lens re-run: ' + errorText(gate) +
       '. Fix the records under ' + runDir + '/' + tierDir + ', then re-invoke the runner ' +
@@ -697,13 +710,13 @@ function repairTierGate(phaseName, tierDir, lenses, gate) {
 // ===========================================================================
 // Tier helper: parallel lens dispatch + per-lens 2-retry + blocking tier gate with repair.
 // ===========================================================================
-function runTier(phaseName, tierDir, lenses) {
+async function runTier(phaseName, tierDir, lenses) {
   phase(phaseName);
   // parallel(thunks) resolves to a positionally-ordered array aligned to thunk
   // order (a failed thunk -> null at its index), so receipts[i] maps to lenses[i]
   // in the retry loop below. This ordered-array return is the standard
   // Workflow-tool contract.
-  const receipts = parallel(lenses.map(function (lens) {
+  const receipts = await parallel(lenses.map(function (lens) {
     return function () {
       return llmStep('apd-' + lens,
         'Analyze the ' + lens + ' lens; emit ' + tierDir + '/' + lens +
@@ -712,39 +725,41 @@ function runTier(phaseName, tierDir, lenses) {
     };
   }));
   // Inspect each receipt after the barrier; null or error -> up to 2 retries.
-  lenses.forEach(function (lens, i) {
+  // A plain loop, not forEach: forEach does not wait for an async callback.
+  for (let i = 0; i < lenses.length; i++) {
+    const lens = lenses[i];
     let r = receipts[i];
     for (let k = 1; k <= 2 && isErr(r); k++) {
       log('tier ' + tierDir + ': lens ' + lens + ' failed; retry ' + k + '/2.');
-      r = llmStep('apd-' + lens,
+      r = await llmStep('apd-' + lens,
         'Retry the ' + lens + ' lens; emit ' + tierDir + '/' + lens + '.findings.yaml and ' +
         tierDir + '/' + lens + '.capabilities.yaml.',
         { phase: phaseName, label: lens + '-retry-' + k });
     }
-  });
+  }
   // Canonicalize the whole run (idempotent, structural-only) so the tier gate
   // below sees canonical envelopes + deterministic ids. alwaysRun bypasses the
   // JS-side idempotency guard: that guard only runs `validate --schema-only`,
   // which would NOT catch fabricated ids (a semantic-pass check), so it could
   // wrongly skip canonicalize and let the tier gate fail. canonicalize is itself
   // idempotent, so always running it is safe. Runs before EACH tier gate.
-  pyStep('canonicalize', {
+  await pyStep('canonicalize', {
     phase: 'canonicalize', label: 'canonicalize-' + tierDir,
     outputs: 'canonicalized lens records under ' + runDir,
     alwaysRun: true,
   });
   // Tier-end gate: blocking. A red gate is repaired file by file, then the owning
   // lenses are re-run once, then the run halts naming the files (see above).
-  const gate = tierGate(phaseName, tierDir, '');
-  repairTierGate(phaseName, tierDir, lenses, gate);
+  const gate = await tierGate(phaseName, tierDir, '');
+  await repairTierGate(phaseName, tierDir, lenses, gate);
 }
 
 // ===========================================================================
 // PHASE 2/3/4 — the three parallel lens tiers
 // ===========================================================================
-runTier('tier-1', '10-trustworthiness', ['confidentiality', 'integrity', 'availability']);
-runTier('tier-2', '20-scalability', ['distributed', 'resilient', 'ephemeral']);
-runTier('tier-3', '30-auditability', ['authenticity', 'non-repudiation', 'immutability']);
+await runTier('tier-1', '10-trustworthiness', ['confidentiality', 'integrity', 'availability']);
+await runTier('tier-2', '20-scalability', ['distributed', 'resilient', 'ephemeral']);
+await runTier('tier-3', '30-auditability', ['authenticity', 'non-repudiation', 'immutability']);
 
 // FULL pre-Phase-5 cross-file gate (--tier skips Pass 3; cluster-candidates
 // must read a cross-file-clean corpus).
@@ -755,7 +770,7 @@ runTier('tier-3', '30-auditability', ['authenticity', 'non-repudiation', 'immuta
 // stops a poisoned corpus from reaching Phase-5 synthesis. alwaysRun: the guard
 // checks only --schema-only, so on a run whose only errors are semantic or
 // cross-file it would return a skip receipt and this gate would never fire.
-const vfull = pyStep('validate', {
+const vfull = await pyStep('validate', {
   phase: 'tier-3', label: 'validate-full-prephase5',
   cliArgs: '--errors-only',
   outputs: 'whole-run cross-file clean (read-only gate)',
@@ -776,11 +791,11 @@ let fellBack = false;
 
 // 5a cluster-candidates (Python).
 phase('synthesis-cluster');
-let cc = pyStep('cluster-candidates', {
+let cc = await pyStep('cluster-candidates', {
   phase: 'synthesis-cluster', label: 'cluster-candidates',
   outputs: runDir + '/40-synthesis/cluster-candidates.yaml' });
 if (isErr(cc)) {
-  cc = pyStep('cluster-candidates', { phase: 'synthesis-cluster', label: 'cluster-candidates-retry-1',
+  cc = await pyStep('cluster-candidates', { phase: 'synthesis-cluster', label: 'cluster-candidates-retry-1',
     outputs: runDir + '/40-synthesis/cluster-candidates.yaml' });
   if (isErr(cc)) { fellBack = true; }
 }
@@ -789,7 +804,7 @@ if (isErr(cc)) {
 let adjudicateErrStreak = 0;
 if (!fellBack) {
   phase('synthesis-adjudicate');
-  let adj = llmStep('apd-cluster-adjudicator',
+  let adj = await llmStep('apd-cluster-adjudicator',
     'Read ONLY 40-synthesis/cluster-candidates.yaml; emit 40-synthesis/cluster-decisions.yaml ' +
     '(with the _members map keyed by group_id).',
     { phase: 'synthesis-adjudicate', label: 'adjudicate' });
@@ -797,30 +812,30 @@ if (!fellBack) {
 
   // 5c apply-clusters (Python) — typed signal AdjudicationMissing == exit 2.
   phase('synthesis-apply');
-  let ap = pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters',
+  let ap = await pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters',
     outputs: runDir + '/40-synthesis/deduped-findings.yaml, deduped-capabilities.yaml, rejected-records.yaml, severity-disagreements.yaml, contradictions.yaml' });
   const isAdjMissing = ap && ap.status === 'error' && ap.errors && ap.errors[0] &&
     /exit=2/.test(ap.errors[0].message);
   if (isAdjMissing) {
     // 5b did not produce a valid cluster-decisions.yaml. Re-dispatch 5b ONCE, then retry 5c.
     log('apply-clusters: AdjudicationMissing (exit 2) — re-running adjudicator once.');
-    const adj2 = llmStep('apd-cluster-adjudicator',
+    const adj2 = await llmStep('apd-cluster-adjudicator',
       'Re-emit 40-synthesis/cluster-decisions.yaml (with the _members map). The prior attempt ' +
       'did not produce a valid decisions file.',
       { phase: 'synthesis-adjudicate', label: 'adjudicate-retry-1' });
     if (isErr(adj2)) { adjudicateErrStreak = 2; }
-    ap = pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-1',
+    ap = await pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-1',
       outputs: runDir + '/40-synthesis/deduped-findings.yaml' });
     if (ap && ap.status === 'error' && ap.errors && ap.errors[0] && /exit=2/.test(ap.errors[0].message)) {
       log('apply-clusters: AdjudicationMissing persists after one adjudicator retry — fallback.');
       fellBack = true;
     } else if (isErr(ap)) {
-      ap = pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-2',
+      ap = await pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-2',
         outputs: runDir + '/40-synthesis/deduped-findings.yaml' });
       if (isErr(ap)) { fellBack = true; }
     }
   } else if (isErr(ap)) {
-    ap = pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-1b',
+    ap = await pyStep('apply-clusters', { phase: 'synthesis-apply', label: 'apply-clusters-retry-1b',
       outputs: runDir + '/40-synthesis/deduped-findings.yaml' });
     if (isErr(ap)) { fellBack = true; }
   }
@@ -842,12 +857,12 @@ if (!fellBack) {
 if (fellBack) {
   phase('synthesis-fallback');
   log('synthesis: decomposed pipeline failed irrecoverably — dispatching apd-synthesizer fallback.');
-  agent(
+  await agent(
     'Append a run-state.yaml breadcrumb to ' + runDir + '/40-synthesis/run-state.yaml using Bash: ' +
     'a YAML entry {phase: synthesis, decision: synthesizer-fallback, reason: decomposed-pipeline-failed}. ' +
     'This is advisory only. Return a one-line confirmation.',
     { phase: 'synthesis-fallback', label: 'run-state-fallback' });
-  agent(
+  await agent(
     'Run as the synthesis FALLBACK. The decomposed pipeline failed. Read the tier corpus under ' +
     runDir + ' and write the synthesis corpus — deduped-findings.yaml, deduped-capabilities.yaml, ' +
     'contradictions.yaml, severity-disagreements.yaml, rejected-records.yaml — AND report-data.yaml, ' +
@@ -869,7 +884,7 @@ if (fellBack) {
 // ===========================================================================
 phase('tmeval');
 phase('apath');
-parallel([
+await parallel([
   function () {
     // tmeval gate WIDENED from args.threat_model to TM-present: the always-on
     // author phase guarantees a canonical 00-context/threat-model-normalized.yaml
@@ -912,7 +927,7 @@ parallel([
 // 40-synthesis/c4-model.yaml. It runs whenever asset-graph.yaml exists and
 // includes the L4/L3 code tiers only when 00-context/code-evidence-index.yaml
 // is present (the C4 scene then renders whatever c4-model.yaml contains).
-pyStep('assemble-c4', {
+await pyStep('assemble-c4', {
   phase: 'apath', label: 'assemble-c4',
   outputs: runDir + '/40-synthesis/c4-model.yaml (c4-/c4e- ids minted; finding/capability badges rolled up)',
   alwaysRun: true,
@@ -924,7 +939,7 @@ pyStep('assemble-c4', {
 // tmeval/apath barrier and before rollup, which loads tmeval-* findings BY ID into
 // nist/attack/matrix coverage — an un-minted (id-less) tmeval finding would drop
 // out of the rollup. (apath-* records are out-of-scope here and pass through.)
-pyStep('canonicalize', {
+await pyStep('canonicalize', {
   phase: 'tmeval', label: 'canonicalize-tmeval',
   outputs: 'tmeval- ids minted under ' + runDir + '/40-threat-model/',
   alwaysRun: true,
@@ -935,17 +950,17 @@ pyStep('canonicalize', {
 // (load_corpus pulls tmeval-* too), so nist/attack/matrix coverage now reflects
 // the tier-4 findings. After this, the FULL validate covers nist/attack/matrix.
 phase('synthesis-rollup');
-let rl = pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup',
+let rl = await pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup',
   outputs: runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml, metrics.yaml (+ declared-taxonomy coverage files)' });
 if (isErr(rl)) {
-  rl = pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup-retry-1',
+  rl = await pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup-retry-1',
     outputs: runDir + '/40-synthesis/nist-coverage.yaml' });
   if (isErr(rl)) {
     // Last resort: the deterministic rollup failed twice. Have the synthesizer
     // write the coverage rollups directly (deduped corpus + apath findings) so
     // build-report's required nist/attack/matrix inputs exist.
     log('rollup: deterministic rollup failed after retry — synthesizer writes coverage as last resort.');
-    agent(
+    await agent(
       'Run as the synthesis FALLBACK and write the coverage rollups ' +
       runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml ' +
       'AND 40-synthesis/metrics.yaml (the report loader REQUIRES metrics.yaml — without it ' +
@@ -961,29 +976,29 @@ if (isErr(rl)) {
 // The workflow owns build + audit even in fallback.
 // ===========================================================================
 phase('synthesis-report');
-llmStep('apd-report-writer',
+await llmStep('apd-report-writer',
   'Read 40-synthesis/metrics.yaml + deduped-findings.yaml + attack-path.findings.yaml (apath-*, when present) + ' +
   'the COMPACT rollups + contradictions/severity-disagreements; rank the headline findings across ' +
   'BOTH the deduped and apath sets; emit 40-synthesis/advisory-report.md + 40-synthesis/report-data.yaml.',
   { phase: 'synthesis-report', label: 'report-writer-attempt-0' });
 
 phase('synthesis-build');
-let build = pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-0',
+let build = await pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-0',
   outputs: runDir + '/40-synthesis/report-html/data.js, build-manifest.txt' });
 // build-report exit 1 surviving one 5e regenerate -> fallback (synthesizer rewrites report-data.yaml).
 if (isErr(build) && !fellBack) {
   log('build-report: error — regenerating report-data via report-writer once.');
-  llmStep('apd-report-writer',
+  await llmStep('apd-report-writer',
     'Regenerate 40-synthesis/report-data.yaml + advisory-report.md (the prior build failed).',
     { phase: 'synthesis-report', label: 'report-writer-attempt-build-fix' });
-  build = pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-build-fix',
+  build = await pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-build-fix',
     outputs: runDir + '/40-synthesis/report-html/data.js' });
   if (isErr(build)) {
     log('build-report: still failing — dispatching synthesizer fallback to rewrite report-data.yaml.');
-    agent('Run as the synthesis FALLBACK and rewrite ' + runDir + '/40-synthesis/report-data.yaml ' +
+    await agent('Run as the synthesis FALLBACK and rewrite ' + runDir + '/40-synthesis/report-data.yaml ' +
       'from the tier corpus, then STOP.',
       { agentType: 'apd-synthesizer', phase: 'synthesis-build', label: 'synthesizer-fallback-build' });
-    build = pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-postfallback',
+    build = await pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-postfallback',
       outputs: runDir + '/40-synthesis/report-html/data.js' });
   }
 }
@@ -998,7 +1013,7 @@ bailIfInterrupted(build, 'synthesis-build');
 phase('synthesis-audit');
 let critique = null;
 for (let i = 0; i <= 2; i++) {
-  const audit = pyStep('audit-report', { phase: 'synthesis-audit', label: 'audit-report-attempt-' + i,
+  const audit = await pyStep('audit-report', { phase: 'synthesis-audit', label: 'audit-report-attempt-' + i,
     reportAudit: true,
     outputs: runDir + '/40-synthesis/report-audit.yaml' });
   const auditorPrompt =
@@ -1008,8 +1023,8 @@ for (let i = 0; i <= 2; i++) {
     '{kind: misleading-severity|material-omission|invented-content, section: <N>, fix: <one line>}. ' +
     'End your message with the literal "GATE: pass" or "GATE: fail".' +
     (critique ? ' PRIOR CRITIQUE (verify it was addressed): ' + critique : '');
-  // The auditor is the ONE dispatch WITHOUT {schema} -> agent() returns its critique STRING.
-  const auditor = agent(auditorPrompt,
+  // The auditor is the ONE dispatch WITHOUT {schema} -> agent() resolves to its critique STRING.
+  const auditor = await agent(auditorPrompt,
     { agentType: 'apd-report-auditor', phase: 'synthesis-audit', label: 'auditor-attempt-' + i });
   // F3: split the deterministic audit into its STRUCTURAL vs EDITORIAL classes.
   // structuralOk now keys on the per-class structural_failed count the worker
@@ -1046,13 +1061,13 @@ for (let i = 0; i <= 2; i++) {
   // Feed BOTH the structural audit (report-audit.yaml) AND the semantic critique back
   // into 5e, then rebuild 5f. The report-writer reads report-audit.yaml and fixes any
   // failed editorial completeness checks (exec_summary/posture_summary/headline/next_steps).
-  llmStep('apd-report-writer',
+  await llmStep('apd-report-writer',
     'Read ' + runDir + '/40-synthesis/report-audit.yaml: address EVERY failed check whose ' +
     'klass is "editorial" by regenerating 40-synthesis/report-data.yaml + advisory-report.md ' +
     '(exec_summary paragraphs, posture_summary, headline_findings, next_steps). ALSO address ' +
     'this semantic critique. CRITIQUE: ' + critique,
     { phase: 'synthesis-report', label: 'report-writer-attempt-' + (i + 1) });
-  pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-' + (i + 1),
+  await pyStep('build-report', { phase: 'synthesis-build', label: 'build-report-attempt-' + (i + 1),
     outputs: runDir + '/40-synthesis/report-html/data.js' });
 }
 
@@ -1071,7 +1086,7 @@ for (let i = 0; i <= 2; i++) {
 phase('domain-coverage-delta');
 // 5h-i — deterministic coverage-delta pre-pass (Python). Best-effort: a failure
 // here does NOT halt the run; the agent can still harvest judgment opportunities.
-pyStep('domain-coverage-delta', {
+await pyStep('domain-coverage-delta', {
   phase: 'domain-coverage-delta', label: 'domain-coverage-delta',
   outputs: runDir + '/40-synthesis/domain-coverage-delta.yaml' });
 
@@ -1080,7 +1095,7 @@ phase('domain-improvements');
 // apd-domain skill + asset-inventory; writes domain-improvements.yaml. Advisory:
 // NOT wrapped in isErr()/HALT; a single best-effort dispatch, and the run proceeds
 // to closeout regardless of its status.
-llmStep('apd-domain-auditor',
+await llmStep('apd-domain-auditor',
   'Capture domain-improvement opportunities for this run. Read ' +
   '40-synthesis/domain-coverage-delta.yaml + 40-synthesis/deduped-findings.yaml + ' +
   '.claude/skills/apd-domain/SKILL.md + 00-context/asset-inventory.yaml; emit ' +
@@ -1093,7 +1108,7 @@ llmStep('apd-domain-auditor',
 // (it now emits content only; the assembler is the sole id author). Runs before
 // the closeout validate, whose _validate_domain_improvements_cross_refs recomputes
 // and would flag an un-minted (id-less) record.
-pyStep('canonicalize', {
+await pyStep('canonicalize', {
   phase: 'domain-improvements', label: 'canonicalize-dimpr',
   outputs: 'dimpr- ids minted in ' + runDir + '/40-synthesis/domain-improvements.yaml',
   alwaysRun: true,
@@ -1103,9 +1118,9 @@ pyStep('canonicalize', {
 // PHASE 6 — closeout.
 // ===========================================================================
 phase('closeout');
-pyStep('summarize', { phase: 'closeout', label: 'summarize',
+await pyStep('summarize', { phase: 'closeout', label: 'summarize',
   outputs: runDir + ' run summary (read-only)' });
-pyStep('validate', { phase: 'closeout', label: 'validate-final',
+await pyStep('validate', { phase: 'closeout', label: 'validate-final',
   cliArgs: '--errors-only', outputs: 'whole-run final clean (read-only assertion)',
   alwaysRun: true });
 log('apd-gauntlet runner: complete for ' + args.run_id + '.');

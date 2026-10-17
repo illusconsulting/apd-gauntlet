@@ -5,7 +5,10 @@ import pathlib
 import shutil
 
 import pytest
+import yaml
 from apd_gauntlet.cli import main
+from apd_gauntlet.linters import compute_capability_id, compute_id, compute_improvement_id
+from apd_gauntlet.validate import run_cross_file_pass
 from click.testing import CliRunner
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "runs"
@@ -177,6 +180,360 @@ def test_merged_cross_reference_resolved_from_deduped(tmp_path):
     result = runner.invoke(main, ["validate", str(dst)])
     assert "merged-abcd1234" not in result.output, result.output
     assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
+
+
+# ---------------------------------------------------------------------------
+# Kind-aware resolution: a record's cross_references and merged_from name ids of
+# its OWN kind (capability.schema.json: capability ids; finding.schema.json:
+# finding ids), so each must resolve against that kind's id set only.
+# ---------------------------------------------------------------------------
+
+# The clean-run fixture's two records (10-trustworthiness/confidentiality.*).
+CLEAN_FINDING_ID = "conf-7aa376c5"
+CLEAN_CAPABILITY_ID = "conf-cap-53b6f810"
+
+# Record field -> the label the cross-file pass uses in its "not found" message.
+REF_FIELDS = {"cross_references": "cross_reference", "merged_from": "merged_from"}
+
+
+def _write_integrity_capability(dst, field, refs):
+    """Write a second, schema-valid capability file (integrity lens) whose
+    ``field`` lists ``refs``; return the new record's id."""
+    title = "Signed claim-event payloads verified by consumers"
+    locator = "§4.2 paragraph 5"
+    rid = compute_capability_id("intg", title, locator)
+    doc = {"capability": {
+        "schema_version": 1,
+        "id": rid,
+        "agent": "integrity",
+        "apd_tier": "trustworthiness",
+        "apd_goal": "integrity",
+        "title": title,
+        "description": "Consumers verify an HMAC over each claim-event payload.",
+        "maturity": "designed",
+        "scope": "Confirmed for: claim-events topic consumers.",
+        "evidence": [{
+            "artifact": "tech_plan.md",
+            "locator": locator,
+            "excerpt": "Consumers verify the payload HMAC before processing",
+        }],
+        "control_mappings": {"nist_800_53r5": ["SI-7"]},
+        field: list(refs),
+    }}
+    path = dst / "10-trustworthiness" / "integrity.capabilities.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return rid
+
+
+def _write_integrity_finding(dst, field, refs):
+    """Write a second, schema-valid finding file (integrity lens) whose
+    ``field`` lists ``refs``; return the new record's id."""
+    title = "Claim-event consumers do not verify payload integrity"
+    locator = "§4.2 paragraph 4"
+    rid = compute_id("intg", title, locator)
+    doc = {"finding": {
+        "schema_version": 1,
+        "id": rid,
+        "agent": "integrity",
+        "apd_tier": "trustworthiness",
+        "apd_goal": "integrity",
+        "disposition": "gap",
+        "severity": "medium",
+        "confidence": "high",
+        "title": title,
+        "summary": "Consumers trust claim-event payloads without an integrity check.",
+        "detail": "A tampered event would be processed as authentic.",
+        "evidence": [{
+            "artifact": "tech_plan.md",
+            "locator": locator,
+            "excerpt": "Consumers deserialize claim events directly",
+        }],
+        "control_mappings": {"nist_800_53r5": ["SI-7"]},
+        "recommendation": {
+            "posture": "required",
+            "summary": "Verify a payload MAC before processing.",
+            "detail": "Add an HMAC over each event payload and verify it in every consumer.",
+        },
+        field: list(refs),
+    }}
+    path = dst / "10-trustworthiness" / "integrity.findings.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return rid
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_capability_in_other_file_resolves(tmp_path, field):
+    """A capability naming an existing capability id from another file (the only
+    form capability.schema.json allows) must not be reported 'not found'."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, [CLEAN_CAPABILITY_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert f"{REF_FIELDS[field]} {CLEAN_CAPABILITY_ID} not found" not in result.output, (
+        result.output
+    )
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_missing_capability_caught(tmp_path, field):
+    """A capability naming a capability id that exists nowhere is still reported."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, ["dist-cap-deadbeef"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} dist-cap-deadbeef not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_finding_id_caught(tmp_path, field):
+    """Resolution is per kind, not over the union: a capability naming an
+    existing FINDING id does not resolve (it is not a capability id)."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, [CLEAN_FINDING_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} {CLEAN_FINDING_ID} not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_finding_in_other_file_resolves(tmp_path, field):
+    """Unchanged behaviour: a finding naming an existing finding id resolves."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, [CLEAN_FINDING_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_missing_finding_caught(tmp_path, field):
+    """Unchanged behaviour: a finding naming a finding id that exists nowhere is
+    reported."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, ["conf-deadbeef"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} conf-deadbeef not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_capability_id_caught(tmp_path, field):
+    """Unchanged behaviour: a finding naming an existing CAPABILITY id does not
+    resolve (it is not a finding id)."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, [CLEAN_CAPABILITY_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} {CLEAN_CAPABILITY_ID} not found" in result.output, (
+        result.output
+    )
+
+
+# Well-formed 40-synthesis/deduped-capabilities.yaml shapes that hold the merged
+# id. apply.py writes the first; the synthesizer-fallback agent may write any of
+# them, and the shared extract_records rule accepts all three.
+DEDUPED_CAPABILITY_DOCS = {
+    "singular-list": "capability:\n- id: cap-merged-abcd1234\n",
+    "plural-list": "capabilities:\n- id: cap-merged-abcd1234\n",
+    "single-record": "capability:\n  id: cap-merged-abcd1234\n",
+}
+
+
+@pytest.mark.parametrize("doc", list(DEDUPED_CAPABILITY_DOCS))
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_merged_capability_ref_resolved_from_deduped(tmp_path, field, doc):
+    """Mirror of FW-3 for capabilities: a cap-merged-* id that exists only in
+    40-synthesis/deduped-capabilities.yaml (hyphenated, so not matched by the
+    ``*.capabilities.yaml`` record glob) resolves once that corpus is present."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        DEDUPED_CAPABILITY_DOCS[doc], encoding="utf-8"
+    )
+    _write_integrity_capability(dst, field, ["cap-merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert "cap-merged-abcd1234" not in result.output, result.output
+    assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
+
+
+# Malformed deduped corpora (written by an LLM on the synthesizer-fallback path):
+# a top-level list, a top-level scalar, a root key whose value is a scalar, a YAML
+# syntax error, and a record whose id is not a string (a list, so unhashable).
+MALFORMED_DEDUPED_BODIES = {
+    "top-level-list": "- id: {id}\n",
+    "top-level-scalar": "5\n",
+    "scalar-root-value": "{root}: 5\n",
+    "invalid-yaml": "{root}: [\n",
+    "non-string-id": "{root}:\n- id: [{id}]\n",
+}
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_malformed_deduped_capabilities_reports_not_found(tmp_path, field, body):
+    """A malformed deduped-capabilities.yaml contributes no ids. validate must
+    report the unresolved cap-merged-* ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="cap-merged-abcd1234", root="capability"),
+        encoding="utf-8",
+    )
+    _write_integrity_capability(dst, field, ["cap-merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert f"{REF_FIELDS[field]} cap-merged-abcd1234 not found" in result.output, (
+        result.output
+    )
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+def test_malformed_deduped_findings_reports_not_found(tmp_path, body):
+    """FW-3 guard: a malformed deduped-findings.yaml contributes no ids. validate
+    must report the unresolved merged-* ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-findings.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="merged-abcd1234", root="finding"),
+        encoding="utf-8",
+    )
+    _write_integrity_finding(dst, "cross_references", ["merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert "cross_reference merged-abcd1234 not found" in result.output, result.output
+
+
+# Deduped files that cannot be read as UTF-8 text: bytes that are not UTF-8, and
+# a directory where the file should be.
+UNREADABLE_DEDUPED = ("non-utf8-bytes", "directory")
+DEDUPED_REF = {
+    "capability": ("deduped-capabilities.yaml", "cap-merged-abcd1234", _write_integrity_capability),
+    "finding": ("deduped-findings.yaml", "merged-abcd1234", _write_integrity_finding),
+}
+
+
+@pytest.mark.parametrize("shape", UNREADABLE_DEDUPED)
+@pytest.mark.parametrize("kind", list(DEDUPED_REF))
+def test_unreadable_deduped_file_reports_not_found(tmp_path, kind, shape):
+    """An unreadable deduped file contributes no ids. validate must report the
+    unresolved merged ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    filename, ref, write_record = DEDUPED_REF[kind]
+    if shape == "directory":
+        (synth / filename).mkdir()
+    else:
+        (synth / filename).write_bytes(b"\xff\xfe\x00bad")
+    write_record(dst, "cross_references", [ref])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert f"cross_reference {ref} not found" in result.output, result.output
+
+
+# The report-data.yaml check reads both deduped files. Per kind: the deduped
+# file, the report-data section and the error a dangling merged id gets there.
+REPORT_DATA_DEDUPED = {
+    "finding": (
+        "deduped-findings.yaml", "headline_findings", "merged-abcd1234",
+        "headline_findings references unknown finding 'merged-abcd1234'",
+    ),
+    "capability": (
+        "deduped-capabilities.yaml", "strengths", "cap-merged-abcd1234",
+        "strengths references unknown capability 'cap-merged-abcd1234'",
+    ),
+}
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+@pytest.mark.parametrize("kind", list(REPORT_DATA_DEDUPED))
+def test_malformed_deduped_with_report_data_reports_unknown(tmp_path, kind, body):
+    """The report-data.yaml check reads a malformed deduped file as holding no
+    ids. validate must report the merged id it headlines as unknown, not crash."""
+    fname, section, rid, message = REPORT_DATA_DEDUPED[kind]
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / fname).write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id=rid, root=kind), encoding="utf-8"
+    )
+    (synth / "report-data.yaml").write_text(
+        yaml.safe_dump({section: [{"id": rid}]}), encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert message in result.output, result.output
+
+
+@pytest.mark.parametrize("doc", list(DEDUPED_CAPABILITY_DOCS))
+def test_report_data_strength_resolves_merged_capability(tmp_path, doc):
+    """The report-data.yaml check reads deduped-capabilities.yaml with the shared
+    extract_records rule, so a cap-merged-* strength resolves in every
+    well-formed shape (singular or plural root key, single record)."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        DEDUPED_CAPABILITY_DOCS[doc], encoding="utf-8"
+    )
+    (synth / "report-data.yaml").write_text(
+        yaml.safe_dump({"strengths": [{"id": "cap-merged-abcd1234"}]}), encoding="utf-8"
+    )
+    report = run_cross_file_pass(dst)
+    assert report.is_clean, report.render()
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+def test_malformed_deduped_findings_with_domain_improvements_reports_not_found(
+    tmp_path, body
+):
+    """The domain-improvements.yaml check reads a malformed deduped-findings.yaml
+    as holding no ids. validate must report the merged-* evidence ref as not
+    found, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-findings.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="merged-abcd1234", root="finding"),
+        encoding="utf-8",
+    )
+    itype, pack, tfile = "missing_severity_clause", "pbm", "severity-rubric.md"
+    improvements = {
+        "schema_version": 1,
+        "generated_by": "domain-auditor",
+        "examined_domains": [pack],
+        "improvements": [{
+            "id": compute_improvement_id(itype, pack, tfile, "merged-abcd1234"),
+            "improvement_type": itype,
+            "target_pack": pack,
+            "target_file": tfile,
+            "source": "deterministic",
+            "priority": "high",
+            "evidence": [{"kind": "finding", "ref": "merged-abcd1234"}],
+            "rationale": "The run raised a finding no selected pack's rubric covers.",
+            "suggested_action": "add the missing severity clause to the pack",
+            "draft_snippet": "- clause: grounded in the merged finding\n",
+        }],
+    }
+    (synth / "domain-improvements.yaml").write_text(
+        yaml.safe_dump(improvements, sort_keys=False), encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert (
+        "evidence[0].ref 'merged-abcd1234' (kind: finding) not found in run corpus"
+        in result.output
+    ), result.output
 
 
 # ---------------------------------------------------------------------------
