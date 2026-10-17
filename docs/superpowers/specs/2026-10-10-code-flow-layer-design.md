@@ -6,6 +6,7 @@
 **Related:** ADR-0007 (code recon), ADR-0019 (multi-repo recon), the IaC spec
 (`2026-10-10-iac-terraform-opentofu-atmos-design.md`), and GRAML (arXiv
 2610.09605).
+**Amended:** 2026-10-17 per the amendments register (A13.27, A15.20)
 
 ## 1. Problem
 
@@ -307,7 +308,8 @@ ends the attack path there and is recorded as `unknown`.
   - **A polyglot microservice demo run with tracing,** for edge precision and
     recall. Candidates: Google Online Boutique, TrainTicket; the plan confirms
     licences.
-- **Baseline.** The 1.7 CBM-only path, scored on the same labels.
+- **Baseline.** The 1.7.1 CBM-only path, scored on the same labels (the 1.7.0
+  runner cannot run; register A15.1).
 - **Metrics:**
   - verdict precision and recall per language and framework;
   - edge precision and recall against traces;
@@ -344,7 +346,11 @@ ends the attack path there and is recorded as `unknown`.
 2. **CF2:** Python and TypeScript frameworks, GraphQL, contracts, deployment
    config, traces, SARIF.
 3. **CF3:** DFD rendering, packets, specialist integration, the
-   infrastructure-to-code join, attack-path merge.
+   infrastructure-to-code join, attack-path merge. Freeze scope comes first:
+   adding `data/codeflow/context-params.yaml` after the 2.0 freeze changes
+   WS2's tunables hash and makes every held-out `eval run` exit 2, so before
+   CF3 `eval freeze` gains a per-family scope (`iac`, `catalog`, `decide`,
+   `codeflow`), or code-flow alone uses `--new-heldout-set` (register A13.27).
 4. **CF4:** evaluation corpora, labels, transformation suite, baseline,
    tuning and freezing.
 

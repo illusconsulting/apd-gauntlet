@@ -10,23 +10,25 @@
 
 **Spec:** Cost audit "Wave 4: Clef as a decision layer" (`cost-audit.txt` lines 252–333), minus finding QA; IaC spec §11 item 7 (`docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md`); local-apps spec §5 (`docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md`); LA1 plan (`docs/superpowers/plans/2026-10-10-local-apps-plan1-config-keys-decision-models.md`); master plan registry §R1–R8, amendment A1 and Task 8 Step 2 (`docs/superpowers/plans/2026-10-10-program-master-plan.md`).
 
+**Amended 2026-10-17** per the amendments register (A1.4, A1.7, A11.2, A12.2, A12.3, A12.4, A12.5, A12.6, A12.8, A12.9, A12.11, A15.12, A15.17, A15.21, A15.26, A15.28, A15.30).
+
 ## Global Constraints
 
 - Decision tasks never write findings, threat text, merged summaries or report prose. They write decision records and escalation digests only.
-- Hosted Clef silently truncates `state` to fit 64k tokens. Count tokens first and split: no request may exceed the model's context (`estimate_tokens` from LA1: `ceil(len(text.encode("utf-8")) / 3)` over state plus questions).
+- Long text state is truncated to the model's window (Clef 65,536; Clef-flash 24,576; Clef-omni 64,000; Jev 32,000); a request whose media plus questions exceed the window fails. Count tokens and split before every call: no request may exceed the model's context (`estimate_tokens` from LA1: `ceil(len(text.encode("utf-8")) / 3)` over state plus questions).
 - System One limits (LA1): 1–64 questions per call; question ids match `^[A-Za-z0-9_.-]{1,100}$`; at most 4 images, Clef models only.
 - Every task runs in shadow mode first: "write decision files, act on none, and compare with `compare-runs`".
 - Per-task mode lives at `.apd-run.yaml` `decision_model.tasks.<task>` ∈ `off | shadow | active`. Default `off` for every task, even when a provider is set. A provider of `none` (or no block) means every task is `off`.
 - `intake-score`, `input-screen` and `output-screen` send whole files. They refuse to run unless the run-config sets `decision_model.allow_full_inputs: true` (default false).
 - Decision spend is shared per run: the remaining budget is `budget_usd_per_run` minus `usage.cost_usd` over every decision record in the run, finding QA included.
-- Thresholds come only from `calibrate` (`tools/apd_gauntlet/data/decide/thresholds.yaml`, entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated}`). An entry that is not calibrated never auto-decides. Every record copies `calibrated` (A1).
+- Thresholds come only from `calibrate` (`tools/apd_gauntlet/data/decide/thresholds.yaml`, entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated, provider, model, weights_revision}`). An entry that is not calibrated never auto-decides, and neither does one calibrated for another provider or model (A12.6). Every record copies `calibrated` (A1).
 - Target precision for `calibrate`: 0.98 (a proposal). Tasks are enabled one at a time in this order: finding QA, `cluster-pairs`, `report-claims`, `asset-match`, `tm-screen`, `intake-score`, `input-screen`, `output-screen`, `iac-triage`.
 - Decision records: `runs/<id>/40-synthesis/decisions/<task>.all.yaml` (LA1's `<task>.<scope>.yaml` with scope `all`). Record level: provider, model, weights revision, schema hash, mode, calibrated, threshold. Item level: probabilities, score, outcome (`auto | escalate | error`).
 - An item in `error` is treated as escalated by every consumer.
 - Orchestration: the workflow runs `pyStep('decide', …)` (the `apd-cli-runner` agent, R5); `runner/flow.py` runs `decide` as a CLI subprocess. Decide receipts are advisory: never wrapped in `isErr`, never thrown.
 - CI never touches the network (ADR-0017). Labels and label sheets stay local.
 - Item refs are minted by Python from content (ADR-0020); no agent writes them.
-- Every behaviour-changing task ends with `compare-runs` on the master plan Task 1 set, run twice per configuration. Each change gates against the previous accepted state (the run set of the last configuration whose gates passed); milestone exits (M5 shadow, M6 enablement) gate against the 1.7.0 baseline.
+- Every behaviour-changing task ends with `compare-runs` on the master plan Task 1 set, run twice per configuration. Each change gates against the previous accepted state (the run set of the last configuration whose gates passed); milestone exits (M5 shadow, M6 enablement) gate against the 1.7.1 baseline. Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
 - Quality gates: `ruff check tools/ tests/`, `mypy tools/` (strict), `pytest`, `markdownlint-cli2` on the linted globs.
 
 ## Review Focus
@@ -43,7 +45,7 @@
 
 | Path | Responsibility | Action |
 |---|---|---|
-| `tools/apd_gauntlet/decide/policy.py` | Task modes, threshold entries, outcome rule | Create |
+| `tools/apd_gauntlet/decide/policy.py` | Task modes, threshold entries, outcome rule | Modify (LA1 created `ThresholdEntry` and `load_threshold`) |
 | `tools/apd_gauntlet/decide/outcomes.py` | WS6 record and escalation-digest writers | Create |
 | `tools/apd_gauntlet/decide/batch.py` | `Decider` protocol, `TaskSpec`, token budgeting, splitting, `run_task` | Create |
 | `tools/apd_gauntlet/decide/command.py` | `decide <ws6-task>` behaviour: mode, consent, budget, client, summary | Create |
@@ -81,8 +83,8 @@ Fixture runs live under `tests/fixtures/decide/<name>-run/`, never under a direc
 
 **Files:**
 
-- Create: `tools/apd_gauntlet/decide/policy.py`, `tools/apd_gauntlet/decide/outcomes.py`, `tools/apd_gauntlet/data/schemas/decision-escalations.schema.json`, `tests/decide/fakes.py`, `tests/fixtures/valid/decision-record-ws6.yaml`, `tests/fixtures/invalid/decision-record-ws6-bad-outcome.yaml`, `tests/fixtures/valid/decision-escalations.yaml`, `tests/fixtures/invalid/decision-escalations-shadow.yaml`
-- Modify: `tools/apd_gauntlet/data/schemas/decision-record.schema.json` (LA1 Task 5), `tools/apd_gauntlet/data/decide/thresholds.yaml` (WS2/A1), `tools/apd_gauntlet/validate.py` (next to LA1's `DECISION_RECORDS_GLOB`; the schema pass is `run_schema_pass`, lines 426–455 at 856ea96), `docs/schema-evolution.md`
+- Create: `tools/apd_gauntlet/decide/outcomes.py`, `tools/apd_gauntlet/data/schemas/decision-escalations.schema.json`, `tests/decide/fakes.py`, `tests/fixtures/valid/decision-record-ws6.yaml`, `tests/fixtures/invalid/decision-record-ws6-bad-outcome.yaml`, `tests/fixtures/valid/decision-escalations.yaml`, `tests/fixtures/invalid/decision-escalations-shadow.yaml`
+- Modify: `tools/apd_gauntlet/decide/policy.py` (LA1 created `ThresholdEntry` and `load_threshold`), `tools/apd_gauntlet/data/schemas/decision-record.schema.json` (LA1 Task 5), `tools/apd_gauntlet/data/decide/thresholds.yaml` (WS2/A1), `tools/apd_gauntlet/validate.py` (`schema_for_run_file`, next to LA1's `40-synthesis/decisions/*.yaml` mapping; the schema pass is `run_schema_pass`, which validates through it; register A11.2), `docs/schema-evolution.md`
 - Test: `tests/decide/test_policy.py`, `tests/decide/test_outcomes.py`, `tests/test_decision_schemas.py` (extend LA1's); create `tests/decide/__init__.py` if LA1 did not, so every test file imports helpers as `from decide.fakes import …` (pytest's default `prepend` import mode puts `tests/` on `sys.path`, as it does for `tests/unit/`)
 
 **Interfaces:**
@@ -91,11 +93,11 @@ Fixture runs live under `tests/fixtures/decide/<name>-run/`, never under a direc
 - Produces (`policy.py`):
   - `WS6_TASKS: tuple[str, ...] = ("cluster-pairs", "report-claims", "tm-screen", "asset-match", "intake-score", "input-screen", "output-screen", "iac-triage")`
   - `Mode = Literal["off", "shadow", "active"]`; `Outcome = Literal["auto", "escalate", "error"]`
-  - `@dataclass(frozen=True) class ThresholdEntry: threshold: float | None; precision: float | None; recall: float | None; n: int; labels_sha256: str | None; calibrated: bool`
-  - `def load_threshold(task: str, path: Path | None = None) -> ThresholdEntry` (`path` defaults to WS2's `THRESHOLDS_PATH`; absent entry → `ThresholdEntry(None, None, None, 0, None, False)`; non-mapping top-level keys ignored)
+  - `@dataclass(frozen=True) class ThresholdEntry: threshold: float | None; precision: float | None; recall: float | None; n: int; labels_sha256: str | None; calibrated: bool; provider: str | None = None; model: str | None = None; weights_revision: str | None = None` (`model` is the provider-returned id; register A12.6)
+  - `def load_threshold(key: str, path: Path | None = None) -> ThresholdEntry` (LA1's signature, register A1.4; WS6 passes its task names as keys; `path` defaults to WS2's `THRESHOLDS_PATH`; absent entry → `ThresholdEntry(None, None, None, 0, None, False)`; non-mapping top-level keys ignored)
   - `def load_run_config(run_dir: Path) -> dict[str, Any]` (missing file → `{}`)
   - `def task_mode(run_cfg: dict[str, Any], task: str) -> Mode`
-  - `@dataclass(frozen=True) class TaskPolicy: task: str; mode: Mode; entry: ThresholdEntry; weights_revision: str | None`, with property `calibrated: bool` and `def outcome(self, score: float | None, error: str | None = None) -> Outcome`
+  - `@dataclass(frozen=True) class TaskPolicy: task: str; mode: Mode; entry: ThresholdEntry; weights_revision: str | None; provider: str | None = None; model: str | None = None` (`provider` and `model` are the client's; register A12.6), with property `calibrated: bool` and `def outcome(self, score: float | None, error: str | None = None) -> Outcome`
   - `def policy_for(run_dir: Path, task: str) -> TaskPolicy`
 - Produces (`outcomes.py`):
   - `def record_path(run_dir: Path, task: str, scope: str = "all") -> Path` → `<run>/40-synthesis/decisions/<task>.<scope>.yaml`
@@ -154,7 +156,7 @@ escalate: [{ref: cluster-cand-0001, scores: {…}, context: {…}, error: null}]
 
 Schema changes to `decision-record.schema.json`: item `outcome` enum gains `auto`, `escalate`; item `flags` enum gains `agent_instructions`, `phi`, `credentials`; optional item properties `score` (number 0–1 or null), `decided` (object or null), `chunks` (integer ≥ 1 or null), `where` (string or null); optional record properties `mode` (enum `shadow`, `active`), `weights_revision` (string or null), and `calibrated` (boolean) if A1 has not added it. If LA1's schema enumerates `task`, its enum gains the eight `WS6_TASKS` names.
 
-Proposal entries appended to `thresholds.yaml`, each `{threshold: <t>, precision: null, recall: null, n: 0, labels_sha256: null, calibrated: false}`: `cluster-pairs` 0.9, `report-claims` 0.9, `tm-screen` 0.9, `asset-match` 0.5, `intake-score` 0.9, `input-screen` 0.9, `output-screen` 0.9, `iac-triage` 0.9.
+Proposal entries appended to `thresholds.yaml`, each `{threshold: <t>, precision: null, recall: null, n: 0, labels_sha256: null, calibrated: false, provider: null, model: null, weights_revision: null}` (register A12.6): `cluster-pairs` 0.9, `report-claims` 0.9, `tm-screen` 0.9, `asset-match` 0.5, `intake-score` 0.9, `input-screen` 0.9, `output-screen` 0.9, `iac-triage` 0.9.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -194,6 +196,11 @@ def test_hand_marked_calibrated_without_labels_never_autos():
     p = TaskPolicy("cluster-pairs", "active", ThresholdEntry(0.9, 0.99, 0.5, 0, None, True), None)
     assert p.calibrated is False and p.outcome(1.0) == "escalate"
 
+def test_threshold_for_other_model_never_autos():          # register A12.6
+    e = ThresholdEntry(0.9, 0.985, 0.4, 200, "a" * 64, True, provider="cloudflare", model="clef")
+    p = TaskPolicy("cluster-pairs", "active", e, None, provider="cloudflare", model="clef-flash")
+    assert p.calibrated is False and p.outcome(1.0) == "escalate"
+
 def test_shadow_records_the_would_be_outcome():
     assert TaskPolicy("cluster-pairs", "shadow", CAL, None).outcome(0.95) == "auto"
 ```
@@ -228,7 +235,7 @@ def test_digest_validates_and_removes(tmp_path):
 # tests/test_decision_schemas.py (extend)
 def test_validate_flags_bad_ws6_record(tmp_path):        # outcome: maybe → exit 1, names the file
 def test_validate_accepts_ws6_record(tmp_path):          # valid/decision-record-ws6.yaml → exit 0
-def test_validate_flags_shadow_digest(tmp_path):         # invalid/decision-escalations-shadow.yaml copied to 40-synthesis/escalations/x.yaml → exit 1, "x.yaml" in output
+def test_validate_flags_shadow_digest(tmp_path):         # invalid/decision-escalations-shadow.yaml copied to 40-synthesis/escalations/x.yaml → exit 1, "x.yaml" in output; schema_errors_for_file(run, "40-synthesis/escalations/x.yaml") is non-empty (A11.2)
 ```
 
 Each copies `tests/fixtures/runs/clean-run` to `tmp_path` and runs `validate --schema-only --errors-only`, as LA1's `test_validate_flags_bad_decision_record` does.
@@ -236,11 +243,11 @@ Each copies `tests/fixtures/runs/clean-run` to `tmp_path` and runs `validate --s
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pytest tests/decide/test_policy.py tests/decide/test_outcomes.py tests/test_decision_schemas.py -v`
-Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.decide.policy`)
+Expected: FAIL (`ImportError` on the names this task adds to `apd_gauntlet.decide.policy`, such as `WS6_TASKS`, and `ModuleNotFoundError: apd_gauntlet.decide.outcomes`; LA1 created `policy.py`, register A1.4)
 
 - [ ] **Step 3: Implement `policy.py`, `outcomes.py`, the schemas, thresholds entries and validator glob**
 
-`TaskPolicy.calibrated` is `entry.calibrated and entry.n >= 1 and entry.labels_sha256 matches ^[0-9a-f]{64}$`. `outcome` returns `error` when `error` is set; `auto` only when calibrated, `entry.threshold` and `score` are not None and `score >= entry.threshold`; else `escalate`. `task_mode` returns `off` unless `decision_model.provider` is set and not `none` and `decision_model.tasks[task]` is `shadow` or `active`. `policy_for` reads `weights_revision` from `decision_model.weights_revision`. `write_task_record` writes `thresholds: {auto: entry.threshold}` (`{}` when None), creates parents, writes atomically (temp file then `os.replace`). Validator: `ESCALATIONS_GLOB = "40-synthesis/escalations/*.yaml"` validated against `decision-escalations.schema.json` in `run_schema_pass`, after LA1's decision-record glob. `docs/schema-evolution.md`: a dated 2.0.0 entry for the decision-record additions and the new `decision-escalations` schema.
+`TaskPolicy.calibrated` is `entry.calibrated and entry.n >= 1 and entry.labels_sha256 matches ^[0-9a-f]{64}$`, and also requires `entry.provider == provider` and `entry.model == model`: a threshold calibrated for another provider or model leaves every item escalated, and `decide` prints Task 3's uncalibrated warning (register A12.6). `outcome` returns `error` when `error` is set; `auto` only when calibrated, `entry.threshold` and `score` are not None and `score >= entry.threshold`; else `escalate`. `task_mode` returns `off` unless `decision_model.provider` is set and not `none` and `decision_model.tasks[task]` is `shadow` or `active`. `policy_for` reads `weights_revision` from `decision_model.weights_revision`, `provider` from `decision_model.provider`, and `model` from the task's model (`decision_model.task_models[task]` when set, register A12.9; otherwise the run's model from LA1's `run_decision_model`). `write_task_record` writes `thresholds: {auto: entry.threshold}` (`{}` when None), creates parents, writes atomically (temp file then `os.replace`). Validator: `schema_for_run_file` (the shared lookup used by `validate` and `resume-plan`) maps `40-synthesis/escalations/*.yaml` to `decision-escalations.schema.json`, next to LA1's `40-synthesis/decisions/*.yaml` mapping, and `run_schema_pass` validates through it (register A11.2). `docs/schema-evolution.md`: a dated 2.0.0 entry for the decision-record additions and the new `decision-escalations` schema.
 
 - [ ] **Step 4: Run to verify pass**
 
@@ -290,9 +297,9 @@ git commit -m "feat(decide): add task policy, WS6 decision records and escalatio
 `run_task` algorithm (the signature and tests leave the order open):
 
 1. `plan = spec.plan(run_dir, info)`; return None if None. `schema_hash = schema_sha256(spec.template())`; `path = record_path(run_dir, spec.name)`.
-2. Reuse: if `record_is_current(path, set(plan.refs), schema_hash)` and no stored item has `outcome: error`, rebuild every item's `outcome` from its stored `score`, `error` and the current `policy`, rewrite the record with zero calls, rebuild the digest from `spec.digest(plan, items)`, and return `TaskRun(path, items, reused=True)`.
-3. `results, fatal = await run_units(client, plan.units)`. `run_units` splits each unit's questions with `chunk_questions` (same state per call), gathers all calls, turns `StateTooLarge` and `ProviderResponseError` into `UnitResult.error = "<ExcName>: <message>"`, and on `AuthRejected` or `BudgetExceeded` returns that exception as `fatal`, marking every unit without an answer `error = "not attempted: <ExcName>"`.
-4. Refs touched by any errored unit become items `{outcome: error, score: None, error: <first error>}`; `spec.drafts(plan, answered)` builds the rest from successful units only. Each draft becomes an item with `outcome = policy.outcome(score)`, its `flags`, `decided`, `chunks` and `where`, and `answers` serialized with `answer_dict`. Items are sorted by ref.
+2. Reuse is per item and keyed by content (register A12.2). Each item stores `state_sha256` over its state, the question-schema hash, image digests and the model. A stored item whose ref is in `plan.refs`, whose `state_sha256` is unchanged and whose `outcome` is not `error` is reused: its `outcome` is rebuilt from its stored `score`, `error` and the current `policy`, with no call. Only changed or new items are re-decided (finding ids hash only `title|first_locator`, so after a repair the id is unchanged and a stale decision would otherwise be reused). If every item is reused (`record_is_current(path, set(plan.refs), schema_hash)`, which also compares each item's `state_sha256`), rewrite the record with zero calls, rebuild the digest from `spec.digest(plan, items)`, and return `TaskRun(path, items, reused=True)`.
+3. `results, fatal = await run_units(client, <the units that touch a changed or new item>)`. `run_units` splits each unit's questions with `chunk_questions` (same state per call), gathers all calls, turns `StateTooLarge` and `ProviderResponseError` into `UnitResult.error = "<ExcName>: <message>"`, and on `AuthRejected` or `BudgetExceeded` returns that exception as `fatal`, marking every unit without an answer `error = "not attempted: <ExcName>"`.
+4. Refs touched by any errored unit become items `{outcome: error, score: None, error: <first error>}`; `spec.drafts(plan, answered)` builds the rest from successful units only. Each draft becomes an item with `outcome = policy.outcome(score)`, its `flags`, `decided`, `chunks`, `where` and `state_sha256`, and `answers` serialized with `answer_dict`. Reused items join them. Items are sorted by ref.
 5. `model` is the first `UnitResult.model`, else `info.id`. `usage = {calls, input_tokens, cost_usd: client.spent_usd, cost_basis}` from the client. Write the record.
 6. If `policy.mode == "active"`, write the digest from `spec.digest(plan, items)`; otherwise `remove_digest`.
 7. Raise `fatal` if set, after writing.
@@ -342,6 +349,9 @@ def test_rerun_reuses_record_and_applies_new_policy(tmp_path):
     run = decide_now(spec, tmp_path, fake2, CLEF, make_policy("toy", "active", calibrated=True))
     assert fake2.sent == [] and run.reused and run.items[0]["outcome"] == "auto"
 
+def test_changed_summary_redecides_one_item(tmp_path): ...   # A12.2: ToySpec({"a": "1", "b": "2"}) decided, then b's text changed → the second run sends calls for b only and reuses a
+def test_unchanged_run_makes_no_calls(tmp_path): ...         # A12.2: the same plan twice → the second FakeDecider's sent == [] and the record's usage.calls == 0
+
 def test_shadow_removes_stale_digest(tmp_path):
     stale = digest_path(tmp_path, "toy"); stale.parent.mkdir(parents=True); stale.write_text("schema_version: 1\n")
     decide_now(ToySpec({"a": "1"}), tmp_path, FakeDecider(), CLEF, make_policy("toy"))
@@ -377,7 +387,7 @@ git commit -m "feat(decide): add token-budgeted task runner that splits before s
 
 **Interfaces:**
 
-- Consumes: Task 1 `WS6_TASKS`, `task_mode`, `policy_for`, `load_run_config`; Task 2 `TaskSpec`, `run_task`; LA1 `run_decision_model`, `client_for`, `egress_notice`, `has_consent`, `record_consent`, `load_config`, `get_model`, `ENV_VARS`, `CredentialError`, `AuthRejected`, `BudgetExceeded`.
+- Consumes: Task 1 `WS6_TASKS`, `task_mode`, `policy_for`, `load_run_config`; Task 2 `TaskSpec`, `run_task`; LA1 `run_decision_model`, `client_for`, `egress_notice`, `has_consent`, `record_consent`, `run_spend` (`factory.py`; LA1 Task 6 creates it, register A1.7), `load_config`, `get_model`, `ENV_VARS`, `CredentialError`, `AuthRejected`, `BudgetExceeded`.
 - Produces (`decide/tasks/__init__.py`): `FINDING_QA = "finding-qa"`; `TASKS: dict[str, TaskSpec]`; `def register(spec: TaskSpec) -> None` (`ValueError` on a duplicate or on a name outside `WS6_TASKS`); `def get_task(name: str) -> TaskSpec` (`KeyError`); `def task_names() -> list[str]` → `[FINDING_QA, *WS6_TASKS]` (a known name whose module is not registered yet exits 2 with `<task> is not available in this build`, after the mode and consent checks); `TASK_EGRESS: dict[str, str]`, which each task's `SPEC.egress` reuses:
 
   | Task | Egress text |
@@ -391,10 +401,11 @@ git commit -m "feat(decide): add token-budgeted task runner that splits before s
   | `output-screen` | the report text and every quoted evidence excerpt the report renders |
   | `iac-triage` | high and critical IaC findings and their evidence packets |
 
-- Produces (`factory.py`, additive): `def has_task_consent(run_dir: Path, provider: str, model: str, tasks: Iterable[str]) -> bool` (LA1's `has_consent` and every task in `consent.json["decision_model"]["tasks"]`); `def record_task_consent(run_dir: Path, provider: str, model: str, tasks: Iterable[str], method: Literal["flag", "prompt", "run-config"]) -> None` (calls `record_consent`, then unions `tasks`, sorted, into the subject). `egress_notice(run_dir)` keeps its signature; when any WS6 task is `shadow` or `active` it appends `" Decision tasks also send: "` followed by `"<task>: <TASK_EGRESS[task]>"` items joined with `"; "`, and a final `"."`.
-- Produces (`command.py`): `FULL_INPUT_TASKS = ("intake-score", "input-screen", "output-screen")`; `def run_spend(run_dir: Path, *, exclude: Path | None = None) -> float` (sum of `usage.cost_usd` over every `40-synthesis/decisions/*.yaml`, finding-QA records included, except `exclude`, the record about to be rewritten); `def remaining_budget(run_dir: Path, cfg: UserConfig, *, exclude: Path | None) -> float`; `def run_task_command(task: str, run_dir: Path, *, assume_yes: bool) -> int` (exit code).
-- Produces (run-config): `decision_model.tasks`: object, `additionalProperties: false`, one optional property per `WS6_TASKS` entry with `enum: [off, shadow, active]`; `decision_model.weights_revision`: string, 1–200 characters; `decision_model.allow_full_inputs`: boolean, default false.
-- CLI: `apd-gauntlet decide TASK RUN_DIR [--tier DIR] [--yes]`, `TASK` ∈ `task_names()`. `finding-qa` keeps LA1's code path, with one change: its client is built with `remaining_budget(run_dir, cfg, exclude=<its own record file>)`, and it exits 1 with `decision budget for this run is exhausted` when that is ≤ 0, so finding QA draws on the same per-run total.
+- Produces (`factory.py`, additive): `def has_task_consent(run_dir: Path, provider: str, model: str, tasks: Iterable[str]) -> bool` (LA1's `has_consent` and every task in `consent.json["decision_model"]["tasks"]`); `def record_task_consent(run_dir: Path, provider: str, model: str, tasks: Iterable[str], method: Literal["flag", "prompt", "run-config"]) -> None` (calls `record_consent`, then unions `tasks`, sorted, into the subject). `egress_notice(run_dir)` keeps its signature; when any WS6 task is `shadow` or `active` it appends `" Decision tasks also send: "` followed by `"<task>: <TASK_EGRESS[task]>"` items joined with `"; "`, and a final `"."`. Consent covers the provider plus the set of models the tasks use (register A12.9): `record_task_consent` also unions each task's model into the subject, and `has_task_consent` requires every one of them.
+- Produces (`command.py`): `FULL_INPUT_TASKS = ("intake-score", "input-screen", "output-screen")`; `def remaining_budget(run_dir: Path, cfg: UserConfig, *, exclude: Path | None) -> float` (`budget_usd_per_run` minus LA1's `run_spend(run_dir, exclude=exclude)`: the sum of `usage.cost_usd` over every `40-synthesis/decisions/*.yaml`, finding-QA records included, except `exclude`, the record about to be rewritten; reused rather than re-created, register A1.7); `def run_task_command(task: str, run_dir: Path, *, assume_yes: bool) -> int` (exit code).
+- Produces (run-config): `decision_model.tasks`: object, `additionalProperties: false`, LA1 Task 8's `finding-qa` property (`off | shadow`, default `shadow` when a provider is set; `active` is rejected; register A12.3) plus one optional property per `WS6_TASKS` entry with `enum: [off, shadow, active]`; `decision_model.task_models`: object `{<task>: <model id>}`, ids validated against LA1's model catalog (register A12.9); `decision_model.weights_revision`: string, 1–200 characters; `decision_model.allow_full_inputs`: boolean, default false.
+- Decision spend is visible (register A12.8): each record's `usage` (`calls`, `input_tokens`, `cost_usd`, `cost_basis`) is what WS2's `usage.yaml` totals under `decision_models` (by task and by cost basis) and in `cost_usd_all`, which `compare-runs` reports as the combined cost; the LA2 ledger records the cost of each `decide` step from it.
+- CLI: `apd-gauntlet decide TASK RUN_DIR [--tier DIR] [--yes]`, `TASK` ∈ `task_names()`. `finding-qa` keeps LA1's code path, with one change: its client is built with `remaining_budget(run_dir, cfg, exclude=<its own record file>)`, and it exits 1 with `decision budget for this run is exhausted` when that is ≤ 0, so finding QA draws on the same per-run total (LA1 Task 6 already builds it this way with `run_spend`, register A1.7).
 
 `run_task_command` behaviour, in order:
 
@@ -413,7 +424,7 @@ git commit -m "feat(decide): add token-budgeted task runner that splits before s
 | success | each `spec.notices(items)` line, then `<task>: <n> items (<a> auto, <e> escalated, <x> errors) [<mode>, calibrated or uncalibrated] -> <record path>` | 0 |
 | `AuthRejected` / `BudgetExceeded` | the record path and `rejected` / `budget` reason | 1 |
 
-The client comes from `client_for(provider, model, replace(cfg, decision_model=replace(cfg.decision_model, budget_usd_per_run=remaining)))`, used as an async context manager. The provider's env var is removed from `os.environ` after the client is built, as LA1's command does. `--tier` with a WS6 task is a `click.UsageError` (`--tier applies to finding-qa only`).
+The client comes from `client_for(provider, model, replace(cfg, decision_model=replace(cfg.decision_model, budget_usd_per_run=remaining)))`, used as an async context manager. Each task's client is built for its own model: `model` is `decision_model.task_models[task]` when set, otherwise the run's model (register A12.9); thresholds are keyed by provider and model (A12.6). The provider's env var is removed from `os.environ` after the client is built, as LA1's command does. `--tier` with a WS6 task is a `click.UsageError` (`--tier applies to finding-qa only`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -487,6 +498,10 @@ def test_active_uncalibrated_warns(tmp_path, monkeypatch):
     assert r.exit_code == 0 and "uncalibrated; every item escalates" in r.output
 
 def test_finding_qa_path_unchanged(cli_run_dir):                 # LA1 fixture: provider none → "disabled for this run"
+
+def test_task_model_overrides_run_model(tmp_path, monkeypatch): ...   # A12.9: task_models {cluster-pairs: clef-omni}, run model clef → client_for receives clef-omni
+def test_unknown_task_model_rejected(tmp_path, monkeypatch): ...      # A12.9: task_models {cluster-pairs: no-such-model} → rejected, names the id, no client built
+# A12.9 also: with task_models {iac-triage: clef-flash}, an unsplittable IaC packet over 24,576 tokens is refused (an error item, no call)
 ```
 
 ```python
@@ -524,14 +539,14 @@ git commit -m "feat(decide): register decision tasks behind per-task run-config 
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/report/transform.py` (`build_apd_data`, lines 2222–2390 at 856ea96; add the key next to `out["meta"]["warnings"]`), `report-template/components.jsx` (`DiagnosticsBanner`, lines 143–208), the compiled bundle `tools/apd_gauntlet/data/report-template/` (`app.js`, `.source-hash`), `CHANGELOG.md`, `docs/html-report.md`
+- Modify: `tools/apd_gauntlet/report/transform.py` (`build_apd_data`; add the key next to `out["meta"]["warnings"]`), `report-template/components.jsx` (`DiagnosticsBanner`), the compiled bundle `tools/apd_gauntlet/data/report-template/` (`app.js`, `.source-hash`), `CHANGELOG.md`, `docs/html-report.md`
 - Test: `tests/unit/report/test_transform_decision_checks.py`, `tests/test_workflow_apd_gauntlet.py` (bundle text pin)
 
 **Interfaces:**
 
 - Consumes: decision records of any task (LA1 finding QA and Tasks 5–12).
-- Produces: `def decision_checks(run_dir: pathlib.Path | None) -> list[dict[str, Any]]` in `report/transform.py`. It returns one entry per `40-synthesis/decisions/*.yaml`, sorted by filename: `{task, scope, provider, model, mode, calibrated, counts, label}`. `mode` is `advisory` when the record has none, `calibrated` is False when absent, and `counts` is `{outcome: n}`. `label` is `"<task> (<mode>, calibrated)"` or `"<task> (<mode>, uncalibrated)"`. `flags` is `{flag: n}` over the items' `flags`; `flagged` lists the first 10 flagged items as `{where, flags: {flag: p}}` (`where` falls back to the ref; `p` comes from the item's noul answer of that id). Unreadable files are skipped and appended to `warnings`. `build_apd_data` sets `out["meta"]["decision_checks"]` only when the list is non-empty, so the committed goldens stay byte-identical.
-- Banner: when `meta.decision_checks` is non-empty, `DiagnosticsBanner` adds `{kind: "warn", label: "Decision checks", text}`. `text` joins `"<label>: <escalate+flag> flagged of <total>"` per entry with `"; "`, adds `" (<flag> <n>, …: <where>, …)"` for entries with `flags`, and ends with `" Shadow results were not acted on."` when any entry is `shadow`.
+- Produces: `def decision_checks(run_dir: pathlib.Path | None) -> list[dict[str, Any]]` in `report/transform.py`. It returns one entry per `40-synthesis/decisions/*.yaml`, sorted by filename: `{task, scope, provider, model, mode, calibrated, counts, label}`. `mode` is `advisory` when the record has none, `calibrated` is False when absent, and `counts` is `{outcome: n}`. `label` is `"<task> (<mode>, calibrated)"` or `"<task> (<mode>, uncalibrated)"`. `flags` is `{flag: n}` over the items' `flags`; `flagged` lists the first 10 flagged items as `{where, flags: {flag: p}}` (`where` falls back to the ref; `p` comes from the item's noul answer of that id). Each entry also carries `cost_usd` and `cost_basis` from the record's `usage`, so the header shows the decision cost (register A12.8). Unreadable files are skipped and appended to `warnings`. `build_apd_data` sets `out["meta"]["decision_checks"]` only when the list is non-empty, so the committed goldens stay byte-identical.
+- Banner: when `meta.decision_checks` is non-empty, `DiagnosticsBanner` adds `{kind: "warn", label: "Decision checks", text}`. `text` joins `"<label>: <escalate+flag> flagged of <total>"` per entry with `"; "`, adds `" (<flag> <n>, …: <where>, …)"` for entries with `flags`, then `" Decision cost: $<sum of cost_usd>."` (register A12.8), and ends with `" Shadow results were not acted on."` when any entry is `shadow`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -600,8 +615,8 @@ Expected: exit 0; the HTML header shows `finding-qa (advisory, uncalibrated)`.
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/cluster_pairs.py`, `tests/fixtures/decide/cluster-run/.apd-run.yaml`, `tests/fixtures/decide/cluster-run/40-synthesis/cluster-candidates.yaml` (group `cluster-cand-0001`: `conf-11111111`, `intg-22222222`, `avail-33333333`; group `cluster-cand-0002`: `dist-44444444`, `resil-55555555`; schema-valid)
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py` (register), `.claude/agents/apd-cluster-adjudicator.md` (new section after `## Inputs`, line 62 at 856ea96), `.claude/workflows/apd-gauntlet.js` (helpers after `isErr`, line 242; the decide step between `label: 'cluster-candidates'` and `label: 'adjudicate'`, lines 510–529; the note on both adjudicator dispatches, lines 525 and 541), `tools/apd_gauntlet/plan_run.py` (row after `cluster-candidates`, lines 122–129), `tools/apd_gauntlet/runner/flow.py` (LA2 Task 7: `synthesis-adjudicate`), `tools/apd_gauntlet/runner/instructions.py` (LA2 Task 5), packaged agent copy via `python -I -m apd_gauntlet.bundle --sync` (LA2 Task 1), `docs/decision-models.md`, `CHANGELOG.md`
-- Test: `tests/decide/test_cluster_pairs.py`, `tests/test_workflow_dispatch_trace.py` (WS3), `tests/test_workflow_apd_gauntlet.py`, `tests/test_cli_plan_run.py`, `tests/runner/test_flow_synthesis.py`, `tests/runner/test_flow_parity.py`; create `tests/test_agent_escalation_sections.py`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py` (register), `.claude/agents/apd-cluster-adjudicator.md` (new section after `## Inputs`), `.claude/workflows/apd-gauntlet.js` (helpers after `function isErr(`; the decide step between `label: 'cluster-candidates'` and `label: 'adjudicate'`; the note on both adjudicator dispatches, `label: 'adjudicate'` and `label: 'adjudicate-retry-1'`), `tools/apd_gauntlet/plan_run.py` (row after `cluster-candidates`), `tools/apd_gauntlet/runner/flow.py` (LA2 Task 7: `synthesis-adjudicate`), `tools/apd_gauntlet/runner/instructions.py` (LA2 Task 5), packaged agent copy via `python -I -m apd_gauntlet.bundle --sync` (LA2 Task 1), `docs/decision-models.md`, `CHANGELOG.md`
+- Test: `tests/decide/test_cluster_pairs.py`, `tests/test_workflow_dispatch_trace.py` (WS3), `tests/test_workflow_apd_gauntlet.py`, `tests/test_cli_plan_run.py`, `tests/runner/test_flow_synthesis.py`, `tests/runner/test_flow_parity.py`, `tests/test_workflow_runner_awaits.py` (`decideStep` joins `PASS_THROUGH` and `CALLS`; register A15.26); create `tests/test_agent_escalation_sections.py`
 
 **Interfaces:**
 
@@ -609,7 +624,7 @@ Expected: exit 0; the HTML header shows `finding-qa (advisory, uncalibrated)`.
 - Produces (`cluster_pairs.py`): `SPEC: TaskSpec` (`name = "cluster-pairs"`, `egress = TASK_EGRESS["cluster-pairs"]`); `RELATIONS: dict[str, str]`; `def pair_ref(group_id: str, a: str, b: str) -> str` → `f"{group_id}:{min(a, b)}:{max(a, b)}"`; `def group_state(group: dict[str, Any], keys: Sequence[int] | None = None) -> dict[str, Any]` → `{"kind", "members": [{"key": "m<i>", "lens", "severity", "title", "summary", "evidence"}]}` with no record ids.
 - Produces (`runner/instructions.py`): `ESCALATION_NOTES: dict[str, str]`; `def escalation_note(task: str, mode: str) -> str` (`" " + ESCALATION_NOTES[task]` when `mode == "active"`, else `""`).
 - Produces (`runner/flow.py`): `async def _decide_cli(self, task: str, label: str, phase: str) -> None` on `Runner`. It runs `["decide", task, str(self.run_dir), "--yes"]` through the Runner's CLI function under ledger kind `cli` when `task_mode(<run config the Runner loads for its code-recon and crown-jewel gates>, task) != "off"`. A non-zero exit emits a `warning` event and the run continues.
-- Produces (workflow): `decideMode(task)` and `decideStep(task, phaseName, label)` (copy below) and `const ESCALATION_NOTES = {...}` holding the same strings as the Python dict.
+- Produces (workflow): `decideMode(task)` (LA1 Task 8 added it; this copy replaces it, register A12.3) and `decideStep(task, phaseName, label)` (copy below) and `const ESCALATION_NOTES = {...}` holding the same strings as the Python dict.
 
 Questions: one `Choice` per member pair, id `p.<i>.<j>` (1-based, `i < j`), instructions `"Compare members m<i> and m<j>. Do they describe the same root cause, related but distinct issues, or unrelated issues?"`, criteria `RELATIONS`:
 
@@ -621,13 +636,14 @@ Questions: one `Choice` per member pair, id `p.<i>.<j>` (1-based, `i < j`), inst
 
 One unit per group (all its pairs; `run_units` caps calls at 64 questions). When `fits` fails for a group, fall back to one unit per pair with a two-member `group_state`. Item = pair; `score = P(unrelated)`. Digest: a group is `auto` (`decided: {decision: separate}`) only when every pair is `auto`. Otherwise it is escalated with `scores: {pairs: [{a, b, same_root_cause, related_distinct, unrelated, outcome}]}` and the first pair error. `describe` returns `{"m1": {title, summary, evidence}, "m2": {…}}` for the pair.
 
-Workflow helpers (exact copy; Python's `task_mode` is the same rule):
+Workflow helpers (exact copy; for the WS6 tasks Python's `task_mode` is the same rule, and `finding-qa` keeps its own switch, `off | shadow`, default `shadow` when a provider is set; register A12.3):
 
 ```js
 function decideMode(task) {
   const dm = args.decision_model;
-  if (!dm || !dm.provider || dm.provider === 'none' || !dm.tasks) return 'off';
-  const m = dm.tasks[task];
+  if (!dm || !dm.provider || dm.provider === 'none') return 'off';
+  const m = dm.tasks ? dm.tasks[task] : undefined;
+  if (task === 'finding-qa') return m === 'off' ? 'off' : 'shadow';
   return (m === 'shadow' || m === 'active') ? m : 'off';
 }
 function decideStep(task, phaseName, label) {
@@ -640,6 +656,8 @@ function escalationNote(task) {
   return decideMode(task) === 'active' ? ' ' + ESCALATION_NOTES[task] : '';
 }
 ```
+
+`decideStep` stays a plain function that returns `pyStep('decide', …)` or `null`; add it to `PASS_THROUGH` and `CALLS` in `tests/test_workflow_runner_awaits.py`. Every call is the statement `await decideStep(…);`. The harness sets no `decision_model`, so `EXPECTED_GREEN_LABELS` is unchanged (register A15.26).
 
 `ESCALATION_NOTES['cluster-pairs']` (exact copy in both channels): `Decision-model escalations: read 40-synthesis/escalations/cluster-pairs.yaml. Adjudicate ONLY the groups listed under escalate, treating the probabilities of each pair as advisory. Emit no decision and no _members entry for groups listed under auto; apply-clusters keeps them separate.`
 
@@ -781,7 +799,7 @@ Expected: exit 0, and `40-synthesis/decisions/cluster-pairs.all.yaml` exists in 
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/report_claims.py`
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-report-auditor.md` (section after `## Inputs`, line 47), `.claude/workflows/apd-gauntlet.js` (audit loop, lines 733–794: the step after `'audit-report-attempt-' + i`, the note appended to `auditorPrompt`), `tools/apd_gauntlet/plan_run.py` (row between the `audit-report` and `apd-report-auditor` rows, lines 171–180), `tools/apd_gauntlet/runner/flow.py` (`synthesis-audit`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-report-auditor.md` (section after `## Inputs`), `.claude/workflows/apd-gauntlet.js` (the audit loop, `for (let i = 0; i <= 2; i++)`: the step after `'audit-report-attempt-' + i`, the note appended to `auditorPrompt`), `tools/apd_gauntlet/plan_run.py` (row between the `audit-report` and `apd-report-auditor` rows), `tools/apd_gauntlet/runner/flow.py` (`synthesis-audit`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
 - Test: `tests/decide/test_report_claims.py`, the Task 5 wiring test files (append the `report-claims` params)
 
 **Interfaces:**
@@ -835,7 +853,7 @@ Expected: FAIL (module missing, then the wiring assertions)
 
 - [ ] **Step 3: Implement the task and its wiring**
 
-The workflow step is `decideStep('report-claims', 'synthesis-audit', 'decide-report-claims-' + i)`. Its plan-run row uses phase `synthesis-audit`. The runner label is `decide-report-claims-<i>`. Docs row: before the Opus auditor on every pass; `noul` supported plus `score` framing; `auto` = claim needs no semantic review; consumer `apd-report-auditor`, which keeps the gate signal. Sync the bundle.
+The workflow step is `await decideStep('report-claims', 'synthesis-audit', 'decide-report-claims-' + i);` (register A15.26). Its plan-run row uses phase `synthesis-audit`. The runner label is `decide-report-claims-<i>`. Docs row: before the Opus auditor on every pass; `noul` supported plus `score` framing; `auto` = claim needs no semantic review; consumer `apd-report-auditor`, which keeps the gate signal. Sync the bundle.
 
 - [ ] **Step 4: Run to verify pass**
 
@@ -858,7 +876,7 @@ As Task 5 Step 6 with `tasks: {report-claims: shadow}`. Expected: exit 0; report
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/asset_match.py`
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/attack_path/build.py` (`build_graph` lines 105–163, `_resolve_edge_endpoints` 594–655, `_add_finding_edges` 658–703, `_add_capability_edges` 706–742); `tools/apd_gauntlet/attack_path/graph.py` (`Edge.provenance` type, line 78); `tools/apd_gauntlet/data/schemas/asset-graph.schema.json` (node `provenance`, which edges `$ref`); the WS5 `edge-review` implementation (locate with `grep -rn '"edge-review"' tools/apd_gauntlet/cli.py`); `.claude/agents/apd-attack-path-analyzer.md` (the edge-review step WS5 left in place of "3. **Author edge provenance.**", line 79 at 856ea96); `.claude/workflows/apd-gauntlet.js` (apath thunk, lines 625–637); `tools/apd_gauntlet/plan_run.py` (before the `apd-attack-path-analyzer` row, lines 143–150); `tools/apd_gauntlet/runner/flow.py` (`apath`); `tools/apd_gauntlet/runner/instructions.py`; packaged agent copy; `docs/schema-evolution.md`; `docs/attack-path-analysis.md`; `docs/decision-models.md`; `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/attack_path/build.py` (`build_graph`, `_resolve_edge_endpoints`, `_add_finding_edges`, `_add_capability_edges`); `tools/apd_gauntlet/attack_path/graph.py` (`Edge.provenance` type); `tools/apd_gauntlet/data/schemas/asset-graph.schema.json` (node `provenance`, which edges `$ref`); the WS5 `edge-review` implementation (locate with `grep -rn '"edge-review"' tools/apd_gauntlet/cli.py`); `.claude/agents/apd-attack-path-analyzer.md` (the edge-review step WS5 left in place of "3. **Author edge provenance.**"); `.claude/workflows/apd-gauntlet.js` (`async function apathBranch()`, the apath thunk's body, which WS5 Task 4 moves there; if it is absent, create it as register A15.25 says, the thunk becoming `function () { return apathBranch(); }` and `apathBranch` joining `ASYNC_HELPERS` and `CALLS` in `tests/test_workflow_runner_awaits.py`; register A15.26); `tools/apd_gauntlet/plan_run.py` (before the `apd-attack-path-analyzer` row); `tools/apd_gauntlet/runner/flow.py` (`apath`); `tools/apd_gauntlet/runner/instructions.py`; packaged agent copy; `docs/schema-evolution.md`; `docs/attack-path-analysis.md`; `docs/decision-models.md`; `CHANGELOG.md`
 - Test: `tests/decide/test_asset_match.py`, `tests/test_attack_path_build.py` (extend), the Task 5 wiring test files (append `("asset-match", "apath")`)
 
 **Interfaces:**
@@ -912,7 +930,7 @@ def test_asset_graph_schema_accepts_decision_provenance(): ...   # an edge with 
 def test_edge_review_skips_auto_edges(tmp_path): ...            # WS5's edge-review output omits the auto edge, keeps the escalate edge
 ```
 
-Wiring tests follow Task 5 with `("asset-match", "apath")` and trace row `("asset-match", "decide-asset-match", "apply-clusters", "apath")`: `decideStep('asset-match', 'apath', 'decide-asset-match')` is the first statement inside the crown-jewels branch of the apath thunk, before any `analyze-attack-paths`, `edge-review` or analyzer step. The analyzer instruction carries `escalationNote('asset-match')`; the agent-section test gains `("apd-attack-path-analyzer", "asset-match")`.
+Wiring tests follow Task 5 with `("asset-match", "apath")` and trace row `("asset-match", "decide-asset-match", "apply-clusters", "apath")`: `await decideStep('asset-match', 'apath', 'decide-asset-match');` is the first statement inside the crown-jewels branch of `apathBranch` (register A15.26), before any `analyze-attack-paths`, `edge-review` or analyzer step. The analyzer instruction carries `escalationNote('asset-match')`; the agent-section test gains `("apd-attack-path-analyzer", "asset-match")`.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -944,7 +962,7 @@ As Task 5 Step 6 with `tasks: {asset-match: shadow}`. Expected: exit 0, and no e
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/tm_screen.py`, `tests/fixtures/decide/tm-run/` (`.apd-run.yaml`; `00-context/threat-model-normalized.yaml` with the two entries of `tests/fixtures/attack_path/minimal-run/00-context/threat-model-normalized.yaml`; `40-synthesis/deduped-findings.yaml` with two findings; `40-synthesis/tm-candidates.yaml` with three pairs)
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-threat-model-evaluator.md` (`### Step 4 — Contradiction detection (Rule 6)`, line 216 at 856ea96), `.claude/workflows/apd-gauntlet.js` (tmeval thunk, lines 608–624), `tools/apd_gauntlet/plan_run.py` (before the `apd-threat-model-evaluator` row, lines 136–141), `tools/apd_gauntlet/runner/flow.py` (`tmeval`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-threat-model-evaluator.md` (`### Step 4 — Contradiction detection (Rule 6)`), `.claude/workflows/apd-gauntlet.js` (`async function tmevalBranch()`, the tmeval thunk's body, which WS5 Task 8 moves there; if it is absent, create it as register A15.25 says, the thunk becoming `function () { return tmevalBranch(); }` and `tmevalBranch` joining `ASYNC_HELPERS` and `CALLS` in `tests/test_workflow_runner_awaits.py`; register A15.26), `tools/apd_gauntlet/plan_run.py` (before the `apd-threat-model-evaluator` row), `tools/apd_gauntlet/runner/flow.py` (`tmeval`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
 - Test: `tests/decide/test_tm_screen.py`, the Task 5 wiring test files (append `("tm-screen", "tmeval")`)
 
 **Interfaces:**
@@ -984,7 +1002,7 @@ def test_unrelated_pairs_auto_and_contradictions_escalate(tmp_path):
 def test_missing_candidates_is_nothing_to_decide(tmp_path): ...   # no tm-candidates.yaml → plan is None
 ```
 
-Wiring tests follow Task 5 with `("tm-screen", "tmeval")` and trace row `("tm-screen", "decide-tm-screen", "apply-clusters", "tmeval")`: the step sits inside the tmeval thunk after WS5's `tm-candidates` step and before `llmStep('apd-threat-model-evaluator'`, and the evaluator instruction carries `escalationNote('tm-screen')`; the agent-section test gains `("apd-threat-model-evaluator", "tm-screen")`.
+Wiring tests follow Task 5 with `("tm-screen", "tmeval")` and trace row `("tm-screen", "decide-tm-screen", "apply-clusters", "tmeval")`: the step, `await decideStep('tm-screen', 'tmeval', 'decide-tm-screen');`, sits inside `tmevalBranch` after WS5's `tm-candidates` step and before `await llmStep('apd-threat-model-evaluator'` (register A15.26), and the evaluator instruction carries `escalationNote('tm-screen')`; the agent-section test gains `("apd-threat-model-evaluator", "tm-screen")`.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -1016,13 +1034,13 @@ As Task 5 Step 6 with `tasks: {tm-screen: shadow}`. Expected: exit 0.
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/_inputs.py`, `tools/apd_gauntlet/decide/tasks/intake_score.py`
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-intake.md` (section before `## Process`, line 85 at 856ea96), `.claude/workflows/apd-gauntlet.js` (`phase('intake')`, before `llmStep('apd-intake'`, lines 313–321), `tools/apd_gauntlet/plan_run.py` (before the `apd-intake` row, lines 58–62), `tools/apd_gauntlet/runner/flow.py` (`intake`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`, `.claude/agents/apd-intake.md` (section before `## Process`), `.claude/workflows/apd-gauntlet.js` (`phase('intake')`, before `await llmStep('apd-intake'`), `tools/apd_gauntlet/plan_run.py` (before the `apd-intake` row), `tools/apd_gauntlet/runner/flow.py` (`intake`), `tools/apd_gauntlet/runner/instructions.py`, packaged agent copy, `docs/decision-models.md`, `CHANGELOG.md`
 - Test: `tests/decide/test_inputs.py`, `tests/decide/test_intake_score.py`, `tests/decide/fakes.py` (add `make_inputs`), the Task 5 wiring test files (append `("intake-score", "intake")`)
 
 **Interfaces:**
 
-- Consumes: Tasks 1–5; LA1 `GOALS` and `GOAL_CRITERIA` (`decide/tasks/finding_qa.py`); the 12 artifact types and descriptions in `.claude/agents/apd-intake.md` Step 1 (lines 106–119, copied verbatim as choice criteria).
-- Produces (`_inputs.py`): `IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".webp"}`; `MAX_IMAGE_BYTES = 4 * 1024 * 1024`; `@dataclass(frozen=True) class InputFile: rel: str; ref: str; text: str | None; image: bytes | None; reason: str | None`; `def iter_inputs(run_dir: Path) -> list[InputFile]` (sorted by `rel`; skips names starting with `.`; a symlink resolving outside `inputs/` gets `reason = "symlink outside inputs"`; non-UTF-8 bytes get `reason = "not UTF-8 text"`; `ref = f"inputs/{rel}#{sha256(bytes)[:8]}"`); `def file_units(f: InputFile, questions: dict[str, Question], info: ModelInfo, prefix: str) -> list[Unit]` (text → `split_text` chunks under `state_budget` minus the wrapper's own estimate, state `{"filename", "part": "<k>/<n>", "text"}`; image → one unit with `images=(bytes,)` when `info.images`; otherwise no units).
+- Consumes: Tasks 1–5; LA1 `GOALS` and `GOAL_CRITERIA` (`decide/tasks/finding_qa.py`); the 12 artifact types and descriptions in `.claude/agents/apd-intake.md` Step 1 (copied verbatim as choice criteria).
+- Produces (`_inputs.py`): `IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".webp"}`; `MAX_IMAGE_BYTES = 4 * 1024 * 1024`; `@dataclass(frozen=True) class InputFile: rel: str; ref: str; text: str | None; image: bytes | None; reason: str | None`; `def iter_inputs(run_dir: Path) -> list[InputFile]` (sorted by `rel`; skips names starting with `.`; a symlink resolving outside `inputs/` gets `reason = "symlink outside inputs"`; non-UTF-8 bytes get `reason = "not UTF-8 text"`; `ref = f"inputs/{rel}#{sha256(bytes)[:8]}"`); `def file_units(f: InputFile, questions: dict[str, Question], info: ModelInfo, prefix: str) -> list[Unit]` (text → `split_text` chunks under `state_budget` minus the wrapper's own estimate, state `{"filename", "part": "<k>/<n>", "text"}`; image → one unit with `images=(bytes,)` when `info.images`; otherwise no units). `file_units` refuses an image over 16 MP or over the per-request limits: it gives no unit, and the file's item is an `error` carrying that reason (register A12.4).
 - Produces (`intake_score.py`): `SPEC` (`name = "intake-score"`, `egress = TASK_EGRESS["intake-score"]`); `ARTIFACT_TYPES: dict[str, str]` (12 keys); `RELEVANCE = ["unlikely", "secondary", "primary"]`; `TAXONOMY_SURFACES: dict[str, str]` (`owasp_top10`, `owasp_api_top10`, `owasp_llm_top10`, `mitre_atlas`, each with its intake Step 4 heuristic sentence).
 
 Questions (14): `type` = `Choice("Which artifact type is this file?", ARTIFACT_TYPES)`; `rel.<goal>` = `Score("How relevant is this artifact to <goal>: <GOAL_CRITERIA[goal]>?", RELEVANCE)` for the 9 goals; `tax.<name>` = `Noul(<heuristic sentence>)`. Aggregation over a file's chunks: `type` from chunk 1, relevance level `RELEVANCE[round(max score)]`, taxonomy `max p`. `score` = chunk 1's `type` confidence. `decided = {path, type, relevance: {goal: level}, taxonomies: [names with p >= 0.5]}`; `chunks = n`; `where = f"inputs/{rel}"`. A file with no units (binary, image on a model without images, outside symlink) becomes an `error` item carrying its `reason`.
@@ -1052,7 +1070,7 @@ def test_image_on_jev_is_error(tmp_path): ...    # info = get_model("typesafe", 
 def test_aggregates_max_relevance_across_chunks(tmp_path): ...   # chunk 2 rel.integrity score 2.0, chunk 1 0.0 → decided relevance integrity == "primary", chunks == n
 ```
 
-Wiring tests follow Task 5 with `("intake-score", "intake")` and trace row `("intake-score", "decide-intake-score", None, "intake")`: `decideStep('intake-score', 'intake', 'decide-intake-score')` precedes `llmStep('apd-intake'`, and the intake instruction carries `escalationNote('intake-score')`; the agent-section test gains `("apd-intake", "intake-score")`, which pins the override rule because the note contains it.
+Wiring tests follow Task 5 with `("intake-score", "intake")` and trace row `("intake-score", "decide-intake-score", None, "intake")`: `await decideStep('intake-score', 'intake', 'decide-intake-score');` precedes `await llmStep('apd-intake'` (register A15.26), and the intake instruction carries `escalationNote('intake-score')`; the agent-section test gains `("apd-intake", "intake-score")`, which pins the override rule because the note contains it.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -1122,7 +1140,7 @@ def test_clean_file_autos_when_calibrated(tmp_path): ... # all p = 0.01, active 
 def test_cli_prints_flags_in_shadow(tmp_path, monkeypatch): ...# allow_full_inputs: true; decide input-screen --yes → "input-screen FLAG"
 ```
 
-Wiring tests follow Task 5 with `("input-screen", "intake")` and trace row `("input-screen", "decide-input-screen", None, "intake")`: in the JS, `'decide-input-screen'` precedes `'decide-intake-score'`, which precedes `llmStep('apd-intake'`. The intake instruction carries both notes; the agent-section test gains `("apd-intake", "input-screen")`.
+Wiring tests follow Task 5 with `("input-screen", "intake")` and trace row `("input-screen", "decide-input-screen", None, "intake")`: in the JS, `'decide-input-screen'` precedes `'decide-intake-score'`, which precedes `await llmStep('apd-intake'`. The intake instruction carries both notes; the agent-section test gains `("apd-intake", "input-screen")`.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -1154,7 +1172,7 @@ As Task 5 Step 6 with `tasks: {input-screen: shadow}` and `allow_full_inputs: tr
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/output_screen.py`
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/report/build.py` (`build_report`, lines 93–172 at 856ea96: echo the notices after `build_apd_data`); `.claude/workflows/apd-gauntlet.js` (immediately before each of the four `pyStep('build-report'` calls, lines 706, 715, 722 and 792); `tools/apd_gauntlet/plan_run.py` (before the `build-report` row, lines 165–169); `tools/apd_gauntlet/runner/flow.py` (before every `build-report` step); `docs/decision-models.md`; `docs/html-report.md`; `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/report/build.py` (`build_report`: echo the notices after `build_apd_data`); `.claude/workflows/apd-gauntlet.js` (immediately before each of the four `await pyStep('build-report'` calls); `tools/apd_gauntlet/plan_run.py` (before the `build-report` row); `tools/apd_gauntlet/runner/flow.py` (before every `build-report` step); `docs/decision-models.md`; `docs/html-report.md`; `CHANGELOG.md`
 - Test: `tests/decide/test_output_screen.py`, `tests/unit/report/test_build_output_screen.py`, the Task 5 wiring test files (append `("output-screen", "synthesis-build")`)
 
 **Interfaces:**
@@ -1172,7 +1190,7 @@ Identical texts collapse into one item: `ref = "x-" + sha256(text)[:8]`, `where`
 
 `build_notices` returns `[]` when the task is `off` or no record exists. A record whose refs no longer match `collect_texts` yields `["output-screen: the record is stale for this report; run decide output-screen again"]`. Otherwise it returns every flag line, in every mode (a flag reaches the operator, never redacts), plus, in `active` mode only, `output-screen: <n> texts not confirmed clean; see 40-synthesis/escalations/output-screen.yaml`. `build_report` echoes these lines; the header shows the same flags through Task 4's `decision_checks` (`flags`, `flagged`).
 
-Workflow: `decideStep('output-screen', 'synthesis-build', 'decide-output-screen-' + <the build label without its "build-report-" prefix>)` before each `build-report` dispatch, giving `decide-output-screen-attempt-0`, `-attempt-build-fix`, `-attempt-postfallback` and `-attempt-<i+1>`. The runner uses the same labels. Re-running before each rebuild costs little: `run_task` reuses the record when no text changed.
+Workflow: `await decideStep('output-screen', 'synthesis-build', 'decide-output-screen-' + <the build label without its "build-report-" prefix>);` before each `build-report` dispatch (register A15.26), giving `decide-output-screen-attempt-0`, `-attempt-build-fix`, `-attempt-postfallback` and `-attempt-<i+1>`. The runner uses the same labels. Re-running before each rebuild costs little: `run_task` reuses the record when no text changed.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1247,7 +1265,7 @@ As Task 5 Step 6 with `tasks: {output-screen: shadow}` and `allow_full_inputs: t
 **Files:**
 
 - Create: `tools/apd_gauntlet/decide/tasks/iac_triage.py`, `tests/fixtures/decide/iac-run/` (`.apd-run.yaml`; `10-trustworthiness/confidentiality.findings.yaml` with a high finding citing `iac-evidence-index.yaml` locator `iac:prod/vpc:aws_security_group.ssh@platform/components/terraform/vpc/main.tf:L4-L9#iev-3f9a0c12`, a medium IaC finding and a high non-IaC finding; `00-context/iac-packets/confidentiality.md` with two level-2 (`##`) sections, one citing `iev-3f9a0c12`)
-- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/synthesis/apply.py` (`apply_clusters`, lines 244–436: merge the annex entries just before `_write_outputs(run_dir, result)` at line 435; `_write_outputs` at 484–515 is the annex writer and stays as is); `tools/apd_gauntlet/data/schemas/severity-disagreement.schema.json`; `.claude/workflows/apd-gauntlet.js` (after the `validate-full-prephase5` gate, lines 491–503); `tools/apd_gauntlet/plan_run.py` (after the tier-3 gate row, lines 114–119); `tools/apd_gauntlet/runner/flow.py` (after `validate-full-prephase5`); `docs/schema-evolution.md`; `docs/decision-models.md`; `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/decide/tasks/__init__.py`; `tools/apd_gauntlet/synthesis/apply.py` (`apply_clusters`: merge the annex entries just before `_write_outputs(run_dir, result)`; `_write_outputs` is the annex writer and stays as is); `tools/apd_gauntlet/data/schemas/severity-disagreement.schema.json`; `.claude/workflows/apd-gauntlet.js` (after the `label: 'validate-full-prephase5'` gate and its `isErr` throw); `tools/apd_gauntlet/plan_run.py` (after the tier-3 gate row); `tools/apd_gauntlet/runner/flow.py` (after `validate-full-prephase5`); `docs/schema-evolution.md`; `docs/decision-models.md`; `CHANGELOG.md`
 - Test: `tests/decide/test_iac_triage.py`, `tests/test_cli_apply_clusters.py` (extend), the Task 5 wiring test files (append `("iac-triage", "tier-3")`)
 
 **Interfaces:**
@@ -1300,7 +1318,7 @@ def test_one_lens_needs_decision(): ...                 # schema: one agent seve
 
 `validate_doc_obj(doc, schema_name)` joins `validate_doc` in `tests/decide/fakes.py` for in-memory documents. `tests/test_cli_apply_clusters.py` gains `test_apply_clusters_writes_iac_triage_annex_entry`: the fixture run plus an active-mode digest, then `apply-clusters` exits 0 and `severity-disagreements.yaml` holds the entry. Its existing tests stay unchanged.
 
-Wiring tests follow Task 5 with `("iac-triage", "tier-3")` and trace row `("iac-triage", "decide-iac-triage", "validate-full-prephase5", "cluster-candidates")`: `decideStep('iac-triage', 'tier-3', 'decide-iac-triage')` sits after the `validate-full-prephase5` throw block and before `phase('synthesis-cluster')`.
+Wiring tests follow Task 5 with `("iac-triage", "tier-3")` and trace row `("iac-triage", "decide-iac-triage", "validate-full-prephase5", "cluster-candidates")`: `await decideStep('iac-triage', 'tier-3', 'decide-iac-triage');` sits after the `validate-full-prephase5` throw block (register A15.26) and before `phase('synthesis-cluster')`.
 
 - [ ] **Step 2: Run to verify failure**
 
@@ -1327,9 +1345,9 @@ git commit -m "feat(decide): triage high and critical IaC findings into the seve
 
 As Task 5 Step 6 with `tasks: {iac-triage: shadow}`, adding the private Atmos repository run from master plan Task 7 Step 1. Expected: exit 0.
 
-- [ ] **Step 7 (operator): M5 exit against the 1.7.0 baseline**
+- [ ] **Step 7 (operator): M5 exit against the 1.7.1 baseline**
 
-With every WS6 task in `shadow` (and `allow_full_inputs: true` only on runs whose hosting the operator has cleared), run the master plan Task 1 set twice, then `apd-gauntlet compare-runs <1.7.0-baseline> <candidate> --gates eval/gates.yaml` for each pair. Expected: exit 0, as the milestone exit for `v2.0.0a4`.
+With every WS6 task in `shadow` (and `allow_full_inputs: true` only on runs whose hosting the operator has cleared), run the master plan Task 1 set twice, then `apd-gauntlet compare-runs <1.7.1-baseline> <candidate> --gates eval/gates.yaml` for each pair. Expected: exit 0, as the milestone exit for `v2.0.0a4`.
 
 ### Task 13: Labelling kit and enablement sequence
 
@@ -1455,6 +1473,36 @@ Finding QA goes first, per LA1, A1 and WS2. Then, for each task in order (`clust
 
 Thresholds are frozen before held-out runs; a threshold changed after a held-out run needs a new held-out set (WS2's freeze protocol enforces this).
 
-- [ ] **Step 8 (operator): WS6 part of the M6 exit against the 1.7.0 baseline**
+- [ ] **Step 8 (operator): WS6 part of the M6 exit against the 1.7.1 baseline**
 
-With every task that passed Step 7 set to `active` and the rest in `shadow`, run the master plan Task 1 set twice, then `apd-gauntlet compare-runs <1.7.0-baseline> <candidate> --gates eval/gates.yaml` for each pair. Expected: exit 0.
+With every task that passed Step 7 set to `active` and the rest in `shadow`, run the master plan Task 1 set twice, then `apd-gauntlet compare-runs <1.7.1-baseline> <candidate> --gates eval/gates.yaml` for each pair. Expected: exit 0.
+
+### Task 14: `diagram-check` decision task
+
+(Consolidated plan task N7.)
+
+Shadow and advisory only. Asks, for each architecture image in `inputs/`, whether it shows each inventory asset, so the attack-path analyzer and the report see where a diagram and the inventory disagree. It runs after `assemble-inventory` (which runs after the intake agent), so intake is not a consumer.
+
+**Files:** Create `tools/apd_gauntlet/decide/tasks/diagram_check.py`, `tests/decide/test_diagram_check.py`, `tests/fixtures/decide/diagram/arch.png` (synthetic: three labelled boxes); Modify `decide/policy.py` (`WS6_TASKS` gains `"diagram-check"`), `decide/tasks/__init__.py` (`TASK_EGRESS["diagram-check"]`), `decide/command.py` (`FULL_INPUT_TASKS` gains `"diagram-check"`, so WS6 Task 3's `allow_full_inputs` guard applies), `run-config.schema.json` (`decision_model.tasks` property), `decision-record.schema.json` (task enum), workflow and `plan_run.py` and `runner/flow.py` (one `await decideStep('diagram-check', 'intake', 'decide-diagram-check');` right after `assemble-inventory` (A15.26)), `.claude/agents/apd-attack-path-analyzer.md` (escalation note), WS6 Task 4's report-header decision checks, docs.
+
+**Interfaces:**
+
+- Consumes: `TaskSpec`, `run_task`, `_inputs.iter_inputs`, `InputFile`, `IMAGE_TYPES`, `MAX_IMAGE_BYTES` (WS6 Tasks 2, 9); `inventory_options` (WS6 Task 7).
+- Produces: `SPEC` (`name = "diagram-check"`, `egress = TASK_EGRESS["diagram-check"]`); one unit per image × up to 64 `Noul` questions `"Does this diagram show <name> (<type>)?"` keyed `a<k>`; `requires allow_full_inputs: true`; default model `clef-omni`; record items `{ref: "<image ref>:<node_id>", score, flags: ["absent_from_diagram"] when p < 0.2, ["absent_from_inventory"] reserved}`.
+
+- [ ] **Step 1:** Tests: `test_requires_allow_full_inputs` (exit 2 without it), `test_one_unit_per_image_with_at_most_64_questions`, `test_image_limits_enforced` (> 4 MiB or > 16 MP → item `error`), `test_jev_provider_skips_with_notice` (no image support → notice, no call), `test_shadow_writes_record_and_changes_nothing`, plus the workflow trace row `("diagram-check", "decide-diagram-check", "assemble-inventory", "intake")`.
+- [ ] **Step 2:** Run; expected FAIL.
+- [ ] **Step 3:** Implement; update both channels and the parity test; bundle sync.
+- [ ] **Step 4:** Tests pass; QG. Commit: `feat(decide): diagram-check task (shadow, advisory)`.
+
+### Task 15 (optional): Workspace decision cache
+
+(Consolidated plan task N8.)
+
+**Interfaces:** run-config `decision_model.cache: run | workspace` (default `run`); cache path `<workspace>/.apd-cache/decide/<provider>/<model>/<state_sha256>.json` holding answers only; keyed by the per-item `state_sha256` from A12.2 (state, schema hash, image digests, model). Tests: `test_workspace_cache_hit_makes_no_call`, `test_cache_never_stores_state`, `test_model_change_misses`. Commit: `feat(decide): optional workspace decision cache`.
+
+### Task 16 (optional): `routing` — escalate-on-doubt, shadow only
+
+(Consolidated plan task N9.)
+
+Writes `40-synthesis/routing.yaml` (outside `decisions/`, so it is neither validated as a decision record nor counted by `run_spend`) with `rerun_on_opus: [<lens>]` when a Sonnet-tier lens's share of calibrated finding-QA flags exceeds a calibrated cut (`routing.flag_share`). Acts only in the LA2 runner through `model_overrides`, and only after an SCP passes with it enabled. The workflow never acts on it until a per-dispatch model in `agent()` is confirmed (parity forbids otherwise). Tests: `test_routing_shadow_never_changes_models`, `test_runner_applies_override_only_when_active`. Commit: `feat(decide): shadow routing suggestions for lens re-runs`.

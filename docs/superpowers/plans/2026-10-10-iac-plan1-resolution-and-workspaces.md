@@ -6,9 +6,11 @@
 
 **Architecture:** A shared process gateway (`apd_gauntlet.sandbox.tools.run_tool`) is the only place a subprocess starts; it enforces a per-tool argument allowlist, a scrubbed environment, a closed-port proxy and per-call isolation. A fixed pipeline in `apd_gauntlet/iac/` discovers roots, picks an engine, sanitises and resolves Atmos stacks, builds one normalised workspace per instance, fetches remote modules only with recorded consent, and writes `00-context/iac-evidence-index.yaml` plus `00-context/iac-summary.md`. `apd-gauntlet iac run <run-dir>` runs it as the `iac` phase between `setup` and `intake` in the workflow, `plan-run` and the runner.
 
-**Tech Stack:** Python 3.10–3.12, click, PyYAML, jsonschema (Draft 2020-12), python-hcl2 7.x (extra `iac`), external tools Atmos 1.231.0, OpenTofu ≥ 1.8.0, Trivy 0.70.0, Checkov 3.3.26, ShellCheck ≥ 0.9; pytest with a fake `run_tool` and an `iac_tools` marker for real-tool tests.
+**Tech Stack:** Python 3.10–3.12, click, PyYAML, jsonschema (Draft 2020-12), python-hcl2 7.x (extra `iac`), external tools Atmos 1.231.0, OpenTofu ≥ 1.12.6, Trivy ≥ 0.71.1, Checkov 3.3.26, ShellCheck ≥ 0.9; pytest with a fake `run_tool` and an `iac_tools` marker for real-tool tests.
 
 **Spec:** `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md` §4, §5, §6, §7.1–§7.5, §7.10 (Atmos and HCL points), §7.11, §8.1 (skeleton), §12, §13.1, §13.4, §14, §15 item 1. Master plan `docs/superpowers/plans/2026-10-10-program-master-plan.md` R1 (`iac run`, `iac consent`), R2 (`run_tool`), R3 (`iac` phase), R4, R6, R7 (`iac-evidence-index` skeleton), R8, A3. This is Plan 1 of 4; Plans 2–4 consume the Interfaces blocks below.
+
+**Amended 2026-10-17** per the amendments register (A13.1, A13.2, A13.3, A13.4, A13.5, A13.6, A13.7, A13.9, A13.10, A13.11, A13.12, A15.12, A15.21, A15.27).
 
 ## Global Constraints
 
@@ -19,7 +21,7 @@
 - Scrubbed environment (spec §7.1): empty start; `PATH` to the resolved tool directory; `HOME` and `TMPDIR` to a fresh temp directory; `LANG`; `GIT_TERMINAL_PROMPT=0`; `GIT_SSH_COMMAND=false`. No cloud, Terraform, OpenTofu, Atmos, GitHub or SSH variables pass through.
 - Egress: with `network=False`, `HTTP_PROXY`, `HTTPS_PROXY` and `ALL_PROXY` point at a closed local port. Only the consented fetch gets the operator's real proxy settings.
 - Atmos functions are always off (`--process-functions=false`); function literals become `unknown` entries. `!terraform.output` and `!terraform.state` also become component-dependency edges; `!exec` is also an execution point.
-- Minimum tool versions (spec §14): Atmos 1.231.0, OpenTofu 1.8.0, Trivy 0.70.0, Checkov 3.3.26, ShellCheck 0.9. The Terraform binary is never invoked.
+- Minimum tool versions (spec §14): Atmos 1.231.0, OpenTofu 1.12.6, Trivy 0.71.1, Checkov 3.3.26, ShellCheck 0.9. OpenTofu 1.12.6 closes GHSA-q7j3-v8qv-22vq (arbitrary file read during git operations; affects < 1.11.10, < 1.12.3 and all 1.10.x) and also fixes credential resend on redirect; Trivy 0.71.1 closes CVE-2026-54448 (Helm tar bomb, < 0.71.0) and CVE-2026-55092 (path traversal, < 0.71.1). Tested versions, recorded as `tested` in `data/iac/tools.yaml`: Atmos 1.232.0, OpenTofu 1.13.1, Trivy 0.75.0, Checkov 3.3.29, ShellCheck 0.11.0; `doctor` warns above them. CI keeps Atmos 1.231.0 until the probes pass on 1.232.0. The Terraform binary is never invoked.
 - Every run-config path is relative to `inputs/` and matches `^(?!/)(?!.*\.\.).+$`.
 - All work happens under `<run>/.apd-state/iac/`. `inputs/` is never modified.
 - Ids are minted by the engine as `iev-` plus the first 8 hex characters of a SHA-256 over the instance, address, kind and check id. Output ordering is stable.
@@ -27,7 +29,7 @@
 - `consent.json` is keyed by subject; this plan owns `"iac_module_fetch": {"sources": [...], "sources_sha256": "...", "granted_at": "...", "method": "..."}` (R6).
 - New schemas `$ref` `_defs.schema.json#/$defs/apd_goal` and never inline a centralised vocabulary (`tests/test_schema_vocab_centralized.py`).
 - Tests never touch the network (ADR-0017 covers tests and real runs). The `iac-tools` CI job's setup step downloads the pinned tool binaries before any test starts; the tests it then runs stay offline. Unit tests use a fake `run_tool`; real-tool tests carry `@pytest.mark.iac_tools` and skip when a tool is absent.
-- Behaviour-changing tasks gate against the previous accepted state: the master plan Task 1 set run on the last accepted commit is the baseline, and `apd-gauntlet compare-runs <previous-accepted> <candidate> --gates eval/gates.yaml` must exit 0.
+- Behaviour-changing tasks gate against the previous accepted state: the master plan Task 1 set run on the last accepted commit is the baseline, and `apd-gauntlet compare-runs <previous-accepted> <candidate> --gates eval/gates.yaml` must exit 0. Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
 
 ## Review Focus
 
@@ -55,7 +57,7 @@
 | `tools/apd_gauntlet/iac/engine.py` | Engine selection and file precedence | Create |
 | `tools/apd_gauntlet/iac/atmos.py` | Sanitise, resolve, provenance | Create |
 | `tools/apd_gauntlet/iac/workspace.py` | Normalised workspace per instance | Create |
-| `tools/apd_gauntlet/iac/consent.py` | `has_fetch_consent`, `record_fetch_consent` | Create |
+| `tools/apd_gauntlet/iac/consent.py` | `has_fetch_consent`, `record_fetch_consent`, `read_consent` | Create |
 | `tools/apd_gauntlet/iac/fetch.py` | Module source listing and consented fetch | Create |
 | `tools/apd_gauntlet/iac/inventory.py` | Atmos and HCL execution points | Create |
 | `tools/apd_gauntlet/iac/index.py` | Id minting, excerpts, index document, writer | Create |
@@ -64,14 +66,14 @@
 | `tools/apd_gauntlet/iac/cli.py` | `iac run`, `iac consent` | Create |
 | `tools/apd_gauntlet/iac/doctor.py` | `doctor` checks via `register_doctor_check` | Create |
 | `tools/apd_gauntlet/data/schemas/iac-evidence-index.schema.json` | Index schema skeleton | Create |
-| `tools/apd_gauntlet/data/schemas/run-config.schema.json:95-118` | `infrastructure` additions (R4) | Modify |
+| `tools/apd_gauntlet/data/schemas/run-config.schema.json` (anchor `"infrastructure"`) | `infrastructure` additions (R4) | Modify |
 | `tools/apd_gauntlet/cli.py` | Register the `iac` group; register doctor checks | Modify |
-| `tools/apd_gauntlet/plan_run.py:48-56` | `iac` step after setup | Modify |
-| `.claude/workflows/apd-gauntlet.js:36-45`, `:265-313` | `iac` phase literal and step | Modify |
+| `tools/apd_gauntlet/plan_run.py` (after the last setup row) | `iac` step after setup | Modify |
+| `.claude/workflows/apd-gauntlet.js` (`meta.phases`, anchor `phases: [`; after the last setup step, before `phase('intake')`) | `iac` phase literal and step | Modify |
 | `tools/apd_gauntlet/runner/flow.py` | `iac` phase and `iac-run` step | Modify |
 | `pyproject.toml` | extra `iac`, dev `python-hcl2`, package data `data/iac/*.yaml`, marker `iac_tools` | Modify |
 | `.github/workflows/python-tests.yml` | `iac-tools` job with pinned tools | Modify |
-| `docs/iac-evaluation.md`, `docs/adrs/0027-iac-evaluation-pipeline.md`, `docs/schema-evolution.md`, `CHANGELOG.md`, `docs/running-the-gauntlet.md:359` | Docs | Create/Modify |
+| `docs/iac-evaluation.md`, `docs/adrs/0027-iac-evaluation-pipeline.md`, `docs/schema-evolution.md`, `CHANGELOG.md`, `docs/running-the-gauntlet.md` (the static-infra row) | Docs | Create/Modify |
 | `tests/iac/…`, `tests/fixtures/iac/…`, `tests/test_adr_0027.py` | Tests and fixtures | Create |
 | `tests/test_workflow_apd_gauntlet.py:27-49`, `tests/test_cli_plan_run.py`, `tests/runner/test_flow_pre_synthesis.py`, `tests/test_run_config_schema.py` | Extended tests | Modify |
 
@@ -166,7 +168,7 @@ A fixture in `test_sandbox_tools.py` removes every `apd-test-*` key from `sandbo
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_sandbox_tools.py -v`
+Run: `pytest tests/iac/test_sandbox_tools.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.sandbox`)
 
 - [ ] **Step 3: Implement `run_tool` and `register_invocation` in `tools/apd_gauntlet/sandbox/tools.py`**
@@ -175,7 +177,7 @@ Order inside `run_tool`: look up `_REGISTRY[tool]` (else `ToolNotAllowed("<tool>
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_sandbox_tools.py -v`
+Run: `pytest tests/iac/test_sandbox_tools.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -197,26 +199,26 @@ git commit -m "feat(sandbox): add the run_tool process gateway"
 
 - Consumes: `register_invocation`, `ToolNotAllowed`, `ToolRunner`, `ToolResult` (Task 1)
 - Produces:
-  - `invocations.py`: `def validate_atmos(args: list[str]) -> None`, `validate_tofu`, `validate_trivy`, `validate_checkov`, `validate_shellcheck` (same signature); `VALIDATORS: dict[str, Validator]` keyed by tool name; `ATMOS_ENV = {"ATMOS_TELEMETRY_ENABLED": "false", "ATMOS_VERSION_CHECK_ENABLED": "false"}`; `CHECKOV_ENV = {"CHECKOV_EXPERIMENTAL_TERRAFORM_MANAGED_MODULES": "True"}`; `TOFU_ENV = {"TF_INPUT": "0", "TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1", "GIT_CONFIG_NOSYSTEM": "1"}`; `def register_iac_invocations() -> None` (idempotent; `tofu` gets `helpers=("git",)` and `allow_network=True`)
+  - `invocations.py`: `def validate_atmos(args: list[str]) -> None`, `validate_tofu`, `validate_trivy`, `validate_checkov`, `validate_shellcheck` (same signature); `VALIDATORS: dict[str, Validator]` keyed by tool name; `ATMOS_ENV = {"ATMOS_TELEMETRY_ENABLED": "false", "ATMOS_VERSION_CHECK_ENABLED": "false", "ATMOS_TOOLCHAIN_INSTALL": "never", "ATMOS_EDITION": load_tool_specs()["atmos"].edition}` (the edition recorded in `data/iac/tools.yaml`); `CHECKOV_ENV = {"CHECKOV_EXPERIMENTAL_TERRAFORM_MANAGED_MODULES": "True"}`; `TOFU_ENV = {"TF_INPUT": "0", "TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1", "GIT_CONFIG_NOSYSTEM": "1"}`; `def register_iac_invocations() -> None` (idempotent; `tofu` gets `helpers=("git",)` and `allow_network=True`)
   - Argument builders (the only way Plans 1–3 compose scanner calls): `def trivy_config_args(target: Path, *, plan: bool = False, tf_vars: Sequence[Path] = (), include_passed: bool = False, ignorefile: Path | None = None) -> list[str]` (`ignorefile` adds `--ignorefile <path>`; Plan 2 Task 3 passes a copy of the client's ignore file only on the run that measures what the client suppresses); `def checkov_args(target: Path, *, plan: bool = False, var_files: Sequence[Path] = ()) -> list[str]` (`-f` with `--framework terraform_plan` when `plan`, else `-d` with `--framework terraform`); `def shellcheck_args(paths: Sequence[Path]) -> list[str]`
-  - `toolcheck.py`: `@dataclass(frozen=True) class ToolSpec: name: str; minimum: str; required_for: str; version_args: tuple[str, ...]; timeout_s: int; install: dict[str, str]`; `def load_tool_specs() -> dict[str, ToolSpec]`; `@dataclass(frozen=True) class ToolStatus: name: str; found: bool; version: str | None; minimum: str; ok: bool; detail: str`; `def parse_version(name: str, stdout: str) -> str | None`; `def version_at_least(found: str, minimum: str) -> bool`; `def tool_status(name: str, *, runner: ToolRunner = run_tool) -> ToolStatus`; `def install_hint(name: str, platform: str | None = None) -> str` (`platform` defaults to `sys.platform`)
+  - `toolcheck.py`: `@dataclass(frozen=True) class ToolSpec: name: str; minimum: str; tested: str; required_for: str; version_args: tuple[str, ...]; timeout_s: int; install: dict[str, str]; edition: str | None = None` (`edition` is set only on the atmos row); `def load_tool_specs() -> dict[str, ToolSpec]`; `@dataclass(frozen=True) class ToolStatus: name: str; found: bool; version: str | None; minimum: str; ok: bool; detail: str`; `def parse_version(name: str, stdout: str) -> str | None`; `def version_at_least(found: str, minimum: str) -> bool`; `def tool_status(name: str, *, runner: ToolRunner = run_tool) -> ToolStatus`; `def install_hint(name: str, platform: str | None = None) -> str` (`platform` defaults to `sys.platform`)
   - `iac/__init__.py` calls `register_iac_invocations()`.
 
 Exact accepted argument vectors (any other vector raises `ToolNotAllowed`; a value slot never starts with `-`; stack and component slots match `^[A-Za-z0-9_./-]+$`; path slots are absolute):
 
 | Tool | Accepted vectors |
 |---|---|
-| `atmos` | `version --format json`; `describe stacks -s <stack> --format json --process-functions=false [--process-templates=false]`; `describe component <component> -s <stack> --format yaml --process-functions=false [--process-templates=false]` |
+| `atmos` | `version --format json`; `describe stacks -s <stack> --format json --process-functions=false [--process-templates=false]`; `describe component <component> -s <stack> --format yaml --process-functions=false --provenance=true [--process-templates=false]` (`--provenance=true` is required, so a client `atmos.yaml` cannot turn provenance off) |
 | `tofu` | `version -json`; `get` |
-| `trivy` | `--version --format json`; `config --skip-check-update --disable-telemetry --skip-version-check --format json --misconfig-scanners terraform\|terraformplan-json [--quiet] [--include-non-failures] [--tf-vars <path>]… [--ignorefile <path>] <path>` (flags in any order before the final `<path>`; the builder omits `--quiet` because Trivy 0.70.0 reports HCL parse errors only on stderr, exits 0 and silently drops the file, and `--quiet` suppresses that line; `-c`/`--config` is rejected) |
+| `trivy` | `--version --format json`; `config --skip-check-update --disable-telemetry --skip-version-check --format json --misconfig-scanners terraform\|terraformplan-json [--include-non-failures] [--tf-vars <path>]… [--ignorefile <path>] <path>` (flags in any order before the final `<path>`; `--quiet` is rejected because Trivy 0.70.0 reports HCL parse errors only on stderr, exits 0 and silently drops the file, and `--quiet` suppresses that line; `-c`/`--config` is rejected) |
 | `checkov` | `--version`; `-d <dir>\|-f <file> --framework terraform\|terraform_plan -o json --skip-download --download-external-modules false --soft-fail [--var-file <path>]…` (flags in any order) |
 | `shellcheck` | `--version`; `-f json --norc <path>…` |
 
-`data/iac/tools.yaml` rows: `atmos {minimum: "1.231.0", required_for: "Atmos roots", version_args: [version, --format, json], timeout_s: 120}`, `tofu {minimum: "1.8.0", required_for: "Module fetch only", version_args: [version, -json], timeout_s: 600}`, `trivy {minimum: "0.70.0", required_for: "Baseline scanning", version_args: [--version, --format, json], timeout_s: 600}`, `checkov {minimum: "3.3.26", required_for: "Relationship checks", version_args: [--version], timeout_s: 900}`, `shellcheck {minimum: "0.9", required_for: "Script checks (optional)", version_args: [--version], timeout_s: 60}`; each with `install: {darwin, linux, win32}` commands (`brew install atmos`, `pipx install checkov`, and so on).
+`data/iac/tools.yaml` rows: `atmos {minimum: "1.231.0", required_for: "Atmos roots", version_args: [version, --format, json], timeout_s: 120, edition: <the Atmos edition to pin, recorded in Step 1>}`, `tofu {minimum: "1.12.6", required_for: "Module fetch only", version_args: [version, -json], timeout_s: 600}`, `trivy {minimum: "0.71.1", required_for: "Baseline scanning", version_args: [--version, --format, json], timeout_s: 600}`, `checkov {minimum: "3.3.26", required_for: "Relationship checks", version_args: [--version], timeout_s: 900}`, `shellcheck {minimum: "0.9", required_for: "Script checks (optional)", version_args: [--version], timeout_s: 60}`; each with `install: {darwin, linux, win32}` commands (`brew install atmos`, `pipx install checkov`, and so on). The file also records `tested: {atmos: 1.232.0, tofu: 1.13.1, trivy: 0.75.0, checkov: 3.3.29, shellcheck: 0.11.0}`, which `load_tool_specs` copies into each `ToolSpec.tested`.
 
 - [ ] **Step 1: Verify the flags this task pins**
 
-Run each with the scratch tools and confirm the listed flags appear: `atmos describe stacks --help`, `atmos describe component --help`, `atmos version --help`, `trivy config --help`, `checkov --help`. Then record, as the first line of `invocations.py`'s module docstring, the assumptions still unverified for tools not installed here: `tofu version -json`, `tofu get`, `TF_INPUT`, `TF_IN_AUTOMATION`, `CHECKPOINT_DISABLE`, `shellcheck --norc`. Expected: every Atmos, Trivy and Checkov flag present, including Trivy's `--ignorefile string  specify .trivyignore file (default ".trivyignore")` (verified on 2026-10-11 against Atmos 1.231.0, Trivy 0.70.0, Checkov 3.3.26). If OpenTofu or ShellCheck is on PATH, run `tofu get -help` and `shellcheck --help` and correct the table before Step 2.
+Run each with `PATH="$APD_IAC_TOOLS_BIN:$PATH"` and confirm the listed flags appear: `atmos describe stacks --help`, `atmos describe component --help` (including `--provenance`), `atmos version --help`, `trivy config --help`, `checkov --help`. Record in `data/iac/tools.yaml` the Atmos edition that `ATMOS_EDITION` pins. Then record, as the first line of `invocations.py`'s module docstring, the assumptions still unverified for tools not installed here: `tofu version -json`, `tofu get`, `TF_INPUT`, `TF_IN_AUTOMATION`, `CHECKPOINT_DISABLE`, `shellcheck --norc`. Expected: every Atmos, Trivy and Checkov flag present, including Trivy's `--ignorefile string  specify .trivyignore file (default ".trivyignore")` (verified on 2026-10-11 against Atmos 1.231.0, Trivy 0.70.0, Checkov 3.3.26). If OpenTofu or ShellCheck is on PATH, run `tofu get -help` and `shellcheck --help` and correct the table before Step 2.
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -224,7 +226,7 @@ Run each with the scratch tools and confirm the listed flags appear: `atmos desc
 ACCEPTED = [
     ("atmos", ["describe", "stacks", "-s", "orgs/prod", "--format", "json", "--process-functions=false"]),
     ("atmos", ["describe", "stacks", "-s", "orgs/prod", "--format", "json", "--process-functions=false", "--process-templates=false"]),
-    ("atmos", ["describe", "component", "vpc", "-s", "prod", "--format", "yaml", "--process-functions=false"]),
+    ("atmos", ["describe", "component", "vpc", "-s", "prod", "--format", "yaml", "--process-functions=false", "--provenance=true"]),
     ("atmos", ["version", "--format", "json"]),
     ("tofu", ["get"]),
     ("trivy", ["config", "--skip-check-update", "--disable-telemetry", "--skip-version-check",
@@ -241,6 +243,7 @@ REJECTED = [
     ("atmos", ["terraform", "plan", "vpc", "-s", "prod"]),
     ("atmos", ["describe", "stacks", "-s", "prod", "--format", "json", "--process-functions=false", "--use-version=1.0.0"]),
     ("atmos", ["describe", "stacks", "-s", "--ai", "--format", "json", "--process-functions=false"]),
+    ("atmos", ["describe", "component", "vpc", "-s", "prod", "--format", "yaml", "--process-functions=false"]),  # provenance not forced
     ("tofu", ["init"]), ("tofu", ["get", "-update"]), ("tofu", ["plan"]),
     ("trivy", ["config", "--format", "json", "--misconfig-scanners", "terraform", "/w"]),       # update not skipped
     ("trivy", ["image", "alpine"]),
@@ -248,6 +251,8 @@ REJECTED = [
                "--format", "json", "--misconfig-scanners", "terraform", "--ignorefile", "rel/.trivyignore", "/w"]),  # relative path
     ("trivy", ["config", "--skip-check-update", "--disable-telemetry", "--skip-version-check",
                "--format", "json", "--misconfig-scanners", "terraform", "-c", "/w/trivy.yaml", "/w"]),            # client config
+    ("trivy", ["config", "--skip-check-update", "--disable-telemetry", "--skip-version-check",
+               "--format", "json", "--misconfig-scanners", "terraform", "--quiet", "/w"]),                     # hides parse errors
     ("checkov", ["-d", "/w", "--framework", "terraform", "-o", "json", "--soft-fail"]),        # downloads allowed
     ("checkov", ["-d", "/w", "--framework", "terraform", "-o", "json", "--skip-download",
                  "--download-external-modules", "true", "--soft-fail"]),
@@ -269,6 +274,8 @@ def test_only_iac_tools_registered_by_package():
     import apd_gauntlet.iac  # noqa: F401
     assert {"atmos", "tofu", "trivy", "checkov", "shellcheck"} <= set(sandbox_tools._REGISTRY)
     assert "terraform" not in sandbox_tools._REGISTRY
+
+def test_atmos_env_registered(): ...   # the registered atmos env holds ATMOS_TELEMETRY_ENABLED=false, ATMOS_VERSION_CHECK_ENABLED=false, ATMOS_TOOLCHAIN_INSTALL=never and ATMOS_EDITION equal to the edition in data/iac/tools.yaml
 ```
 
 ```python
@@ -276,6 +283,7 @@ def test_builders_produce_accepted_vectors(tmp_path):
     validate_trivy(trivy_config_args(tmp_path, tf_vars=[tmp_path / "a.json"], include_passed=True))
     validate_trivy(trivy_config_args(tmp_path / "plan.json", plan=True))
     validate_trivy(trivy_config_args(tmp_path, ignorefile=tmp_path / "client.trivyignore.yaml"))
+    assert "--quiet" not in trivy_config_args(tmp_path, include_passed=True)
     validate_checkov(checkov_args(tmp_path, var_files=[tmp_path / "a.tfvars"]))
     validate_checkov(checkov_args(tmp_path / "plan.json", plan=True))
     validate_shellcheck(shellcheck_args([tmp_path / "x.sh"]))
@@ -286,7 +294,7 @@ def test_version_parsing():
     assert parse_version("atmos", '{"version": "1.231.0", "os": "linux"}') == "1.231.0"
     assert parse_version("trivy", '{"Version":"0.70.0"}') == "0.70.0"
     assert parse_version("checkov", "3.3.26\n") == "3.3.26"
-    assert parse_version("tofu", '{"terraform_version": "1.10.6"}') == "1.10.6"
+    assert parse_version("tofu", '{"terraform_version": "1.13.1"}') == "1.13.1"
     assert parse_version("shellcheck", "ShellCheck - shell script analysis tool\nversion: 0.9.0\n") == "0.9.0"
 
 def test_version_compare():
@@ -310,7 +318,7 @@ Add `tests/iac/fakes.py` with `class FakeRunner` (conforms to `ToolRunner`; `on(
 
 - [ ] **Step 3: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_invocations.py tests/iac/test_toolcheck.py -v`
+Run: `pytest tests/iac/test_invocations.py tests/iac/test_toolcheck.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.iac`)
 
 - [ ] **Step 4: Implement the validators, the data file and `toolcheck.py`**
@@ -319,7 +327,7 @@ Validators parse the vector against the table with an explicit flag set per form
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac -v`
+Run: `pytest tests/iac -v`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -333,7 +341,7 @@ git commit -m "feat(iac): add the tool argument allowlist and tool inventory"
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/data/schemas/run-config.schema.json:95-118`
+- Modify: `tools/apd_gauntlet/data/schemas/run-config.schema.json` (anchor on `"infrastructure"`; LA1 and CAT1 edit the schema first)
 - Create: `tools/apd_gauntlet/iac/model.py`, `tools/apd_gauntlet/iac/config.py`, `tests/fixtures/valid/run-config-with-iac.yaml`, `tests/fixtures/invalid/run-config-iac-bad-engine.yaml`, `tests/fixtures/invalid/run-config-iac-traversal.yaml`
 - Modify: `tests/iac/conftest.py` (helpers `write_run`, `copy_fixture`, `run_with_fixture`, `load_index`, `tree_digest`, `grep_tree`)
 - Test: `tests/test_run_config_schema.py` (extend), `tests/iac/test_config.py`
@@ -343,7 +351,7 @@ git commit -m "feat(iac): add the tool argument allowlist and tool inventory"
 - Produces (schema, R4): under `infrastructure.static`, `terraform.items` becomes `oneOf: [<the existing guarded string>, {type: object, additionalProperties: false, required: [root], properties: {root: <guarded string>, var_files: {array of guarded strings}, engine: {enum: [opentofu, terraform]}}}]`; `atmos: {array of {additionalProperties: false, required: [root], properties: {root: <guarded string>, stacks: {array of strings, minLength 1}}}}`. Under `infrastructure`: `modules: {additionalProperties: false, properties: {fetch: {type: boolean}}}`; `plans: {array of {additionalProperties: false, required: [path], properties: {path: <guarded string>, stack: string, component: string, root: <guarded string>}}}`; `require_tools: {type: boolean}`.
 - Produces (`model.py`):
   - `Engine = Literal["opentofu", "terraform"]`; `FetchStatus = Literal["fetched", "local", "not_fetched", "partial"]`; `RootStatus = Literal["resolved", "partial", "unresolved-raw"]`
-  - `UnknownReason = Literal["function_literal", "template_unresolved", "outside_include", "remote_include", "remote_import", "gomplate_datasource", "escaping_symlink", "multiline_rewrite", "stack_unresolved", "component_not_committed", "root_refused", "escaping_module_source", "remote_module_not_fetched", "credentials_required", "module_fetch_failed", "early_eval_unresolved", "parse_error", "tool_missing", "tool_failed", "internal_error"]`
+  - `UnknownReason = Literal["function_literal", "template_unresolved", "outside_include", "remote_include", "remote_import", "gomplate_datasource", "atmos_config_stripped", "escaping_symlink", "multiline_rewrite", "stack_unresolved", "component_not_committed", "root_refused", "escaping_module_source", "remote_module_not_fetched", "credentials_required", "module_fetch_failed", "early_eval_unresolved", "parse_error", "tool_missing", "tool_failed", "internal_error"]`
   - `ExecutionKind = Literal["atmos_exec", "atmos_custom_command", "atmos_workflow_shell", "atmos_hook", "atmos_component_command", "local_exec", "remote_exec", "external_data", "provisioner_resource"]`
   - `@dataclass(frozen=True) class Unknown: reason: UnknownReason; file_path: str; line: int; detail: str; root: str | None = None; instance: str | None = None; address: str | None = None; key: str = ""`
   - `@dataclass(frozen=True) class ExecutionPoint: kind: ExecutionKind; file_path: str; line: int; detail: str; root: str | None = None; instance: str | None = None; address: str | None = None`
@@ -406,14 +414,14 @@ Conftest helpers: `write_run(tmp_path, extra)` writes `runs/r/.apd-run.yaml` wit
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_run_config_schema.py tests/iac/test_config.py -v`
+Run: `pytest tests/test_run_config_schema.py tests/iac/test_config.py -v`
 Expected: FAIL (the new fixtures fail validation; `apd_gauntlet.iac.config` missing)
 
 - [ ] **Step 3: Implement the schema change, `model.py` and `config.py`**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_run_config_schema.py tests/iac/test_config.py tests/test_cli_validate_run_config.py -v`
+Run: `pytest tests/test_run_config_schema.py tests/iac/test_config.py tests/test_cli_validate_run_config.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -470,14 +478,14 @@ def test_parse_error(tmp_path):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_hcl.py -v`
+Run: `pytest tests/iac/test_hcl.py -v`
 Expected: FAIL (module missing)
 
 - [ ] **Step 3: Implement `hcl.py`**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_hcl.py -v`
+Run: `pytest tests/iac/test_hcl.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -552,14 +560,14 @@ def test_override_names():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_discover.py tests/iac/test_engine.py -v`
+Run: `pytest tests/iac/test_discover.py tests/iac/test_engine.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `discover.py` and `engine.py`**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_discover.py tests/iac/test_engine.py -v`
+Run: `pytest tests/iac/test_discover.py tests/iac/test_engine.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -594,6 +602,7 @@ Rewrite rules, each a single-line substitution so provenance line numbers still 
 | A Go template action `{{ … }}` containing `atmos.` (`atmos.Component`, `atmos.Store`, `atmos.GomplateDatasource`, any other) | the whole scalar becomes a quoted literal with `{{`/`}}` replaced by `{ {`/`} }` | `template_unresolved` |
 | `components.terraform.command`, `components.helmfile.command`, `components.packer.command` in the copied `atmos.yaml`, and any component-level `command:` key in a stack manifest | the value becomes `SENTINEL_COMMAND` | none (the original value is kept in `atmos_config` for engine selection and Task 10's execution points) |
 | `templates.settings.gomplate.datasources` and `templates.settings.sprig` in the copied `atmos.yaml` | removed; `templates.settings.gomplate.enabled: false` written | `gomplate_datasource` |
+| `toolchain`, top-level `dependencies` and `auth` in the copied `atmos.yaml` | removed | `atmos_config_stripped`, one per key |
 
 A file whose rewrite cannot stay on one line (a block-scalar include, a multi-line template action) is excluded from the copy and recorded `multiline_rewrite`; its stacks later fail to resolve and are recorded as unresolved. A symlink whose real path leaves the root is not copied (`escaping_symlink`). A root whose `base_path`, `components.terraform.base_path`, `stacks.base_path` or `workflows.base_path` is absolute or resolves outside the root is refused (`refused` set, one `root_refused` unknown, nothing copied).
 
@@ -676,7 +685,7 @@ def test_multiline_include_excludes_file(tmp_path): ...  # "x: !include |\n  htt
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_atmos_sanitize.py -v`
+Run: `pytest tests/iac/test_atmos_sanitize.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `sanitize_root`**
@@ -693,7 +702,7 @@ A local include target resolves first against the manifest's directory, then aga
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_atmos_sanitize.py -v`
+Run: `pytest tests/iac/test_atmos_sanitize.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -717,18 +726,18 @@ git commit -m "feat(iac): sanitise Atmos roots on a scratch copy"
   - `def list_stack_manifests(copy_root: Path, atmos_config: dict[str, Any]) -> list[str]` — manifest names relative to `stacks.base_path`, without extension, from `included_paths` minus `excluded_paths` (`**` globs), sorted
   - `@dataclass class StackResolution: manifest: str; stack: str | None; components: dict[str, dict[str, Any]]; templates: bool; error: str | None`
   - `def resolve_manifest(copy_root: Path, manifest: str, *, runner: ToolRunner, timeout_s: int) -> StackResolution` — `atmos describe stacks -s <manifest> --format json --process-functions=false`, retried once with `--process-templates=false` on a nonzero exit; both failing → `error` holds the last 2,000 characters of stderr
-  - `FUNCTION_LITERAL_RE = re.compile(r"^!(?P<fn>[a-z][a-z0-9._-]*)(?:\s|$)")`; `TEMPLATE_REMNANT_RE = re.compile(r"\{\{|\{ \{|<no value>")`
+  - `FUNCTION_LITERAL_RE = re.compile(r"^!(?P<fn>[a-z][a-z0-9._-]*)(?:\s|$)")`; `TEMPLATE_REMNANT_RE = re.compile(r"\{\{|\{ \{|<no value>|\(computed\)")` (`(computed)` is Atmos's placeholder under the `warn` error mode)
   - `def unknown_paths(value: Any, prefix: str) -> list[tuple[str, str]]` — `(path, literal)` for every string matching either pattern, depth first
   - `def instances_from_stack(res: StackResolution, root: Root, sanitize: SanitizeResult, *, inputs: Path, stack_globs: Sequence[str]) -> tuple[list[Instance], list[Unknown], list[ExecutionPoint]]`
   - `def parse_provenance(text: str) -> dict[str, tuple[str, int | None]]` — key path (`vars.map_public_ip_on_launch`) → (manifest file relative to `stacks.base_path`, line)
-  - `def fetch_provenance(copy_root: Path, component: str, stack: str, *, runner: ToolRunner, timeout_s: int) -> dict[str, tuple[str, int | None]]`
+  - `def fetch_provenance(copy_root: Path, component: str, stack: str, *, runner: ToolRunner, timeout_s: int) -> dict[str, tuple[str, int | None]]` — `atmos describe component <component> -s <stack> --format yaml --process-functions=false --provenance=true`, so provenance is on whatever the client `atmos.yaml` sets; when the parsed output carries an `__atmos_provenance` key, that is read in preference to the comments
   - `def locate_var_definition(copy_root: Path, stacks_base: str, component: str, var: str) -> tuple[str, int] | None` — the first manifest line `<var>:` nested under a `<component>:` key line, as a path relative to `stacks_base`
   - `def attach_provenance(instances: Sequence[Instance], copy_root: Path, root: Root, *, runner: ToolRunner, timeout_s: int) -> list[Unknown]` — fills each `Instance.provenance` (keyed by variable name, files made `inputs`-relative) from `fetch_provenance`, with at most `IAC_MAX_CONCURRENCY` calls in flight; a failed call yields a `tool_failed` unknown for that instance and leaves its provenance empty
   - `IAC_MAX_CONCURRENCY = 4`
 
 `instances_from_stack` keeps components whose `metadata.type` is not `abstract` and whose stack name matches a `stack_globs` entry (`fnmatch`; empty means all). Each instance gets `id = "<stack>/<component>"`, `module_path` = Atmos root path joined with the component's `component_info.component_path`, `vars` minus unknown top-level keys, `unknown_vars` sorted, `inherited` from each component in `metadata.inherits` (values from the same stack output, locations from `locate_var_definition`), `settings`, `backend`, `backend_type`. Each literal yields an `Unknown(reason="function_literal" | "template_unresolved", key=<var path>)` citing the line `locate_var_definition` finds for the component, then for each component in `metadata.inherits`, else line 1 of the manifest (all `inputs`-relative); `!terraform.output` and `!terraform.state` add `"<stack>/<target component>"` to `dependencies`; `!exec` also yields `ExecutionPoint("atmos_exec")`. A component directory missing under `inputs` yields `component_not_committed`. A failed manifest yields one `stack_unresolved` unknown citing line 1 with Atmos's stderr as `detail`.
 
-Provenance comment format (Atmos 1.231.0, verified on the probe fixture): `vars:` subtree lines end in `# ● [1] orgs/prod.yaml:8`, `# ○ [2] catalog/vpc.yaml:6` or `# ∴ …`, and a line may omit `:<line>`.
+Provenance comment format (Atmos 1.231.0, verified on the probe fixture): `vars:` subtree lines end in `# ● [1] orgs/prod.yaml:8`, `# ○ [2] catalog/vpc.yaml:6` or `# ∴ …`; a line may omit `:<line>` or append `:<col>` after it.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -752,6 +761,7 @@ def test_parse_provenance():
     p = parse_provenance(PROV)
     assert p["vars.map_public_ip_on_launch"] == ("orgs/prod.yaml", 8)
     assert p["vars.enable_flow_logs"] == ("catalog/vpc.yaml", 6) and p["vars.net.cidr"] == ("orgs/prod.yaml", None)
+    assert parse_provenance("vars:\n  a: 1  # ● [1] orgs/prod.yaml:8:5\n")["vars.a"] == ("orgs/prod.yaml", 8)
 
 def test_manifests_listed(tmp_path):
     res = sanitize_basic(tmp_path)
@@ -783,6 +793,7 @@ def test_instances_unknowns_and_execution_points(tmp_path):
 
 def test_stack_globs_filter(tmp_path): ...       # stack_globs=("dev*",) → no prod instances
 def test_no_value_is_unknown(): assert unknown_paths({"name": "<no value>"}, "vars") == [("vars.name", "<no value>")]
+def test_computed_marker_is_unknown(): assert unknown_paths({"id": "(computed)"}, "vars") == [("vars.id", "(computed)")]
 ```
 
 `DEV_JSON` mirrors `PROD_JSON` for `dev` with `name: "{{ .vars.stage | nosuchfunc }}"`.
@@ -797,20 +808,23 @@ def test_live_resolution_matches_probe(tmp_path, require_tools):
     prov = fetch_provenance(res.copy_root, "vpc", "prod", runner=run_tool, timeout_s=120)
     assert prov["vars.map_public_ip_on_launch"] == ("orgs/prod.yaml", 8)
     assert prov["vars.enable_flow_logs"] == ("catalog/vpc.yaml", 6)
+
+@pytest.mark.iac_tools
+def test_provenance_forced_on_against_client_config(tmp_path, require_tools): ...   # the copied atmos.yaml turns provenance off → fetch_provenance still returns ("orgs/prod.yaml", 8) for vars.map_public_ip_on_launch
 ```
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_atmos_resolve.py tests/iac/test_atmos_resolve_live.py -v`
+Run: `pytest tests/iac/test_atmos_resolve.py tests/iac/test_atmos_resolve_live.py -v`
 Expected: FAIL (functions missing; live test fails or skips without Atmos)
 
 - [ ] **Step 3: Implement the resolve half of `atmos.py`**
 
-`resolve_manifest` passes `cwd=copy_root`. `parse_provenance` tracks the YAML key path by indentation and reads the trailing comment with `re.compile(r"#\s+[●○∴]\s+\[\d+\]\s+(?P<file>\S+?)(?::(?P<line>\d+))?\s*$")`.
+`resolve_manifest` passes `cwd=copy_root`. `parse_provenance` tracks the YAML key path by indentation and reads the trailing comment with `re.compile(r"#\s+[●○∴]\s+\[\d+\]\s+(?P<file>\S+?)(?::(?P<line>\d+)(?::\d+)?)?\s*$")` (an optional `:col` follows the line).
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `PATH=/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/bin:$PATH /home/claude/venv-apd/bin/pytest tests/iac/test_atmos_resolve.py tests/iac/test_atmos_resolve_live.py -v`
+Run: `PATH="$APD_IAC_TOOLS_BIN:$PATH" pytest tests/iac/test_atmos_resolve.py tests/iac/test_atmos_resolve_live.py -v`
 Expected: PASS (the live test runs where Atmos 1.231.0 is on PATH and skips elsewhere)
 
 - [ ] **Step 5: Commit**
@@ -833,6 +847,7 @@ git commit -m "feat(iac): resolve Atmos stacks with functions off and parse prov
   - `CONSENT_SUBJECT = "iac_module_fetch"`
   - `ConsentMethod = Literal["flag", "prompt", "tui", "web"]`
   - `def sources_sha256(sources: Sequence[str]) -> str` — SHA-256 of the sorted unique sources joined with `"\n"`
+  - `def read_consent(run_dir: Path) -> dict[str, Any]` — the parsed `<run>/.apd-state/consent.json`, every subject included, `{}` when the file is absent (IAC3 Task 9 consumes it)
   - `def has_fetch_consent(run_dir: Path, sources: Sequence[str]) -> bool` (R6)
   - `def record_fetch_consent(run_dir: Path, sources: Sequence[str], method: ConsentMethod) -> None` (R6) — writes `consent.json["iac_module_fetch"] = {"sources": sorted unique, "sources_sha256", "granted_at": UTC ISO-8601 with Z, "method"}` by read-modify-write with an atomic rename, preserving every other subject
 
@@ -861,18 +876,18 @@ def test_changed_sources_invalidate_consent(tmp_path):
     assert not has_fetch_consent(tmp_path, SRC + ["git::https://example.com/new.git?ref=v1"])
 ```
 
-`write_consent`/`read_consent` read and write `<dir>/.apd-state/consent.json`.
+`write_consent` (a test helper) writes `<dir>/.apd-state/consent.json`; the tests read it back with the exported `read_consent`.
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_consent.py -v`
+Run: `pytest tests/iac/test_consent.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `consent.py`**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_consent.py -v`
+Run: `pytest tests/iac/test_consent.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -905,15 +920,16 @@ git commit -m "feat(iac): record module-fetch consent under its own subject"
     - `@dataclass(frozen=True) class ModuleSource: workspace: str; module: str; source: str; version: str | None; file_path: str; line: int; remote: bool`
     - `def list_module_sources(ws: Workspace, known_vars: Mapping[str, Any]) -> tuple[list[ModuleSource], list[Unknown]]` — remote means not `./`/`../`; a source containing `var.` is resolved from `known_vars` only when the engine is opentofu (`early_eval_unresolved` otherwise)
     - `def needs_credentials(source: str) -> bool` — `git@`, `ssh://`, `git::ssh://`, `s3::`, `gcs::`, or a registry host other than `registry.terraform.io` and `registry.opentofu.org`
-    - `def fetch_modules(ws: Workspace, sources: Sequence[ModuleSource], *, runner: ToolRunner, timeout_s: int) -> tuple[FetchStatus, list[Unknown]]`
+    - `def normalise_source(source: str, version: str | None = None) -> str` — strips a leading `registry.terraform.io/` or `registry.opentofu.org/` and appends `@<version>` when a version is given; consent strings and `modules.json` entries are compared in this form
+    - `def fetch_modules(ws: Workspace, sources: Sequence[ModuleSource], *, runner: ToolRunner, timeout_s: int, consented: Collection[str] = ()) -> tuple[FetchStatus, list[Unknown], list[str]]` — `consented` holds the consent's sources in `normalise_source` form (as `collect_fetch_sources` returns them), including transitive sources consented after an earlier run; the third value lists, sorted and in `normalise_source` form, every transitive source `modules.json` recorded, covered or rolled back (Task 11 keeps them across runs)
 
-Workspace layout: `tree = ws_root / "ws-<sha8>"`, `target = tree / <module_path>`; each local module directory is mirrored at its own `inputs`-relative path under `tree`. Per directory: copy the files `apply_precedence` keeps, written with `.tf`/`.tf.json` names; copy subdirectories that hold no `IAC_SUFFIXES` file (templates, policies) recursively; never copy `.terraform/`, `.git/` or `SCANNER_CONFIG_FILES`. Copies are byte-identical, so inline suppression comments (`#trivy:ignore:…`, `#checkov:skip=…`) stay in the workspace; Plan 2 Task 3 scans a separate neutralised copy. Override files are copied, and each block they define becomes an `Override` naming the non-override file that defines the same address (`overrides_file`). Each kept file is parsed with `parse_file`; an `HclParseError` yields a `parse_error` unknown citing the file's line 1, and the file is still copied so scanners see it. Variables: an Atmos instance writes `instance.vars` to `target / VARS_FILENAME`; a plain root copies its declared `var_files` plus `terraform.tfvars` and `*.auto.tfvars(.json)` and lists them in `var_files`. `unknown_vars` = the instance's unknowns plus variables declared without a default and absent from every var file. `not_analysed` lists `NOT_ANALYSED_SUFFIXES` files and the files `apply_precedence` excluded; `IGNORED_SUFFIXES` files are skipped silently. The workspace id is `"ws-" + sha256(content_sha256 + vars_sha256 + engine)[:8]`.
+Workspace layout: `tree = ws_root / "ws-<sha8>"`, `target = tree / <module_path>`; each local module directory is mirrored at its own `inputs`-relative path under `tree`. Per directory: copy the files `apply_precedence` keeps, written with `.tf`/`.tf.json` names; copy subdirectories that hold no `IAC_SUFFIXES` file (templates, policies) recursively; never copy `.terraform/`, `.git/` or `SCANNER_CONFIG_FILES`. Archives (`*.tgz`, `*.tar*`, `*.zip`) and files over 5 MB are never copied into a workspace either; they are listed under `not_analysed`. Copies are byte-identical, so inline suppression comments (`#trivy:ignore:…`, `#checkov:skip=…`) stay in the workspace; Plan 2 Task 3 scans a separate neutralised copy. Override files are copied, and each block they define becomes an `Override` naming the non-override file that defines the same address (`overrides_file`). Each kept file is parsed with `parse_file`; an `HclParseError` yields a `parse_error` unknown citing the file's line 1, and the file is still copied so scanners see it. Variables: an Atmos instance writes `instance.vars` to `target / VARS_FILENAME`; a plain root copies its declared `var_files` plus `terraform.tfvars` and `*.auto.tfvars(.json)` and lists them in `var_files`. `unknown_vars` = the instance's unknowns plus variables declared without a default and absent from every var file. `not_analysed` lists `NOT_ANALYSED_SUFFIXES` files and the files `apply_precedence` excluded; `IGNORED_SUFFIXES` files are skipped silently. The workspace id is `"ws-" + sha256(content_sha256 + vars_sha256 + engine)[:8]`.
 
-`fetch_modules` runs `runner("tofu", ["get"], cwd=ws.target, network=True, timeout_s=…)` only for workspaces with at least one remote source that does not need credentials; credential sources become `credentials_required` unknowns without a call. Exit 0 → `fetched` (or `partial` when some sources were skipped), else `module_fetch_failed` with stderr and `not_fetched`.
+`fetch_modules` runs `runner("tofu", ["get"], cwd=ws.target, network=True, timeout_s=…)` only for workspaces with at least one remote source that does not need credentials; credential sources become `credentials_required` unknowns without a call. Exit 0 → `fetched` (or `partial` when some sources were skipped), else `module_fetch_failed` with stderr and `not_fetched`. After an exit 0, `fetch_modules` reads `.terraform/modules/modules.json` under `ws.target` and checks each entry. It skips the root entry (`Key` `""`) and every local source (`./` or `../`, the remote rule of `list_module_sources`): a local submodule inside a fetched module is covered by its parent's consent. An entry whose `normalise_source(Source)` equals `normalise_source(s.source)` for one of `sources` is that direct call, covered by the call's own consent whatever version its constraint resolved to. Every other entry is transitive, and is covered only when `normalise_source(Source, Version)` is in `consented`. For a transitive source that is not covered, it removes that workspace's fetched tree, sets `not_fetched`, and records `remote_module_not_fetched` with detail `transitive source not consented: <src>` (`<src>` in `normalise_source` form). The third return value lists every transitive source, covered or not; Task 11's fetch stage keeps them, so `collect_fetch_sources` lists them on the next `iac consent` and on every later run (consolidated plan DEC-24).
 
 - [ ] **Step 1: Verify the OpenTofu assumptions**
 
-With OpenTofu ≥ 1.8.0 on PATH, in a scratch copy of `tests/fixtures/iac/plain` with a registry module added: run `tofu get`, confirm `.terraform/modules/modules.json` is written and that `TF_INPUT=0` suppresses prompts; add `variable "ver" {}` with `source = "./mods/${var.ver}"`, write `apd.auto.tfvars.json`, and confirm `tofu get` reads it for the early-evaluated source. Expected: record each result in `fetch.py`'s module docstring. If `tofu get` ignores the file, `list_module_sources` records every `var.`-dependent source as `early_eval_unresolved` regardless of engine (spec §7.5 step 3) and the test `test_early_eval_resolved_for_opentofu` asserts that instead.
+With OpenTofu ≥ 1.12.6 on PATH, in a scratch copy of `tests/fixtures/iac/plain` with a registry module added: run `tofu get`, confirm `.terraform/modules/modules.json` is written and that `TF_INPUT=0` suppresses prompts; add `variable "ver" {}` with `source = "./mods/${var.ver}"`, write `apd.auto.tfvars.json`, and confirm `tofu get` reads it for the early-evaluated source. Expected: record each result in `fetch.py`'s module docstring. If `tofu get` ignores the file, `list_module_sources` records every `var.`-dependent source as `early_eval_unresolved` regardless of engine (spec §7.5 step 3) and the test `test_early_eval_resolved_for_opentofu` asserts that instead.
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -973,10 +989,16 @@ def test_early_eval_resolved_for_opentofu(tmp_path): ...   # source "./mods/${va
 def test_fetch_calls_tofu_get_with_network(tmp_path, fake_runner):
     ws = ws_with(tmp_path, 'module "a" { source = "git::https://example.com/a.git?ref=v1" }\n')
     fake_runner.on("tofu", ["get"])
-    status, unknowns = fetch_modules(ws, list_module_sources(ws, {})[0], runner=fake_runner, timeout_s=60)
-    assert status == "fetched" and fake_runner.calls == [("tofu", ["get"], ws.target, True)]
+    status, unknowns, transitive = fetch_modules(ws, list_module_sources(ws, {})[0], runner=fake_runner, timeout_s=60)
+    assert status == "fetched" and transitive == [] and fake_runner.calls == [("tofu", ["get"], ws.target, True)]
+
+def test_normalise_source():
+    assert normalise_source("registry.opentofu.org/terraform-aws-modules/vpc/aws", "5.1.0") == "terraform-aws-modules/vpc/aws@5.1.0"
+    assert normalise_source("git::https://example.com/a.git?ref=v1") == "git::https://example.com/a.git?ref=v1"
 
 def test_credential_sources_skipped_without_call(tmp_path, fake_runner): ...   # only git@ source → no call, status not_fetched, unknown credentials_required
+def test_transitive_source_not_consented_rolled_back(tmp_path, fake_runner): ...   # tofu get's effect writes modules.json with a nested source absent from sources and consented → fetched tree removed, status not_fetched, unknown remote_module_not_fetched "transitive source not consented: <src>", and the third value lists <src>
+def test_consented_registry_module_with_local_submodule_not_rolled_back(tmp_path, fake_runner): ...   # module "vpc" source "terraform-aws-modules/vpc/aws" version "5.1.0"; tofu get's effect writes modules.json with the root entry (Key ""), {"Key": "vpc", "Source": "registry.opentofu.org/terraform-aws-modules/vpc/aws", "Version": "5.1.0"} and {"Key": "vpc.x", "Source": "./modules/x"} → status fetched, third value [], no remote_module_not_fetched unknown
 ```
 
 `inst(id, module_path, engine)` builds an `Instance` with `root=id`; `ws_with(tmp_path, text)` writes a one-file module and builds its workspace.
@@ -995,14 +1017,14 @@ This test pins spec §7.5's open item, verified on 2026-10-11: Trivy 0.70.0 reso
 
 - [ ] **Step 3: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_workspace.py tests/iac/test_fetch.py tests/iac/test_fetch_live.py -v`
+Run: `pytest tests/iac/test_workspace.py tests/iac/test_fetch.py tests/iac/test_fetch_live.py -v`
 Expected: FAIL
 
 - [ ] **Step 4: Implement `workspace.py` and `fetch.py`**
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `PATH=/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/bin:/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/ckv/bin:$PATH /home/claude/venv-apd/bin/pytest tests/iac/test_workspace.py tests/iac/test_fetch.py tests/iac/test_fetch_live.py -v`
+Run: `PATH="$APD_IAC_TOOLS_BIN:$PATH" pytest tests/iac/test_workspace.py tests/iac/test_fetch.py tests/iac/test_fetch_live.py -v`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -1079,14 +1101,14 @@ def test_atmos_execution_points(tmp_path): ...  # atmos.yaml commands + workflow
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_index.py tests/iac/test_inventory.py -v`
+Run: `pytest tests/iac/test_index.py tests/iac/test_inventory.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `inventory.py`, `index.py`, `summary.py` and the schema**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_index.py tests/iac/test_inventory.py tests/test_meta_schemas.py tests/test_schema_vocab_centralized.py -v`
+Run: `pytest tests/iac/test_index.py tests/iac/test_inventory.py tests/test_meta_schemas.py tests/test_schema_vocab_centralized.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1101,29 +1123,29 @@ git commit -m "feat(iac): add the evidence index skeleton, execution points and 
 **Files:**
 
 - Create: `tools/apd_gauntlet/iac/pipeline.py`, `tools/apd_gauntlet/iac/cli.py`, `docs/iac-evaluation.md`, `tests/fixtures/iac/plain-remote/` (the `plain` fixture plus `module "vpc" { source = "terraform-aws-modules/vpc/aws" version = "5.1.0" }` in `infra/live/prod/main.tf`)
-- Modify: `tools/apd_gauntlet/cli.py` (`from .iac.cli import iac_group`; `main.add_command(iac_group)`), `docs/schema-evolution.md`, `CHANGELOG.md`, `docs/running-the-gauntlet.md:359`
+- Modify: `tools/apd_gauntlet/cli.py` (`from .iac.cli import iac_group`; `main.add_command(iac_group)`), `docs/schema-evolution.md`, `CHANGELOG.md`, `docs/running-the-gauntlet.md` (the static-infra row)
 - Test: `tests/iac/test_pipeline.py`, `tests/iac/test_cli_iac.py`
 
 **Interfaces:**
 
 - Consumes: Tasks 1–10
 - Produces (`pipeline.py`):
-  - `STATE_DIR = ".apd-state/iac"`; `INSTANCES_FILENAME = "instances.json"`
+  - `STATE_DIR = ".apd-state/iac"`; `INSTANCES_FILENAME = "instances.json"`; `TRANSITIVE_FILENAME = "transitive-sources.json"`
   - `@dataclass class IacRunResult: status: Literal["ok", "skipped", "up_to_date", "failed"]; exit_code: int; index_path: Path | None; summary_path: Path | None; messages: list[str]`
   - `@dataclass class PipelineState: run_dir: Path; inputs: Path; cfg: IacConfig; roots: list[Root]; root_status: dict[str, tuple[RootStatus, str]]; sanitized: dict[str, SanitizeResult]; instances: list[Instance]; workspaces: dict[str, Workspace]; builder: IndexBuilder; tools: dict[str, ToolStatus]; not_analysed: list[str]; messages: list[str]`
   - `Stage = Callable[[PipelineState, ToolRunner], None]`; `STAGES: list[tuple[str, Stage]]` — this plan registers `discover`, `resolve`, `workspace`, `fetch`, `inventory`; `def insert_stage(name: str, stage: Stage, *, after: str) -> None` (Plans 2 and 3 add `scan`, `checks`, `plan`, `graph`, `context`)
   - `def run_iac(run_dir: Path, *, runner: ToolRunner | None = None) -> IacRunResult` — `None` resolves `apd_gauntlet.iac.pipeline.run_tool` at call time so tests can monkeypatch it
-  - `def collect_fetch_sources(run_dir: Path, *, runner: ToolRunner | None = None) -> list[str]` — runs `discover` through `workspace` and returns sorted unique `"<source>@<version>"` (or `<source>`) strings for remote sources
+  - `def collect_fetch_sources(run_dir: Path, *, runner: ToolRunner | None = None) -> list[str]` — runs `discover` through `workspace` and returns sorted unique `"<source>@<version>"` (or `<source>`) strings in `normalise_source` form (Task 9) for remote sources, plus every transitive source recorded in `.apd-state/iac/transitive-sources.json` (rule 5), so a consented transitive source stays listed after a successful fetch
   - `def load_instances(run_dir: Path) -> dict[str, Instance]` (reads `.apd-state/iac/instances.json`, which `run_iac` writes with `{id: dataclasses.asdict(instance)}`, and rebuilds the `VarOrigin` values)
 - Produces (`cli.py`): click group `iac_group` (name `iac`) with `run RUN_DIR` (prints `result.messages`, exits `result.exit_code`) and `consent RUN_DIR [--yes]`.
 
 `run_iac` order and rules:
 
 1. `load_iac_config` → None: `status="skipped"`, exit 0, writes nothing. No roots after discovery: `skipped`, message `iac: no Terraform or Atmos roots declared`.
-2. Stamp: `.apd-state/iac/stamp.json` = `{inputs_sha256, config_sha256, consent_sha256, tools, engine_version}` over every file under the declared root paths and plan paths. An equal stamp with a schema-valid index → `up_to_date`, exit 0, no tool calls beyond the version checks.
+2. Stamp: `.apd-state/iac/stamp.json` = `{inputs_sha256, config_sha256, consent_sha256, data_sha256, tools, engine_version}`, where `inputs_sha256` covers every file under the declared root paths and plan paths and `data_sha256` covers the packaged `data/iac/*.yaml`. An equal stamp with a schema-valid index → `up_to_date`, exit 0, no tool calls beyond the version checks.
 3. `tool_status` for every tool in `data/iac/tools.yaml`. An Atmos root with Atmos absent or below minimum → root `unresolved-raw` with a `tool_missing` unknown; `require_tools: true` and a needed tool not ok → `failed`, exit 1, last message names the tool, the minimum and its `install_hint`.
 4. Stages in `STAGES` order. An exception inside one root's or one instance's stage becomes an `internal_error` unknown for that scope, and the run continues. A root whose sanitise is refused, or whose every manifest failed, is `unresolved-raw`; one with some failed manifests is `partial`. The `resolve` stage calls `attach_provenance` per Atmos root; the `workspace` stage dedupes by `dedupe_key`.
-5. Fetch: `cfg.fetch`, remote sources present and `has_fetch_consent` → `fetch_modules`. No consent → each remote source becomes `remote_module_not_fetched` with detail `run 'apd-gauntlet iac consent <run-dir>'`, the instances' `fetch` is `not_fetched`, and the message `iac: module fetch needs consent: run 'apd-gauntlet iac consent <run-dir>'` is added. `cfg.fetch` false → remote sources are `remote_module_not_fetched` with detail `infrastructure.modules.fetch is false`.
+5. Fetch: `cfg.fetch`, remote sources present and `has_fetch_consent` over the list `collect_fetch_sources` computes (this run's remote sources plus the recorded transitive sources) → `fetch_modules` with `consented` set to that list; an unconsented transitive source rolls that workspace back (Task 9). After the fetches, the stage rewrites `transitive-sources.json` with the sorted union of the transitive sources they returned, keeping the previous entries too unless every workspace with remote sources ended `fetched`. No consent → each remote source becomes `remote_module_not_fetched` with detail `run 'apd-gauntlet iac consent <run-dir>'`, the instances' `fetch` is `not_fetched`, and the message `iac: module fetch needs consent: run 'apd-gauntlet iac consent <run-dir>'` is added. `cfg.fetch` false → remote sources are `remote_module_not_fetched` with detail `infrastructure.modules.fetch is false`.
 6. `write_index`, `write_summary`, then the stamp and `instances.json`. An `IndexSchemaError` → `failed`, exit 1 (an engine bug, never IaC input).
 
 `iac consent`: computes `collect_fetch_sources`; `cfg.fetch` false → prints `module fetch is disabled for this run (infrastructure.modules.fetch: false)`, exit 0; no remote sources → prints `no remote module sources to fetch`, exit 0; otherwise prints `The following module sources will be downloaded with 'tofu get' (network access):` and one source per line, then `--yes` → `record_fetch_consent(..., "flag")`; on a TTY, `click.prompt("Type 'fetch' to allow these downloads")` equal to `fetch` → `record_fetch_consent(..., "prompt")`; anything else exits 2 with `consent not recorded`.
@@ -1169,6 +1191,8 @@ def test_fetch_with_consent_calls_tofu_get(tmp_path, fake_runner, tools_ok): ...
 def test_second_run_up_to_date(tmp_path, fake_runner, tools_ok): ...   # run twice → second status "up_to_date", no describe or get calls
 def test_internal_error_isolated(tmp_path, fake_runner, tools_ok, monkeypatch): ...  # parse_file raises for one of two roots → internal_error unknown for it, the other resolved, exit 0
 def test_instances_state_written(tmp_path, fake_runner, tools_ok): ...   # load_instances(run)["plain:infra/live/prod"].engine == "terraform"
+def test_consent_lists_transitive_sources_after_first_fetch(tmp_path, fake_runner, tools_ok): ...   # consent, then a run whose tofu get writes a nested unconsented source → collect_fetch_sources(run) now includes it, and has_fetch_consent is false until iac consent runs again
+def test_transitive_consent_survives_refetch(tmp_path, fake_runner, tools_ok): ...   # tofu get writes a nested source T: run → rolled back; iac consent --yes (S and T); run → fetched; edit an input file; then has_fetch_consent(run, collect_fetch_sources(run)) is true, and the next run makes one tofu get call, ends fetch "fetched" and records no remote_module_not_fetched unknown
 ```
 
 ```python
@@ -1185,18 +1209,18 @@ def test_cli_run_and_consent(tmp_path, monkeypatch, fake_runner, tools_ok):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_pipeline.py tests/iac/test_cli_iac.py -v`
+Run: `pytest tests/iac/test_pipeline.py tests/iac/test_cli_iac.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `pipeline.py`, `cli.py` and the registration in `cli.py`**
 
 - [ ] **Step 4: Write the docs**
 
-`docs/iac-evaluation.md`: the run-config block (spec §6), what the `iac` phase does and writes, required and optional tools with minimums, the safety model (spec §12, including the `atmos.Component` template finding and the recommendation to run hostile repositories in a container with no network), consent with `iac consent`, and the `unresolved-raw` fallback. `docs/schema-evolution.md`: a `## v2.0.0 — IaC evaluation (additive)` section with a dated entry for the run-config `infrastructure` additions and the new `iac-evidence-index` schema (skeleton). `CHANGELOG.md` under ``## Unreleased — 2.0 line (`next`)`` → `### Added`: the `iac` phase, `apd-gauntlet iac run` and `iac consent`. `docs/running-the-gauntlet.md:359`: the static-infra row also names `apd-gauntlet iac run`.
+`docs/iac-evaluation.md`: the run-config block (spec §6), what the `iac` phase does and writes, required and optional tools with minimums, the safety model (spec §12, including the `atmos.Component` template finding and the recommendation to run hostile repositories in a container with no network), consent with `iac consent`, and the `unresolved-raw` fallback. `docs/schema-evolution.md`: a `## v2.0.0 — IaC evaluation (additive)` section with a dated entry for the run-config `infrastructure` additions and the new `iac-evidence-index` schema (skeleton). `CHANGELOG.md` under ``## Unreleased — 2.0 line (`next`)`` → `### Added`: the `iac` phase, `apd-gauntlet iac run` and `iac consent`. `docs/running-the-gauntlet.md` (locate the static-infra row by its text): the row also names `apd-gauntlet iac run`.
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac -v && /home/claude/venv-apd/bin/mypy tools/ && markdownlint-cli2 docs/iac-evaluation.md docs/schema-evolution.md CHANGELOG.md docs/running-the-gauntlet.md`
+Run: `pytest tests/iac -v && mypy tools/ && markdownlint-cli2 docs/iac-evaluation.md docs/schema-evolution.md CHANGELOG.md docs/running-the-gauntlet.md`
 Expected: PASS, mypy clean, 0 lint errors
 
 - [ ] **Step 6: Commit**
@@ -1210,7 +1234,7 @@ git commit -m "feat(iac): add the iac pipeline and the iac run/consent commands"
 
 **Files:**
 
-- Modify: `.claude/workflows/apd-gauntlet.js:36-45` (`meta.phases`) and the setup/intake boundary (`:265-313`), `tools/apd_gauntlet/plan_run.py:48-56`, `tools/apd_gauntlet/runner/flow.py` (`PHASES`, phase table)
+- Modify: `.claude/workflows/apd-gauntlet.js` (`meta.phases`, anchor `phases: [`) and the setup/intake boundary (after the last setup step, `prepare-run` then `build-lens-skills`, and before `phase('intake')`), `tools/apd_gauntlet/plan_run.py` (after the last setup row), `tools/apd_gauntlet/runner/flow.py` (`PHASES`, phase table)
 - Test: `tests/test_workflow_apd_gauntlet.py:27-49` (extend), `tests/test_cli_plan_run.py` (extend), `tests/runner/test_flow_pre_synthesis.py` (extend), `tests/test_workflow_dispatch_trace.py` (WS3 harness, extend)
 
 **Interfaces:**
@@ -1218,7 +1242,7 @@ git commit -m "feat(iac): add the iac pipeline and the iac run/consent commands"
 - Consumes: `apd-gauntlet iac run <run-dir>` (Task 11); LA2's `Runner`, `scenario()`, `FakeCli`; WS3's `pyStep` (dispatching `apd-cli-runner`) and its trace helpers `trace(cfg)`, `cli(t)`, `HA_SHAPED`; WS5's `build-lens-skills` setup step; WS1's `resume-plan` (`tools/apd_gauntlet/resume_plan.py` `RESUMABLE_STEPS`)
 - Produces (R3):
   - `meta.phases` and `runner.flow.PHASES` gain `'iac'` immediately after `'setup'` and before `'intake'`.
-  - Workflow: after the setup phase's last step (WS3's `prepare-run`, then WS5's `build-lens-skills`) and before `phase('intake')`, `phase('iac');` then, only when `args.infrastructure && args.infrastructure.mode === 'static'`, `const iacReceipt = pyStep('iac', { phase: 'iac', label: 'iac-run', positional: 'run ' + runDir, alwaysRun: true, outputs: runDir + '/00-context/iac-evidence-index.yaml, ' + runDir + '/00-context/iac-summary.md' });` followed by `bailIfInterrupted(iacReceipt, 'iac')` and, on `isErr(iacReceipt)`, `throw new Error('iac phase failed: a required IaC tool is missing (infrastructure.require_tools: true) or the evidence index failed its schema gate; see the receipt errors.')`; otherwise `log('iac: infrastructure.mode is not static — skipping.')`. `iac run` is idempotent through its stamp, so the step is always-run.
+  - Workflow: after the setup phase's last step (WS3's `prepare-run`, then WS5's `build-lens-skills`) and before `phase('intake')`, `phase('iac');` then, only when `args.infrastructure && args.infrastructure.mode === 'static'`, `const iacReceipt = await pyStep('iac', { phase: 'iac', label: 'iac-run', positional: 'run ' + runDir, alwaysRun: true, outputs: runDir + '/00-context/iac-evidence-index.yaml, ' + runDir + '/00-context/iac-summary.md' });` followed by `bailIfInterrupted(iacReceipt, 'iac')` and, on `isErr(iacReceipt)`, `throw new Error('iac phase failed: a required IaC tool is missing (infrastructure.require_tools: true) or the evidence index failed its schema gate; see the receipt errors.')`; otherwise `log('iac: infrastructure.mode is not static — skipping.')`. `iac run` is idempotent through its stamp, so the step is always-run.
   - `plan_run.build_plan`: when `cfg.get("infrastructure", {}).get("mode") == "static"`, append `_step("iac", "CLI", f"iac run {run_dir}", "00-context/iac-evidence-index.yaml, 00-context/iac-summary.md")` after the last `setup` step.
   - Runner: phase `iac` with one CLI step label `iac-run` running `["iac", "run", str(run_dir)]` under the same condition; a nonzero exit → `RunHalted("iac", <stderr tail>)`.
   - WS1 `resume-plan` needs no entry: `RESUMABLE_STEPS` lists agent steps only, and CLI steps always run; `iac run` itself returns `up_to_date` from its stamp.
@@ -1281,14 +1305,14 @@ def test_iac_dispatch_only_when_static():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/runner -v`
+Run: `pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/runner -v`
 Expected: FAIL on the new tests (and `test_flow_parity.py::test_phases_match_workflow` once only one side changes)
 
 - [ ] **Step 3: Implement the phase in all three channels**
 
 - [ ] **Step 4: Run to verify pass, including both parity tests**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/runner tests/test_workflow_dispatch_trace.py -v`
+Run: `pytest tests/test_workflow_apd_gauntlet.py tests/test_cli_plan_run.py tests/runner tests/test_workflow_dispatch_trace.py -v`
 Expected: PASS (the trace test skips without Node), including `test_plan_run_phase_names_consistent_with_workflow` and `tests/runner/test_flow_parity.py::test_phases_match_workflow`
 
 - [ ] **Step 5: Commit**
@@ -1307,12 +1331,12 @@ Run the master plan Task 1 set on this branch, then `apd-gauntlet compare-runs <
 **Files:**
 
 - Create: `tests/iac/test_security_regressions.py`
-- Modify: `.github/workflows/python-tests.yml` (new job `iac-tools`), `tests/iac/conftest.py` (fixture `http_sentinel`, helper `add_component`)
+- Modify: `.github/workflows/python-tests.yml` (new job `iac-tools`), `tools/apd_gauntlet/data/iac/tools.yaml` (SHA-256 values of the CI release assets), `tests/iac/conftest.py` (fixture `http_sentinel`, helper `add_component`)
 
 **Interfaces:**
 
 - Consumes: `run_iac`, `load_instances` (Task 11), `VALIDATORS` (Task 2), fixtures from Tasks 5–6
-- Produces: CI job `iac-tools` (ubuntu-latest, Python 3.12). A setup step downloads Atmos 1.231.0 and Trivy 0.70.0 from their GitHub release assets with SHA-256 verification against each release's checksum file, and runs `pipx install checkov==3.3.26`; then `pip install -e ".[dev,iac]"`. Only that setup step uses the network. The test step `pytest -m iac_tools -v` runs offline: Trivy uses its bundled checks (`--skip-check-update`), Checkov never downloads (`--skip-download`, `--download-external-modules false`), and Atmos calls go through `run_tool`'s closed proxy (ADR-0017 covers tests and real runs, not tool installation).
+- Produces: CI job `iac-tools` (ubuntu-latest, Python 3.12; every action pinned by full commit SHA). A setup step downloads Atmos 1.231.0 (kept until the probes pass on 1.232.0), Trivy 0.75.0 and OpenTofu 1.13.1 (so the live fetch test runs in CI) from their GitHub release assets. It verifies each binary against the SHA-256 value committed in `data/iac/tools.yaml`, not only against the release's checksum file, and verifies Trivy's cosign signature. It never uses `trivy-action` or `setup-trivy` (the malicious Trivy v0.69.4 and the affected actions of March 2026). It runs `pipx install checkov==3.3.26`; then `pip install -e ".[dev,iac]"`. Only that setup step uses the network. The test step `pytest -m iac_tools -v` runs offline: Trivy uses its bundled checks (`--skip-check-update`), Checkov never downloads (`--skip-download`, `--download-external-modules false`), and Atmos calls go through `run_tool`'s closed proxy (ADR-0017 covers tests and real runs, not tool installation).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1359,6 +1383,8 @@ def test_remote_include_makes_no_connection(tmp_path, require_tools, http_sentin
     assert r.exit_code == 0 and http_sentinel.requests == []
     assert "remote_include" in [e.get("reason") for e in load_index(run)["entries"]]
 
+def test_toolchain_and_auth_make_no_connection(tmp_path, require_tools, http_sentinel): ...   # atmos.yaml gains toolchain, top-level dependencies and auth pointing at http://127.0.0.1:<sentinel port> → http_sentinel.requests == [] and three atmos_config_stripped entries
+
 def test_provenance_points_at_prod_override(tmp_path, require_tools):
     require_tools("atmos")
     run = run_with_fixture(tmp_path, "atmos-basic", {"atmos": [{"root": "platform"}]})
@@ -1391,20 +1417,20 @@ def test_no_process_start_outside_gateway():
 
 - [ ] **Step 2: Run the suite**
 
-Run: `PATH=/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/bin:$PATH /home/claude/venv-apd/bin/pytest tests/iac/test_security_regressions.py -v`
+Run: `PATH="$APD_IAC_TOOLS_BIN:$PATH" pytest tests/iac/test_security_regressions.py -v`
 Expected: PASS. These tests pin behaviour Tasks 6–11 built; a failure is a defect in the owning task, fixed there before this task commits. Without Atmos on PATH every test reports SKIPPED.
 
 - [ ] **Step 3: Add the CI job**
 
 - [ ] **Step 4: Run the full suite**
 
-Run: `/home/claude/venv-apd/bin/pytest -q`
+Run: `pytest -q`
 Expected: PASS, with `iac_tools` tests skipped where the tools are absent
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/iac/test_security_regressions.py tests/iac/conftest.py .github/workflows/python-tests.yml
+git add tests/iac/test_security_regressions.py tests/iac/conftest.py .github/workflows/python-tests.yml tools/apd_gauntlet/data/iac/tools.yaml
 git commit -m "test(iac): pin the Atmos and include probes as security regressions"
 ```
 
@@ -1419,7 +1445,7 @@ git commit -m "test(iac): pin the Atmos and include probes as security regressio
 **Interfaces:**
 
 - Consumes (LA3, `tools/apd_gauntlet/app/services.py`): `@dataclass class Check: name: str; status: Literal["pass", "warn", "fail"]; detail: str; fix: str | None`; `doctor()`; and, from amendment A3, `register_doctor_check(name: str, fn: Callable[[UserConfig], Check]) -> None`, with `doctor()` appending registered checks after the built-ins. Also `tool_status`, `install_hint`, `load_tool_specs` (Task 2)
-- Produces: `def iac_tool_check(name: str) -> Callable[[UserConfig], Check]`; `def register_iac_doctor_checks() -> None` (idempotent) registering checks `iac-atmos`, `iac-tofu`, `iac-trivy`, `iac-checkov`, `iac-shellcheck`, `iac-python-hcl2`. Status: found and at or above minimum → `pass` with the version; absent → `warn` (`fix` = `install_hint`), because IaC evaluation is optional; found below minimum → `fail` (`fix` names the minimum), because an older Atmos may not honour `--process-functions=false`. `iac-python-hcl2` warns with `pip install "apd-gauntlet[iac]"` when the import fails.
+- Produces: `def iac_tool_check(name: str) -> Callable[[UserConfig], Check]`; `def register_iac_doctor_checks() -> None` (idempotent) registering checks `iac-atmos`, `iac-tofu`, `iac-trivy`, `iac-checkov`, `iac-shellcheck`, `iac-python-hcl2`. Status: found, at or above minimum and not above the tested version (`ToolSpec.tested`) → `pass` with the version; found above the tested version → `warn` (`detail` names the tested version, `fix` None); absent → `warn` (`fix` = `install_hint`), because IaC evaluation is optional; found below minimum → `fail` (`fix` names the minimum), because an older Atmos may not honour `--process-functions=false`. `iac-python-hcl2` warns with `pip install "apd-gauntlet[iac]"` when the import fails.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1440,9 +1466,11 @@ def test_missing_tool_warns_with_install_hint(monkeypatch):
     assert c.status == "warn" and "pipx install checkov" in c.fix
 
 def test_tool_at_minimum_passes_without_fix(monkeypatch):
-    monkeypatch.setattr(doctor_mod, "tool_status", lambda name, **k: ToolStatus(name, True, "0.70.0", "0.70.0", True, "ok"))
+    monkeypatch.setattr(doctor_mod, "tool_status", lambda name, **k: ToolStatus(name, True, "0.71.1", "0.71.1", True, "ok"))
     c = iac_tool_check("trivy")(UserConfig())
-    assert c == Check(name="iac-trivy", status="pass", detail="trivy 0.70.0", fix=None)
+    assert c == Check(name="iac-trivy", status="pass", detail="trivy 0.71.1", fix=None)
+
+def test_tool_above_tested_warns(monkeypatch): ...   # ToolStatus for trivy 0.76.0 (tested 0.75.0 in data/iac/tools.yaml) → status "warn", detail names 0.75.0, fix None
 ```
 
 ```python
@@ -1462,7 +1490,7 @@ def test_adr_records_spec_decisions():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_doctor.py tests/test_adr_0027.py -v`
+Run: `pytest tests/iac/test_doctor.py tests/test_adr_0027.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `doctor.py`, the registration call and the ADR**
@@ -1471,7 +1499,7 @@ ADR-0027 records the decisions in spec §3 (one row each) plus the template-func
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac tests/test_adr_0027.py tests/test_adrs.py -v && markdownlint-cli2 docs/adrs/0027-iac-evaluation-pipeline.md`
+Run: `pytest tests/iac tests/test_adr_0027.py tests/test_adrs.py -v && markdownlint-cli2 docs/adrs/0027-iac-evaluation-pipeline.md`
 Expected: PASS, 0 lint errors
 
 - [ ] **Step 5: Commit**

@@ -10,6 +10,8 @@
 
 **Spec:** Cost and token audit (Claude Doc "APD Gauntlet cost and token audit", 2026-10-10), "Protecting accuracy"; `docs/superpowers/plans/2026-10-10-program-master-plan.md` Global Constraints, Review Focus, Task 1, Registry R1, R2, R6, R7, R8; `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md` §13.2–13.3; GRAML (arXiv:2610.09605) §II-E (τ* chosen on validation data, then fixed) and its dataset section (cross-dataset deduplication of held-out sets); `docs/adrs/0017-local-only-accuracy-benchmark.md`; Claude Code monitoring docs (`https://code.claude.com/docs/en/monitoring-usage`, read 2026-10-11).
 
+**Amended 2026-10-17** per the amendments register (A9.1, A9.2, A9.3, A9.4, A9.5, A9.6, A9.7, A9.19, A12.6, A12.8, A13.27, A15.12, A15.14, A15.21, A15.22, A15.28).
+
 ## Global Constraints
 
 - Ships on `next` (2.0 line); CHANGELOG entries go under ``## Unreleased — 2.0 line (`next`)``.
@@ -26,7 +28,7 @@
 - R1 `compare-runs <baseline> <candidate> [--json] [--gates eval/gates.yaml]`: "A deterministic delta. Exits 0 when every gate passes, 1 when any fails, 2 on usage errors or a missing baseline."
 - R1 `usage <run-dir> --otel <file>`: "Summarises tokens and cost per agent and phase from OpenTelemetry `claude_code.api_request` events into `<run-dir>/.apd-state/usage.yaml`."
 - R1 `eval run <corpus.yaml> --set dev|heldout --evaluator <name>`: "Runs a registered evaluator and writes `eval/results/<evaluator>/<set>-<timestamp>.yaml`."
-- R1 `calibrate <task> --labels <file> --target-precision <p>`: "Writes or updates `tools/apd_gauntlet/data/decide/thresholds.yaml` entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated: true}`."
+- R1 `calibrate <task> --labels <file> --target-precision <p>`: "Writes or updates `tools/apd_gauntlet/data/decide/thresholds.yaml` entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated: true, provider, model, weights_revision}`; exits 2 if the labelled records mix models (A12.6)."
 - R1 `metamorphic run --suite <name>`: "Generic invariance harness. Suites register transformations (IAC4: T1–T8; CF4 adds its own)."
 - R2 `apd_gauntlet.eval.evaluators`: `register(name: str, fn: Callable[[CorpusEntry, Labels], EvalResult])`.
 - Tuning protocol (IaC spec §13.2): "Tunables are tuned on development only and frozen before held-out runs … A tunable changed after a held-out run means a new held-out set."
@@ -72,7 +74,7 @@
 | `.claude/workflows/apd-gauntlet.js` | Count retries, first-pass failures, audit iterations; pass them to closeout | Modify |
 | `eval/gates.yaml` | The five proposal gates | Create |
 | `pyproject.toml` | Package data `data/decide/*.yaml` | Modify |
-| `.gitignore` | `eval/results/`, `eval/local/` | Modify |
+| `.gitignore` | `eval/results/`, `eval/local/`, `telemetry/` | Modify |
 | `docs/measuring-changes.md` | Operator runbook | Create |
 | `docs/adrs/0028-committed-calibration-and-frozen-evaluation.md` | Exception to ADR-0017 and the freeze protocol | Create |
 | `docs/adrs/0017-local-only-accuracy-benchmark.md`, `docs/ci-gate-model.md`, `docs/running-the-gauntlet.md` | Cross-references | Modify |
@@ -279,33 +281,35 @@ git commit -m "feat(measure): add pairwise run delta with excused losses and hea
 **Files:**
 
 - Create: `tools/apd_gauntlet/measure/attempts.py`, `tools/apd_gauntlet/data/schemas/run-attempts.schema.json`
-- Modify: `tools/apd_gauntlet/cli.py:353-363` (`summarize`), `tools/apd_gauntlet/measure/runs.py` (`RunSnapshot.attempts`), `docs/schema-evolution.md`, `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/cli.py` (`summarize`, ≈ 367–377), `tools/apd_gauntlet/measure/runs.py` (`RunSnapshot.attempts`), `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_measure_attempts.py`, `tests/test_summarize.py` (extend)
 
 **Interfaces:**
 
 - Produces:
-  - Schema `$id` `https://github.com/illusconsulting/apd-gauntlet/schemas/run-attempts.schema.json`: object, `additionalProperties: false`, all keys required: `schema_version` (const 1), `recorded_by` (enum `workflow`, `runner`, `operator`), `lens_retries` (object of integers ≥ 0), `first_pass_invalid`, `tier_gate_failures`, `skipped` (arrays of unique non-empty strings), `audit_iterations` (integer ≥ 1)
+  - Schema `$id` `https://github.com/illusconsulting/apd-gauntlet/schemas/run-attempts.schema.json`: object, `additionalProperties: false`, all keys required: `schema_version` (const 1), `recorded_by` (enum `workflow`, `runner`, `operator`), `lens_retries` (object of integers ≥ 0), `first_pass_invalid`, `tier_gate_failures`, `skipped` (arrays of unique non-empty strings), `audit_iterations` (integer ≥ 1), and, counting WS1's repair loop (register A9.4), `tier_repairs` (object of integers ≥ 0 keyed by tier directory: files repaired) and `lens_reruns` (object of integers ≥ 0 keyed by lens: lenses re-run)
   - `class AttemptsError(Exception)`
-  - `@dataclass(frozen=True) class Attempts: recorded_by: str; lens_retries: dict[str, int]; first_pass_invalid: tuple[str, ...]; tier_gate_failures: tuple[str, ...]; skipped: tuple[str, ...]; audit_iterations: int` with properties `first_pass_validator_errors -> int` (`len(first_pass_invalid) + len(tier_gate_failures)`) and `lens_retries_total -> int`
+  - `@dataclass(frozen=True) class Attempts: recorded_by: str; lens_retries: dict[str, int]; first_pass_invalid: tuple[str, ...]; tier_gate_failures: tuple[str, ...]; skipped: tuple[str, ...]; audit_iterations: int; tier_repairs: dict[str, int]; lens_reruns: dict[str, int]` with properties `first_pass_validator_errors -> int` (`len(first_pass_invalid) + len(tier_gate_failures)`), `lens_retries_total -> int`, `tier_repairs_total -> int` and `lens_reruns_total -> int`
   - `ATTEMPTS_RELPATH = Path(".apd-state/attempts.yaml")`
   - `def write_attempts(run_dir: Path, data: Mapping[str, Any]) -> Path` (validates, creates `.apd-state/`, raises `AttemptsError` listing schema messages)
   - `def read_attempts(run_dir: Path) -> Attempts | None` (`None` when absent; `AttemptsError` when invalid)
   - `RunSnapshot` gains `attempts: Attempts | None = None`; `load_run` maps `AttemptsError` to `RunLoadError`
   - CLI: `summarize RUN_DIR [--json] [--record-attempts JSON]`
 
-In 1.7 runs none of these numbers is persisted: lens retries, first-pass receipts and tier-gate results live only in the workflow's JavaScript (`.claude/workflows/apd-gauntlet.js:442-453`), and `40-synthesis/report-audit.yaml` is overwritten on each audit attempt. This file is their only source; Task 7 makes the workflow write it, and LA2's runner calls `write_attempts` directly.
+In 1.7 runs none of these numbers is persisted: lens retries, first-pass receipts and tier-gate results live only in the workflow's JavaScript (`.claude/workflows/apd-gauntlet.js`, inside `async function runTier`: the lens-retry loop `for (let i = 0; i < lenses.length; i++)`, ≈ 729–739, and the tier gate after it), and `40-synthesis/report-audit.yaml` is overwritten on each audit attempt. This file is their only source; Task 7 makes the workflow write it, and LA2's runner calls `write_attempts` directly.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```python
 GOOD = {"schema_version": 1, "recorded_by": "workflow", "lens_retries": {"integrity": 1, "availability": 0},
-        "first_pass_invalid": ["integrity"], "tier_gate_failures": ["20-scalability"], "skipped": [], "audit_iterations": 2}
+        "first_pass_invalid": ["integrity"], "tier_gate_failures": ["20-scalability"], "skipped": [], "audit_iterations": 2,
+        "tier_repairs": {"20-scalability": 1}, "lens_reruns": {}}
 
 def test_round_trip(tmp_path):
     write_attempts(tmp_path, GOOD)
     a = read_attempts(tmp_path)
     assert a.first_pass_validator_errors == 2 and a.lens_retries_total == 1 and a.audit_iterations == 2
+    assert a.tier_repairs_total == 1 and a.lens_reruns_total == 0
 
 def test_absent_is_none(tmp_path):
     assert read_attempts(tmp_path) is None
@@ -360,7 +364,7 @@ git commit -m "feat(measure): record lens retries, first-pass failures and audit
 **Files:**
 
 - Create: `tools/apd_gauntlet/measure/usage.py`, `tests/fixtures/otel/claude-code-logs.otlp.jsonl`, `tests/fixtures/otel/console-export.txt`, `docs/measuring-changes.md`, `tests/test_measuring_changes_doc.py`
-- Modify: `tools/apd_gauntlet/cli.py` (append before `if __name__ == "__main__":`, line 1465), `tools/apd_gauntlet/measure/runs.py` (`RunSnapshot.usage_totals`), `docs/running-the-gauntlet.md` (one line in "Local accuracy benchmark (out-of-band)" linking the runbook), `CHANGELOG.md`
+- Modify: `tools/apd_gauntlet/cli.py` (append before `if __name__ == "__main__":`, ≈ line 1524), `tools/apd_gauntlet/measure/runs.py` (`RunSnapshot.usage_totals`), `docs/running-the-gauntlet.md` (one line in "Local accuracy benchmark (out-of-band)" linking the runbook), `CHANGELOG.md`
 - Test: `tests/test_measure_usage.py`, `tests/test_cli_usage.py`
 
 **Interfaces:**
@@ -368,12 +372,14 @@ git commit -m "feat(measure): record lens retries, first-pass failures and audit
 - Produces:
   - `class UsageParseError(Exception)`
   - `@dataclass(frozen=True) class ApiRequest: agent: str; model: str; input_tokens: int; output_tokens: int; cache_read_tokens: int; cache_creation_tokens: int; cost_usd_micros: int; session_id: str | None; workflow_run_id: str | None`
+  - Optional (register A9.7): record `effort` per request as a last field `effort: str | None = None`, decoded from the `effort` attribute. It is folded into consolidated plan task N10 (WS5 Task 15a), which adds it if this task does not.
   - `def iter_api_requests(path: Path) -> Iterator[ApiRequest]` — the only function that knows the file format
   - `AGENT_PHASES: dict[str, str]`; `PSEUDO_PHASES = frozenset({"cli-steps", "session", "unattributed"})`; `REDACTED_AGENTS = frozenset({"custom", "third-party"})`
   - `def phase_for(agent: str) -> str`
   - `def summarize_usage(requests: Iterable[ApiRequest], *, source: Path, workflow_run: str | None = None) -> dict[str, Any]`
   - `USAGE_RELPATH = Path(".apd-state/usage.yaml")`; `def write_usage(run_dir: Path, summary: Mapping[str, Any]) -> Path`
-  - `RunSnapshot` gains `usage_totals: dict[str, float] | None = None` (`totals` of `usage.yaml`)
+  - `def summarize_decisions(run_dir: Path) -> dict[str, Any]` — the `decision_models` block of `usage.yaml` (register A12.8)
+  - `RunSnapshot` gains `usage_totals: dict[str, float] | None = None` (`totals` of `usage.yaml`, plus its `cost_usd_all` when present)
   - CLI: `usage RUN_DIR --otel FILE [--workflow-run ID] [--json]`; exit 0 written, 1 no `api_request` events after filtering (nothing written), 2 `UsageParseError`
 
 The documented attribute names are fixed above; the file format is not documented (the page describes neither the console exporter's output nor the log record body). `iter_api_requests` therefore accepts OTLP/JSON only — the proto3 JSON mapping of `ExportLogsServiceRequest`, one document per line, as the OpenTelemetry Collector `file` exporter writes it (a single pretty-printed document is also accepted). A record counts when attribute `event.name == "api_request"` or `body.stringValue == "claude_code.api_request"`. Attribute values are decoded from `stringValue`, `intValue` (a JSON string or number), `doubleValue` or `boolValue`; token fields coerce with `int()`. Cost is `cost_usd_micros` when present, else `round(cost_usd × 1e6)`, else 0 with a `missing_cost` count. A missing `agent.name` becomes `main`. Record attributes override resource attributes. Lines that parse but hold no `resourceLogs` (metrics or traces in the same file) are skipped; text that is not JSON raises `UsageParseError` naming OTLP/JSON and the runbook.
@@ -396,11 +402,12 @@ Telemetry carries no phase attribute, so `phase_for` maps the agent name (any `<
 | `apd-report-writer` | `synthesis-report` |
 | `apd-report-auditor` | `synthesis-audit` |
 | `apd-domain-auditor` | `domain-improvements` |
+| `apd-tier-repair` (WS1's tier-gate repair agent; register A9.2) | `canonicalize` |
 | `general-purpose` (every `pyStep` worker) | `cli-steps` |
 | `main` | `session` |
 | anything else, including `custom` and `third-party` | `unattributed` |
 
-`usage.yaml` keys: `schema_version: 1`, `generated_by: apd-gauntlet usage`, `source: {file, sha256, api_requests, sessions, workflow_runs}`, `filter: {workflow_run}`, `totals`, `by_agent: {<agent>: {phase, requests, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd}}`, `by_phase: {<phase>: {…same counters…}}`, `warnings: [str]`. `cost_usd` is `micros / 1e6`.
+`usage.yaml` keys: `schema_version: 1`, `generated_by: apd-gauntlet usage`, `source: {file, sha256, api_requests, sessions, workflow_runs}`, `filter: {workflow_run}`, `totals`, `by_agent: {<agent>: {phase, requests, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd}}`, `by_phase: {<phase>: {…same counters…}}`, `warnings: [str]`. `cost_usd` is `micros / 1e6`. Decision-model spend is visible too (register A12.8): `usage.yaml` gains `decision_models` (`summarize_decisions`: totals of `calls`, `input_tokens` and `cost_usd` from the `usage` block of every `<run>/40-synthesis/decisions/*.yaml` record, `by_task` and `by_cost_basis`; empty mappings when the run has none) and `cost_usd_all` (`totals.cost_usd` plus the decision-model `cost_usd`).
 
 Fixture `claude-code-logs.otlp.jsonl` (two lines, two export batches; every `api_request` record carries `event.name`, `session.id: s1`):
 
@@ -451,6 +458,9 @@ def test_agent_phases_cover_agents_and_workflow_phases():
     assert agents <= set(AGENT_PHASES)
     m = re.search(r"phases:\s*\[(.*?)\]", WORKFLOW_JS.read_text(), re.DOTALL)
     assert set(AGENT_PHASES.values()) <= set(re.findall(r"'([^']+)'", m.group(1))) | PSEUDO_PHASES
+
+def test_tier_repair_counts_under_canonicalize():
+    assert phase_for("apd-tier-repair") == "canonicalize"
 
 # tests/test_cli_usage.py
 def test_usage_writes_state_file(make_run):
@@ -507,7 +517,7 @@ git commit -m "feat(measure): add usage command summarising OpenTelemetry api_re
 **Interfaces:**
 
 - Produces:
-  - `METRICS = frozenset({"unexcused_lost_critical_high", "severity_agreement_pct", "blocked_rate_abs_delta_pts", "first_pass_validator_errors_delta", "lens_retries_delta", "audit_iterations_delta"})`
+  - `METRICS = frozenset({"unexcused_lost_critical_high", "severity_agreement_pct", "blocked_rate_abs_delta_pts", "first_pass_validator_errors_delta", "lens_retries_delta", "tier_repairs_delta", "lens_reruns_delta", "audit_iterations_delta"})` (`tier_repairs_delta` and `lens_reruns_delta` count WS1's repair loop, register A9.4)
   - `@dataclass(frozen=True) class Check: metric: str; op: Literal["le", "ge"]; value: float`
   - `@dataclass(frozen=True) class Gate: id: str; text: str; checks: tuple[Check, ...]`
   - `class GatesError(Exception)`
@@ -535,7 +545,8 @@ gates:
     checks: [{metric: blocked_rate_abs_delta_pts, op: le, value: 5}]
   - id: first_pass_and_retries
     text: first-pass schema validity and retry count no worse than baseline
-    checks: [{metric: first_pass_validator_errors_delta, op: le, value: 0}, {metric: lens_retries_delta, op: le, value: 0}]
+    checks: [{metric: first_pass_validator_errors_delta, op: le, value: 0}, {metric: lens_retries_delta, op: le, value: 0},
+             {metric: tier_repairs_delta, op: le, value: 0}, {metric: lens_reruns_delta, op: le, value: 0}]
   - id: audit_iterations
     text: report audit passes in no more iterations than baseline
     checks: [{metric: audit_iterations_delta, op: le, value: 0}]
@@ -553,7 +564,8 @@ def test_gate_texts_match_master_plan_verbatim():
 def test_evaluate_statuses():
     gates = load_gates(REPO / "eval/gates.yaml")
     vals = {"unexcused_lost_critical_high": 0, "severity_agreement_pct": 89.9, "blocked_rate_abs_delta_pts": 5.0,
-            "first_pass_validator_errors_delta": None, "lens_retries_delta": None, "audit_iterations_delta": None}
+            "first_pass_validator_errors_delta": None, "lens_retries_delta": None, "tier_repairs_delta": None,
+            "lens_reruns_delta": None, "audit_iterations_delta": None}
     out = evaluate(gates, vals, {"audit_iterations_delta": "no attempts file"})
     assert [o.status for o in out] == ["pass", "fail", "pass", "not_available", "not_available"]
     assert out[4].reason == "no attempts file" and overall(out) == "fail"
@@ -589,7 +601,7 @@ git commit -m "feat(measure): add proposal comparison gates and evaluator"
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/measure/compare.py`, `tools/apd_gauntlet/cli.py` (append), `docs/measuring-changes.md`, `CHANGELOG.md`, `tests/test_measuring_changes_doc.py`
+- Modify: `tools/apd_gauntlet/measure/compare.py`, `tools/apd_gauntlet/measure/gates.py` (the `excused` status, register A9.5), `tools/apd_gauntlet/cli.py` (append), `docs/measuring-changes.md`, `CHANGELOG.md`, `tests/test_measuring_changes_doc.py`
 - Test: `tests/test_cli_compare_runs.py`
 
 **Interfaces:**
@@ -602,11 +614,13 @@ git commit -m "feat(measure): add proposal comparison gates and evaluator"
   - `def compare_sides(baseline: Sequence[RunSnapshot], candidate: Sequence[RunSnapshot], *, excused: frozenset[str] = frozenset()) -> Comparison`
   - `def comparison_json(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: str) -> dict[str, Any]` (top-level keys `status`, `baseline`, `candidate`, `pairs`, `runs` (keyed by the run path as `resolve_side` returned it, not `Path.resolve()`; the same-directory check alone uses `resolve()`), `values`, `gates`, `warnings`)
   - `def render_text(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: str) -> str`
-  - CLI: `compare-runs BASELINE CANDIDATE [--json] [--gates PATH] [--excuse ID]... [--strict]`
+  - CLI: `compare-runs BASELINE CANDIDATE [--json] [--gates PATH] [--excuse VALUE]... [--strict]`
 
-Values: pairwise metrics (`unexcused_lost_critical_high`, `severity_agreement_pct`) are `statistics.median` over all |B|×|C| pairs (pairs with `None` dropped; all `None` → `None`). Per-run metrics (`blocked_rate_pct`, `first_pass_validator_errors`, `lens_retries_total`, `audit_iterations`, usage `cost_usd`) take the median per side; `blocked_rate_abs_delta_pts = |med_c − med_b|`; the three attempts deltas are `med_c − med_b`, `None` when any run on either side has `attempts is None` (reason `"no .apd-state/attempts.yaml in <run> (1.7 runs and foreground drives record none)"`) or a non-empty `attempts.skipped` (reason `"<run> resumed: N steps skipped, retries under-counted"`). Usage cost is reported, never gated.
+Values: pairwise metrics (`unexcused_lost_critical_high`, `severity_agreement_pct`) are `statistics.median` over all |B|×|C| pairs (pairs with `None` dropped; all `None` → `None`). Per-run metrics (`blocked_rate_pct`, `first_pass_validator_errors`, `lens_retries_total`, `tier_repairs_total`, `lens_reruns_total`, `audit_iterations`, usage `cost_usd`, and usage `cost_usd_all`, the combined agent and decision-model cost of register A12.8) take the median per side; `blocked_rate_abs_delta_pts = |med_c − med_b|`; the five attempts deltas (`first_pass_validator_errors_delta`, `lens_retries_delta`, `tier_repairs_delta`, `lens_reruns_delta`, `audit_iterations_delta`; register A9.4) are `med_c − med_b`, `None` when any run on either side has `attempts is None` (reason `"no .apd-state/attempts.yaml in <run> (1.7 runs and foreground drives record none)"`) or a non-empty `attempts.skipped` (reason `"<run> resumed: N steps skipped, retries under-counted"`). Usage cost is reported, never gated.
 
 Exit codes: 2 when the baseline does not resolve (message names `-r1`/`-r2` and `docs/measuring-changes.md`), the candidate does not resolve, both sides share a directory, a baseline run has zero findings, two runs carry different non-`None` `inputs_sha256`, a run fails to load, or `--gates` is unreadable. With `--gates`: 1 when `overall` is `fail`, or `pass_with_gaps` under `--strict`; else 0. Without `--gates`: status `delta_only`, exit 0. One run on a side with `--gates` adds the warning "gates applied to a single run per side; run each configuration twice".
+
+`--excuse VALUE` is repeatable (register A9.5). A value `<gate-id>:<reason>` whose prefix is a gate id marks that gate `excused`: `GateOutcome.status` gains `"excused"`, which counts as a pass in `overall`; the gate's JSON entry carries `excuse: <reason>`; the text report prints `EXCUSED (<reason>)`. Any other value is a finding id (finding ids never contain `:`) and goes to `compare_sides(excused=…)`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -647,6 +661,14 @@ def test_lost_high_fails_and_excuse_passes(make_run, edit):
     assert cr(b, c, "--gates", GATES).exit_code == 1
     assert cr(b, c, "--gates", GATES, "--excuse", "conf-7aa376c5").exit_code == 0
 
+def test_gate_excuse_passes_and_is_recorded(make_run, edit):
+    b, c = make_run("b"), make_run("c"); edit.drop(c, "conf-7aa376c5")
+    ex = "no_lost_critical_high:loss reviewed"
+    out = json.loads(cr(b, c, "--gates", GATES, "--json", "--excuse", ex).stdout)
+    assert out["gates"][0]["status"] == "excused" and out["gates"][0]["excuse"] == "loss reviewed"
+    r = cr(b, c, "--gates", GATES, "--excuse", ex)
+    assert r.exit_code == 0 and "EXCUSED (loss reviewed)" in r.output
+
 def test_pair_convention_and_medians(make_run, edit, tmp_path):
     for n in ("x-base-r1", "x-base-r2", "x-cand-r1", "x-cand-r2"): make_run(n)
     edit.drop(tmp_path / "x-cand-r1", "conf-7aa376c5")
@@ -675,7 +697,7 @@ def test_usage_cost_reported(make_run):
     assert out["status"] == "delta_only" and out["runs"][str(c)]["cost_usd"] == 1.5
 ```
 
-`GOOD_ATTEMPTS` is the Task 3 `GOOD` mapping with `first_pass_invalid`/`tier_gate_failures` empty. Add to `tests/test_measuring_changes_doc.py`: `test_runbook_covers_compare_runs` asserting `compare-runs`, `--gates eval/gates.yaml`, `pass_with_gaps`, `--strict`, `--excuse` and `not_available` appear.
+`GOOD_ATTEMPTS` is the Task 3 `GOOD` mapping with `first_pass_invalid`/`tier_gate_failures` empty and `tier_repairs` `{}`. Add to `tests/test_measuring_changes_doc.py`: `test_runbook_covers_compare_runs` asserting `compare-runs`, `--gates eval/gates.yaml`, `pass_with_gaps`, `--strict`, `--excuse` and `not_available` appear.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -694,7 +716,7 @@ Expected: PASS; 0 lint errors
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/apd_gauntlet/measure/compare.py tools/apd_gauntlet/cli.py tests/test_cli_compare_runs.py tests/test_measuring_changes_doc.py docs/measuring-changes.md CHANGELOG.md
+git add tools/apd_gauntlet/measure/compare.py tools/apd_gauntlet/measure/gates.py tools/apd_gauntlet/cli.py tests/test_cli_compare_runs.py tests/test_measuring_changes_doc.py docs/measuring-changes.md CHANGELOG.md
 git commit -m "feat(cli): add compare-runs with run pairs, medians and proposal gates"
 ```
 
@@ -702,7 +724,7 @@ git commit -m "feat(cli): add compare-runs with run pairs, medians and proposal 
 
 **Files:**
 
-- Modify: `.claude/workflows/apd-gauntlet.js:242` (helpers), `:425-475` (`runTier`), `:736` (audit loop), `:844-846` (closeout `summarize`); `docs/measuring-changes.md`, `CHANGELOG.md`
+- Modify: `.claude/workflows/apd-gauntlet.js`, located by anchor (register A15.28; line numbers are hints): `function isErr` (≈ 340; helpers), `async function repairTierGate` (repair counts, register A9.4), `async function runTier` (≈ 713), the audit loop `for (let i = 0; i <= 2; i++)` (≈ 1015–1072), `await pyStep('summarize'` (≈ 1121–1122; closeout); `docs/measuring-changes.md`, `CHANGELOG.md`
 - Test: `tests/test_workflow_apd_gauntlet.py` (extend), `tests/test_measuring_changes_doc.py` (extend)
 
 **Interfaces:**
@@ -718,6 +740,7 @@ JavaScript (exact copy; the static tests pin these strings):
 const attempts = {
   schema_version: 1, recorded_by: 'workflow',
   lens_retries: {}, first_pass_invalid: [], tier_gate_failures: [], skipped: [],
+  tier_repairs: {}, lens_reruns: {},
   audit_iterations: 0,
 };
 function isSkip(r) {
@@ -725,10 +748,10 @@ function isSkip(r) {
 }
 ```
 
-In `runTier`'s `forEach`: `if (isSkip(r)) attempts.skipped.push(lens);`, then `if (isErr(r) || r.outputs.some(function (o) { return !o.schema_valid; })) attempts.first_pass_invalid.push(lens);`, a `let retries = 0;` set to `k` inside the retry loop, and `attempts.lens_retries[lens] = retries;` after it. The tier gate becomes `const gate = pyStep('validate', {…unchanged…}); if (isErr(gate)) attempts.tier_gate_failures.push(tierDir);`. The audit loop's first statement is `attempts.audit_iterations = i + 1;`. Closeout:
+In `runTier`'s lens-retry `for` loop (where `r` is `receipts[i]`): `if (isSkip(r)) attempts.skipped.push(lens);`, then `if (isErr(r) || r.outputs.some(function (o) { return !o.schema_valid; })) attempts.first_pass_invalid.push(lens);`, a `let retries = 0;` set to `k` inside the retry loop, and `attempts.lens_retries[lens] = retries;` after it. After `const gate = await tierGate(phaseName, tierDir, '');` insert `if (isErr(gate)) attempts.tier_gate_failures.push(tierDir);` before `await repairTierGate(phaseName, tierDir, lenses, gate);`; leave `tierGate` and `regate` unchanged. In `repairTierGate` (register A9.4), `attempts.tier_repairs[tierDir] = (attempts.tier_repairs[tierDir] || 0) + files.length;` goes before the repair fan-out, and `for (const lens of rerun) attempts.lens_reruns[lens] = 1;` before the lens re-run fan-out. The audit loop's first statement is `attempts.audit_iterations = i + 1;`. Closeout:
 
 ```js
-pyStep('summarize', { phase: 'closeout', label: 'summarize', alwaysRun: true,
+await pyStep('summarize', { phase: 'closeout', label: 'summarize', alwaysRun: true,
   cliArgs: "--record-attempts '" + JSON.stringify(attempts) + "'",
   outputs: runDir + '/.apd-state/attempts.yaml' });
 ```
@@ -750,6 +773,9 @@ def test_attempts_counted_in_tiers_and_audit():
     for s in ("attempts.skipped.push(lens)", "attempts.first_pass_invalid.push(lens)",
               "attempts.lens_retries[lens] = retries", "attempts.tier_gate_failures.push(tierDir)"):
         assert s in tier
+    repair = text[text.index("async function repairTierGate"):text.index("async function runTier")]
+    for s in ("attempts.tier_repairs[tierDir]", "attempts.lens_reruns[lens] = 1"):
+        assert s in repair
     assert "attempts.audit_iterations = i + 1;" in text
 
 def test_closeout_summarize_records_attempts_and_always_runs():
@@ -784,8 +810,8 @@ git commit -m "feat(workflow): record lens retries, first-pass failures and audi
 
 - [ ] **Step 6 (operator): Measure the change**
 
-Run the master plan Task 1 set twice on this commit (names ending `-wf-r1`, `-wf-r2`), then for each example `apd-gauntlet compare-runs runs/<example>-baseline runs/<example>-wf --gates eval/gates.yaml`.
-Expected: exit 0 (`pass_with_gaps`: gates 4–5 unavailable against the 1.7.0 baseline), and every `-wf` run has `.apd-state/attempts.yaml`.
+Run the master plan Task 1 set twice on this commit (names ending `-wf-r1`, `-wf-r2`), then for each example `apd-gauntlet compare-runs runs/<example>-baseline runs/<example>-wf --gates eval/gates.yaml`. `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, so run this commit's runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or start a new session (register A15.12).
+Expected: exit 0 (`pass_with_gaps`: gates 4–5 unavailable against the 1.7.1 baseline), and every `-wf` run has `.apd-state/attempts.yaml`.
 
 ### Task 8: Evaluation schemas, corpus loader and evaluator registry
 
@@ -1002,6 +1028,8 @@ git commit -m "feat(eval): add findings evaluator and label template"
 
 "Older than the tunables files" is decided by content, not modification time: a git checkout resets mtimes, so an mtime rule would refuse or accept at random. `check_frozen` raises `"eval/frozen.yaml not found — tune on dev, then run 'apd-gauntlet eval freeze'"` when missing, and `"tunables changed since freeze: <added|removed|changed> <path>, …"` on any difference. `freeze` writes nothing when the hash is unchanged; on a changed hash it refuses with `"tunables frozen as <sha8> were used on held-out data (<file>); changing them needs a new held-out set (IaC spec §13.2) — pass --new-heldout-set once you have one"` when `heldout_uses` finds a result, and with the flag writes `generation + 1`; otherwise it rewrites with the same generation. An empty tunable set is valid (thresholds may not exist yet).
 
+**Freeze scope (register A13.27).** A tunables file added after the 2.0 freeze, such as code-flow's `data/codeflow/context-params.yaml` (CF3), changes `tunables_sha256` and makes every held-out `eval run` exit 2 (`test_added_tunable_counts` pins this). Before CF3, give `eval freeze` a per-family scope (`iac`, `catalog`, `decide`, `codeflow`), or use `--new-heldout-set` for code-flow only (consolidated plan Phase 9 Step 2).
+
 ADR-0028 (Context, Decision, Consequences, Alternatives considered; ≥ 3,000 bytes) records:
 
 - what is committed: `eval/gates.yaml`; corpus manifests and labels that reference only committed fixtures or public repositories pinned by SHA; `eval/frozen.yaml`; `thresholds.yaml` entries (threshold, precision, recall, `n`, `labels_sha256`). This is a narrow exception to ADR-0017's "not even a bare count": aggregate calibration statistics carry no subject data, and the master plan's R1 entry format requires them.
@@ -1081,7 +1109,7 @@ git commit -m "feat(eval): freeze tunables by content hash; ADR-0028 committed c
 **Files:**
 
 - Create: `tools/apd_gauntlet/eval/runner.py`
-- Modify: `tools/apd_gauntlet/cli.py` (`eval run`), `.gitignore` (append `eval/results/` and `eval/local/` under a comment citing ADR-0028), `docs/measuring-changes.md`, `CHANGELOG.md`, `tests/test_measuring_changes_doc.py`
+- Modify: `tools/apd_gauntlet/cli.py` (`eval run`), `.gitignore` (append `eval/results/` and `eval/local/` under a comment citing ADR-0028, and `telemetry/`, register A9.6), `docs/measuring-changes.md`, `CHANGELOG.md`, `tests/test_measuring_changes_doc.py`
 - Test: `tests/test_cli_eval_run.py`
 
 **Interfaces:**
@@ -1133,7 +1161,7 @@ def test_unknown_evaluator_exits_2(make_run, tmp_path): ...    # "--evaluator no
 
 def test_results_and_local_are_gitignored():
     lines = (REPO / ".gitignore").read_text().splitlines()
-    assert "eval/results/" in lines and "eval/local/" in lines
+    assert "eval/results/" in lines and "eval/local/" in lines and "telemetry/" in lines
 ```
 
 Add `test_runbook_covers_eval` asserting `eval run`, `--set heldout`, `eval freeze`, `--new-heldout-set`, `label-template` and `eval/local/` appear.
@@ -1145,7 +1173,7 @@ Expected: FAIL (`No such command 'run'` in the `eval` group)
 
 - [ ] **Step 3: Implement the runner, the command, `.gitignore` and the runbook section**
 
-Runbook section "Evaluate against labels": corpus layout (`eval/<area>/corpus.yaml`, `eval/<area>/labels/`; private corpora under `eval/local/`), labelling with `eval label-template`, dev versus held-out, the freeze protocol, results location. CHANGELOG bullet for `eval run`.
+Runbook section "Evaluate against labels": corpus layout (`eval/<area>/corpus.yaml`, `eval/<area>/labels/`; private corpora under `eval/local/`), labelling with `eval label-template`, dev versus held-out, the freeze protocol, results location. The runbook also states that `telemetry/` is git-ignored because telemetry exports hold Bash commands, tool input, `user.email` and account ids (register A9.6). CHANGELOG bullet for `eval run`.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1178,19 +1206,20 @@ git commit -m "feat(eval): add eval run with the held-out freeze guard"
   - `@dataclass(frozen=True) class Calibration: threshold: float | None; precision: float | None; recall: float | None; n: int; feasible: bool; best_precision: float | None`
   - `def choose_threshold(pairs: Sequence[tuple[float, bool]], *, direction: Literal["above", "below"], target_precision: float, min_support: int = 10) -> Calibration`
   - `def labelled_pairs(labels: Labels, key: str) -> tuple[list[tuple[float, bool]], int]` — (pairs, skipped)
+  - `def record_model(labels: Labels) -> tuple[str, str, str | None]` — the `(provider, model, weights_revision)` shared by every labelled record (register A12.6, DEC-13): `model` is the provider-returned id; `weights_revision` is the records' `weights_revision` (WS6 records carry it; LA1 records do not, giving `None`); records that mix models raise `CalibrationError` naming them
   - `THRESHOLDS_PATH = resources.data_dir() / "decide" / "thresholds.yaml"` (resolved lazily)
-  - `def write_threshold(path: Path, key: str, cal: Calibration, labels_sha256: str) -> None` — sets `<key>: {threshold, precision (4 dp), recall (4 dp), n, labels_sha256, calibrated: true}`, keeps other entries, re-emits the fixed comment header, `sort_keys=True`
+  - `def write_threshold(path: Path, key: str, cal: Calibration, labels_sha256: str, *, provider: str, model: str, weights_revision: str | None) -> None` — sets `<key>: {threshold, precision (4 dp), recall (4 dp), n, labels_sha256, provider, model, weights_revision, calibrated: true}` (register A12.6: a threshold entry is keyed by the model it was calibrated on), keeps other entries, re-emits the fixed comment header, `sort_keys=True`
   - CLI: `calibrate TASK --labels FILE --target-precision P [--min-support N] [--thresholds PATH]`; `P` is `click.FloatRange(0, 1, min_open=True)`
 
 `choose_threshold`: sort the distinct values; candidate cuts are midpoints of consecutive distinct values, so no labelled value sits on a cut and LA1's strict `<` and an inclusive comparison classify the labelled set identically. For each cut, positives are values above it (`above`) or below it (`below`); precision = TP/positives; recall = TP/all gold positives. A cut is feasible when positives ≥ `min_support` and precision ≥ the target. Choose the feasible cut with the highest recall, then the highest precision (equivalently the most conservative cut; exact ties cannot occur). The written threshold is `round(cut, 6)` when that stays strictly between its two neighbours, else `cut`. No feasible cut → `feasible=False`, `threshold=None`, `best_precision` = the highest precision among cuts with enough support (or `None`). No gold positives → `CalibrationError`.
 
 `labelled_pairs`: resolve each `records[].path` relative to the labels file; the record's `task` must equal the part of `key` before the first `.`; every labelled `ref` must exist in the record (else `CalibrationError` naming it); items with `outcome: error` or a `None` value are skipped. The finding passed to `value` comes from `load_corpus(record_path.parents[2], include_attack_path=True)` (a record lives at `<run>/40-synthesis/decisions/<file>`), cached per run.
 
-CLI exits: 2 for a key missing from `VALUE_SPECS` (lists the keys), labels not of kind `decisions`, a labels `task` different from `TASK`, labels with `set: heldout` ("calibrate on dev labels only; thresholds freeze before held-out runs"), or a `CalibrationError`; 1 when infeasible (`"no threshold reaches precision ≥ P with at least N predicted positives (best: Q); <TASK> stays uncalibrated"`), file untouched; 0 written, printing the entry and `"re-run 'apd-gauntlet eval freeze' before any held-out run"`.
+CLI exits: 2 for a key missing from `VALUE_SPECS` (lists the keys), labels not of kind `decisions`, a labels `task` different from `TASK`, labels with `set: heldout` ("calibrate on dev labels only; thresholds freeze before held-out runs"), or a `CalibrationError` (including labelled records that mix models, register A12.6); 1 when infeasible (`"no threshold reaches precision ≥ P with at least N predicted positives (best: Q); <TASK> stays uncalibrated"`), file untouched; 0 written, printing the entry and `"re-run 'apd-gauntlet eval freeze' before any held-out run"`.
 
 `thresholds.yaml` ships as a comment header (registry R8; keys `<task>` or `<task>.<flag>`; written by `calibrate`; proposal entries ship as `calibrated: false` per amendment A1) followed by `{}`.
 
-Fixture `finding-qa.record.yaml` follows the LA1 shape with `task: finding-qa`, `scope: 10-trustworthiness`, and nine items `conf-00000001`…`conf-00000009`: items 1–8 have `answers.excerpt_supports_claim.p` = 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8 and `outcome: pass`; item 9 has `outcome: error`. Tests copy it to `<tmp>/run/40-synthesis/decisions/finding-qa.10-trustworthiness.yaml` and write labels with `gold` true, true, true, false, true, false, false, false, true for items 1–9.
+Fixture `finding-qa.record.yaml` follows the LA1 shape with `task: finding-qa`, `scope: 10-trustworthiness`, `provider: cloudflare`, `model: clef` (register A12.6), and nine items `conf-00000001`…`conf-00000009`: items 1–8 have `answers.excerpt_supports_claim.p` = 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8 and `outcome: pass`; item 9 has `outcome: error`. Tests copy it to `<tmp>/run/40-synthesis/decisions/finding-qa.10-trustworthiness.yaml` and write labels with `gold` true, true, true, false, true, false, false, false, true for items 1–9.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1227,7 +1256,8 @@ def test_calibrate_writes_entry(decision_labels, tmp_path):
     assert r.exit_code == 0
     assert yaml.safe_load(th.read_text())["finding-qa.unsupported"] == {
         "threshold": 0.35, "precision": 0.8, "recall": 1.0, "n": 8,
-        "labels_sha256": hashlib.sha256(decision_labels.read_bytes()).hexdigest(), "calibrated": True}
+        "labels_sha256": hashlib.sha256(decision_labels.read_bytes()).hexdigest(),
+        "provider": "cloudflare", "model": "clef", "weights_revision": None, "calibrated": True}
 
 def test_min_support_refuses_tiny_sets(decision_labels, tmp_path):
     th = tmp_path / "thresholds.yaml"; th.write_text("{}\n"); before = th.read_bytes()
@@ -1238,6 +1268,7 @@ def test_min_support_refuses_tiny_sets(decision_labels, tmp_path):
 def test_heldout_labels_refused(decision_labels, tmp_path): ...        # set: heldout → exit 2, file unchanged
 def test_task_mismatch_refused(decision_labels, tmp_path): ...         # CLI task finding-qa.lens_drift vs labels task → 2
 def test_unknown_ref_refused(decision_labels, tmp_path): ...           # labels ref conf-0000000a → 2, names the ref
+def test_mixed_models_refused(decision_labels, tmp_path): ...         # a second record with model clef-flash → 2, file unchanged (A12.6)
 def test_unknown_task_lists_keys(decision_labels, tmp_path): ...       # "nope" → 2, output contains "finding-qa.unsupported"
 def test_packaged_thresholds_file_exists():
     assert (resources.data_dir() / "decide/thresholds.yaml").is_file()
@@ -1344,7 +1375,19 @@ git add tools/apd_gauntlet/eval tools/apd_gauntlet/cli.py tests/fixtures/metamor
 git commit -m "feat(eval): add metamorphic harness with a parse-threat-model demonstration suite"
 ```
 
+### Task 13a: Real pre-dedup counts (WS2 addition, FHIR remediation W3a)
+
+(Consolidated plan task N20.)
+
+**Files:** `tools/apd_gauntlet/synthesis/metrics.py` (`compute_metrics`), `tools/apd_gauntlet/synthesis/rollup.py` (`build_rollups`); tests `tests/test_metrics_pre_dedup.py`.
+
+**Interfaces:** `compute_metrics(..., *, findings_pre_dedup: int | None = None, capabilities_pre_dedup: int | None = None)`; `None` keeps today's value (the deduped length), so callers and committed examples are unaffected until `build_rollups` passes the counts of records in the tier directories' `*.findings.yaml` and `*.capabilities.yaml`.
+
+- [ ] Steps: test that a run with two lens findings merged into one reports `findings_pre_dedup == 2` and `findings_total == 1` → fail → implement → pass → QG; regenerate nothing in `examples/` (they keep their values until rerun). Commit: `fix(metrics): report real pre-dedup counts`.
+
 ### Task 14: Acceptance on the Task 1 baselines (operator)
+
+The master plan Task 1 baselines are 1.7.1 runs (A15.1). `runs/apd-20261016-ws1-gate` is one more 1.7.1 run of claim-event-bus (single run, no code recon, no telemetry).
 
 **Files:**
 

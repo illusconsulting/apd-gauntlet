@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md` §7.9, §7.12, §8.2, §8.3, §9 (lens packets, competing explanations, validator gate 3, attack-path analyzer, report header), §10, §11, §14 (`setup`, records), §15 item 3, §16. Master plan R2 (`select_packet`, `EVIDENCE_INDEXES`), R7 (`iac-graph`, `finding.alternatives_considered`, asset-graph `iac_evidence`), R8. This is Plan 3 of 4; it consumes Plans 1 and 2, and Plan 4 consumes the Interfaces below.
 
+**Amended 2026-10-17** per the amendments register (A13.12, A13.16, A13.18, A13.19, A13.25, A13.26, A13.28, A15.12, A15.21, A15.28).
+
 ## Global Constraints
 
 - Graph nodes carry `{id, kind, class, type, instance, address, file_path, line_range, excerpt, multiplicity}`; edges carry `{id, from, to, kind, attributes, file_path, line_range, excerpt, confidence}` (spec §8.2).
@@ -29,7 +31,8 @@
 - Suppressed entries (Plan 2 `suppressed_in_repo`) stay seeds like any other result; packets show the suppression as counter-evidence, never as a control.
 - Attack paths stop at the compute node until the code-flow layer defines the infrastructure-to-code join (spec §16).
 - A run without IaC produces byte-identical report data (`tests/integration/report/test_example_golden.py`).
-- Tasks that change what agents read or what the validator accepts gate against the previous accepted state: the master plan Task 1 set run on the last accepted commit is the baseline, and `apd-gauntlet compare-runs <previous-accepted> <candidate> --gates eval/gates.yaml` must exit 0.
+- Tasks that change what agents read or what the validator accepts gate against the previous accepted state: the master plan Task 1 set run on the last accepted commit is the baseline, and `apd-gauntlet compare-runs <previous-accepted> <candidate> --gates eval/gates.yaml` must exit 0. Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
+- M5 merge order (register A13.28): merge one at a time and rebuild the bundle after each: IAC3 Task 5 with CAT3 Task 6; WS6 Task 4, IAC3 Task 8 and CAT3 Task 14; IAC3 Task 6 with CAT3 Tasks 2–4; IAC3 Task 7, WS6 Task 7 and CAT3 Task 9.
 
 ## Review Focus
 
@@ -57,9 +60,9 @@
 | `tools/apd_gauntlet/attack_path/build.py:105-163`, `:235-307`, `:798-840` | IaC edge merge; public `resolved_attacker_positions` | Modify |
 | `tools/apd_gauntlet/data/schemas/asset-graph.schema.json:31`, `:79` | Provenance `iac_evidence`; source `iac_graph` | Modify |
 | `tools/apd_gauntlet/report/transform.py:156-219`, `report-template/screens/Overview.jsx:156-168`, `tools/apd_gauntlet/data/report-template/` | Report header | Modify |
-| `.claude/workflows/apd-gauntlet.js:425-461`, `tools/apd_gauntlet/runner/instructions.py` | Lens dispatch names the packet | Modify |
+| `.claude/workflows/apd-gauntlet.js` (`async function runTier(`, `async function repairTierGate(`), `tools/apd_gauntlet/runner/instructions.py` | Lens dispatch names the packet | Modify |
 | `.claude/agents/apd-intake.md`, `.claude/skills/apd-evidence-discipline/SKILL.md`, `.claude/skills/apd-finding-schema/SKILL.md`, `.claude/skills/apd-attack-path-discipline/SKILL.md` | Agent and skill text | Modify |
-| `tools/apd_gauntlet/app/setup.py`, `app/services.py`, `app/web/server.py`, `app/web/templates/fetch_consent.html`, `app/tui.py` | Setup hints and fetch-consent dialogs | Modify/Create |
+| `tools/apd_gauntlet/app/setup.py`, `app/services.py`, `app/web/server.py`, `app/web/templates/fetch_consent.html`, `app/tui/{__init__,app,screens}.py` | Setup hints and fetch-consent dialogs | Modify/Create |
 | `docs/iac-evaluation.md`, `docs/attack-path-analysis.md`, `docs/schema-evolution.md`, `CHANGELOG.md` | Docs | Modify |
 | `tests/iac/…`, `tests/context/test_select.py`, `tests/test_validator_iac_graph.py`, `tests/test_finding_alternatives.py`, `tests/test_attack_path_iac.py`, `tests/unit/report/test_transform_meta.py`, `tests/app/…` | Tests | Create/Modify |
 
@@ -194,14 +197,14 @@ def test_graph_stage_writes_valid_file(tmp_path, fake_runner, tools_ok):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_graph.py tests/iac/test_graph_stage.py -v`
+Run: `pytest tests/iac/test_graph.py tests/iac/test_graph_stage.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `graph.py`, the map, the schema and the stage**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac tests/test_meta_schemas.py tests/test_schema_vocab_centralized.py -v`
+Run: `pytest tests/iac tests/test_meta_schemas.py tests/test_schema_vocab_centralized.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -240,14 +243,14 @@ def test_graph_schema_validated_by_validate(tmp_path): ...  # malformed iac-grap
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_validator_iac_graph.py -v`
+Run: `pytest tests/test_validator_iac_graph.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Register the graph and extend the known-address set**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_validator_iac_graph.py tests/test_validator_iac_evidence.py tests/test_validator_evidence_registry.py -v`
+Run: `pytest tests/test_validator_iac_graph.py tests/test_validator_iac_evidence.py tests/test_validator_evidence_registry.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -350,14 +353,14 @@ The expected tuples were computed with a reference implementation of the algorit
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/context/test_select.py -v`
+Run: `pytest tests/context/test_select.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.context`)
 
 - [ ] **Step 3: Implement `select.py` and the parameter file (pure Python, no NumPy)**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/context -v && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest tests/context -v && mypy tools/`
 Expected: PASS, mypy clean
 
 - [ ] **Step 5: Commit**
@@ -377,7 +380,7 @@ git commit -m "feat(context): add the domain-neutral evidence packet selector"
 
 **Interfaces:**
 
-- Consumes: Task 1 `IacGraph`, `GraphNode`, `GraphEdge`, `INTERNET`, `internet_position`; Plan 2 entry fields `suppressed_in_repo`, `suppression`; Task 3 `select_packet`, `TypedGraph`, `TypedEdge`, `ContextParams`, `load_context_params`; Plan 2 `GoalMap`, `effective_severity`, `SEVERITY_ORDER`; Plan 1 `Workspace`; WS6 Task 11's reading contract (`packet_for(goal_text, ids)` splits a goal file at level-2 headings and returns the sections that cite a finding's ids)
+- Consumes: Task 1 `IacGraph`, `GraphNode`, `GraphEdge`, `INTERNET`, `internet_position`; Plan 2 entry fields `suppressed_in_repo`, `suppression`; Task 3 `select_packet`, `TypedGraph`, `TypedEdge`, `ContextParams`, `load_context_params`; Plan 2 `GoalMap`, `effective_severity`, `SEVERITY_ORDER`; Plan 1 `Workspace`; WS6 Task 12's reading contract (`packet_for(goal_text, ids)` splits a goal file at level-2 headings and returns the sections that cite a finding's ids)
 - Produces:
   - `PACKETS_DIR = "iac-packets"`; `GOALS: tuple[str, ...]` (the nine `apd_goal` values)
   - `@dataclass(frozen=True) class Seed: entry_id: str; instance: str; address: str; check_id: str; title: str; severity: str; confidence: str; goals: tuple[str, ...]; nodes: tuple[str, ...]; var_refs: frozenset[str]`
@@ -474,14 +477,14 @@ Each test packet (1,000 characters) alone exceeds the 200-token cap, so the goal
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_context.py -v`
+Run: `pytest tests/iac/test_context.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `context.py`, the stage and the summary section**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac tests/context -v`
+Run: `pytest tests/iac tests/context -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -495,8 +498,10 @@ git commit -m "feat(iac): render per-goal evidence packets with counter-evidence
 
 **Files:**
 
-- Modify: `.claude/workflows/apd-gauntlet.js:425-461` (`runTier` lens instructions, first dispatch and retries), `tools/apd_gauntlet/runner/instructions.py` (the `apd-<lens>` and `apd-<lens>:retry` instructions), `.claude/agents/apd-intake.md` (Step 4b), `.claude/skills/apd-evidence-discipline/SKILL.md` (IaC section)
+- Modify: `.claude/workflows/apd-gauntlet.js` (`runTier` lens instructions, first dispatch and retries: locate by `async function runTier(` and its lens-retry `for (let i = 0; i < lenses.length; i++)` loop, and the `-rerun` dispatch in `async function repairTierGate(`; register A15.28), `tools/apd_gauntlet/runner/instructions.py` (the `apd-<lens>` and `apd-<lens>:retry` instructions), `.claude/agents/apd-intake.md` (Step 4b), `.claude/skills/apd-evidence-discipline/SKILL.md` (IaC section), `tools/apd_gauntlet/data/claude/` (packaged copies, register A13.16)
 - Test: `tests/test_workflow_apd_gauntlet.py`, `tests/runner/test_flow_parity.py`, `tests/test_intake_contract.py`, `tests/test_skill_apd_evidence_discipline_iac.py` (extend each)
+
+Workflow edits follow register A15.21. Only the instruction strings change: the first dispatch and the `-rerun` dispatch stay `return llmStep('apd-' + lens, …)` inside their `parallel` thunks, and the retry stays `r = await llmStep('apd-' + lens, …)`. No `await`, helper or dispatch label changes, so `tests/test_workflow_runner_awaits.py` is untouched, and the substring `llmStep('apd-' + lens` that `test_lens_instruction_names_iac_packet` counts matches every awaited form.
 
 **Interfaces:**
 
@@ -532,20 +537,22 @@ def test_skill_names_graph_citation():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_workflow_apd_gauntlet.py tests/runner/test_flow_parity.py tests/test_intake_contract.py tests/test_skill_apd_evidence_discipline_iac.py -v`
+Run: `pytest tests/test_workflow_apd_gauntlet.py tests/runner/test_flow_parity.py tests/test_intake_contract.py tests/test_skill_apd_evidence_discipline_iac.py -v`
 Expected: FAIL on the new tests
 
 - [ ] **Step 3: Edit the workflow, the runner instructions, the intake agent and the skill**
 
+Then run `python -I -m apd_gauntlet.bundle --sync` to refresh the packaged copies (register A13.16).
+
 - [ ] **Step 4: Run to verify pass and lint**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_workflow_apd_gauntlet.py tests/runner tests/test_intake_contract.py tests/test_skill_apd_evidence_discipline_iac.py tests/test_lint_agents.py tests/test_lint_skills.py -v && markdownlint-cli2 ".claude/**/*.md"`
+Run: `pytest tests/test_workflow_apd_gauntlet.py tests/runner tests/test_intake_contract.py tests/test_skill_apd_evidence_discipline_iac.py tests/test_lint_agents.py tests/test_lint_skills.py tests/test_bundle.py -v && markdownlint-cli2 ".claude/**/*.md"`
 Expected: PASS, 0 lint errors
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .claude/workflows/apd-gauntlet.js tools/apd_gauntlet/runner/instructions.py .claude/agents/apd-intake.md .claude/skills/apd-evidence-discipline/SKILL.md tests
+git add .claude/workflows/apd-gauntlet.js tools/apd_gauntlet/runner/instructions.py .claude/agents/apd-intake.md .claude/skills/apd-evidence-discipline/SKILL.md tools/apd_gauntlet/data/claude tests
 git commit -m "feat(workflow): point each lens at its IaC packet and intake at graph trust edges"
 ```
 
@@ -557,7 +564,7 @@ Run the master plan Task 1 set on this branch, then `apd-gauntlet compare-runs <
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/data/schemas/finding.schema.json:143-161` (new optional property), `tools/apd_gauntlet/validate.py` (`run_evidence_pass` rule), `tools/apd_gauntlet/synthesis/apply.py:309-335` (merged findings), `.claude/skills/apd-finding-schema/SKILL.md`, `.claude/skills/apd-evidence-discipline/SKILL.md`, `docs/schema-evolution.md`
+- Modify: `tools/apd_gauntlet/data/schemas/finding.schema.json:143-161` (new optional property), `tools/apd_gauntlet/validate.py` (`run_evidence_pass` rule), `tools/apd_gauntlet/synthesis/apply.py:309-335` (merged findings), `.claude/skills/apd-finding-schema/SKILL.md`, `.claude/skills/apd-evidence-discipline/SKILL.md`, `docs/schema-evolution.md`, `tools/apd_gauntlet/data/claude/` (packaged copies, register A13.16)
 - Create: `tests/fixtures/valid/finding-with-alternatives.yaml`
 - Test: `tests/test_finding_alternatives.py`
 
@@ -599,22 +606,22 @@ def test_merged_finding_keeps_alternatives(tmp_path):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_finding_alternatives.py -v`
+Run: `pytest tests/test_finding_alternatives.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the schema property, the rule, the merge and the skill text**
 
-The finding-schema skill documents the field with the spec §9 example; the evidence-discipline skill says high and critical IaC findings record at least two competing explanations (one turn, not sequential calls) and that a pruned hypothesis still cites the evidence that pruned it. `docs/schema-evolution.md` gains a dated entry: `finding` gains optional `alternatives_considered`.
+The finding-schema skill documents the field with the spec §9 example; the evidence-discipline skill says high and critical IaC findings record at least two competing explanations (one turn, not sequential calls) and that a pruned hypothesis still cites the evidence that pruned it. `docs/schema-evolution.md` gains a dated entry: `finding` gains optional `alternatives_considered`. Then run `python -I -m apd_gauntlet.bundle --sync` to refresh the packaged copies (register A13.16).
 
 - [ ] **Step 4: Run to verify pass, including synthesis and examples**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_finding_alternatives.py tests/test_finding_schema.py tests/unit/synthesis tests/test_synthesis_equivalence.py tests/test_validate_example_run.py -v && markdownlint-cli2 ".claude/**/*.md" docs/schema-evolution.md`
+Run: `pytest tests/test_finding_alternatives.py tests/test_finding_schema.py tests/unit/synthesis tests/test_synthesis_equivalence.py tests/test_validate_example_run.py tests/test_bundle.py -v && markdownlint-cli2 ".claude/**/*.md" docs/schema-evolution.md`
 Expected: PASS, 0 lint errors
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/apd_gauntlet/data/schemas/finding.schema.json tools/apd_gauntlet/validate.py tools/apd_gauntlet/synthesis/apply.py .claude/skills docs/schema-evolution.md tests
+git add tools/apd_gauntlet/data/schemas/finding.schema.json tools/apd_gauntlet/validate.py tools/apd_gauntlet/synthesis/apply.py .claude/skills tools/apd_gauntlet/data/claude docs/schema-evolution.md tests
 git commit -m "feat(findings): require competing explanations on serious IaC findings"
 ```
 
@@ -626,7 +633,7 @@ Run the master plan Task 1 set on this branch, then `apd-gauntlet compare-runs <
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/attack_path/build.py:105-163` (load and merge), new `_add_iac_edges` beside `_add_code_evidence_edges` (`:798-840`), `tools/apd_gauntlet/data/schemas/asset-graph.schema.json:31` (provenance source enum gains `iac_evidence`), `:79` (`sources_used` enum gains `iac_graph`), `.claude/skills/apd-attack-path-discipline/SKILL.md`, `docs/attack-path-analysis.md`
+- Modify: `tools/apd_gauntlet/attack_path/build.py:105-163` (load and merge), new `_add_iac_edges` beside `_add_code_evidence_edges` (`:798-840`), `tools/apd_gauntlet/data/schemas/asset-graph.schema.json:31` (provenance source enum gains `iac_evidence`), `:79` (`sources_used` enum gains `iac_graph`), `.claude/skills/apd-attack-path-discipline/SKILL.md`, `docs/attack-path-analysis.md`, `tools/apd_gauntlet/data/claude/` (packaged copies, register A13.16)
 - Test: `tests/test_attack_path_iac.py`
 
 **Interfaces:**
@@ -680,22 +687,22 @@ def test_runs_without_iac_unchanged(): ...                       # tests/fixture
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_attack_path_iac.py -v`
+Run: `pytest tests/test_attack_path_iac.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the merge, the schema enums, the skill note and the doc section**
 
-The attack-path discipline skill gains: IaC-derived edges carry `provenance.source: iac_evidence` with an `iacg:` locator; cite that id; an IaC node the inventory does not name is never added; paths stop at the compute node (spec §16).
+The attack-path discipline skill gains: IaC-derived edges carry `provenance.source: iac_evidence` with an `iacg:` locator; cite that id; an IaC node the inventory does not name is never added; paths stop at the compute node (spec §16). Then run `python -I -m apd_gauntlet.bundle --sync` to refresh the packaged copies (register A13.16).
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_attack_path_iac.py tests/test_attack_path_build.py tests/test_attack_path_graph.py tests/test_cli_analyze_attack_paths.py tests/test_skill_apd_attack_path_discipline.py -v && markdownlint-cli2 ".claude/**/*.md" docs/attack-path-analysis.md`
+Run: `pytest tests/test_attack_path_iac.py tests/test_attack_path_build.py tests/test_attack_path_graph.py tests/test_cli_analyze_attack_paths.py tests/test_skill_apd_attack_path_discipline.py tests/test_bundle.py -v && markdownlint-cli2 ".claude/**/*.md" docs/attack-path-analysis.md`
 Expected: PASS, 0 lint errors
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/apd_gauntlet/attack_path/build.py tools/apd_gauntlet/data/schemas/asset-graph.schema.json .claude/skills/apd-attack-path-discipline/SKILL.md docs/attack-path-analysis.md tests/test_attack_path_iac.py
+git add tools/apd_gauntlet/attack_path/build.py tools/apd_gauntlet/data/schemas/asset-graph.schema.json .claude/skills/apd-attack-path-discipline/SKILL.md tools/apd_gauntlet/data/claude docs/attack-path-analysis.md tests/test_attack_path_iac.py
 git commit -m "feat(attack-path): merge IaC exposure, trust and grant edges into the asset graph"
 ```
 
@@ -734,7 +741,7 @@ def test_overview_renders_iac_card() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/unit/report/test_transform_meta.py tests/test_workflow_apd_gauntlet.py -v`
+Run: `pytest tests/unit/report/test_transform_meta.py tests/test_workflow_apd_gauntlet.py -v`
 Expected: FAIL on the new tests
 
 - [ ] **Step 3: Implement `iac_header`, the card, and rebuild the bundle**
@@ -743,7 +750,7 @@ Run: `python tools/build_report_template.py`
 
 - [ ] **Step 4: Run to verify pass, freshness and golden**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/unit/report tests/integration/report tests/test_workflow_apd_gauntlet.py -v && /home/claude/venv-apd/bin/python tools/check_report_template_freshness.py`
+Run: `pytest tests/unit/report tests/integration/report tests/test_workflow_apd_gauntlet.py -v && python tools/check_report_template_freshness.py`
 Expected: PASS; the golden `claim-event-bus-golden-data.js` comparison unchanged; freshness OK
 
 - [ ] **Step 5: Commit**
@@ -757,13 +764,13 @@ git commit -m "feat(report): show the IaC run in the report header"
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/app/setup.py` (`apply_setup` warnings), `tools/apd_gauntlet/app/services.py` (`start_run`), `tools/apd_gauntlet/app/web/server.py` (start route), `tools/apd_gauntlet/app/tui.py` (start action)
+- Modify: `tools/apd_gauntlet/app/setup.py` (`apply_setup` warnings), `tools/apd_gauntlet/app/services.py` (`start_run`), `tools/apd_gauntlet/app/web/server.py` (start route), `tools/apd_gauntlet/app/tui/{__init__,app,screens}.py` (LA3's TUI package: start action)
 - Create: `tools/apd_gauntlet/app/web/templates/fetch_consent.html`
-- Test: `tests/app/test_setup.py`, `tests/app/test_services_lifecycle.py`, `tests/app/test_web.py`, `tests/app/test_tui.py` (extend each, following LA3's fixtures)
+- Test: `tests/app/test_setup.py`, `tests/app/test_services_lifecycle.py`, `tests/app/web/test_routes.py`, `tests/app/test_tui.py` (extend each, following LA3's fixtures)
 
 **Interfaces:**
 
-- Consumes: Plan 1 `tool_status`, `install_hint`, `load_tool_specs`, `collect_fetch_sources`, `has_fetch_consent`, `record_fetch_consent`, `read_consent`; LA3 `SetupResult`, `start_run` (`tools/apd_gauntlet/app/services.py`), `ApdApp`, the `cfg_ws` fixture and LA3's TUI test form `async with ApdApp(cfg_ws).run_test(size=(80, 24)) as pilot`, and LA3's web test-client fixture (written `web` below; use the name `tests/app/test_web.py` defines when LA3 lands)
+- Consumes: Plan 1 `tool_status`, `install_hint`, `load_tool_specs`, `collect_fetch_sources`, `has_fetch_consent`, `record_fetch_consent`, `read_consent`; LA3 `SetupResult`, `start_run` (`tools/apd_gauntlet/app/services.py`), `ApdApp`, the `cfg_ws` fixture and LA3's TUI test form `async with ApdApp(cfg_ws).run_test(size=(80, 24)) as pilot`, and LA3's web test-client fixture (written `web` below; use the name `tests/app/web/test_routes.py` defines when LA3 lands)
 - Produces:
   - `apply_setup` appends, for each IaC tool not found or below minimum, `"IaC: <tool> not found (<required_for>); install with: <install_hint>"` to `SetupResult.warnings` (spec §14: `setup` prints install commands per platform)
   - `class FetchConsentNeeded(Exception): sources: list[str]` in `app/services.py`
@@ -802,20 +809,22 @@ def test_tui_fetch_modal(cfg_ws, run_with_remote_modules, monkeypatch, popen_stu
     assert read_consent(run_with_remote_modules)["iac_module_fetch"]["method"] == "tui"
 ```
 
-`run_with_remote_modules` (new, `tests/app/conftest.py`) creates a run in `cfg_ws`'s workspace whose `inputs/` is Plan 1's `plain-remote` fixture and whose run-config sets `infrastructure: {mode: static, static: {terraform: ["infra/**"]}, modules: {fetch: true}}`. `popen_stub` (new) replaces the process start inside LA3's `start_run` with a stub returning PID 4242. `start_from_tui(pilot, run_id)` (new) drives LA3's start action for `run_id` with the keys LA3's own start test uses. `FetchConsentModal` (new, `app/tui.py`) shows the sources in a `Static` exposed as `sources_text`, with buttons `#fetch-allow` and `#fetch-skip`.
+`run_with_remote_modules` (new, `tests/app/conftest.py`) creates a run in `cfg_ws`'s workspace whose `inputs/` is Plan 1's `plain-remote` fixture and whose run-config sets `infrastructure: {mode: static, static: {terraform: ["infra/**"]}, modules: {fetch: true}}`. `popen_stub` (new) replaces the process start inside LA3's `start_run` with a stub returning PID 4242. `start_from_tui(pilot, run_id)` (new) drives LA3's start action for `run_id` with the keys LA3's own start test uses. `FetchConsentModal` (new, in the `app/tui/` package) shows the sources in a `Static` exposed as `sources_text`, with buttons `#fetch-allow` and `#fetch-skip`.
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/app -v`
+Run: `pytest tests/app -v`
 Expected: FAIL on the new tests
 
 - [ ] **Step 3: Implement the setup warnings, `start_run`, the web route and template, and the TUI modal**
 
 Imports from `apd_gauntlet.iac` stay inside the functions that use them, so `app.services` never imports the IaC package at module load.
 
+`apd-gauntlet run --yes` never grants `iac_module_fetch`; Task 10's "Consent in the TUI and web" section documents it (register A13.25).
+
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/app tests/iac -v`
+Run: `pytest tests/app tests/iac -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -833,11 +842,11 @@ git commit -m "feat(app): IaC tool hints in setup and fetch-consent dialogs in t
 
 - [ ] **Step 1: Write the docs**
 
-`docs/iac-evaluation.md` gains "Infrastructure graph" (classes, edge kinds, AWS-only semantics, multiplicity), "Evidence packets" (seeds, weights, the size cap, how to read a packet, counter-evidence including "suppressed in repo"), "Competing explanations", "Attack paths" (the edge mapping, the inventory join, and `data/iac/internet-aliases.yaml` with how to add a pack's internet position), "Report header" and "Consent in the TUI and web". `docs/schema-evolution.md` gains dated entries for the new `iac-graph` schema and the asset-graph provenance value `iac_evidence` and source `iac_graph` (the `alternatives_considered` entry landed in Task 6). `CHANGELOG.md` gains Added bullets for the graph, packets, alternatives, the attack-path merge and the report header.
+`docs/iac-evaluation.md` gains "Infrastructure graph" (classes, edge kinds, AWS-only semantics, multiplicity), "Evidence packets" (seeds, weights, the size cap, how to read a packet, counter-evidence including "suppressed in repo"), "Competing explanations", "Attack paths" (the edge mapping, the inventory join, and `data/iac/internet-aliases.yaml` with how to add a pack's internet position; the `agentic-ai`, `mobile-applications` and `security-tooling` packs declare no internet attacker position, so IaC internet edges never start in those runs, register A13.26), "Report header" and "Consent in the TUI and web" (`apd-gauntlet run --yes` never grants `iac_module_fetch`, register A13.25). `docs/schema-evolution.md` gains dated entries for the new `iac-graph` schema and the asset-graph provenance value `iac_evidence` and source `iac_graph` (the `alternatives_considered` entry landed in Task 6). `CHANGELOG.md` gains Added bullets for the graph, packets, alternatives, the attack-path merge and the report header.
 
 - [ ] **Step 2: Lint and run the full suite**
 
-Run: `markdownlint-cli2 docs/iac-evaluation.md docs/schema-evolution.md docs/adrs/0027-iac-evaluation-pipeline.md CHANGELOG.md && /home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/ruff check tools/ tests/ && /home/claude/venv-apd/bin/mypy tools/`
+Run: `markdownlint-cli2 docs/iac-evaluation.md docs/schema-evolution.md docs/adrs/0027-iac-evaluation-pipeline.md CHANGELOG.md && pytest -q && ruff check tools/ tests/ && mypy tools/`
 Expected: 0 lint errors; PASS; ruff and mypy clean
 
 - [ ] **Step 3: Commit**
