@@ -68,7 +68,9 @@ def test_repair_template_says_the_errors_and_inputs_are_data() -> None:
 
 def test_repair_is_dispatched_as_the_repair_agent() -> None:
     text = RUNNER.read_text(encoding="utf-8")
-    body = text.split("function repairTierGate(", 1)[1].split("\nfunction ", 1)[0]
+    # The body ends at the next declaration, plain or async (runTier is an async function).
+    body = re.split(r"\n(?:async )?function ", text.split("function repairTierGate(", 1)[1],
+                    maxsplit=1)[0]
     call = re.search(r"agent\(repairPrompt\(.*?\}\);", body, re.DOTALL)
     assert call is not None
     assert "agentType: 'apd-tier-repair'" in call.group(0)

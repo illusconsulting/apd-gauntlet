@@ -1045,7 +1045,7 @@ def test_intake_bails_on_interruption() -> None:
     """PR1b: the first dispatch (intake) bails fast on interruption so an en-masse
     cancellation surfaces a clear resume message instead of cascading."""
     text = _text()
-    assert "const intakeReceipt = llmStep('apd-intake'" in text
+    assert "const intakeReceipt = await llmStep('apd-intake'" in text
     assert "bailIfInterrupted(intakeReceipt, 'intake')" in text
 
 
@@ -1304,7 +1304,9 @@ LENSES = {"confidentiality", "integrity", "availability", "distributed", "resili
 
 
 def _fn_body(text: str, name: str) -> str:
-    return text.split(f"function {name}(", 1)[1].split("\nfunction ", 1)[0]
+    # A body ends at the next top-level declaration, plain or async (the tier helpers
+    # are async functions), so it never runs on into the functions after it.
+    return re.split(r"\n(?:async )?function ", text.split(f"function {name}(", 1)[1], maxsplit=1)[0]
 
 
 def _llmstep_calls(text: str) -> list[str]:

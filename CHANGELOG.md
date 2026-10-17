@@ -247,6 +247,16 @@ All notable changes to this project will be documented in this file. Format base
   outside the inputs folder, it exits 1, names each link and its target, and
   creates nothing. Links that stay inside are copied as links, and absolute ones
   become relative links, so the run never points back at the original folder.
+- **The workflow runner now awaits every dispatch.** It was written for an older
+  Workflow runtime, where `agent()` returned the agent's result. On current Claude
+  Code, `agent()` and `parallel()` return Promises, and the runner awaited none of
+  them. Every receipt it checked was a pending Promise, which read as success, so
+  no agent ran to completion and every run failed at the report-audit gate with a
+  misleading `audit-report still FAILED a STRUCTURAL check` error. The runner now
+  awaits every dispatch, so each step finishes before the next one starts. Only a
+  tier's lenses, a tier's repairs and re-runs, and the threat-model evaluator with
+  the attack-path analyzer run in parallel. A `resume-plan` refusal now halts the
+  run before anything else is dispatched.
 
 ## v1.7.0 — 2026-06-09
 
