@@ -259,8 +259,8 @@ def test_plugin_manifest_version_matches_pyproject() -> None:
     assert init_version == py_version, (
         f"__init__ version is {init_version!r}; pyproject is {py_version!r}"
     )
-    assert py_version == "1.7.0", (
-        f"expected the 1.7.0 release version; pyproject reports {py_version!r}"
+    assert py_version == "1.7.1", (
+        f"expected the 1.7.1 release version; pyproject reports {py_version!r}"
     )
 
 

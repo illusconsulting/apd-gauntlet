@@ -41,7 +41,7 @@ thinking.
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install apd-gauntlet
-apd-gauntlet --version          # should print 1.7.0
+apd-gauntlet --version          # should print 1.7.1
 ```
 
 To use the chat-driven workflow, Claude also needs the agents and skills. Get them **either** way:
@@ -197,7 +197,7 @@ This creates `runs/apd-YYYYMMDD-my-feature/` containing your copied `inputs/`, t
 run_id: apd-20260625-my-feature
 domains:
   - pbm
-framework_version: 1.7.0
+framework_version: 1.7.1
 code_recon: auto          # runs code analysis if available, skips otherwise
 taxonomies:
   - cwe
