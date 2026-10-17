@@ -265,7 +265,12 @@ All notable changes to this project will be documented in this file. Format base
   whole-run check and halted the gauntlet before synthesis. `cross_references` and
   `merged_from` now resolve against the ids of the record's own kind, including
   merged capability ids (`cap-merged-*`, from
-  `40-synthesis/deduped-capabilities.yaml`) after synthesis.
+  `40-synthesis/deduped-capabilities.yaml`) after synthesis. Those merged ids also
+  resolve now in the asset-graph `mitigated_by_capability` edge check and the
+  `contradictions.yaml` `capability_id` check. This cross-file check reads a
+  malformed `deduped-findings.yaml` or `deduped-capabilities.yaml` as holding no
+  ids and reports the references left unresolved. On a malformed
+  `deduped-findings.yaml` it used to crash.
 
 ## v1.7.0 — 2026-06-09
 

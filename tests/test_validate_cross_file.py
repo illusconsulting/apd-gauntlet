@@ -179,6 +179,7 @@ def test_merged_cross_reference_resolved_from_deduped(tmp_path):
     result = runner.invoke(main, ["validate", str(dst)])
     assert "merged-abcd1234" not in result.output, result.output
     assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
 
 
 # ---------------------------------------------------------------------------
@@ -328,8 +329,19 @@ def test_finding_ref_to_capability_id_caught(tmp_path, field):
     )
 
 
+# Well-formed 40-synthesis/deduped-capabilities.yaml shapes that hold the merged
+# id. apply.py writes the first; the synthesizer-fallback agent may write any of
+# them, and the shared extract_records rule accepts all three.
+DEDUPED_CAPABILITY_DOCS = {
+    "singular-list": "capability:\n- id: cap-merged-abcd1234\n",
+    "plural-list": "capabilities:\n- id: cap-merged-abcd1234\n",
+    "single-record": "capability:\n  id: cap-merged-abcd1234\n",
+}
+
+
+@pytest.mark.parametrize("doc", list(DEDUPED_CAPABILITY_DOCS))
 @pytest.mark.parametrize("field", list(REF_FIELDS))
-def test_merged_capability_ref_resolved_from_deduped(tmp_path, field):
+def test_merged_capability_ref_resolved_from_deduped(tmp_path, field, doc):
     """Mirror of FW-3 for capabilities: a cap-merged-* id that exists only in
     40-synthesis/deduped-capabilities.yaml (hyphenated, so not matched by the
     ``*.capabilities.yaml`` record glob) resolves once that corpus is present."""
@@ -337,12 +349,61 @@ def test_merged_capability_ref_resolved_from_deduped(tmp_path, field):
     synth = dst / "40-synthesis"
     synth.mkdir(exist_ok=True)
     (synth / "deduped-capabilities.yaml").write_text(
-        "capability:\n- id: cap-merged-abcd1234\n", encoding="utf-8"
+        DEDUPED_CAPABILITY_DOCS[doc], encoding="utf-8"
     )
     _write_integrity_capability(dst, field, ["cap-merged-abcd1234"])
     result = CliRunner().invoke(main, ["validate", str(dst)])
     assert "cap-merged-abcd1234" not in result.output, result.output
     assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
+
+
+# Malformed deduped corpora (written by an LLM on the synthesizer-fallback path):
+# a top-level list, a top-level scalar, and a root key whose value is a scalar.
+MALFORMED_DEDUPED_BODIES = {
+    "top-level-list": "- id: {id}\n",
+    "top-level-scalar": "5\n",
+    "scalar-root-value": "{root}: 5\n",
+}
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_malformed_deduped_capabilities_reports_not_found(tmp_path, field, body):
+    """A malformed deduped-capabilities.yaml contributes no ids. validate must
+    report the unresolved cap-merged-* ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="cap-merged-abcd1234", root="capability"),
+        encoding="utf-8",
+    )
+    _write_integrity_capability(dst, field, ["cap-merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert f"{REF_FIELDS[field]} cap-merged-abcd1234 not found" in result.output, (
+        result.output
+    )
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+def test_malformed_deduped_findings_reports_not_found(tmp_path, body):
+    """FW-3 guard: a malformed deduped-findings.yaml contributes no ids. validate
+    must report the unresolved merged-* ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-findings.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="merged-abcd1234", root="finding"),
+        encoding="utf-8",
+    )
+    _write_integrity_finding(dst, "cross_references", ["merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert "cross_reference merged-abcd1234 not found" in result.output, result.output
 
 
 # ---------------------------------------------------------------------------

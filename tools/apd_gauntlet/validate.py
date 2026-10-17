@@ -1055,6 +1055,35 @@ def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> No
             ])
 
 
+def _deduped_record_ids(run_dir: pathlib.Path, kind: str) -> set[str]:
+    """Return the record ids in ``40-synthesis/deduped-<plural>.yaml`` for
+    ``kind`` (``finding`` or ``capability``), for id resolution only.
+
+    The file is written by ``synthesis/apply.py`` or, on the fallback path, by
+    the synthesizer agent, so it may be malformed. A missing file, a YAML error,
+    a document that is not a mapping or a root value that is not a list or a
+    record all give no ids instead of raising; any ref that needed one is then
+    reported "not found" as usual. Records come from the shared
+    ``extract_records`` rule (singular or plural root key, per-record wrappers).
+    """
+    root_key = RECORD_KINDS[kind][1]
+    path = run_dir / "40-synthesis" / f"deduped-{_PLURAL_ROOT[root_key]}.yaml"
+    if not path.exists():
+        return set()
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return set()
+    if not isinstance(doc, dict):
+        return set()
+    ids: set[str] = set()
+    for rec in extract_records(doc, root_key):
+        rid = rec.get("id")
+        if isinstance(rid, str) and rid:
+            ids.add(rid)
+    return ids
+
+
 def run_cross_file_pass(
     run_dir: pathlib.Path, *, strict_excerpts: bool = False
 ) -> ValidationReport:
@@ -1109,36 +1138,12 @@ def run_cross_file_pass(
     # Pre-synthesis the file is absent, so this is a no-op and the raw-set gate
     # is unchanged. (Resolution-only: these records are not schema-validated
     # here, and adding ids can only clear false "not found" errors.)
-    deduped_findings_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_findings_path.exists():
-        try:
-            deduped_doc = yaml.safe_load(
-                deduped_findings_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError:
-            deduped_doc = {}
-        deduped_recs = deduped_doc.get("finding") or deduped_doc.get("findings") or []
-        for rec in deduped_recs:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
     # The same for capabilities: a merged capability's 'cap-merged-<sha8>' id
     # exists only in 40-synthesis/deduped-capabilities.yaml (not matched by the
     # ``*.capabilities.yaml`` glob), and capability.schema.json allows a
     # capability's cross_references / merged_from to name it.
-    deduped_caps_path = run_dir / "40-synthesis" / "deduped-capabilities.yaml"
-    if deduped_caps_path.exists():
-        try:
-            deduped_doc = yaml.safe_load(
-                deduped_caps_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError:
-            deduped_doc = {}
-        deduped_recs = (
-            deduped_doc.get("capability") or deduped_doc.get("capabilities") or []
-        )
-        for rec in deduped_recs:
-            if isinstance(rec, dict) and rec.get("id"):
-                capability_ids.add(rec["id"])
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
     # Verify cross_references, merged_from, and evidence artifacts. Both name ids
     # of the record's OWN kind (finding.schema.json: finding ids;
