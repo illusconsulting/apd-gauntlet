@@ -1,7 +1,7 @@
 # Design: CAPEC bridge — a derived CWE ↔ ATT&CK view
 
 - **Date:** 2026-06-14
-- **Status:** Approved (design); implementation in progress
+- **Status:** Implemented (v1.7.0, #110)
 - **Framework version at design:** 1.7.0 (main). No version bump required (additive, derived).
 - **New ADR:** [0022](../../adrs/0022-derived-cross-framework-views.md) (derived cross-framework views) — this is its first instance.
 - **Related ADRs:** 0008 (multi-framework taxonomy mappings), 0012 (ATLAS — rollup plumbing precedent), 0020 (tooling-authored derived fields).

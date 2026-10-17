@@ -1,9 +1,11 @@
 """Scaffold a runs/<run-id>/ directory."""
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import shutil
+from collections.abc import Iterator
 
 import yaml
 
@@ -26,6 +28,49 @@ def _validate_run_id(run_id: str) -> None:
             f"invalid run_id {run_id!r}: must match {_RUN_ID_RE.pattern} "
             "and contain no '..' segments"
         )
+
+
+class UnsafeInputsError(ValueError):
+    """The inputs folder holds links that point outside it."""
+
+
+def _is_within(path: pathlib.Path, root: pathlib.Path) -> bool:
+    return path == root or root in path.parents
+
+
+def _links_under(top: pathlib.Path) -> Iterator[pathlib.Path]:
+    """Yield every symlink under ``top`` (file, directory or dangling) without
+    following any of them."""
+    for dirpath, dirnames, filenames in os.walk(top, followlinks=False):
+        for name in [*dirnames, *filenames]:
+            path = pathlib.Path(dirpath, name)
+            if path.is_symlink():
+                yield path
+
+
+def find_escaping_links(inputs_src: pathlib.Path) -> list[str]:
+    """Return every link under ``inputs_src`` whose real target is outside it,
+    as sorted POSIX paths relative to ``inputs_src``."""
+    root = inputs_src.resolve()
+    return sorted(
+        link.relative_to(inputs_src).as_posix()
+        for link in _links_under(inputs_src)
+        if not _is_within(pathlib.Path(os.path.realpath(link)), root)
+    )
+
+
+def _relativize_links(copied: pathlib.Path, inputs_src: pathlib.Path) -> None:
+    """Point every absolute link under ``copied`` at the same file inside
+    ``copied``, so the run stays self-contained. Callers have already refused
+    links that escape ``inputs_src``."""
+    root = inputs_src.resolve()
+    for link in _links_under(copied):
+        if not os.path.isabs(os.readlink(link)):
+            continue
+        original = inputs_src / link.relative_to(copied)
+        mapped = copied / pathlib.Path(os.path.realpath(original)).relative_to(root)
+        link.unlink()
+        link.symlink_to(os.path.relpath(mapped, link.parent))
 
 
 def _resolve_pack_taxonomies(
@@ -56,6 +101,12 @@ def scaffold_run(
     domains_dir: pathlib.Path | None = None,
 ) -> pathlib.Path:
     _validate_run_id(run_id)
+    escaping = find_escaping_links(inputs_src)
+    if escaping:
+        detail = "; ".join(f"{rel} -> {os.readlink(inputs_src / rel)}" for rel in escaping)
+        raise UnsafeInputsError(
+            f"inputs contain links that point outside the inputs folder: {detail}"
+        )
     if domains_dir is None:
         from . import resources as _resources
         domains_dir = _resources.domains_dir()
@@ -64,10 +115,13 @@ def scaffold_run(
         (run_dir / sub).mkdir(parents=True, exist_ok=True)
     for item in inputs_src.iterdir():
         target = run_dir / "inputs" / item.name
-        if item.is_dir():
-            shutil.copytree(item, target, dirs_exist_ok=True)
+        if item.is_symlink():
+            shutil.copy2(item, target, follow_symlinks=False)
+        elif item.is_dir():
+            shutil.copytree(item, target, symlinks=True, dirs_exist_ok=True)
         else:
             shutil.copy2(item, target)
+    _relativize_links(run_dir / "inputs", inputs_src)
     # Operator --taxonomies first (order preserved), then pack-declared taxonomies
     # not already present. Dedupe; stable order.
     merged_tax: dict[str, None] = {}

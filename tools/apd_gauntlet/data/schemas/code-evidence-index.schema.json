@@ -48,10 +48,10 @@
   "$defs": {
     "entry": {
       "type": "object",
-      "required": ["id", "qualified_name", "kind", "file_path", "line_range", "excerpt", "apd_relevance"],
+      "required": ["qualified_name", "kind", "file_path", "line_range", "excerpt", "apd_relevance"],
       "additionalProperties": false,
       "properties": {
-        "id":             { "type": "string", "pattern": "^cev-[0-9a-f]{8}$" },
+        "id":             { "type": "string", "pattern": "^cev-[0-9a-f]{8}$", "readOnly": true },
         "qualified_name": { "type": "string", "minLength": 1 },
         "kind":           { "type": "string", "enum": ["function", "class", "route", "consumer", "job", "module", "edge"] },
         "file_path":      { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\.\\.).+$" },

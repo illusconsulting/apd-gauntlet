@@ -16,3 +16,10 @@ def test_domains_dir_has_pbm_pack() -> None:
 
 def test_read_schema_parses() -> None:
     assert resources.read_schema("domain.schema.json").get("$id")
+
+
+def test_read_prompt_repair_is_js_safe_and_has_placeholders() -> None:
+    text = resources.read_prompt("repair")
+    for ph in ("{{RUN_DIR}}", "{{FILE}}", "{{ERRORS}}"):
+        assert ph in text
+    assert "'" not in text and "\\" not in text

@@ -133,7 +133,6 @@ Run the evidence-discipline checklist for every record:
 7. ATT&CK technique mappings only when one-sentence rationale is specific
 8. `related_concerns` populated when adjacent-goal material is observed
 9. Title names a specific component and a specific concern
-10. ID computed deterministically per the schema rule
 
 ## Final message (receipt only)
 

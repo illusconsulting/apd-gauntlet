@@ -17,7 +17,7 @@ The gauntlet anchors compliance on **NIST 800-53r5** and already produces `nist-
 ### Success criteria
 
 1. `refresh-crosswalks` produces `data/hipaa-800-53-crosswalk.json` + `data/csf2-800-53-crosswalk.json` from NIST sources, each row carrying the STRM relationship where published.
-2. The synthesizer emits `hipaa-coverage.yaml` + `csf2-coverage.yaml` by projecting `nist-coverage.yaml`; gated on `projections:` run-config (default `[hipaa, csf2]`).
+2. The synthesizer emits `hipaa-coverage.yaml` + `csf2-coverage.yaml` by projecting `nist-coverage.yaml`; gated on the `projections:` list in the run's `.apd-run.yaml`. Opt-in, with no default: a run that leaves the list out gets neither file, and `projections: [hipaa, csf2]` turns on both.
 3. Each HIPAA standard / CSF subcategory row aggregates the 800-53 controls mapping to it, inherits posture + finding/capability provenance, and carries mapping fidelity.
 4. A "Compliance Crosswalk" Coverage family renders both, labeled **derived projection — not an audit attestation**, with the STRM relationship visible.
 5. Advisory only; **silence on absence**; full test coverage; golden regen; gates green.
@@ -28,7 +28,7 @@ The gauntlet anchors compliance on **NIST 800-53r5** and already produces `nist-
 |---|----------|--------|
 | 1 | Authorship | **Derived (synthesizer).** Pure projection of `nist-coverage.yaml`; no emission key, no specialist work. |
 | 2 | Targets (v1) | **HIPAA Security Rule + NIST CSF 2.0.** HITRUST/ISO deferred. |
-| 3 | Gating | New run-config `projections: [hipaa, csf2]` (default on). Not part of `taxonomies` (that enum = emission only). |
+| 3 | Gating | New run-config `projections` list (`enum: [hipaa, csf2]`), **opt-in**: there is no default, so a run emits a projection only when its `.apd-run.yaml` lists it (e.g. `projections: [hipaa, csf2]`). An earlier draft of this spec said "default on"; the shipped schema and synthesizer are opt-in. Not part of `taxonomies` (that enum = emission only). |
 | 4 | Fidelity | Carry **NIST IR 8477 STRM** relationship (`subset`/`superset`/`intersect`/`equal`) per mapping; render it; never present an `intersect` as full coverage. |
 | 5 | Framing | Report family labeled **"derived projection — not an audit attestation."** Load-bearing disclaimer. |
 | 6 | Catalog source | `refresh-crosswalks` CLI + two bundled JSON catalogs from NIST CPRT / CSRC. |
@@ -51,7 +51,7 @@ Both crosswalks are **published by NIST as machine-readable artifacts** (spike, 
 | Title/URL catalog | `report/taxonomy.py` | `hipaa_titles()` (§164.3xx standard names), `csf2_titles()` (subcategory names); URLs to the CSF tool / HIPAA reg |
 | Rollup | `synthesis/rollup.py` (`_nist_rollup` is the input) | `_framework_projection_rollup(nist_rollup, crosswalk)` → two artifacts |
 | Rollup schema | **new** `schemas/hipaa-coverage.schema.json`, `schemas/csf2-coverage.schema.json` | validate |
-| Run-config | `schemas/run-config.schema.json` | add `projections` array (`enum: [hipaa, csf2]`); default applied in `init_run` |
+| Run-config | `schemas/run-config.schema.json` | add `projections` array (`enum: [hipaa, csf2]`), no `default`; the synthesizer reads it from `.apd-run.yaml` (`_declared_projections` in `synthesis/rollup.py`), and `init_run` does not write it |
 | Validate | `validate.py` (`SYNTHESIS_ROLLUPS`) | register both |
 | Report load/transform | `report/loader.py`, `report/transform.py` | new "Compliance Crosswalk" family + scenes |
 | Report template | `report-template/screens/Coverage.jsx` (+ rebuild) | HIPAA + CSF2 sub-tabs, derived/fidelity labeling |

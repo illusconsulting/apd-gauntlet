@@ -1,7 +1,10 @@
 """Tests for the build-domain-skill merge engine."""
 from __future__ import annotations
 
+import hashlib
 import pathlib
+import re
+import shutil
 
 import yaml as _yaml
 from apd_gauntlet.build_domain_skill import build_domain_skill
@@ -122,3 +125,63 @@ def test_no_taxonomies_omits_frontmatter_key(tmp_path):
     build_domain_skill(["sample"], DOMAINS, out, "1.0.0", emit_sidecars=False)
     fm = _frontmatter((out / "SKILL.md").read_text())
     assert "taxonomies" not in fm["metadata"]
+
+
+def _copied_pack(tmp_path) -> pathlib.Path:
+    shutil.copytree(DOMAINS / "sample", tmp_path / "domains" / "sample")
+    return tmp_path / "domains"
+
+
+def test_rebuild_when_pack_file_edited_without_version_bump(tmp_path):
+    domains, out = _copied_pack(tmp_path), tmp_path / "apd-domain"
+    build_domain_skill(["sample"], domains, out, "1.0.0")
+    rubric = domains / "sample" / "severity-rubric.md"
+    rubric.write_text(rubric.read_text() + "\nEDITED-WITHOUT-BUMP\n")
+    build_domain_skill(["sample"], domains, out, "1.0.0")
+    assert "EDITED-WITHOUT-BUMP" in (out / "SKILL.md").read_text()
+    assert "EDITED-WITHOUT-BUMP" in (out / "by-goal" / "confidentiality.md").read_text()
+
+
+def test_rebuild_when_domain_yaml_edited(tmp_path):
+    domains, out = _copied_pack(tmp_path), tmp_path / "apd-domain"
+    build_domain_skill(["sample"], domains, out, "1.0.0")
+    meta = domains / "sample" / "domain.yaml"
+    meta.write_text(
+        meta.read_text().replace("PHI store specific to the sample domain.", "EDITED store.")
+    )
+    build_domain_skill(["sample"], domains, out, "1.0.0")
+    assert "EDITED store." in (out / "SKILL.md").read_text()
+
+
+def test_content_hash_recorded_in_frontmatter(tmp_path):
+    out = tmp_path / "apd-domain"
+    build_domain_skill(["sample"], DOMAINS, out, "1.0.0")
+    fm = _yaml.safe_load((out / "SKILL.md").read_text().split("---\n")[1])
+    assert re.fullmatch(r"[0-9a-f]{64}", fm["metadata"]["content_sha256"])
+
+
+def test_legacy_skill_without_hash_is_rebuilt_once(tmp_path):
+    out = tmp_path / "apd-domain"
+    p = build_domain_skill(["sample"], DOMAINS, out, "1.0.0")
+    p.write_text(re.sub(r"(?m)^  content_sha256: .*\n", "", p.read_text()))
+    build_domain_skill(["sample"], DOMAINS, out, "1.0.0")
+    assert "content_sha256:" in p.read_text()
+
+
+def test_content_hash_covers_domain_yaml_then_included_files_in_declared_order(tmp_path):
+    """The recorded hash is SHA-256 over, per pack in declared order, domain.yaml then each
+    included file: ``name\\0rel\\0`` + raw bytes + ``\\0``."""
+    out = tmp_path / "apd-domain"
+    build_domain_skill(["sample", "sample2"], DOMAINS, out, "1.0.0")
+    fm = _yaml.safe_load((out / "SKILL.md").read_text().split("---\n")[1])
+    h = hashlib.sha256()
+    for name in ("sample", "sample2"):
+        pack = DOMAINS / name
+        includes = _yaml.safe_load((pack / "domain.yaml").read_text())["includes"]
+        rels = ["domain.yaml"]
+        for glob in includes:
+            rels += [str(f.relative_to(pack)) for f in sorted(pack.glob(glob))]
+        for rel in rels:
+            h.update(f"{name}\0{rel}\0".encode() + (pack / rel).read_bytes() + b"\0")
+    assert fm["metadata"]["content_sha256"] == h.hexdigest()
+

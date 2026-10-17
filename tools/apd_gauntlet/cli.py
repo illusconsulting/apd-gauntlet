@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from . import FRAMEWORK_VERSION, __version__
 from . import resources as _resources
 from .build_domain_skill import build_domain_skill
-from .init_run import scaffold_run
+from .init_run import UnsafeInputsError, scaffold_run
 from .lint_agents import lint_agents_dir
 from .lint_skills import lint_skills_dir
 from .linters import check_capability_id, check_finding_id
@@ -31,6 +31,7 @@ from .summary import render_summary, summarize_run
 from .threat_model.author import build_skeleton_from_inventory_file
 from .validate import (
     ValidationReport,
+    add_excerpt_violations,
     build_registry,
     run_cross_file_pass,
     run_schema_pass,
@@ -69,7 +70,17 @@ def main() -> None:
         "skips the cross-file pass and 00-context/40-synthesis rollup checks."
     ),
 )
-def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--strict-excerpts",
+    is_flag=True,
+    help=(
+        "Make an evidence excerpt that is not verbatim in its cited inputs/ file an "
+        "ERROR (a WARNING by default). Ignored with --schema-only."
+    ),
+)
+def validate(  # type: ignore[no-untyped-def]
+    run_dir, schema_only, strict, as_json, errors_only, tier, strict_excerpts
+) -> None:
     target = run_dir / tier if tier else run_dir
     if tier and not target.is_dir():
         raise click.ClickException(f"--tier subdir not found: {target}")
@@ -85,9 +96,12 @@ def validate(run_dir, schema_only, strict, as_json, errors_only, tier) -> None: 
             files_seen=max(schema_rep.files_seen, semantic_rep.files_seen),
             records_seen=schema_rep.records_seen,
         )
+        add_excerpt_violations(
+            merged, run_dir, records_dir=target, strict_excerpts=strict_excerpts
+        )
     else:
         semantic_rep = run_semantic_pass(target)
-        cross_file_rep = run_cross_file_pass(target)
+        cross_file_rep = run_cross_file_pass(target, strict_excerpts=strict_excerpts)
         merged = ValidationReport(
             errors=schema_rep.errors + semantic_rep.errors + cross_file_rep.errors,
             warnings=schema_rep.warnings + semantic_rep.warnings + cross_file_rep.warnings,
@@ -217,15 +231,19 @@ def init_run_cmd(run_id, inputs, domains, root, taxonomies, threat_model, method
     parsed = (
         [t.strip() for t in taxonomies.split(",") if t.strip()] if taxonomies else None
     )
-    target = scaffold_run(
-        run_id,
-        inputs,
-        list(domains),
-        root,
-        taxonomies=parsed,
-        threat_model=threat_model,
-        methodology_hint=methodology_hint,
-    )
+    try:
+        target = scaffold_run(
+            run_id,
+            inputs,
+            list(domains),
+            root,
+            taxonomies=parsed,
+            threat_model=threat_model,
+            methodology_hint=methodology_hint,
+        )
+    except UnsafeInputsError as e:
+        click.echo(f"init-run: {e}", err=True)
+        raise SystemExit(1) from None
     click.echo(f"Run scaffolded at {target}")
 
 
@@ -395,6 +413,43 @@ def plan_run_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
         click.echo(_stdjson.dumps(plan, indent=2))
     else:
         click.echo(render_markdown(plan, cfg))
+
+
+@main.command("resume-plan")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
+@click.option("--json", "as_json", is_flag=True, help="Emit the plan as one line of JSON.")
+def resume_plan_cmd(run_dir: pathlib.Path, as_json: bool) -> None:
+    """Report which agent steps of a run are already complete (read-only).
+
+    A step is complete when every file of one of its output sets is present, non-empty
+    and schema-valid; the runner resumes from this and skips the complete steps. Writes
+    nothing. Exits 2 when RUN_DIR/.apd-run.yaml is missing, unparseable or invalid, and 3
+    when the run was created by a different framework major than this engine.
+    """
+    from .resume_plan import (
+        EngineMismatch,
+        RunConfigError,
+        build_resume_plan,
+        check_engine_compat,
+    )
+
+    try:
+        check_engine_compat(run_dir)
+    except RunConfigError as e:
+        click.echo(str(e), err=True)
+        raise SystemExit(2) from e
+    except EngineMismatch as e:
+        click.echo(str(e), err=True)
+        raise SystemExit(3) from e
+
+    plan = build_resume_plan(run_dir)
+    if as_json:
+        click.echo(_stdjson.dumps(plan))
+        return
+    click.echo(f"engine {plan['engine_version']}")
+    for step in plan["steps"]:
+        state = "complete" if step["complete"] else "pending"
+        click.echo(f"{state}  {step['label']}  {step['reason']}")
 
 
 @main.command("manual-audit-prompts")
@@ -932,7 +987,12 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
                     "crown_jewels[] in the domain pack or .apd-run.yaml to "
                     "enable attack-path analysis."
                 ),
-                # TODO: reference ADR-0010 once C-27 lands
+                # Per docs/adrs/0010-attack-path-analysis-on-partial-graphs.md
+                # (decision rule 2), a missing crown-jewel declaration yields
+                # this single blocked finding instead of an enumeration or a
+                # guessed target. The builder applies the same rule to missing
+                # attacker positions and ambiguous node names. The ADR's
+                # apath-blocked- id prefix is not used; the id is apath-<hash>.
                 "detail": (
                     "Attack-path analysis requires at least one "
                     "(attacker_position, crown_jewel) pair declared in either "
@@ -1252,6 +1312,9 @@ def canonicalize_cmd(run_dir: Path) -> None:
     Idempotent, whole-run: normalizes the record envelope (singular root key,
     unwraps per-record wrappers, injects schema_version), recomputes every
     deterministic id (tooling is authoritative), and rewrites cross_references.
+    Also mints the 00-context ids agents no longer emit (cev- on code-evidence-index
+    entries; tm- on normalized threat-model entries, plus an absent
+    inferred_apd_goals), only where absent: an existing value is never rewritten.
     Structural only — never edits titles, excerpts, or evidence.
     """
     from .canonicalize import CanonicalizeCollision, canonicalize_run
@@ -1266,6 +1329,11 @@ def canonicalize_cmd(run_dir: Path) -> None:
     click.echo(
         f"canonicalize: {result.records_canonicalized} records recanonicalized, "
         f"{result.cross_refs_rewritten} cross-refs rewritten"
+        + (
+            f", {result.context_ids_minted} context ids minted"
+            if result.context_ids_minted
+            else ""
+        )
         + (
             f", {len(result.parse_errors)} files skipped (unparseable)"
             if result.parse_errors

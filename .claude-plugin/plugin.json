@@ -1,6 +1,6 @@
 {
   "name": "apd-gauntlet",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "APD security architecture review framework — 9 specialist agents plus intake, the apd-gauntlet workflow runner, and a synthesizer fallback. Requires the apd-gauntlet PyPI package on PATH.",
   "author": { "name": "APD Gauntlet contributors", "url": "https://github.com/illusconsulting/apd-gauntlet" },
   "homepage": "https://github.com/illusconsulting/apd-gauntlet",
@@ -28,7 +28,8 @@
     "./.claude/agents/apd-synthesizer.md",
     "./.claude/agents/apd-threat-model-author.md",
     "./.claude/agents/apd-threat-model-evaluator.md",
-    "./.claude/agents/apd-threat-model-recon.md"
+    "./.claude/agents/apd-threat-model-recon.md",
+    "./.claude/agents/apd-tier-repair.md"
   ],
   "skills": [
     "./.claude/skills/apd-attack-path-discipline",

@@ -22,9 +22,9 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The 20 agents
+## The 21 agents
 
-The gauntlet ships 20 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
+The gauntlet ships 21 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, the tier-gate repair agent, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
 
 | Role | Agent | Purpose |
 |---|---|---|
@@ -33,6 +33,7 @@ The gauntlet ships 20 agents: intake, the nine specialists, the synthesizer and 
 | Specialist × 9 | `apd-confidentiality`, `apd-integrity`, `apd-availability`, `apd-distributed`, `apd-resilient`, `apd-ephemeral`, `apd-authenticity`, `apd-non-repudiation`, `apd-immutability` | Each analyzes input artifacts through one lens; emits findings and capabilities |
 | Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
 | Synthesis (fallback) | `apd-synthesizer` | One-shot fallback when the decomposed path fails: clusters via merge/link/separate and produces the report and rollups directly |
+| Tier-gate repair (v1.7.1+) | `apd-tier-repair` | Dispatched only when a tier gate fails: fixes the one record file the gate rejected, from the validator errors for that file. It has only the Read and Edit tools and treats the errors, the file and `inputs/` as data, never instructions |
 | Optional intake (v1.1+) | `apd-code-recon` | Produces the code-grounded companion to the intake brief from codebase-memory-mcp call/symbol graphs |
 | Always-on intake (v1.6+) | `apd-threat-model-author` | Authors the canonical baseline threat model on every run — drives the deterministic `author-threat-model` CLI floor then grounds or blocks each cell; emits `00-context/threat-model-normalized.yaml` (`generated_by: threat_model_author`) + `00-context/threat-model-authored.md` |
 | Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a *supplied* threat model into the sibling `00-context/threat-model-supplied-normalized.yaml` (the author owns the canonical baseline); recognized methodologies include STRIDE, LINDDUN, PASTA, and CSA MAESTRO (reduced-fidelity `methodology_hint: maestro`, L1–L7 layers mapped to APD goals) |
@@ -42,11 +43,11 @@ The gauntlet ships 20 agents: intake, the nine specialists, the synthesizer and 
 
 Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). Three of the optional agents are truly **activation-gated** — the runner dispatches them only when a precondition holds, and skips them silently (or blocks, where the discipline rule demands it) otherwise: `apd-code-recon` (gated on `code_recon` enabled/auto and CBM reachable), `apd-threat-model-recon` (gated on a supplied `threat_model:`), and `apd-attack-path-analyzer` (gated on a declared crown jewel + attacker position). These declare their preconditions in `.apd-run.yaml` or the active domain pack. The remaining optional agents run unconditionally: `apd-threat-model-evaluator` is **no longer gated** (the always-on author guarantees a baseline threat model, so the evaluator runs on every run), and `apd-domain-auditor` runs every run as an advisory, non-blocking pass. Separately, `apd-threat-model-author` (v1.6+) is **always-on**: it is not optional and not gated — it authors the canonical baseline threat model on every run.
 
-A twenty-first file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 20.
+A twenty-second file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 21.
 
 ## Execution model: foreground / in-session
 
-The runner is **interactive**: every specialist it dispatches runs as a subagent of the live Claude Code session that launched the run. Drive it in the **foreground / in-session** — either by prompting Claude to run the `apd-gauntlet` workflow, or via the explicit `apd-gauntlet plan-run` drive checklist. A background (`run_in_background`) or headless launch can interrupt the specialist dispatches mid-flight, cancelling the subagents and leaving an empty or partial run directory. The runner is resumable: re-invoke it in the foreground and idempotency guards replay completed phases. See [Running the gauntlet](running-the-gauntlet.md) for the operator-facing foreground statement and the preflight checklist.
+The runner is **interactive**: every specialist it dispatches runs as a subagent of the live Claude Code session that launched the run. Drive it in the **foreground / in-session** — either by prompting Claude to run the `apd-gauntlet` workflow, or via the explicit `apd-gauntlet plan-run` drive checklist. A background (`run_in_background`) or headless launch can interrupt the specialist dispatches mid-flight, cancelling the subagents and leaving an empty or partial run directory. The runner is resumable: re-invoke it in the foreground and the runner calls `apd-gauntlet resume-plan` once and skips every agent step whose outputs are already present and valid. See [Running the gauntlet](running-the-gauntlet.md) for the operator-facing foreground statement and the preflight checklist.
 
 ## Tier topology
 

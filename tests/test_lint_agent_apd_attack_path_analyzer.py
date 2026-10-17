@@ -85,3 +85,32 @@ def test_agent_lints_clean() -> None:
     assert AGENT.exists()
     agent_names = {p.name for p in agent_dir.glob("*.md")}
     assert "apd-attack-path-analyzer.md" in agent_names
+
+
+def test_agent_has_no_obsolete_template_hedge() -> None:
+    text = AGENT.read_text()
+    assert "does not yet exist" not in text and "Task C-22" not in text
+    assert "templates/attack-path-report.template.md" in text
+    assert (REPO_ROOT / "templates" / "attack-path-report.template.md").is_file()
+
+
+def test_agent_has_no_manual_schema_check_passage() -> None:
+    text = AGENT.read_text()
+    for stale in ("Task C-21", "direct schema check", "vacuously"):
+        assert stale not in text
+    assert "apd-gauntlet validate" in text
+
+
+def test_validate_step_is_scoped_to_the_four_attack_path_files() -> None:
+    """The analyzer runs in parallel with the threat-model evaluator, whose records
+    have no ids yet, so whole-run validation errors from tmeval are not its to fix."""
+    text = AGENT.read_text()
+    step = text.split("6. **Validate.**", 1)[1].split("\n## ", 1)[0]
+    for name in (
+        "asset-graph.yaml",
+        "attack-paths.yaml",
+        "defense-graph.yaml",
+        "attack-path.findings.yaml",
+    ):
+        assert name in step
+    assert "apd-threat-model-evaluator" in step and "not yours to fix" in step

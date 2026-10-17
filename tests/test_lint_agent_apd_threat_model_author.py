@@ -104,3 +104,26 @@ def test_agent_lints_clean() -> None:
     result = runner.invoke(main, ["lint-agents", "--agent-dir", str(agent_dir)])
     assert result.exit_code == 0, result.output
     assert lint_agent_file(AGENT, REPO_ROOT) == []
+
+
+def _step_4() -> str:
+    return AGENT.read_text().split("### Step 4", 1)[1].split("\n### ", 1)[0]
+
+
+def test_agent_does_not_compute_entry_ids() -> None:
+    text = AGENT.read_text()
+    assert "Do NOT emit `entry_id`" in text and "sha8(" not in text
+    assert "every `entry_id` recomputes" not in text
+    assert "no entry carries `entry_id`" in text
+    step = _step_4()
+    assert "apd-gauntlet canonicalize" in step and "skeleton" in step
+
+
+def test_agent_still_authors_goals_and_canonicalize_fills_only_absent_ones() -> None:
+    # Task 9 ruling: only the id moves to Python. The agent keeps authoring
+    # inferred_apd_goals (MAESTRO layers, the N_compliance override, judgement);
+    # canonicalize fills the field only when the agent leaves it out.
+    step = _step_4()
+    assert "inferred_apd_goals" in step and "stride_letter_to_apd_goals" in step
+    assert "linddun_letter_to_apd_goals" in step and "MAESTRO" in step
+    assert "only when you leave" in step

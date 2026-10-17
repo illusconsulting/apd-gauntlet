@@ -66,3 +66,8 @@ def test_never_invent_threats_rule_has_scoping_clause() -> None:
 
 def test_mapping_tables_single_sourced_pointer() -> None:
     assert "tools/apd_gauntlet/threat_model/mappings.py" in SKILL.read_text()
+
+
+def test_rule6_defers_entry_ids_to_canonicalize() -> None:
+    section = _authoring_section()
+    assert "canonicalize" in section and "recomputes as" not in section

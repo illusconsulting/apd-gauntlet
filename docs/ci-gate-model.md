@@ -27,12 +27,11 @@ would leak a sensitive review. We resolve it with two tracks.
 The framework version is **held at 1.7.0** for the entire program. Workstreams
 are sequenced by dependency phase, not by release version. Schema additions are
 additive/optional and recorded as dated entries under the 1.7.0 section of
-[Schema evolution](schema-evolution.md). The authoritative issue crosswalk
-(prior "plan"/"notes" numbering → this program's workstreams) and the per-phase
-sequencing live in the program design spec under `docs/superpowers/specs/` (the
-remediation design doc, §4 "Issue crosswalk"), referenced from each workstream's
-plan; it is not reproduced here to keep program-internal identifiers out of the
-shipped reference docs.
+[Schema evolution](schema-evolution.md). The issue crosswalk (prior
+"plan"/"notes" numbering → this program's workstreams) and the per-phase
+sequencing are program-internal planning records that are not in the repository.
+This page does not reproduce them, to keep program-internal identifiers out of
+the shipped reference docs.
 
 ## What CI enforces (the committed gates)
 
