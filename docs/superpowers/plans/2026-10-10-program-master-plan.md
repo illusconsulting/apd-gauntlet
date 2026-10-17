@@ -14,7 +14,7 @@
 
 all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind a measured before-and-after comparison.
 
-**Architecture:** Two release lines (RELEASING.md): fixes land on `main` and merge forward; everything else lands on `next`. Each milestone ends in a tagged pre-release that passes the comparison gates against the 1.7.0 baseline. Shared names and interfaces are fixed once, in the registry below, and every detailed plan uses them.
+**Architecture:** Two release lines (RELEASING.md): fixes land on `main` and merge forward; everything else lands on `next`. Each milestone ends in a tagged pre-release that passes the comparison gates against the 1.7.1 baseline (A15.1). Shared names and interfaces are fixed once, in the registry below, and every detailed plan uses them.
 
 **Tech Stack:** Python 3.10–3.12 engine (`tools/apd_gauntlet`), the Claude Code workflow (`.claude/workflows/apd-gauntlet.js`), the Claude Agent SDK runner (2.0), and external tools: Atmos, OpenTofu, Trivy, Checkov, ShellCheck, Joern, OpenGrep.
 
@@ -26,13 +26,15 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 - `docs/superpowers/specs/2026-10-11-threat-catalog-integration-design.md` (approved 2026-10-11)
 - The cost and token audit (Claude Doc "APD Gauntlet cost and token audit", 2026-10-10), the source for WS1, WS3, WS5 and WS6.
 
+**Amended 2026-10-17 per the amendments register** (A7.18, A7.19, A7.20, A7.21, A7.22, A7.23, A7.24, A8.1, A8.4, A8.6, A9.2, A9.13, A10.5, A10.10, A12.6, A14.3, A14.5, A14.6, A15.4, A15.5, A15.7, A15.11, A15.12, A15.13).
+
 ## Global Constraints
 
 - **Release lines:** per RELEASING.md. Bug fixes go to `main` by PR, then `main` merges into `next`. Features go to `next` by PR. Tags pass `tools/check_release_tag.py`.
 - **Versions:** pyproject and `__init__` use PEP 440 (`2.0.0aN`); the plugin manifests use SemVer (`2.0.0-alpha.N`). The test literal moves with each pre-release.
 - **CI never touches the network** (ADR-0017). Real-run accuracy is judged locally, and real runs are never committed.
-- **Every behaviour-changing task ships behind `compare-runs`,** run twice per configuration. Each task or PR group gates against the previous accepted state (the last configuration whose gates passed). Each milestone exit gates against the 1.7.0 baseline.
-- **Gates that a baseline cannot measure.** 1.7 runs record no retries, first-pass validation or audit iterations, so `compare-runs` reports gates 4–5 as `not_available` against the 1.7.0 baseline. It still exits 0 (`pass_with_gaps`); `--strict` turns that into a failure. A second baseline captured on `next` after WS2 Task 7 makes those gates measurable for WS3 onward.
+- **Every behaviour-changing task ships behind `compare-runs`,** run twice per configuration. Each task or PR group gates against the previous accepted state (the last configuration whose gates passed). Each milestone exit gates against the 1.7.1 baseline (Task 1). A run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or in a new session, because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started (A15.12).
+- **Gates that a baseline cannot measure.** 1.7 runs record no retries, first-pass validation or audit iterations, so `compare-runs` reports gates 4–5 as `not_available` against the 1.7.1 baseline. It still exits 0 (`pass_with_gaps`); `--strict` turns that into a failure. A second baseline captured on `next` after WS2 Task 7 makes those gates measurable for WS3 onward.
 - **The comparison gates.** These comparison gates are proposals, recorded in `eval/gates.yaml`:
   - no critical or high finding lost unless the loss traces to evidence;
   - severity agrees on at least 90% of matched findings;
@@ -42,7 +44,9 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 - **Ids are minted by Python only** (ADR-0020); agents emit content.
 - **Nothing from a client repository executes.** Every external tool runs through `apd_gauntlet.sandbox.run_tool` (registry §R2).
 - **Decision models default to `none`.** Their flags are advisory. Thresholds come from `calibrate` on development labels, frozen before held-out runs.
-- **Quality gates:** `ruff check tools/ tests/`, `mypy tools/` (strict on `tools/apd_gauntlet`), `pytest`, and `markdownlint-cli2` on the linted globs all pass on every PR.
+- **Quality gates:** `ruff check tools/ tests/`, `mypy tools/` (strict on `tools/apd_gauntlet`), `pytest`, and `markdownlint-cli2` on the linted globs all pass on every PR. CI excludes `docs/superpowers/plans/**`, so a PR that edits a plan file lints it explicitly: `npx --yes markdownlint-cli2 <plan files>`.
+- **External tool floors:** OpenTofu ≥ 1.12.6 (tested 1.13.1), Trivy ≥ 0.71.1 (tested 0.75.0), Atmos ≥ 1.231.0 (tested 1.232.0), Checkov ≥ 3.3.26 (tested 3.3.29), ShellCheck ≥ 0.9 (tested 0.11.0), python-hcl2 `>=7,<8`.
+- **Python dependency pins:** `claude-agent-sdk>=0.2.167,<0.3`, `textual>=8.2,<9`, `starlette>=1.0,<2`, `httpx>=0.27,<1`, `keyring>=25.7,<26`, dev `pytest-asyncio>=1.0` with `asyncio_mode = "auto"`.
 
 ## Review Focus
 
@@ -74,14 +78,14 @@ all on the 2.0 line, then the code-flow layer on 2.1. Every change lands behind 
 
 | Milestone | Tag | Contents | Exit gate |
 |---|---|---|---|
-| M1 | `v1.7.1` (`main`) | Baseline captured on 1.7.0; WS1 | WS1 tests green; `compare-runs` 1.7.1 vs 1.7.0 passes the gates |
+| M1 | `v1.7.1` (`main`) | WS1 (released as v1.7.1) | WS1 tests green; the 1.7.1 substitute gate (A8.1): offline regression passed (consolidated Task 1.4), live run clean (consolidated Task 1.5 Steps 1–4), metrics comparison inconclusive against the 1.4.0-era example (A15.9); 1.7.1 released on that basis (consolidated DEC-1) |
 | M2 | `v2.0.0a1` | Docs PRs merged; WS2; second baseline captured on `next`; WS3 | Gates pass (gates 4–5 against the second baseline); `usage` shows lower cost per run |
 | M3 | `v2.0.0a2` | LA1, LA2 (amended) | Runner completes the committed examples with parity; finding QA in shadow |
-| M4 | `v2.0.0a3` | LA3; WS5 Wave 2; CAT1 | Gates pass after each Wave 2 item; catalog load, stub-rule and KB-edition tests green |
+| M4 | `v2.0.0a3` | LA3; WS5 Wave 2; CAT1 | Gates pass after each Wave 2 item; catalog load, no-HITRUST, KB-alignment and KB-edition tests green |
 | M5 | `v2.0.0a4` | IAC1–IAC3; WS6 tasks in shadow mode; CAT2 and CAT3 with `threat_catalog: off` as the default | IaC probe-regression and security tests green: `!exec` and template canaries, outside and remote includes, `.tofu` precedence, override files, argument allowlist, suppressions surfaced; catalog metamorphic suite C1–C6 green |
-| M6 | `v2.0.0b1` | IAC4; calibration; WS5 Wave 3, one tier at a time; WS6 tasks enabled one at a time; CAT4 | Held-out IaC recall ≥ 1.7 baseline; gates pass per tier; catalog gates decide the `threat_catalog` default; feature freeze |
+| M6 | `v2.0.0b1` | IAC4; calibration; WS5 Wave 3, one tier at a time; WS6 tasks enabled one at a time; CAT4 | Held-out IaC recall ≥ 1.7.1 baseline; gates pass per tier; catalog gates decide the `threat_catalog` default; feature freeze |
 | M7 | `v2.0.0rc1` → `v2.0.0` | Fixes only; WS9 | RELEASING.md GA checklist |
-| M8 | `v2.1.0aN` | WS8 (CF1–CF4) after spec approval | CF4 evaluation vs the 1.7 CBM-only baseline |
+| M8 | `v2.1.0aN` | WS8 (CF1–CF4) after spec approval | CF4 evaluation vs the 1.7.1 CBM-only baseline |
 
 **Parallel-safe pairs**, run in separate worktrees:
 
@@ -109,8 +113,9 @@ Every detailed plan uses these exact names. A plan that needs a new shared name 
 | `closeout <run-dir>` | WS3 | Composite: dimpr canonicalize, `summarize`, final `validate`. |
 | `compare-runs <baseline> <candidate> [--json] [--gates eval/gates.yaml]` | WS2 | A deterministic delta. Exits 0 when every gate passes, 1 when any fails, 2 on usage errors or a missing baseline. |
 | `usage <run-dir> --otel <file>` | WS2 | Summarises tokens and cost per agent and phase from OpenTelemetry `claude_code.api_request` events into `<run-dir>/.apd-state/usage.yaml`. |
+| `usage <run-dir> --otel <file> --expect-model <agent-glob>=<model-prefix>` | WS5 Task 15a (N10) | Repeatable. Exits 1 and prints `expect-model: <agent> ran <model>, expected <prefix>*` on any mismatch; `usage.yaml` `by_agent.<agent>` gains `models` and `efforts`. |
 | `eval run <corpus.yaml> --set dev\|heldout --evaluator <name>` | WS2 | Runs a registered evaluator and writes `eval/results/<evaluator>/<set>-<timestamp>.yaml`. |
-| `calibrate <task> --labels <file> --target-precision <p>` | WS2 | Writes or updates `tools/apd_gauntlet/data/decide/thresholds.yaml` entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated: true}`. |
+| `calibrate <task> --labels <file> --target-precision <p>` | WS2 | Writes or updates `tools/apd_gauntlet/data/decide/thresholds.yaml` entry `<task>: {threshold, precision, recall, n, labels_sha256, calibrated: true, provider, model, weights_revision}`; exits 2 if the labelled records mix models (A12.6). |
 | `metamorphic run --suite <name>` | WS2 | Generic invariance harness. Suites register transformations (IAC4: T1–T8; CF4 adds its own). |
 | `xref-digest <run-dir> --before <tier-dir>` | WS5 | Writes `40-synthesis/digests/xref-<tier>.yaml`. |
 | `report-digest <run-dir>` | WS5 | Writes `40-synthesis/digests/report.yaml`. |
@@ -118,7 +123,7 @@ Every detailed plan uses these exact names. A plan that needs a new shared name 
 | `tm-candidates <run-dir>` | WS5 | Writes `40-synthesis/tm-candidates.yaml` (the Python join of TM entries and findings). |
 | `render <run-dir> --artifact <name>` | WS5 | Renders markdown from YAML for `threat-model-authored`, `attack-path-report`, `threat-model-coverage-report` and `advisory-report`. |
 | `build-lens-skills <run-dir>` | WS5 | One compiled skill packet per lens, under `.claude/skills/apd-domain/lens/<goal>.md`. |
-| `decide <task> <run-dir>` | LA1 | Task registry `apd_gauntlet.decide.tasks`. LA1 owns `finding-qa`. WS6 adds `cluster-pairs`, `report-claims`, `tm-screen`, `asset-match`, `intake-score`, `input-screen` and `iac-triage`. |
+| `decide <task> <run-dir>` | LA1 | Task registry `apd_gauntlet.decide.tasks`. LA1 owns `finding-qa`. WS6 adds `cluster-pairs`, `report-claims`, `tm-screen`, `asset-match`, `intake-score`, `input-screen`, `iac-triage` and `diagram-check` (N7, WS6 Task 14). |
 | `iac run <run-dir>` / `iac consent <run-dir>` | IAC1 | Per the IaC spec. |
 | `code-flow run <run-dir>` | CF1 | Per the code-flow spec. |
 | `refresh-threat-catalog [--version X.Y.Z] [--dry-run] [--out-dir DIR] [--token-env NAME]` | CAT1 | Refreshes `data/threat-catalog/open.json` and its schema from a catalog release; verifies, validates and checks `compat.yaml`. |
@@ -152,14 +157,21 @@ WS3 renames no phase. The `setup` phase runs `prepare-run`. WS10 adds no phase: 
 | Key | Owner |
 |---|---|
 | `decision_model` | LA1 |
+| `decision_model.provider: selfhosted` | LA1 Task 10 (N5) |
+| `decision_model.tasks.finding-qa` (`off \| shadow`; default `shadow` when a provider is set) | LA1 Task 8 (A12.3) |
+| `decision_model.task_models` (`{<task>: <model id>}`, ids validated against the catalog) | WS6 Task 3 (A12.9) |
+| `decision_model.tasks.diagram-check` | WS6 Task 14 (N7) |
+| `decision_model.cache` (`run \| workspace`, default `run`) | WS6 Task 15 (N8, optional) |
 | `domain_improvement_capture: false` | WS3 |
 | `infrastructure.static.atmos`, the object form of `infrastructure.static.terraform`, `infrastructure.modules`, `infrastructure.plans`, `infrastructure.require_tools` | IAC1 |
 | `code_flow`, `repos[].deploys_as` | CF1 |
-| `threat_catalog` (`off \| open \| full`, or an object with `edition`, `path`, `system_types`, `exclude_system_types`) | CAT1 |
+| `threat_catalog` (`off \| open \| full`, or an object with `edition`, `path`, `system_types`, `exclude_system_types`). `full` is an operator-supplied local catalog file in the release schema (A7). | CAT1 |
+
+User-config keys (`user-config.schema.json`, not the run config): `decision_model.base_url`, `decision_model.context_window`, `decision_model.images`, `decision_model.ca_bundle` (LA1 Task 10, N5); `decision_model.cloudflare_gateway_id`, `decision_model.gateway_log_payloads` (LA1 Task 11, N6).
 
 ### R5. Agent frontmatter
 
-- Every agent sets `model` and `effort`. WS3 adds `effort` everywhere and keeps today's models; WS5 Wave 3 changes models one tier at a time.
+- Every agent sets `model` and `effort`. WS3 adds `effort` everywhere and keeps today's models; WS5 Wave 3 changes models one tier at a time. Every agent also sets `omitClaudeMd: true` (N15, WS5 Task 0b).
 - New agent `apd-cli-runner` (WS3): tools `Bash` only, `model: haiku`, `effort: low`. `pyStep()` dispatches with `agentType: 'apd-cli-runner'`.
 
 ### R6. State files under `runs/<id>/.apd-state/`
@@ -203,16 +215,24 @@ LA1's `has_consent` and `record_consent` read and write the `decision_model` sub
 | `threat-model-normalized` | Skeleton-only optional `catalog_candidates`; the validator warns if it appears in the authored TM | CAT2 |
 | `owasp-coverage`; `owasp_*.json` KBs | Entries gain `edition`, `edition_names`, `crosswalked`, `crosswalked_from`; KBs gain `edition` and `seed_source` | CAT1 |
 | `defense-graph`, `metrics` | `candidate_d3fend[].source`; `catalogThreatsByStatus` | CAT3 |
+| `decision-record` | Gains required `calibrated`, `endpoint` (host only), per-item `state_sha256` and `possibly_truncated` | LA1 (A1.3, A12.2, A12.7; `endpoint` from N5) |
+| `thresholds.yaml` entries (`data/decide/`) | Gain `provider`, `model` and `weights_revision` | WS2 (A12.6) |
+| `run-attempts` | Gains required `tier_repairs` and `lens_reruns`; optional `llm_first_pass_invalid`, `repairs` and `python_repairs` | WS2 (A9.4); WS5 Task 15b (N11) |
+| `routing` | New file `40-synthesis/routing.yaml`, outside `decisions/` | WS6 Task 16 (N9, optional) |
+| `code-evidence-index` | Gains optional `repos[].coverage` | WS5 Tasks 13–14 (N21) |
+| `metrics` | Gains real `findings_pre_dedup` and `capabilities_pre_dedup` counts | WS2 (N20) |
 
 Each change gets a dated entry in `docs/schema-evolution.md`.
 
 ### R8. Data files
 
-- `tools/apd_gauntlet/data/decide/thresholds.yaml` (WS2 writes; LA1, WS6 read)
+- `tools/apd_gauntlet/data/decide/thresholds.yaml` (WS2 writes; LA1, WS6 read). Entries carry `provider`, `model` and `weights_revision`; a client whose provider or model differs from the entry's escalates every item, with a warning (A12.6).
 - `tools/apd_gauntlet/data/iac/` (WS7)
 - `tools/apd_gauntlet/data/codeflow/` (WS8)
-- `tools/apd_gauntlet/data/threat-catalog/` (WS10): `open.json`, `open.schema.json`, `open.provenance.json`, `compat.yaml`, `selection.yaml`, `system-types.yaml`, `apd-goals.yaml`, `taxonomy-map.yaml`, `owasp-crosswalks.yaml`. No full-edition schema is vendored, and the full catalog is never committed (`.gitignore` guards `threat-catalog-full-*.json`). Also `00-context/threat-scope.yaml`, `00-context/threat-candidates.md`, `00-context/threat-shortlists/<goal-stem>.md`, `40-synthesis/catalog-coverage.yaml`, `40-synthesis/catalog-gaps.yaml`, `40-threat-model/catalog-silence-dismissals.yaml`, `eval/catalog/decision.yaml` (committed aggregates, ADR-0028) and `eval/local/catalog/` (gitignored). WS2's `TUNABLE_GLOBS` gains `data/threat-catalog/selection.yaml` and `data/threat-catalog/system-types.yaml`.
+- `tools/apd_gauntlet/data/threat-catalog/` (WS10): `open.json`, `open.schema.json`, `open.provenance.json`, `compat.yaml`, `selection.yaml`, `system-types.yaml`, `apd-goals.yaml`, `taxonomy-map.yaml`, `owasp-crosswalks.yaml`. `open.json` and `open.schema.json` are the release's `threat-catalog-<v>.json` and `threat-catalog.schema.json`, byte-identical. A local catalog file (`threat_catalog: full`) is never committed or vendored; the loader warns when it sits in an unignored git tree. Also `00-context/threat-scope.yaml`, `00-context/threat-candidates.md`, `00-context/threat-shortlists/<goal-stem>.md`, `40-synthesis/catalog-coverage.yaml`, `40-synthesis/catalog-gaps.yaml`, `40-threat-model/catalog-silence-dismissals.yaml`, `eval/catalog/decision.yaml` (committed aggregates, ADR-0028) and `eval/local/catalog/` (gitignored). WS2's `TUNABLE_GLOBS` gains `data/threat-catalog/selection.yaml` and `data/threat-catalog/system-types.yaml`.
 - `eval/` at the repo root, not packaged: corpora manifests, labels, gates and local results (results are gitignored)
+- `eval/gates-wave3.yaml` (WS5 Task 15c, N12): the Wave 3 artifact-level gates, holding the A10.11 thresholds
+- `docs/superpowers/ledgers/<plan-slug>.md`: each executed plan's controller ledger of rulings, committed with its PR (new files there need `git add -f`)
 
 ### R9. Additions settled by the detailed plans
 
@@ -220,7 +240,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 **CLI (R1):**
 
-- **`resume-plan`:** exits 2 when `.apd-run.yaml` is missing or invalid, and 3 when the run's `framework_version` major differs from the engine's. 2.0 applies the mirror rule. `steps` lists the 18 agent steps only, by first-attempt label (WS1).
+- **`resume-plan`:** exits 2 when `.apd-run.yaml` is missing or invalid, and 3 when the run's `framework_version` major differs from the engine's. 2.0 applies the mirror rule. `steps` lists the agent steps with `code-recon` expanded per `recon_shards(cfg)` plus `code-recon-cross-repo`, by first-attempt label (WS1).
 - **Composites** (WS3):
   - each constituent always runs;
   - status lines `<composite>: <step> exit=<N>` go to stderr, then `ok` or `failed <steps>`;
@@ -244,7 +264,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
   - `linters.{compute_cev_id, compute_tm_entry_id}`.
 - **WS2:**
   - `measure.attempts.write_attempts` (the LA2 runner calls it at closeout);
-  - `measure.usage.AGENT_PHASES` (WS3 adds `apd-cli-runner` and `apd-tier-repair`);
+  - `measure.usage.AGENT_PHASES` (WS2 lists `apd-tier-repair`; WS3 adds `apd-cli-runner`);
   - `eval.calibrate.{register_value, ValueSpec}`;
   - `eval.metamorphic.{register_suite, BUILTIN_SUITE_MODULES}`.
 
@@ -271,9 +291,9 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 **Agents (R5), replacing R5's first line:**
 
-- Every agent sets `effort` after WS3, and `model` after WS5 Task 23, when the linter starts requiring it.
+- Every agent sets `effort` after WS3, and `model` after WS5 Task 23, when the linter starts requiring it. Every agent also sets `omitClaudeMd: true` (N15, WS5 Task 0b).
 - Descriptions are one line: at most 160 characters for agents, 200 for skills, and 4,096 bytes in total.
-- New agent `apd-tier-repair` (WS3): tools Read and Edit, `sonnet`, `low`, usage phase `canonicalize`. WS1's `repairTierGate` dispatches it.
+- New agent `apd-tier-repair` (WS1; WS3 adds `effort: low`): tools Read and Edit, `sonnet`, `low`, usage phase `canonicalize`. WS1's `repairTierGate` dispatches it.
 - `apd-orchestrator` is deleted by WS3.
 
 **State (R6):**
@@ -320,12 +340,16 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 | ADR | Owner |
 |---|---|
+| 0016, 0018 | Unused (reserved 2026-06; never landed) |
 | 0024–0026 | LA1–LA3 |
 | 0027 | IAC1 (IaC evaluation, including template-driven execution) |
 | 0028 | WS2 (measurement, and the narrow ADR-0017 exception for aggregate calibration statistics) |
 | 0029 | WS6 |
 | 0030 | CAT1 (threat catalog as an enrichment layer) |
-| 0031 onward | Code-flow (CF1–CF4) |
+| 0031–0039 | Code-flow (CF1–CF4) |
+| 0040 | Healthcare / clinical-FHIR pack (N22) |
+
+N5 and N6 amend ADR-0024; N7–N9 amend ADR-0029; N1 needs no ADR.
 
 ---
 
@@ -355,7 +379,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 ---
 
-## Task 1: Capture the 1.7.0 baseline (operator)
+## Task 1: Capture the 1.7.1 baseline (operator)
 
 **Files:** none committed. Run directories stay local, under `runs/` (gitignored).
 
@@ -367,29 +391,29 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
     - `OTEL_EXPORTER_OTLP_PROTOCOL=http/json`
     - `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318`
     - `OTEL_LOG_TOOL_DETAILS=1`
-- [ ] **Step 2: Run the baseline set twice each on 1.7.0:** the three committed examples (`examples/apd-20260601-claim-event-bus`, `examples/apd-20260602-acme-mobile-banking`, `examples/apd-20260612-home-assistant`), plus one private PBM run. Keep each run directory and its telemetry export under a name ending `-baseline-r1` or `-baseline-r2`.
+- [ ] **Step 2: Run the baseline set twice each on 1.7.1 (`pip install apd-gauntlet==1.7.1` and the 1.7.1 plugin from `main`):** the three committed examples (`examples/apd-20260601-claim-event-bus`, `examples/apd-20260602-acme-mobile-banking`, `examples/apd-20260612-home-assistant`), plus one private PBM run. Keep each run directory and its telemetry export under a name ending `-baseline-r1` or `-baseline-r2`.
 - [ ] **Step 3: Verify.** Each run directory passes `apd-gauntlet validate <run-dir>`, and each telemetry file contains `claude_code.api_request` events. Expected: "Clean." for every run; a non-empty event count for every file.
 
 ## Task 2: Execute WS1 and release 1.7.1
 
-- [ ] **Step 1:** Execute `2026-10-10-ws1-defect-fixes-1.7.1.md` on a branch from `main`, one PR per task group the plan names.
-- [ ] **Step 2:** Rerun Task 1's set on the 1.7.1 candidate. Once WS2 Task "compare-runs" exists, run `apd-gauntlet compare-runs <baseline> <candidate> --gates eval/gates.yaml` for each pair. Expected: exit 0 for each.
-- [ ] **Step 3:** Bump to 1.7.1 per RELEASING.md "Cutting a stable 1.7.x release". Tag and push. Expected: the release gate prints `prerelease=false, make_latest=true`.
-- [ ] **Step 4:** Merge `main` into `next`, keeping `next`'s version values. Expected: CI green on `next`.
+- [x] **Step 1:** Execute `2026-10-10-ws1-defect-fixes-1.7.1.md` on a branch from `main`, one PR per task group the plan names. **Done:** one branch and PR #49 (A8.3).
+- [x] **Step 2:** Pass the 1.7.1 substitute gate (A8.1; `compare-runs` exists on neither line): the offline example regression (consolidated plan Task 1.4, Appendix 1: `validate`, `canonicalize`, `build-report`, `audit-report`, `resume-plan` on the three committed examples, each identical to the 1.7.0 engine's output) plus one live run of `examples/apd-20260601-claim-event-bus/inputs` with the `metrics.yaml` comparison (consolidated Task 1.5). Keep the 1.7.1 run directory `runs/apd-20261016-ws1-gate` for WS2 (it has no telemetry); no 1.7.0 live run exists (A15.1). A 1.7.1 defect found later ships as 1.7.2. **Done:** substitute gate (A8.1).
+- [x] **Step 3:** Bump to 1.7.1 per RELEASING.md "Cutting a stable 1.7.x release". Tag and push. Expected: the release gate prints `prerelease=false, make_latest=true`. **Done:** tag `v1.7.1`.
+- [x] **Step 4:** Merge `main` into `next` with `git merge --no-ff main`. While `next` has no 2.0 pre-release, the merge is conflict-free and takes 1.7.1 in all five version places; keep them ("keep `next`'s values" applies only once `2.0.0aN` is on `next`). In the same merge commit, reword next's CHANGELOG bullet "Version stays `1.7.0` for now" to "Version tracks the stable line (1.7.1) until the first 2.0 pre-release", and delete the empty `## [Unreleased]` heading that comes from `main`. Expected: CI green on `next`. **Done:** merge-forward #52 (A8.4).
 
 ## Task 3: Merge pending docs and release-line PRs
 
 - [ ] **Step 1:** Merge #27 into `main`, then `main` into `next`, then #28 into `next`.
 - [ ] **Step 2:** Merge #29 into `next`, then this branch (IaC spec, code-flow draft, program plans).
 - [ ] **Step 3:** Apply amendments A1–A3 to the LA plan files in one docs PR. Expected: `markdownlint-cli2` clean.
-- [ ] **Step 4 (administrator):** Protect `next`, and add the `v*` tag ruleset.
+- [ ] **Step 4 (administrator):** Protect `next`, and add the `v*` tag ruleset. (2026-10-17: `next` is protected by ruleset `next-protection-rules`; the `v*` tag ruleset is still open, consolidated Task 0.2 Step 1.)
 
 ## Task 4: M2 — WS2 and WS3, then `v2.0.0a1`
 
 - [ ] **Step 1:** Execute the WS2 plan. Expected: `compare-runs` and `usage` work on the Task 1 baselines; WS2 Task 14's noise-floor check passes.
 - [ ] **Step 1a: Capture the second baseline.** After WS2 Task 7 (attempts recorded), rerun the Task 1 set twice on `next` with the names ending `-next-baseline-r1` and `-next-baseline-r2`. Expected: each run has `.apd-state/attempts.yaml`, so gates 4–5 are measurable from WS3 onward.
 - [ ] **Step 2:** Execute the WS3 plan, one PR per task. After each behaviour-changing task, run the Task 1 set twice and `compare-runs`. Expected: every gate passes, and `usage` shows per-run cost at or below baseline.
-- [ ] **Step 3:** Cut `v2.0.0a1` per RELEASING.md "Cutting a 2.0 pre-release". Expected: the gate prints `prerelease=true, make_latest=false`.
+- [ ] **Step 3:** Cut `v2.0.0a1` per RELEASING.md "Cutting a 2.0 pre-release". The version-bump PR also changes the workflow's older-engine halt (`pip install --upgrade "apd-gauntlet>=1.7.1,<2"` and "upgrade apd-gauntlet to 1.7.1"), its two assertions in `tests/test_workflow_apd_gauntlet.py` and the copy of the command in `docs/running-the-gauntlet.md` to `pip install --upgrade --pre "apd-gauntlet>=2.0.0a1,<3"` and "upgrade apd-gauntlet to 2.0.0a1"; the CHANGELOG's v1.7.1 entry stays as history (A8.6). Expected: the gate prints `prerelease=true, make_latest=false`.
 
 ## Task 5: M3 — LA1 and LA2, then `v2.0.0a2`
 
@@ -402,7 +426,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 
 - [ ] **Step 1:** Execute LA3, as amended by A3.
 - [ ] **Step 2:** Execute the Wave 2 part of WS5 in the plan's order (digests and renders first), with `compare-runs` after each item. Expected: gates pass; `usage` shows the per-item saving.
-- [ ] **Step 2a:** Execute CAT1 (`2026-10-11-cat1-catalog-data-loader-editions.md`). Expected: the vendored open catalog passes the load, stub-rule and KB-edition tests; `compare-runs` passes with `threat_catalog: off` (CAT1 changes OWASP editions, so crosswalked comparisons are part of this check).
+- [ ] **Step 2a:** Execute CAT1 (`2026-10-11-cat1-catalog-data-loader-editions.md`). Expected: the vendored open catalog passes the load, no-HITRUST, KB-alignment and KB-edition tests; `compare-runs` passes with `threat_catalog: off` (CAT1 changes OWASP editions, so crosswalked comparisons are part of this check).
 - [ ] **Step 3:** Cut `v2.0.0a3`.
 
 ## Task 7: M5 — IAC1–IAC3 and WS6 shadow mode, then `v2.0.0a4`
@@ -417,7 +441,7 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 ## Task 8: M6 — evaluation, calibration, tiering; `v2.0.0b1` and feature freeze
 
 - [ ] **Step 0: One shared freeze.** IAC4 context parameters, CAT4 selection parameters and the WS2 `calibrate` thresholds are all tuned on development data first; then a single `eval freeze`; then every held-out run. Tuning after the freeze needs `eval freeze --new-heldout-set`.
-- [ ] **Step 1:** Execute IAC4. Label the development and held-out corpora, run the 1.7 raw-read baseline and the new path, then tune the context parameters (frozen in Step 0's shared freeze). Expected: held-out recall of labelled issues ≥ baseline.
+- [ ] **Step 1:** Execute IAC4. Label the development and held-out corpora, run the 1.7.1 raw-read baseline and the new path, then tune the context parameters (frozen in Step 0's shared freeze). Expected: held-out recall of labelled issues ≥ baseline.
 - [ ] **Step 2:** Run `calibrate` for `finding-qa` and each WS6 task on the development labels, with target precision 0.98. Then enable tasks one at a time: finding QA first, then `cluster-pairs`, `report-claims`, `asset-match`, `tm-screen`, `intake-score`, `input-screen`, `iac-triage`. Run `compare-runs` after each. Expected: gates pass.
 - [ ] **Step 3:** Execute the Wave 3 part of WS5, one tier of lenses at a time, report writer last, with `compare-runs` after each. Expected: gates pass, or the tier reverts to its previous model.
 - [ ] **Step 3a:** Execute CAT4: label threats, tune selection on development data before the shared freeze, measure once on held-out. Expected: every catalog gate passes and `threat_catalog` defaults to `open`; otherwise the default stays `off` for 2.0.
@@ -438,8 +462,8 @@ The detailed plans fixed these names. They are binding in the same way as R1–R
 ## Task 10: M8 — code-flow layer (2.1)
 
 - [ ] **Step 1:** Review and approve `2026-10-10-code-flow-layer-design.md`, resolving its §13 open questions.
-- [ ] **Step 2:** Write CF1–CF4 with superpowers:writing-plans, using registry R2 (`run_tool`, `select_packet`, `EVIDENCE_INDEXES`) and R3 (the `code-flow` phase).
-- [ ] **Step 3:** Execute CF1–CF4. Gate on CF4's evaluation against the 1.7 CBM-only baseline.
+- [ ] **Step 2:** Write CF1–CF4 with superpowers:writing-plans, using registry R2 (`run_tool`, `select_packet`, `EVIDENCE_INDEXES`) and R3 (the `code-flow` phase). Add each new plan file with `git add -f`.
+- [ ] **Step 3:** Execute CF1–CF4. Gate on CF4's evaluation against the 1.7.1 CBM-only baseline.
 
 ---
 
@@ -458,7 +482,7 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 5. **Id minting.** `cev-` and `tm-` ids are minted only when absent, so ids in committed examples keep resolving. ADR-0020 gets an amendment note.
 6. **Agents.** Repairs go to a narrow `apd-tier-repair` agent, and `apd-orchestrator` is deleted.
 7. **Comparison policy.**
-   - Each step compares against the previous accepted state; milestones compare against 1.7.0.
+   - Each step compares against the previous accepted state; milestones compare against the 1.7.1 baseline (A15.1).
    - WS1 runs comparisons once per PR group.
    - A second baseline on `next` makes gates 4–5 measurable.
    - WS3 Task 8 (strict excerpts by default) records `--excuse` for the first-pass validity gate, because it introduces a new error class on purpose.
@@ -481,7 +505,7 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
     - `build-lens-skills` stays a separate step.
 12. **Evaluation corpora.** The committed examples form the development findings corpus. The held-out findings corpus is private PBM runs under `eval/local/`.
 13. **Execution method** (2026-10-11): every detailed plan runs with superpowers:subagent-driven-development — a fresh implementer per task, spec and quality review before the next task, and a whole-branch review at the end.
-14. **Threat catalog** (2026-10-11): spec approved. The OWASP LLM fix is 2.0 only (A5 declined). HITRUST lineage is removed everywhere: open stubs carry no `hitrust` block, and the gauntlet never reads lineage from either edition.
+14. **Threat catalog** (2026-10-11): spec approved. The OWASP LLM fix is 2.0 only (A5 declined). Catalog 1.1.0 (2026-10-13) removed all HITRUST content. The whole release is vendored as `open`; `full` is an operator-supplied local file; the loader and CI refuse any `hitrust` key or text (A7).
 
 ## Decisions still needed (defaults apply if no answer)
 
@@ -492,7 +516,9 @@ These were settled while writing the detailed plans. Each plan's Global Constrai
 | IaC held-out repositories (a public OpenTofu repository plus Atmos repositories), with licences checked at pinned commits | Chosen during IAC4 Task 1 | M6 |
 | How aggressive the domain consumer map is (pbm drops 55% against the audit's 45%) | Packs' stated consumers | WS5 Task 9 |
 | Match parameters (title similarity 0.5; at least 10 predicted positives for `calibrate`) | Confirmed or adjusted by WS2 Task 14's noise check | M2 |
-| Open catalog release: public download or token, and its licence (for NOTICE) | Anonymous download; `GITHUB_TOKEN` when the release is private | CAT1 Task 14 |
+| Catalog repository visibility and licence (consolidated DEC-7) | Repository public; data CC BY-SA 4.0, code Apache-2.0; CIS ids only; CSA ids plus short attributed titles | Consolidated Task 5.3 |
+| Catalog compat floor and asset names (consolidated DEC-8) | `>=1.1.0,<2.0.0`; `threat-catalog-<v>.json`, `threat-catalog.schema.json`, `SHA256SUMS`; vendored names stay `open.*` | CAT1 Tasks 6 and 10 |
+| ATT&CK v20.0 follow-up versus the catalog's v19.2 (consolidated DEC-9) | Vendor 1.1.0; refresh ATT&CK only if an id check fails; plan catalog 1.2.0 on v20 | CAT1 Task 14 |
 | CAT4 held-out systems | Two private systems: one with PHI-classified assets, one using the `agentic-ai` pack | M6 |
 
 ## Size
@@ -527,7 +553,7 @@ Each behaviour-changing PR group also needs about 8 gauntlet runs (4 configurati
 - **Live fixture recording** for decision providers (LA1 Task 9) needs real keys.
 - **Hosting decision for Clef** on reviews of PHI-handling systems: Workers AI only if the client's Cloudflare agreements cover it, otherwise self-hosted. Needed before any decision task runs on a PHI review.
 - **Repository administration:** branch protection and the tag ruleset (Task 3).
-- **Threat catalog release:** publish `illusconsulting/threat-catalog` 1.0.0 with the open asset, its schema and the private full asset, before CAT1 vendors it.
+- **Threat catalog release:** create `illusconsulting/threat-catalog` (public by default), push the 1.1.0 sources, and add `LICENSE` and `NOTICE`. Tag `v1.1.0` and publish `threat-catalog-1.1.0.json`, `threat-catalog.schema.json` and `SHA256SUMS`. Do this before CAT1 Task 7, which copies the release schema. CAT1 Task 14 vendors the file.
 
 ## Risks
 

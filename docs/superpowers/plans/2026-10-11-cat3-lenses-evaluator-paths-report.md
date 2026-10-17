@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Amended 2026-10-17** per the amendments register (A7.43, A7.44, A7.45, A7.46, A7.47, A7.48, A7.49, A7.51, A7.54, A7.56, A7.57, A7.58, A7.60, A7 anchors after WS1, A14.2, A15.3, A15.12, A15.21, A15.25, A15.27, A15.28).
+
 **Goal:** Carry the threat catalog from the threat-model phase into every later stage: per-goal lens shortlists, lens-cited `threat_refs` with derived `catalog_mappings`, catalog-silence evaluation, attack-path labels, a source-split coverage layer, the report's "Threat coverage" section and a redacted cross-run gap export.
 
 **Architecture:** A shared run context (`catalog/runctx.py`) loads the catalog exactly as `catalog scope` recorded it and indexes who cites which threat. Deterministic modules (`shortlists`, `derive`, `coverage`, `gaps`) hang off existing steps (`canonicalize`, `apply-clusters`, `tm-candidates`, `analyze-attack-paths`, `rollup`) plus one new step, `catalog-shortlists`, which runs in the `canonicalize` phase right after WS1's `canonicalize-threat-model` and before the lens tiers. Lenses and the evaluator gain prompt text while Python derives and counts everything, and with `threat_catalog` off every step behaves exactly as today.
@@ -17,12 +19,13 @@
 ## Global Constraints
 
 - Line `next`. One PR per task. This plan is on the master plan's "merge one PR at a time" list: Task 5 edits `.claude/workflows/apd-gauntlet.js` and `tools/apd_gauntlet/runner/flow.py`, and Task 8 edits the workflow's tmeval instruction.
-- Assumed merged before Task 1: CAT1 (`catalog/{config,load,model,translate}.py`, fixtures, `load_fixture_catalog`, `catalog_fixture_dir`), CAT2 (`catalog/{goals,scope,candidates,text}.py`, `catalog scope` and its `catalog` click group, label `catalog-scope` behind the JS `catalogEdition(args)` guard, TM `catalog_refs`/`catalog_gap_reason`, skeleton `catalog_candidates`, conftest fixtures `make_threat`, `make_catalog`, `catalog_run`, `patch_catalog_loader`), WS1 (`canonicalize-threat-model`, `resume-plan`), WS2 (`compare-runs`, `tests/conftest.py`), WS3 (`apd-cli-runner`, composites, `tests/test_workflow_dispatch_trace.py`), WS5 Tasks 4, 7, 8 and 11 (`attack_path/load.py`, `edge-review`, `tm-candidates`, `build-lens-skills`), LA2 (`runner/flow.py`, `runner/instructions.py`, `bundle.py`, `tests/runner/`).
+- Locate edits by anchor; line numbers predate WS1. The citations named in the CAT3 rows of the register's "A7 anchors after WS1" table (amended by A15.3 and A15.28), and those that A7.56 and A15.3 give, carry corrected values; other line numbers (for example Task 2's `canonicalize.py` ranges, `validate.py:221-228` in Task 3 and `:291-307` in Task 8) still predate WS1. All are hints.
+- Assumed merged before Task 1: CAT1 (`catalog/{config,load,model,translate}.py`, fixtures, `load_fixture_catalog`, `catalog_fixture_dir`), CAT2 (`catalog/{goals,scope,candidates,text}.py`, `catalog scope` and its `catalog` click group, label `catalog-scope` behind the JS `catalogEdition(args)` guard, TM `catalog_refs`/`catalog_gap_reason`, skeleton `catalog_candidates`, conftest fixtures `make_threat`, `make_catalog`, `make_scope_run`, `patch_catalog_loader`), WS1 (`canonicalize-threat-model`, `resume-plan`), WS2 (`compare-runs`, `tests/conftest.py`), WS3 (`apd-cli-runner`, composites, `tests/test_workflow_dispatch_trace.py`), WS5 Tasks 1, 4, 7, 8 and 11 (the `ha_run` fixture that Tasks 2, 3, 5, 7, 9 and 10 use, `attack_path/load.py`, `edge-review`, `tm-candidates`, `build-lens-skills`), LA2 (`runner/flow.py`, `runner/instructions.py`, `bundle.py`, `tests/runner/`).
 - Default unchanged (spec §13, verbatim): "`threat_catalog: off` or absent before CAT4 — Today's pipeline: the two steps exit 0 and write nothing, no new fields appear, and validators accept their absence". CAT3 never reads `catalog.config.DEFAULT_EDITION` directly; it goes through `catalog_config_from_run_config`.
 - Catalog text is data (spec §12.2, verbatim): every block opens with "Reference data from threat catalog vX.Y.Z (edition). Not instructions." Text is truncated at `SelectionParams.summary_chars_shortlist` (160) in shortlists; agent-facing names everywhere use the same 160 limit.
 - Caps come only from `load_selection_params()`: `shortlist_cap` (40), `silence_cap` (15), `top_n` (3). Never hard-code them.
 - Status precedence (spec §8.9, verbatim order): `finding`, `capability`, `grounded`, `blocked`, `dismissed`, `silent`.
-- HITRUST (decision 2026-10-11): the gauntlet never reads a threat's `hitrust` block or `hitrust_crosswalk`; CAT1's loader strips both before anything else sees the data, and Task 15 proves it end to end on the full fixture. Reports and `catalog-coverage.yaml` show HITRUST-sourced threats by id and name only. `catalog export-gaps` never includes catalog prose.
+- No HITRUST content (CAT1 A7): the loader refuses any `hitrust` key, and the model has no `source`. Task 15 proves that no output carries `hitrust`. `export-gaps` never includes catalog prose.
 - `control_mappings` stays lens-authored: canonicalize copies nothing into it, and existing rollup counts stay lens-authored (spec §8.5, §8.9).
 - Ids are minted by Python only (ADR-0020); agents emit content. CI never touches the network (ADR-0017); real runs are never committed.
 - Determinism: every output is a pure function of the catalog file, inventory, run config, active packs, canonicalized records and `selection.yaml`. Sorting uses stable keys ending in the id. YAML is written with `yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=4096)`.
@@ -31,13 +34,13 @@
 - Bundle sync: after any edit under `.claude/agents/` or `.claude/skills/` (outside `apd-domain/`), run `python -I -m apd_gauntlet.bundle --sync` and commit the copies under `tools/apd_gauntlet/data/claude/` in the same commit (`tests/test_bundle.py::test_bundle_matches_repo`).
 - Quality gates on every PR: `ruff check tools/ tests/`, `mypy tools/` (strict on `tools/apd_gauntlet`), `pytest`, `markdownlint-cli2` on the linted globs.
 - Docs live with behaviour: `CHANGELOG.md` `## Unreleased — 2.0 line`, `docs/schema-evolution.md` (one section, `## v2.0.0 — Threat catalog: lens references, derived mappings and coverage views`, created in Task 2 and extended by later tasks), `docs/deterministic-field-register.md` "Other derived fields", and the CLI list in `docs/running-the-gauntlet.md:42-71`.
-- Operator gate (OG). On the task's commit, run the master plan Task 1 set twice with `threat_catalog` absent, into `runs/<id>-cat3-<tag>-r1` and `-r2`, then run `apd-gauntlet compare-runs <previous accepted state> runs/<id>-cat3-<tag> --gates eval/gates.yaml` for each run id. Pass: every comparison exits 0. Exit 2 means a missing baseline; capture it (master plan Task 1) and never compare against nothing. PR groups and their gate: A = Tasks 1–4 (OG after Task 4), B = Task 5, C = Task 6, D = Tasks 7–8 (OG after Task 8), E = Task 9, F = Tasks 10–13 (OG after Task 12), G = Task 14. Task 15 records the first `open` comparison for information (master plan Task 7 Step 2a).
+- Operator gate (OG). On the task's commit, run the master plan Task 1 set twice with `threat_catalog` absent, into `runs/<id>-cat3-<tag>-r1` and `-r2`, then run `apd-gauntlet compare-runs <previous accepted state> runs/<id>-cat3-<tag> --gates eval/gates.yaml` for each run id. Pass: every comparison exits 0. Exit 2 means a missing baseline; capture it (master plan Task 1) and never compare against nothing. PR groups and their gate: A = Tasks 1–4 (OG after Task 4), B = Task 5, C = Task 6, D = Tasks 7–8 (OG after Task 8), E = Task 9, F = Tasks 10–13 (OG after Task 12), G = Task 14. Task 15 records the first `open` comparison for information (master plan Task 7 Step 2a). `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, so to exercise a changed runner run it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or start a new session (register A15.12).
 
 ## Review Focus
 
 - **A run with `threat_catalog` absent or `off`.** Every output must stay byte-identical to today's: rollups, attack-path files, `tm-candidates.yaml`, `data.js`. Pinned by Task 10 `test_rollups_byte_identical_when_catalog_off` (Home Assistant example) and Task 9 `test_attack_path_outputs_unchanged_without_catalog`.
 - **A cross-lens merge whose sources cite catalog threats.** `apply-clusters` builds merged records field by field, so `threat_refs` and `catalog_mappings` would vanish and silence and coverage would report cited threats as silent. Pinned by Task 4 `test_merge_unions_threat_refs_and_catalog_mappings` and Task 7 `test_silence_excludes_threat_cited_only_by_merged_finding`.
-- **A full-edition run.** HITRUST-sourced summaries must never reach `catalog-coverage.yaml`, `data.js` or the gap export. Pinned by Task 11 `test_coverage_omits_summary_for_hitrust_sourced_threats` and Task 15 `test_catalog_steps_never_emit_hitrust_lineage`.
+- **A local catalog carrying a `hitrust` key:** the loader falls back to open, and no output carries `hitrust`. Pinned by CAT1 `test_full_with_hitrust_key_falls_back` and Task 15 `test_catalog_steps_never_emit_hitrust`.
 - **An agent's `catalog_gap_reason` that names a client asset, identity or repository path.** The export must redact it before the file can leave the machine. Pinned by Task 13 `test_export_redacts_names_and_paths`.
 - **An edited local catalog whose text contains backticks, a code fence or newlines.** That text must not escape the shortlist's reference-data fence, and each field is truncated. Pinned by Task 5 `test_shortlist_text_cannot_escape_fence`.
 
@@ -66,7 +69,7 @@
 | `tools/apd_gauntlet/data/schemas/{catalog-coverage,catalog-gaps,catalog-silence-dismissals}.schema.json` | New | Create (8, 11, 12) |
 | `.claude/skills/{apd-evidence-discipline,apd-control-mappings,apd-finding-schema,apd-threat-model-methodologies,apd-attack-path-discipline}/SKILL.md`, the nine lens agents, `.claude/agents/apd-threat-model-evaluator.md`, `.claude/skills/apd-domain/lens/*.md` | Lens and evaluator guidance; regenerated packets | Modify (6, 8, 9) |
 | `report-template/screens/{Coverage,AttackPaths}.jsx`, `tools/apd_gauntlet/data/report-template/` | Threat coverage sub-tab; tactic chips; rebuilt bundle | Modify (14) |
-| `tests/conftest.py` | CAT2's `make_catalog` gains `frameworks`; fixtures `make_run_catalog`, `scoped_ceb_run` | Modify (1) |
+| `tests/conftest.py` | Fixtures `make_run_catalog`, `scoped_ceb_run` | Modify (1) |
 | `tests/test_catalog_*.py`, `tests/unit/report/test_threat_coverage_*.py`, and the extended suites named per task | Tests | Create/Modify |
 | `docs/{running-the-gauntlet,threat-modeling,attack-path-analysis,taxonomy-mappings,html-report,deterministic-field-register,schema-evolution}.md`, `CHANGELOG.md` | Docs | Modify (each task) |
 
@@ -77,14 +80,14 @@
 **Files:**
 
 - Create: `tools/apd_gauntlet/catalog/runctx.py`
-- Modify: `tests/conftest.py` (CAT2's `make_catalog` fixture gains `frameworks=None`; new fixtures `make_run_catalog` and `scoped_ceb_run`)
+- Modify: `tests/conftest.py` (new fixtures `make_run_catalog` and `scoped_ceb_run`)
 - Test: `tests/test_scoped_ceb_runctx.py`
 
 **Interfaces:**
 
 - Consumes:
   - CAT1: `catalog_config_from_run_config(run_cfg) -> CatalogConfig | None`, `load_selection_params(path=None) -> SelectionParams`, `CatalogError`, `Catalog`, `Threat`, `MappingRef`; conftest fixtures `catalog_fixture_dir` and `load_fixture_catalog` (`Callable[[Literal["open", "full"]], Catalog]`).
-  - CAT2: `scope.catalog_for_run(run_cfg, run_dir=None) -> tuple[CatalogConfig | None, Catalog | None, tuple[str, ...]]`, `scope.ScopeError`, `scope.Surface`, `scope.surface_from_dict(d) -> Surface`, `scope.build_scope(run_dir)`, `candidates.load_scope(run_dir) -> dict | None`, `candidates.rank_key(threat, surface, emphasize) -> tuple[int, int, int, int, str]`, `candidates.cell_key(entry) -> str` (`f"{asset}|{methodology}|{stride_letter or linddun_letter or ''}"`), `threat_model.mappings.MAESTRO_LAYERS` (`L1`–`L7` plus `CL`); conftest fixtures `make_threat` (keyword-only, `id=` first), `make_catalog(threats, *, edition="open", version="1.0.0", sha256="0" * 64, fallback_from=None, warnings=())` and `patch_catalog_loader` (patches `apd_gauntlet.catalog.scope.load_catalog` with `load_fixture_catalog(cfg.edition)`).
+  - CAT2: `scope.catalog_for_run(run_cfg, run_dir=None) -> tuple[CatalogConfig | None, Catalog | None, tuple[str, ...]]`, `scope.ScopeError`, `scope.Surface`, `scope.surface_from_dict(d) -> Surface`, `scope.build_scope(run_dir)`, `candidates.load_scope(run_dir) -> dict | None`, `candidates.rank_key(threat, surface, emphasize) -> tuple[int, int, int, int, str]`, `candidates.cell_key(entry) -> str` (`f"{asset}|{methodology}|{stride_letter or linddun_letter or ''}"`), `threat_model.mappings.MAESTRO_LAYERS` (`L1`–`L7` plus `CL`); conftest fixtures `make_threat` (keyword-only, `id=` first), `make_catalog(threats, *, edition="open", version="1.0.0", frameworks=None, sha256="0" * 64, fallback_from=None, warnings=())` and `patch_catalog_loader` (patches `apd_gauntlet.catalog.scope.load_catalog` with `load_fixture_catalog(cfg.edition)`).
   - `synthesis.loader.load_corpus(run_dir)`, `validate.extract_records(doc, root_key)`.
 - Produces (`tools/apd_gauntlet/catalog/runctx.py`):
   - `DERIVED_TAXONOMIES: tuple[str, ...] = ("mitre_attack", "atlas", "cwe", "owasp_top10", "owasp_api_top10", "owasp_llm_top10", "maswe", "nist_800_53r5")` (the finding `control_mappings` keys the §8.6 table derives into)
@@ -188,7 +191,7 @@ def test_collect_citations_falls_back_to_lens_corpus(tmp_path): ...   # no dedup
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_scoped_ceb_runctx.py -v`
+Run: `pytest tests/test_scoped_ceb_runctx.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.catalog.runctx`)
 
 - [ ] **Step 3: Implement `runctx.py` and the conftest fixtures**
@@ -197,7 +200,7 @@ YAML reads use `yaml.safe_load`; unreadable optional files count as absent. Impo
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_scoped_ceb_runctx.py -v && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest tests/test_scoped_ceb_runctx.py -v && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -213,9 +216,9 @@ git commit -m "feat(catalog): add the scope-consistent run catalog context and c
 
 - Create: `tools/apd_gauntlet/catalog/derive.py`
 - Modify: `tools/apd_gauntlet/canonicalize.py:1-26` (docstring), `:120-127` (`CanonicalizeResult`), `:138-216` (`_recompute_ids_for_file`), `:272-310` (`canonicalize_run`)
-- Modify: `tools/apd_gauntlet/cli.py:1247-1281` (`canonicalize_cmd`: catch `CatalogError`; summary suffix)
+- Modify: `tools/apd_gauntlet/cli.py:1298-1340` (`canonicalize_cmd`: catch `CatalogError`; summary suffix)
 - Modify: `tools/apd_gauntlet/data/schemas/finding.schema.json` (properties `threat_refs`, `catalog_mappings`), `capability.schema.json` (property `threat_refs`, beside `:95-99`)
-- Modify: `docs/deterministic-field-register.md:30-40`, `docs/schema-evolution.md` (new section above `## v1.7.0 — Tooling-authored derived fields (id ownership)`, `:77`), `docs/taxonomy-mappings.md` (`## Derived views vs. emission taxonomies (v1.7+)`, `:138`), `CHANGELOG.md`
+- Modify: `docs/deterministic-field-register.md:30-40`, `docs/schema-evolution.md` (new section above `## v1.7.0 — Tooling-authored derived fields (id ownership)`, `:87`), `docs/taxonomy-mappings.md` (`## Derived views vs. emission taxonomies (v1.7+)`, `:138`), `CHANGELOG.md`
 - Test: `tests/test_catalog_derive.py`, `tests/test_canonicalize_catalog.py`, `tests/test_finding_schema.py`, `tests/test_capability_schema.py`, `tests/test_register_consistency.py`
 
 **Interfaces:**
@@ -229,7 +232,7 @@ git commit -m "feat(catalog): add the scope-consistent run catalog context and c
   - `def unsupported_mappings(finding: Mapping[str, Any], catalog: Catalog) -> list[tuple[str, str]]` (`(taxonomy, id)` lens ids in `DERIVED_TAXONOMIES` that no cited threat maps, primary or partial; ATT&CK and ATLAS ids fold to their parent and NIST enhancements fold to the base control before comparing; `[]` when no cited id is in the catalog, since the validator already errors on those; sorted)
   - `def union_catalog_mappings(records: Sequence[Mapping[str, Any]]) -> dict[str, list[dict[str, Any]]]`
   - `def fill_tm_attack(entry: dict[str, Any], catalog: Catalog) -> None` (fixed signature)
-- Produces (`canonicalize.py`): `CanonicalizeResult.catalog_fields_derived: int = 0`; `def _apply_catalog_mappings(record: dict[str, Any], kind: str, rc: RunCatalog | None) -> bool`; `def _fill_tm_catalog_attack(run_dir: Path, rc: RunCatalog | None) -> int`; `_recompute_ids_for_file(path, root_key, id_map, seen_new_ids, rc=None) -> tuple[list[dict[str, Any]] | None, int, int]` (third value: records whose catalog fields changed).
+- Produces (`canonicalize.py`): `CanonicalizeResult.catalog_fields_derived: int = 0`; `def _apply_catalog_mappings(record: dict[str, Any], kind: str, rc: RunCatalog | None) -> bool`; `def _fill_tm_catalog_attack(run_dir: Path, rc: RunCatalog | None) -> int`; `_recompute_ids_for_file(path, root_key, id_map, seen_new_ids, *, qualify_llm=False, rc=None) -> FileResult`, where CAT1 Task 3's `FileResult` dataclass (`records`, `ids_changed`, `llm_qualified: int = 0`) gains `catalog_changed: int = 0` (records whose catalog fields changed).
 - Produces (schemas): finding `threat_refs` = `{type: array, uniqueItems: true, items: {$ref: _defs.schema.json#/$defs/catalog_threat_id}}`; capability `threat_refs` = `{$ref: finding.schema.json#/properties/threat_refs}`; finding `catalog_mappings` = `{type: object, readOnly: true, additionalProperties: false, properties: {<each DERIVED_TAXONOMIES key>: {type: array, items: {type: object, required: [id, via], additionalProperties: false, properties: {id: <the matching control_mappings id pattern or $ref>, via: {type: array, minItems: 1, uniqueItems: true, items: {$ref: …catalog_threat_id}}}}}}}`. The `owasp_llm_top10` id reuses the finding schema's `control_mappings.owasp_llm_top10` items by `$ref`, so CAT1's `LLMnn:2025` pattern applies.
 
 Rules:
@@ -345,7 +348,7 @@ def test_register_lists_catalog_field(field):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_derive.py tests/test_canonicalize_catalog.py tests/test_finding_schema.py tests/test_capability_schema.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_catalog_derive.py tests/test_canonicalize_catalog.py tests/test_finding_schema.py tests/test_capability_schema.py tests/test_register_consistency.py -v`
 Expected: FAIL (`ModuleNotFoundError: apd_gauntlet.catalog.derive`; schema rejects `threat_refs`)
 
 - [ ] **Step 3: Implement `derive.py`, the canonicalize passes, the schemas and the docs**
@@ -354,7 +357,7 @@ Register rows: `catalog_mappings` on findings (owner `catalog.derive.derive_cata
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/ruff check tools/ tests/ && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && ruff check tools/ tests/ && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -368,7 +371,7 @@ git commit -m "feat(catalog): derive catalog_mappings from lens threat_refs in c
 
 **Files:**
 
-- Modify: `tools/apd_gauntlet/validate.py:221-228` (`CONTEXT_DERIVED_STEMS` gains `"threat-scope.yaml"`), `:471-525` (`run_semantic_pass`), `:702-865` (`run_cross_file_pass` passes `catalog_checks=False` to its re-run of the semantic pass)
+- Modify: `tools/apd_gauntlet/validate.py:221-228` (`CONTEXT_DERIVED_STEMS` gains `"threat-scope.yaml"`), `:773` (`run_semantic_pass`), `:1069` (`run_cross_file_pass`, which takes `*, strict_excerpts`, passes `catalog_checks=False` to its re-run of the semantic pass at `:1155`)
 - Modify: `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_validate_catalog_refs.py`
 
@@ -432,7 +435,7 @@ def test_threat_scope_is_citable_shortlists_are_not():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_validate_catalog_refs.py -v`
+Run: `pytest tests/test_validate_catalog_refs.py -v`
 Expected: FAIL (no catalog messages emitted; `threat-scope.yaml` missing from `CONTEXT_DERIVED_STEMS`)
 
 - [ ] **Step 3: Implement the stem, `_run_root`, `_check_catalog_refs` and the `catalog_checks` switch**
@@ -441,7 +444,7 @@ Schema-evolution bullet: none (no schema change). CHANGELOG `### Added`: the val
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q tests/test_validate_catalog_refs.py tests/test_validate_example_run.py && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q tests/test_validate_catalog_refs.py tests/test_validate_example_run.py && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -489,14 +492,14 @@ def test_capability_merge_unions_threat_refs(tmp_path): ...   # _scaffold_two_ca
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_cli_apply_clusters.py -k "threat_refs or catalog" -v`
+Run: `pytest tests/test_cli_apply_clusters.py -k "threat_refs or catalog" -v`
 Expected: FAIL (`KeyError: 'threat_refs'`)
 
 - [ ] **Step 3: Implement the two unions**
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_cli_apply_clusters.py tests/test_synthesis_equivalence.py -v`
+Run: `pytest tests/test_cli_apply_clusters.py tests/test_synthesis_equivalence.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -517,8 +520,8 @@ Expected: exit 0 for every comparison.
 
 - Create: `tools/apd_gauntlet/catalog/shortlists.py`
 - Modify: `tools/apd_gauntlet/cli.py` (subcommand `shortlists` on the `catalog` click group CAT2 registered)
-- Modify: `.claude/workflows/apd-gauntlet.js` (one `pyStep` right after WS1's `label: 'canonicalize-threat-model'` statement; at `856ea96` that region is `:400-420`, after the tm-recon `if/else`)
-- Modify: `tools/apd_gauntlet/plan_run.py:80-95` (row after WS1's tm-recon `canonicalize` row), `tools/apd_gauntlet/runner/flow.py` (CLI step after `canonicalize-threat-model`)
+- Modify: `.claude/workflows/apd-gauntlet.js` (one `await pyStep` right after WS1's `label: 'canonicalize-threat-model'` statement, `:565-570`, and before `async function runTier(`, `:713`, after the tm-recon `if/else`)
+- Modify: `tools/apd_gauntlet/plan_run.py:110-116` (row after WS1's tm-recon `canonicalize` row), `tools/apd_gauntlet/runner/flow.py` (CLI step after `canonicalize-threat-model`)
 - Modify: `docs/running-the-gauntlet.md:42-71`, `docs/threat-modeling.md` (`## The authored baseline threat model (v1.7+)`, `:75`), `docs/deterministic-field-register.md`, `CHANGELOG.md`
 - Test: `tests/test_catalog_shortlists.py`, `tests/test_workflow_apd_gauntlet.py`, `tests/test_workflow_dispatch_trace.py` (`CLI_LABELS`), `tests/test_cli_plan_run.py`, `tests/runner/test_flow_pre_synthesis.py`, `tests/runner/test_flow_parity.py`, `tests/test_register_consistency.py`
 
@@ -574,9 +577,9 @@ def test_rows_grounded_first_then_rank_then_id(make_threat, rc_for):
 def test_rows_capped(make_threat, rc_for): ...   # params=replace(load_selection_params(), shortlist_cap=2) -> 2 rows, total 4
 
 def test_line_uses_summary_or_family_name(make_threat, rc_for):
-    stub = make_threat(id="TC-IN-005", source="HITRUST", stub=True, summary=None, family_name="Injection & Input Handling")
+    stub = make_threat(id="TC-IN-005", summary="", family_name="Injection & Input Handling")
     rows, _ = shortlist_rows("integrity", rc_for([stub, make_threat(id="TC-IN-006")]), Citations.empty())
-    assert [r.line for r in rows] == ["Injection & Input Handling", "Synthetic summary."]
+    assert [r.line for r in rows] == ["Injection & Input Handling", "Summary of TC-IN-006"]
 
 def test_render_opens_with_provenance_then_fence(make_threat, rc_for):
     rc = rc_for([make_threat(id="TC-IN-001")]); rows, total = shortlist_rows("integrity", rc, Citations.empty())
@@ -663,7 +666,7 @@ Also add `"catalog-shortlists"` to `tests/runner/test_flow_parity.py::test_label
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_shortlists.py tests/test_workflow_apd_gauntlet.py tests/test_workflow_dispatch_trace.py tests/test_cli_plan_run.py tests/runner tests/test_register_consistency.py -k "shortlist or labels or happy_path or catalog" -v`
+Run: `pytest tests/test_catalog_shortlists.py tests/test_workflow_apd_gauntlet.py tests/test_workflow_dispatch_trace.py tests/test_cli_plan_run.py tests/runner tests/test_register_consistency.py -k "shortlist or labels or happy_path or catalog" -v`
 Expected: FAIL (module and step missing)
 
 - [ ] **Step 3: Implement the module, the CLI, the three channels and the docs**
@@ -675,7 +678,7 @@ Workflow statement, after WS1's `canonicalize-threat-model` step and before `fun
 // canonicalize phase, so grounded threats rank first. Advisory: on failure the lenses run
 // without shortlists (the shortlist is a floor, not a boundary).
 if (catalogEdition(args) !== 'off') {
-  const sl = pyStep('catalog', { phase: 'canonicalize', label: 'catalog-shortlists',
+  const sl = await pyStep('catalog', { phase: 'canonicalize', label: 'catalog-shortlists',
     positional: 'shortlists ' + runDir, alwaysRun: true,
     outputs: runDir + '/00-context/threat-shortlists/<goal>.md (9 lens shortlists)' });
   bailIfInterrupted(sl, 'canonicalize');
@@ -687,7 +690,7 @@ if (catalogEdition(args) !== 'off') {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/ruff check tools/ tests/ && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && ruff check tools/ tests/ && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -763,7 +766,7 @@ def test_committed_lens_packet_carries_catalog_guidance(stem):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_lens_guidance.py -v`
+Run: `pytest tests/test_catalog_lens_guidance.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Write the sections and agent items, regenerate packets, sync the bundle**
@@ -772,7 +775,7 @@ Run: `apd-gauntlet build-lens-skills examples/apd-20260601-claim-event-bus` (the
 
 - [ ] **Step 4: Run tests and linters**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/apd-gauntlet lint-agents --agent-dir .claude/agents/ && /home/claude/venv-apd/bin/apd-gauntlet lint-skills && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
+Run: `pytest -q && apd-gauntlet lint-agents --agent-dir .claude/agents/ && apd-gauntlet lint-skills && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
 Expected: PASS; lint clean; 0 markdown errors (WS5's `test_committed_packets_match_rebuild` and `test_packet_saving` and LA2's `test_bundle_matches_repo` included)
 
 - [ ] **Step 5: Commit**
@@ -881,7 +884,7 @@ Add `"catalog_silence"` to `CATALOG_FIELDS`.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_tmeval_id.py tests/test_catalog_silence.py tests/test_tm_candidates.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_tmeval_id.py tests/test_catalog_silence.py tests/test_tm_candidates.py tests/test_register_consistency.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the flavor, the schemas, `coverage.silence_*` and the `tm-candidates` extension**
@@ -890,7 +893,7 @@ Expected: FAIL
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -905,9 +908,9 @@ git commit -m "feat(tmeval): list in-scope catalog threats nobody cited as catal
 **Files:**
 
 - Create: `tools/apd_gauntlet/data/schemas/catalog-silence-dismissals.schema.json`
-- Modify: `tools/apd_gauntlet/validate.py` (new `THREAT_MODEL_ROLLUPS` after `CONTEXT_ROLLUPS`, `:291-307`; `_validate_threat_model_rollups` called from `run_schema_pass`, `:426-455`; `_check_catalog_dismissals` called from `run_cross_file_pass`)
-- Modify: `.claude/agents/apd-threat-model-evaluator.md` (new `### Step 5b — Catalog silence (Rule 8)` after `### Step 5 — Silence detection (Rule 7)`, `:264-298`; output contract item; self-check items), `.claude/skills/apd-threat-model-methodologies/SKILL.md` (new ``### Rule 8 — Catalog silence (`disposition: uncertainty`)`` after Rule 7, `:250-278`)
-- Modify: `.claude/workflows/apd-gauntlet.js` (the tmeval `llmStep` instruction WS5 Task 8 wrote; at `856ea96` the thunk is `:607-624`), `tools/apd_gauntlet/runner/instructions.py` (`INSTRUCTIONS["apd-threat-model-evaluator"]`), `tools/apd_gauntlet/data/claude/` (bundle sync)
+- Modify: `tools/apd_gauntlet/validate.py` (new `THREAT_MODEL_ROLLUPS` after `CONTEXT_ROLLUPS`, `:291-307`, added to `_ROLLUP_TABLES` (`:560-563`) as `"40-threat-model": THREAT_MODEL_ROLLUPS`; one `_validate_rollups(run_dir, "40-threat-model", …)` call (`_validate_rollups` `:691`) in `run_schema_pass` (`:711`), and no new function, so `schema_for_run_file` and `schema_errors_for_file`, which `resume-plan` and the repair loop use, then cover the dismissals file; `_check_catalog_dismissals` called from `run_cross_file_pass` (`:1069`), resolving each new reference against the ids of the record kind it names and reading deduped ids only through `_deduped_record_ids` (`:1039`); locate these edits by the function names)
+- Modify: `.claude/agents/apd-threat-model-evaluator.md` (new `### Step 5b — Catalog silence (Rule 8)` after `### Step 5 — Silence detection (Rule 7)`, `:271-306`; output contract item; self-check items), `.claude/skills/apd-threat-model-methodologies/SKILL.md` (new ``### Rule 8 — Catalog silence (`disposition: uncertainty`)`` after Rule 7, `:250-278`)
+- Modify: `.claude/workflows/apd-gauntlet.js` (the tmeval `llmStep` instruction WS5 Task 8 wrote, inside `async function tmevalBranch()` after WS5 Task 8 (register A15.25); locate it by that anchor), `tools/apd_gauntlet/runner/instructions.py` (`INSTRUCTIONS["apd-threat-model-evaluator"]`), `tools/apd_gauntlet/data/claude/` (bundle sync)
 - Modify: `docs/threat-modeling.md` (`### The three finding flavors`, `:151-163`), `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_catalog_silence_contract.py`, `tests/test_other_schemas.py` (append)
 
@@ -970,7 +973,7 @@ def test_unoffered_dismissal_is_warning(scoped_ceb_run): ...   # after tm-candid
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_silence_contract.py tests/test_other_schemas.py -v`
+Run: `pytest tests/test_catalog_silence_contract.py tests/test_other_schemas.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Write the schema, validator wiring, agent and skill text, the instruction sentence, and sync the bundle**
@@ -979,7 +982,7 @@ Docs: `docs/threat-modeling.md` adds a "Catalog silence (2.0, threat catalog on)
 
 - [ ] **Step 4: Run tests and linters**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/apd-gauntlet lint-agents --agent-dir .claude/agents/ && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
+Run: `pytest -q && apd-gauntlet lint-agents --agent-dir .claude/agents/ && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1000,7 +1003,7 @@ Expected: exit 0 for every comparison; no candidate run has `catalog-silence-dis
 
 - Modify: `tools/apd_gauntlet/catalog/derive.py` (`edge_threat_refs`, `tactic_sequence`)
 - Modify: `tools/apd_gauntlet/attack_path/d3fend_overlay.py:67-142` (`build_overlays` gains `catalog`)
-- Modify: `tools/apd_gauntlet/cli.py:783-907` (`analyze_attack_paths`), `:1037-1067` (`_write_asset_graph`), `:1085-1099` (`_serialize_edge`), `:1102-1144` (`_write_attack_paths`)
+- Modify: `tools/apd_gauntlet/cli.py:834` (`analyze_attack_paths`), `:1088` (`_write_asset_graph`), `:1136` (`_serialize_edge`), `:1153` (`_write_attack_paths`)
 - Modify: `tools/apd_gauntlet/attack_path/load.py` (WS5 `load_graph`, `load_paths`: ignore `threat_refs` and `tactic_sequence`)
 - Modify: `tools/apd_gauntlet/data/schemas/asset-graph.schema.json:40-56` (edge `threat_refs`), `attack-path.schema.json:25-45` (path `tactic_sequence`), `defense-graph.schema.json:42-66` (candidate `source`)
 - Modify: `.claude/skills/apd-attack-path-discipline/SKILL.md` (one sentence in the D3FEND rule), `tools/apd_gauntlet/data/claude/` (sync), `docs/attack-path-analysis.md` (`## Reading the outputs`, `:217-236`), `docs/deterministic-field-register.md`, `docs/schema-evolution.md`, `CHANGELOG.md`
@@ -1075,7 +1078,7 @@ Add `"edge_threat_refs"`, `"tactic_sequence"` and `"source: catalog"` to `CATALO
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_attack_paths.py tests/test_d3fend_overlay.py tests/test_render_attack_path_report.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_catalog_attack_paths.py tests/test_d3fend_overlay.py tests/test_render_attack_path_report.py tests/test_register_consistency.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the two derivations, the overlay extension, the writers, the loader tolerance, schemas and docs**
@@ -1084,7 +1087,7 @@ Expected: FAIL
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1172,7 +1175,7 @@ Add `"catalog_finding_ids"` to `CATALOG_FIELDS`.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_rollup_split.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_catalog_rollup_split.py tests/test_register_consistency.py -v`
 Expected: FAIL (`KeyError: 'catalog_finding_ids'`)
 
 - [ ] **Step 3: Implement the gate, the attach helper and the six schema properties**
@@ -1181,7 +1184,7 @@ Call `_attach_catalog_finding_ids(result, findings)` in `build_rollups` after th
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q tests/test_catalog_rollup_split.py tests/test_cli_rollup.py tests/test_synthesis_equivalence.py tests/unit/synthesis && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q tests/test_catalog_rollup_split.py tests/test_cli_rollup.py tests/test_synthesis_equivalence.py tests/unit/synthesis && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1197,7 +1200,7 @@ git commit -m "feat(rollup): list catalog-only reaches apart from lens-authored 
 
 - Modify: `tools/apd_gauntlet/catalog/coverage.py` (coverage view)
 - Create: `tools/apd_gauntlet/data/schemas/catalog-coverage.schema.json`
-- Modify: `tools/apd_gauntlet/synthesis/rollup.py:47-62` (`RollupResult.catalog_coverage`), `:356-429` (`build_rollups`), `:845-885` (`_write`); `tools/apd_gauntlet/validate.py:234-287` (`SYNTHESIS_ROLLUPS` gains `"catalog-coverage.yaml": "catalog-coverage.schema.json"`); `tools/apd_gauntlet/data/schemas/metrics.schema.json:20` (optional `catalogThreatsByStatus`); `tools/apd_gauntlet/cli.py:1350-1361` (`rollup_cmd` echo)
+- Modify: `tools/apd_gauntlet/synthesis/rollup.py:47-62` (`RollupResult.catalog_coverage`), `:356-429` (`build_rollups`), `:845-885` (`_write`); `tools/apd_gauntlet/validate.py:480` (`SYNTHESIS_ROLLUPS` gains `"catalog-coverage.yaml": "catalog-coverage.schema.json"`); `tools/apd_gauntlet/data/schemas/metrics.schema.json:20` (optional `catalogThreatsByStatus`); `tools/apd_gauntlet/cli.py:1409` (`rollup_cmd` echo)
 - Modify: `docs/taxonomy-mappings.md` (`## Derived views vs. emission taxonomies (v1.7+)`), `docs/deterministic-field-register.md`, `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_catalog_coverage.py`, `tests/unit/synthesis/test_metrics_schema.py` (append), `tests/test_register_consistency.py`
 
@@ -1219,7 +1222,7 @@ catalog: {edition, version, sha256, fallback_from}       # copied from threat-sc
 selection_version: 1
 status_counts: {finding: 0, capability: 0, grounded: 0, blocked: 0, dismissed: 0, silent: 0}
 threats:            # every in-scope threat, by id
-  - {id, name, family, source, abstraction, kind, status, goals, surfaces, crown_jewel_surface,
+  - {id, name, family, abstraction, kind, status, goals, surfaces, crown_jewel_surface,
      finding_ids, capability_ids, tm_entry_ids, silence_finding_ids, dismissal_reason?, summary?}
 frameworks:
   - key: owasp_agentic            # catalog.frameworks key; control frameworks keep the ctl_ prefix
@@ -1234,12 +1237,13 @@ frameworks:
 Rules:
 
 - Status follows `STATUS_ORDER`, first match: `cites.findings`, then `cites.capabilities`, then `cites.tm_entries`, then `cites.blocked_cells`, then an offered dismissal (`(id, s)` in `cites.dismissals` with `s in offered.get(id, ())`), else `silent`.
-- `summary` appears only for `source: added` threats, as CAT2's `clip(summary, summary_chars_shortlist)` (spec §12.3). `name` is clipped the same way.
+- `summary` appears for every threat, clipped (CAT2's `clip(summary, summary_chars_shortlist)`) and on one line, and is omitted when empty (spec §12.3). `name` is clipped the same way.
 - Frameworks:
   - The view covers every mapping and control key for which `taxonomy_for(key) is None`, so the keys derived into findings (and `capec`, `nist_800_53` and `d3fend`) stay out of it.
   - Items are those reached by an in-scope threat, primary or partial. An item's finding and capability ids are the union over its threats.
   - `posture` is `posture(has_findings=bool(finding_ids), has_caps=bool(capability_ids))`, and `fidelity` is `exact` only when every link is `primary`.
   - Items sort by `(-(finding_count + capability_count), id)`; frameworks by key; frameworks with no items are omitted.
+  - Catalog control rows (`kind: control`, for example `ctl_nist_csf2`) are not compliance coverage: they render apart from the "Compliance crosswalk" sub-tab, labelled "catalog threat control refs — not an attestation" (DEC-30).
 - Schema: goal items `$ref` `apd_goal`; `status` enum `STATUS_ORDER`; `posture` enum as `framework-coverage.schema.json`; `fit` enum `primary|partial`; `additionalProperties: false` everywhere.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1268,13 +1272,14 @@ def test_status_precedence(make_threat, cov_rc):
     assert [t["status"] for t in doc["threats"]] == ["finding", "capability", "grounded", "blocked", "dismissed", "silent", "silent"]
     assert doc["status_counts"] == {"finding": 1, "capability": 1, "grounded": 1, "blocked": 1, "dismissed": 1, "silent": 2}
 
-def test_coverage_omits_summary_for_hitrust_sourced_threats(make_threat, cov_rc):   # Review Focus 3
-    h = make_threat(id="TC-IN-007", source="HITRUST", summary="HITRUST-derived prose")
-    a = make_threat(id="TC-IN-008", summary="Added prose")
-    doc = coverage_from(cov_rc([h, a]), Citations.empty(), {})
+def test_coverage_summary_is_clipped_and_one_line(make_threat, cov_rc):
+    long = make_threat(id="TC-IN-007", summary="First line\nsecond line " + "x" * 300)
+    empty = make_threat(id="TC-IN-008", summary="")
+    doc = coverage_from(cov_rc([long, empty, make_threat(id="TC-IN-009")]), Citations.empty(), {})
     rows = {t["id"]: t for t in doc["threats"]}
-    assert "summary" not in rows["TC-IN-007"] and rows["TC-IN-008"]["summary"] == "Added prose"
-    assert "HITRUST-derived prose" not in yaml.safe_dump(doc)
+    assert rows["TC-IN-007"]["summary"] == clip(long.summary, load_selection_params().summary_chars_shortlist)
+    assert "\n" not in rows["TC-IN-007"]["summary"]
+    assert "summary" not in rows["TC-IN-008"] and rows["TC-IN-009"]["summary"] == "Summary of TC-IN-009"
 
 def test_frameworks_posture_and_fidelity(make_threat, cov_rc):
     a = make_threat(id="TC-AG-001", mappings={"owasp_agentic": (MappingRef("ASI01", "Goal hijack", "primary"),),
@@ -1307,16 +1312,16 @@ Append to `tests/unit/synthesis/test_metrics_schema.py`: `compute_metrics(...)` 
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_coverage.py tests/unit/synthesis/test_metrics_schema.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_catalog_coverage.py tests/unit/synthesis/test_metrics_schema.py tests/test_register_consistency.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the view, the schema, the rollup wiring and the registration**
 
-Docs: `docs/taxonomy-mappings.md` adds the catalog coverage view as a derived view (ADR-0022 pattern; no HITRUST lineage view; not an attestation).
+Docs: `docs/taxonomy-mappings.md` adds the catalog coverage view as a derived view (ADR-0022 pattern; not an attestation).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1331,7 +1336,7 @@ git commit -m "feat(rollup): write catalog-coverage.yaml with statuses and frame
 **Files:**
 
 - Create: `tools/apd_gauntlet/catalog/gaps.py`, `tools/apd_gauntlet/data/schemas/catalog-gaps.schema.json`
-- Modify: `tools/apd_gauntlet/synthesis/rollup.py` (`RollupResult.catalog_gaps`, `build_rollups`, `_write`), `tools/apd_gauntlet/validate.py:234-287` (`SYNTHESIS_ROLLUPS` gains `"catalog-gaps.yaml": "catalog-gaps.schema.json"`)
+- Modify: `tools/apd_gauntlet/synthesis/rollup.py` (`RollupResult.catalog_gaps`, `build_rollups`, `_write`), `tools/apd_gauntlet/validate.py:480` (`SYNTHESIS_ROLLUPS` gains `"catalog-gaps.yaml": "catalog-gaps.schema.json"`)
 - Modify: `docs/deterministic-field-register.md`, `docs/schema-evolution.md`, `CHANGELOG.md`
 - Test: `tests/test_catalog_gaps.py`, `tests/test_register_consistency.py`
 
@@ -1390,14 +1395,14 @@ def test_rollup_writes_valid_gaps(scoped_ceb_run): ...   # build_rollups -> cata
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_gaps.py tests/test_register_consistency.py -v`
+Run: `pytest tests/test_catalog_gaps.py tests/test_register_consistency.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `gaps.py`, the schema and the rollup wiring**
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1479,16 +1484,16 @@ def test_cli_export_gaps(tmp_path):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_export_gaps.py -v`
+Run: `pytest tests/test_catalog_export_gaps.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `redact`, `export_gaps` and the CLI**
 
-Docs: the CLI line `apd-gauntlet catalog export-gaps <run-dir>... --out FILE  # 2.0: merge catalog gaps across runs for catalog review (local; review before sharing)`; CHANGELOG `### Added`, noting that gap reasons in full-edition runs may paraphrase catalog prose, which is why the header asks for review.
+Docs: the CLI line `apd-gauntlet catalog export-gaps <run-dir>... --out FILE  # 2.0: merge catalog gaps across runs for catalog review (local; review before sharing)`; CHANGELOG `### Added`, noting that gap reasons in `full` runs may paraphrase the operator's local catalog prose, which is why the header asks for review.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q tests/test_catalog_export_gaps.py && /home/claude/venv-apd/bin/mypy tools/`
+Run: `pytest -q tests/test_catalog_export_gaps.py && mypy tools/`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1513,7 +1518,7 @@ git commit -m "feat(catalog): export redacted catalog gaps across runs"
 - Consumes: Task 11's document and `STATUS_ORDER` (imported inside the function); Task 9's `tactic_sequence`.
 - Produces:
   - `def threat_coverage_view(artifacts: RunArtifacts) -> dict[str, Any]` → `{present: True, catalog: {edition, version}, selection_version, note, status_counts: {<STATUS_ORDER>: n}, attention: [{id, name, status, surfaces, silence_finding_ids, summary?}], frameworks: [{key, kind, name, version, items: [{id, name, threat_ids, finding_count, capability_count, posture, fidelity}]}]}`
-  - `attention` holds the `silent` and `blocked` threats with `crown_jewel_surface: true`, sorted by status order then id. `summary` passes through only when `source == "added"`, even if the YAML carries one.
+  - `attention` holds the `silent` and `blocked` threats with `crown_jewel_surface: true`, sorted by status order then id. `summary` passes through when present.
   - `build_apd_data` adds `out["threat_coverage"]` only when `artifacts.catalog_coverage` is not None (so `data.js` for every existing run is unchanged); a transform failure records `section_errors["threat_coverage"]` and sets `{"present": False}`
   - Each path dict in `attack_paths_data` carries `tactic_sequence` only when the YAML path has a non-empty one
   - JSX: `const threatCov = data.threat_coverage; const showThreatCov = !!(threatCov && threatCov.present);`; a sub-tab `Threat catalog coverage · § {n}` inserted before the APD matrix with the same numbering machinery; `ThreatCoverageTable({ data })` renders the status counts, the crown-jewel attention table (id, name, status, surfaces, summary when present, linked silence findings) and one table per framework (item, name, threats, findings, capabilities, posture, fidelity) under the note "Derived view of what this review examined; not an attestation."; AttackPaths renders `Tactics: A → B → C` when `p.tactic_sequence` is non-empty
@@ -1526,13 +1531,13 @@ COV = {"schema_version": 1, "generated_by": "synthesizer", "note": "Derived view
        "catalog": {"edition": "full", "version": "1.0.0", "sha256": "0" * 64, "fallback_from": None}, "selection_version": 1,
        "status_counts": {"finding": 1, "capability": 0, "grounded": 0, "blocked": 1, "dismissed": 0, "silent": 1},
        "threats": [
-           {"id": "TC-AC-001", "name": "A", "source": "added", "status": "finding", "crown_jewel_surface": True, "summary": "Added prose", "surfaces": ["db"], "silence_finding_ids": []},
-           {"id": "TC-AC-002", "name": "B", "source": "HITRUST", "status": "silent", "crown_jewel_surface": True, "summary": "HITRUST prose", "surfaces": ["db"], "silence_finding_ids": ["tmeval-00000001"]},
-           {"id": "TC-AC-003", "name": "C", "source": "added", "status": "blocked", "crown_jewel_surface": True, "summary": "Blocked prose", "surfaces": ["db"], "silence_finding_ids": []},
-           {"id": "TC-AC-004", "name": "D", "source": "added", "status": "silent", "crown_jewel_surface": False, "surfaces": ["api"], "silence_finding_ids": []}],
+           {"id": "TC-AC-001", "name": "A", "status": "finding", "crown_jewel_surface": True, "summary": "Added prose", "surfaces": ["db"], "silence_finding_ids": []},
+           {"id": "TC-AC-002", "name": "B", "status": "silent", "crown_jewel_surface": True, "surfaces": ["db"], "silence_finding_ids": ["tmeval-00000001"]},
+           {"id": "TC-AC-003", "name": "C", "status": "blocked", "crown_jewel_surface": True, "summary": "Blocked prose", "surfaces": ["db"], "silence_finding_ids": []},
+           {"id": "TC-AC-004", "name": "D", "status": "silent", "crown_jewel_surface": False, "surfaces": ["api"], "silence_finding_ids": []}],
        "frameworks": []}
 
-def test_view_attention_and_hitrust_guard():
+def test_view_attention():
     v = threat_coverage_view(_artifacts(catalog_coverage=COV))
     assert [r["id"] for r in v["attention"]] == ["TC-AC-003", "TC-AC-002"]
     assert "summary" not in v["attention"][1] and v["attention"][0]["summary"] == "Blocked prose"
@@ -1564,16 +1569,16 @@ def test_bundle_ships_threat_coverage():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/unit/report/test_threat_coverage_view.py tests/unit/report/test_threat_coverage_jsx.py -v`
+Run: `pytest tests/unit/report/test_threat_coverage_view.py tests/unit/report/test_threat_coverage_jsx.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the loader field, the view, the passthrough, the JSX, rebuild the bundle and write the docs**
 
-Run: `python tools/build_report_template.py` (Node 20+). `docs/html-report.md` describes the section, the HITRUST rule and where the YAML lives.
+Run: `python tools/build_report_template.py` (Node 20+). `docs/html-report.md` describes the section and where the YAML lives.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/home/claude/venv-apd/bin/pytest -q tests/unit/report tests/integration/report && python tools/check_report_template_freshness.py && markdownlint-cli2 docs/html-report.md`
+Run: `pytest -q tests/unit/report tests/integration/report && python tools/check_report_template_freshness.py && markdownlint-cli2 docs/html-report.md`
 Expected: PASS; both golden `data.js` cases unchanged; the freshness check passes
 
 - [ ] **Step 5: Commit**
@@ -1588,7 +1593,7 @@ git commit -m "feat(report): add the Threat coverage section and path tactic seq
 Run: `apd-gauntlet compare-runs <previous accepted state> runs/<id>-cat3-g --gates eval/gates.yaml` for each run id.
 Expected: exit 0 for every comparison; report audit iterations not above the previous state.
 
-### Task 15: No lineage anywhere, and the first `open` comparison
+### Task 15: No HITRUST content in any output, and the first `open` comparison
 
 **Files:**
 
@@ -1596,22 +1601,14 @@ Expected: exit 0 for every comparison; report audit iterations not above the pre
 
 **Interfaces:**
 
-- Consumes: CAT1's `tests/fixtures/threat_catalog/full.json`; the `scoped_ceb_run` fixture (its `patch_catalog_loader` dependency makes every in-process CLI call load CAT1's full fixture); the CLI commands of CAT2 (`author-threat-model` with scope), Tasks 5, 7, 9, 11–13 and WS5 (`tm-candidates`).
+- Consumes: CAT1's `tests/fixtures/threat_catalog/full.json`, `load_catalog` and `CatalogConfig`; the `scoped_ceb_run` fixture (its `patch_catalog_loader` dependency makes every in-process CLI call load CAT1's full fixture); the CLI commands of CAT2 (`author-threat-model` with scope), Tasks 5, 7, 9, 11–13 and WS5 (`tm-candidates`).
 - Produces: the §12.3 guard as a test.
 
 - [ ] **Step 1: Write the test**
 
 ```python
 # tests/test_catalog_no_lineage.py
-KEY_RE = re.compile(r'(?m)^\s*-?\s*["\']?hitrust(_crosswalk)?["\']?\s*:|"hitrust(_crosswalk)?"\s*:')
-
-def _hitrust_ids(full: Path) -> set[str]:
-    doc = json.loads(full.read_text())
-    ids = {i for t in doc["threats"] if t.get("hitrust") for i in t["hitrust"]["ids"]}
-    return ids | {r["hitrust_id"] for r in doc.get("hitrust_crosswalk", [])}
-
-def test_catalog_steps_never_emit_hitrust_lineage(scoped_ceb_run, catalog_fixture_dir, tmp_path):   # Review Focus 3, spec §12.3
-    ids = _hitrust_ids(catalog_fixture_dir / "full.json"); assert ids          # fixture sanity
+def test_catalog_steps_never_emit_hitrust(scoped_ceb_run, tmp_path):   # Review Focus 3, spec §12.3
     run = lambda *a: CliRunner().invoke(main, [*a]).exit_code
     assert run("author-threat-model", str(scoped_ceb_run)) == 0
     _cite_scope_threats(scoped_ceb_run)      # TM catalog_refs + one catalog_gap_reason; threat_refs on one lens, one deduped finding, one deduped capability
@@ -1626,28 +1623,34 @@ def test_catalog_steps_never_emit_hitrust_lineage(scoped_ceb_run, catalog_fixtur
         assert run("build-report", str(scoped_ceb_run)) == 0
     outputs = [p for p in scoped_ceb_run.rglob("*") if p.is_file() and "inputs" not in p.parts] + [tmp_path / "export.yaml"]
     for p in outputs:
-        text = p.read_text(encoding="utf-8", errors="ignore")
-        assert not KEY_RE.search(text), p
-        assert not [i for i in ids if i in text], p
+        assert "hitrust" not in p.read_text(encoding="utf-8", errors="ignore").lower(), p
+
+def test_hitrust_bearing_local_catalog_never_reaches_outputs(catalog_fixture_dir, tmp_path):   # Review Focus 3
+    doc = json.loads((catalog_fixture_dir / "full.json").read_text())
+    doc["threats"][0]["hitrust"] = {"ids": ["01.a"]}
+    local = tmp_path / "local-catalog.json"; local.write_text(json.dumps(doc))
+    cat = load_catalog(CatalogConfig("full", local, (), ()), data_dir=catalog_fixture_dir)
+    assert cat.edition == "open" and cat.fallback_from == "full"
+    assert any("hitrust key" in w for w in cat.warnings)
 ```
 
 `_cite_scope_threats` and `_dismiss_first_silence_candidate` are local helpers. They pick ids from `load_run_catalog(scoped_ceb_run).in_scope` and `tm-candidates.yaml`, so the test does not depend on the fixture's id choices.
 
 - [ ] **Step 2: Run the test**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/test_catalog_no_lineage.py -v`
-Expected: PASS. A failure names the file that leaked; fix the producer, never the test. If a fixture summary itself embeds a HITRUST id, the fixture is wrong (CAT1) and is fixed there.
+Run: `pytest tests/test_catalog_no_lineage.py -v`
+Expected: PASS. A failure names the file that leaked; fix the producer, never the test. If a fixture itself contains `hitrust`, the fixture is wrong (CAT1) and is fixed there.
 
 - [ ] **Step 3: Run the full quality gates**
 
-Run: `/home/claude/venv-apd/bin/pytest -q && /home/claude/venv-apd/bin/ruff check tools/ tests/ && /home/claude/venv-apd/bin/mypy tools/ && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
+Run: `pytest -q && ruff check tools/ tests/ && mypy tools/ && markdownlint-cli2 ".claude/**/*.md" "docs/**/*.md" "!docs/superpowers/plans/**"`
 Expected: PASS
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add tests/test_catalog_no_lineage.py
-git commit -m "test(catalog): no HITRUST lineage reaches any catalog output"
+git commit -m "test(catalog): no HITRUST content reaches any catalog output"
 ```
 
 - [ ] **Step 5: Operator — first `open` comparison, for information (master plan Task 7 Step 2a)**

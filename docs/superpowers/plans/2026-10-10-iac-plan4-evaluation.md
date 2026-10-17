@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Measure the IaC pipeline on labelled development and held-out repositories against the 1.7 raw-read baseline, prove its results survive behaviour-preserving changes (T1–T8), tune the packet parameters on development data only before WS2's freeze, and pre-fill the `iac-triage` calibration labels from the IaC labels.
+**Goal:** Measure the IaC pipeline on labelled development and held-out repositories against the 1.7.1 raw-read baseline, prove its results survive behaviour-preserving changes (T1–T8), tune the packet parameters on development data only before WS2's freeze, and pre-fill the `iac-triage` calibration labels from the IaC labels.
 
 **Architecture:** Everything plugs into WS2's harness instead of adding commands. The corpus is a WS2 `eval-corpus` manifest; labels use a new `iac` kind of WS2's `eval-labels` schema; three evaluators register with `apd_gauntlet.eval.evaluators.register` for `apd-gauntlet eval run`; suite `iac` registers with `apd_gauntlet.eval.metamorphic.register_suite` for `apd-gauntlet metamorphic run --suite iac`; WS2's `eval freeze` already covers `data/iac/context-params.yaml`. A local tuning script writes new parameters for the operator to freeze, and a helper pre-fills WS6's `iac-triage` label sheet from the IaC labels before `calibrate`.
 
 **Tech Stack:** Python 3.10–3.12, PyYAML, jsonschema, python-hcl2 7.x; WS2 `eval run`, `eval freeze`, `metamorphic run`, `calibrate`; WS6 `decide-labels`; Atmos, Trivy, Checkov and OpenTofu for local runs; pytest with the `iac_tools` marker.
 
-**Spec:** `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md` §10 (frozen parameters), §11 item 7, §13.2 (including the 1.7 baseline amendment), §13.3, §15 item 4. Master plan R1 (`eval run`, `calibrate`, `metamorphic run`; `iac-triage` owned by WS6), R2 (`apd_gauntlet.eval.evaluators`), R7 (`eval-corpus`, `eval-labels`), R8 (`eval/` at the repo root), Task 8 Step 1, M6 exit gate. WS2 plan Tasks 8–13 and WS6 plan Tasks 11–12 (`docs/superpowers/plans/2026-10-10-ws2-measurement-and-evaluation.md`, `2026-10-10-ws6-decision-tasks.md`). This is Plan 4 of 4; it consumes Plans 1–3.
+**Spec:** `docs/superpowers/specs/2026-10-10-iac-terraform-opentofu-atmos-design.md` §10 (frozen parameters), §11 item 7, §13.2 (including the 1.7 baseline amendment), §13.3, §15 item 4. Master plan R1 (`eval run`, `calibrate`, `metamorphic run`; `iac-triage` owned by WS6), R2 (`apd_gauntlet.eval.evaluators`), R7 (`eval-corpus`, `eval-labels`), R8 (`eval/` at the repo root), Task 8 Step 1, M6 exit gate. WS2 plan Tasks 8–13 and WS6 plan Tasks 12–13 (`docs/superpowers/plans/2026-10-10-ws2-measurement-and-evaluation.md`, `2026-10-10-ws6-decision-tasks.md`). This is Plan 4 of 4; it consumes Plans 1–3.
+
+**Amended 2026-10-17** per the amendments register (A13.12, A13.18, A13.20, A13.21, A13.22, A13.23, A13.24, A15.12, A15.19).
 
 ## Global Constraints
 
@@ -16,7 +18,7 @@
 - **Labels.** Each repository has a hand-labelled file of expected results: check category, address and verdict (spec §13.2).
 - **Metrics.** Precision, recall and F1 per check category for the deterministic index; the same end to end for final findings; unknown rate; packet tokens per goal (spec §13.2).
 - **Tuning protocol.** Tunables are tuned on development only and frozen before held-out runs: edge weights, score coefficients, K, reliability weights, and decision thresholds. A tunable changed after a held-out run means a new held-out set (spec §13.2). WS2 enforces this: `TUNABLE_GLOBS` includes `tools/apd_gauntlet/data/*/context-params.yaml`, `eval run --set heldout` exits 2 when tunables changed since `eval freeze`, and `eval freeze` refuses after held-out use without `--new-heldout-set`.
-- **Baseline.** Every metric is also computed for 1.7's raw-read path on the same corpus and labels; a release that lowers recall of labelled issues against that baseline does not ship (spec §13.2 amendment; master plan M6: "Held-out IaC recall ≥ 1.7 baseline").
+- **Baseline.** Every metric is also computed for 1.7.1's raw-read path on the same corpus and labels; a release that lowers recall of labelled issues against that baseline does not ship (spec §13.2 amendment; master plan M6: "Held-out IaC recall ≥ 1.7.1 baseline").
 - **Transformation suite.** Each of T1–T8 is applied to the fixtures and the normalised result set `{(check id, address modulo rename map, verdict)}` must not change; known non-invariances are listed in the suite's allowlist with a reason (spec §13.3). WS2's allowlist is keyed by `(transform, fixture)`, so each IaC metamorphic fixture covers one concern.
 - **Local only (ADR-0017, amended by WS2's ADR-0028).** Tests never touch the network; real runs, checkouts and results stay under the gitignored `eval/local/` and `eval/results/`. The transformation suite runs offline on committed fixtures in the `iac-tools` CI job, whose setup step alone downloads the pinned tool binaries (coordinator decision, 2026-10-11).
 - **Decision thresholds** come from `calibrate` on development labels and are frozen before held-out runs (master plan Global Constraints). `decide iac-triage` is WS6's task (R1); this plan supplies its labels.
@@ -24,7 +26,7 @@
 ## Review Focus
 
 - **Tuning that sees held-out data:** editing `data/iac/context-params.yaml` after `eval freeze` must make a held-out `eval run` exit 2, and the tuning script must never freeze. Pinned by Task 3 `test_context_params_are_tunables`, `test_heldout_refused_after_param_edit` and Task 4 `test_tune_writes_unfrozen_params`.
-- **An operator who never ran the baseline:** `iac-delta` with no recorded 1.7 run for an entry fails with a message, never passes against nothing. Pinned by Task 3 `test_delta_without_baseline_fails`.
+- **An operator who never ran the baseline:** `iac-delta` with no recorded 1.7.1 run for an entry fails with a message, never passes against nothing. Pinned by Task 3 `test_delta_without_baseline_fails`.
 - **An undeclared or hiding non-invariance:** a transformation that changes a result set fails the suite unless that `(transform, fixture)` is allowlisted with a reason; the allowlist may never cover T1, T2, T4 or T7, which change nothing a scanner can see. Pinned by Task 2 `test_suite_flags_changed_results` and `test_allowlist_excludes_pipeline_transforms`.
 - **A leaky corpus:** the same repository directory in both sets (even at different commits), a held-out entry without a licence, or a labels file of the wrong kind is a manifest error. Pinned by Task 1 `test_same_directory_in_both_sets_rejected`, `test_heldout_requires_licence`, `test_labels_must_be_iac_kind`.
 - **A recall regression hidden by an average:** one category whose held-out recall falls below the baseline fails the gate even when total F1 rises. Pinned by Task 3 `test_delta_gate_fails_on_one_category`.
@@ -71,6 +73,8 @@
 
 Manifest entries use WS2's shape `{id, set, repo: {url, commit, path}, labels, licence}`. Development entries: this repository's Plan 1–3 fixtures (`repo.url` `https://github.com/illusconsulting/apd-gauntlet.git` at the commit that last changed each fixture, `path: tests/fixtures/iac/<name>`) and `https://github.com/bridgecrewio/terragoat.git`, path `terraform/aws` (Apache-2.0). Held-out candidates, confirmed in Step 1: `https://github.com/cloudposse/atmos.git` `examples/quick-start-advanced` (Apache-2.0; Atmos with catalogs and inheritance), `https://github.com/terraform-aws-modules/terraform-aws-vpc.git` `examples/complete` (Apache-2.0), `https://github.com/terraform-aws-modules/terraform-aws-eks.git` `examples/eks-managed-node-group` (Apache-2.0; IAM-heavy), and one public OpenTofu repository with `.tofu` files, chosen in Step 1. TerraGoat is maintained by the Checkov authors, so it stays in development only.
 
+`CorpusEntry` drops `licence`, so `validate_iac_corpus` reads it from the raw manifest. An entry whose root uses `../` modules puts the whole checkout in `inputs/` (register A13.20). For Atmos entries the 1.7.1 baseline is `terraform: ["<root>/components/terraform/**/*.tf"]`, with stacks as ordinary inputs (register A13.21, A15.19).
+
 - [ ] **Step 1: Confirm candidates and licences (operator)**
 
 Clone each held-out candidate at its current default-branch commit into `eval/local/iac/checkouts/<id>`, read `LICENSE` at that commit, and record `commit` and `licence`. Replace a candidate that is not Apache-2.0, MIT, MPL-2.0 or BSD, that has fewer than 10 resources, or whose authors overlap with this project's. Expected: four held-out entries with commit and licence; the OpenTofu entry contains at least one `.tofu` file.
@@ -102,7 +106,7 @@ def test_checkout_dir(tmp_path): ...   # this repo → root/path; other repo →
 
 - [ ] **Step 3: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_corpus.py tests/test_eval_corpus.py -v`
+Run: `pytest tests/iac/test_corpus.py tests/test_eval_corpus.py -v`
 Expected: FAIL on the new tests (WS2's own corpus tests still pass)
 
 - [ ] **Step 4: Implement the kind, the checks, the manifest and the development labels**
@@ -111,7 +115,7 @@ Label the Plan 1–3 fixtures and TerraGoat's `terraform/aws` by hand: every che
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_corpus.py tests/test_eval_corpus.py tests/test_meta_schemas.py -v`
+Run: `pytest tests/iac/test_corpus.py tests/test_eval_corpus.py tests/test_meta_schemas.py -v`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -131,7 +135,7 @@ git commit -m "feat(eval): add the IaC corpus and the iac labels kind"
 
 **Interfaces:**
 
-- Consumes: WS2 `RenameMap` (transformed name → original name), `ResultSet`, `Transform`, `Suite(name, fixtures, transforms, extract, normalise, known_non_invariant)`, `register_suite`, `run_suite`, `CaseResult`; Plan 1 `run_iac`, `parse_file`
+- Consumes: WS2 `RenameMap` (transformed name → original name), `ResultSet`, `Transform`, `Suite(name, fixtures, transforms, extract, normalise, known_non_invariant)`, `register_suite`, `run_suite`, `CaseResult`, `MetamorphicError` (WS2 Task 13's existing class; do not define a new one, register A13.22); Plan 1 `run_iac`, `parse_file`
 - Produces:
   - Transforms (`(src, dst) -> RenameMap`): `t1_rename_resources`, `t2_rename_vars_locals`, `t3_move_to_local_module`, `t4_split_files`, `t4_merge_files` (registered as `T4-split` and `T4-merge`), `t5_tf_to_tofu`, `t6_move_to_catalog`, `t7_add_noise`, `t8_hcl_to_json`. A rename-map key ending in `.` is a prefix: T3 returns `{"module.moved.": ""}`.
   - `def extract(fixture: Path) -> ResultSet` — builds a temporary run with `inputs/` = the fixture and the fixture's `iac-fixture.yaml` infrastructure block, runs `run_iac`, and returns `{(check id, address, "fail" | "pass")}` over `check` and `control` entries; raises `MetamorphicError("suite iac needs trivy and checkov on PATH")` when either is missing
@@ -167,6 +171,8 @@ def test_t8_json_same_blocks(tmp_path):
     t8_hcl_to_json(FIX / "metamorphic/s3", tmp_path / "t8")
     assert {b.address for b in parse_file(tmp_path / "t8/main.tf.json")} == {b.address for b in parse_file(FIX / "metamorphic/s3/main.tf")}
 
+def test_missing_tool_exits_2(tmp_path, monkeypatch): ...   # trivy and checkov absent from PATH → `metamorphic run --suite iac` exits 2 naming them (register A13.22)
+
 def test_suite_registered():
     load_builtin_suites()
     assert SUITES["iac"] is IAC_SUITE and set(IAC_SUITE.transforms) == {"T1", "T2", "T3", "T4-split", "T4-merge", "T5", "T6", "T7", "T8"}
@@ -190,19 +196,21 @@ def test_suite_green_on_fixtures(require_tools):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_metamorphic.py -v`
+Run: `pytest tests/iac/test_metamorphic.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement the transforms, `extract`, `normalise` and the registration**
 
+Missing tools raise WS2's `MetamorphicError`; confirm that `metamorphic run` maps it to exit 2 (register A13.22).
+
 - [ ] **Step 4: Run the live suite and record genuine non-invariances**
 
-Run: `PATH=/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/bin:/tmp/claude-0/-home-claude-apd-gauntlet/62f4ef46-a9fa-56b6-909b-632a30f9b40f/scratchpad/ckv/bin:$PATH /home/claude/venv-apd/bin/apd-gauntlet metamorphic run --suite iac --json`
+Run: `PATH="$APD_IAC_TOOLS_BIN:$PATH" apd-gauntlet metamorphic run --suite iac --json`
 Expected: exit 0. Each `violated` case is either a pipeline defect, fixed in the owning plan's module with a regression test there, or a scanner limitation (for example a scanner treating `.tf.json` differently) recorded in `KNOWN_NON_INVARIANT` with the tool version and reason. A `stale_allowlist` case means the row is no longer needed and is removed.
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_metamorphic.py tests/test_eval_metamorphic.py -v`
+Run: `pytest tests/iac/test_metamorphic.py tests/test_eval_metamorphic.py -v`
 Expected: PASS (the live test skips without the tools)
 
 - [ ] **Step 6: Commit**
@@ -285,14 +293,14 @@ def test_packet_tokens(tmp_path): ...   # 400-character confidentiality.md → {
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_evaluators.py -v`
+Run: `pytest tests/iac/test_evaluators.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement matching, metrics and the evaluators; add the import to `load_builtin_evaluators`**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_evaluators.py tests/test_eval_evaluators.py tests/test_cli_eval_run.py -v`
+Run: `pytest tests/iac/test_evaluators.py tests/test_eval_evaluators.py tests/test_cli_eval_run.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -347,14 +355,14 @@ def test_script_refuses_heldout_entries(tmp_path): ...   # a corpus whose only e
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_tuning.py -v`
+Run: `pytest tests/iac/test_tuning.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `tuning.py` and the script**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_tuning.py tests/context -v`
+Run: `pytest tests/iac/test_tuning.py tests/context -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -400,14 +408,14 @@ def test_script_refuses_heldout(tmp_path): ...               # sheet whose run m
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_triage_labels.py -v`
+Run: `pytest tests/iac/test_triage_labels.py -v`
 Expected: FAIL
 
 - [ ] **Step 3: Implement `triage_labels.py` and the script**
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `/home/claude/venv-apd/bin/pytest tests/iac/test_triage_labels.py tests/decide/test_labels.py -v`
+Run: `pytest tests/iac/test_triage_labels.py tests/decide/test_labels.py -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -421,7 +429,7 @@ git commit -m "feat(eval): pre-fill iac-triage labels from the IaC corpus labels
 
 **Files:**
 
-- Modify: `docs/iac-evaluation.md` ("Evaluation"), `docs/measuring-changes.md` (WS2 runbook: "IaC corpus" pointer), `RELEASING.md` (the `v2.0.0b1` checklist in "Cutting a 2.0 pre-release"), `CHANGELOG.md`, `tools/apd_gauntlet/data/iac/context-params.yaml` (Task 4 output), `eval/frozen.yaml` (WS2 `eval freeze` output)
+- Modify: `docs/iac-evaluation.md` ("Evaluation"), `docs/measuring-changes.md` (WS2 runbook: "IaC corpus" pointer), `RELEASING.md` (a new `### Beta gates (v2.0.0b1)` checklist in "Cutting a 2.0 pre-release"; none exists yet, register A13.23), `CHANGELOG.md`, `tools/apd_gauntlet/data/iac/context-params.yaml` (Task 4 output), `eval/frozen.yaml` (WS2 `eval freeze` output)
 
 Every step runs locally (ADR-0017, ADR-0028); run directories, checkouts and results stay under `eval/local/` and `eval/results/`.
 
@@ -429,16 +437,16 @@ Every step runs locally (ADR-0017, ADR-0028); run directories, checkouts and res
 
 Label each held-out checkout before any candidate run on it. Expected: `validate_iac_corpus` clean; held-out labels committed; no run output consulted while labelling.
 
-- [ ] **Step 2: Run the 1.7 raw-read baseline**
+- [ ] **Step 2: Run the 1.7.1 raw-read baseline**
 
-In a separate virtual environment with `apd-gauntlet==1.7.0` and the 1.7.0 plugin, run the gauntlet once per corpus entry with the labels' `baseline_infrastructure`, and record each run directory as `baseline` in `eval/local/iac/runs.yaml`. Expected: every run completes and passes `apd-gauntlet validate`.
+In a separate virtual environment with `apd-gauntlet==1.7.1` and the 1.7.1 plugin, run the gauntlet twice per corpus entry with the labels' `baseline_infrastructure` (register A13.24), and record each run directory as `baseline` in `eval/local/iac/runs.yaml`. Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12). Expected: every run completes and passes `apd-gauntlet validate`.
 
 - [ ] **Step 3: Development evaluation and tuning**
 
 Run: `apd-gauntlet eval run eval/iac/corpus.yaml --set dev --evaluator iac-index`, then `python -I tools/scripts/tune_iac_context.py --corpus eval/iac/corpus.yaml`, then the same `eval run` again.
 Expected: the second run's development packet recall is at least the first's, with mean packet tokens within the cap; commit `data/iac/context-params.yaml` with `chore(iac): packet parameters tuned on development data`.
 
-- [ ] **Step 4: Calibrate triage (after WS6 Task 11 lands `iac-triage`)**
+- [ ] **Step 4: Calibrate triage (after WS6 Task 12 lands `iac-triage`)**
 
 Run `decide iac-triage` in shadow mode on the development candidate runs, then: `apd-gauntlet decide-labels sheet iac-triage <dev run dirs…>`, `python -I tools/scripts/prefill_iac_triage.py eval/local/decide/iac-triage.sheet.yaml --corpus eval/iac/corpus.yaml`, `apd-gauntlet decide-labels annotate eval/local/decide/iac-triage.sheet.yaml` for the rest, `apd-gauntlet decide-labels export eval/local/decide/iac-triage.sheet.yaml`, and `apd-gauntlet calibrate iac-triage --labels eval/local/decide/iac-triage.labels.yaml --target-precision 0.98` (master plan Task 8 Step 2).
 Expected: `data/decide/thresholds.yaml` gains `iac-triage` with `calibrated: true`, or exit 1 with the task left uncalibrated.
@@ -450,12 +458,12 @@ Expected: `eval/frozen.yaml` written; commit it with the tuned parameters and th
 
 - [ ] **Step 6: Held-out candidate runs and the gate**
 
-Run the 2.0 gauntlet once per held-out entry, record each as `candidate` in `eval/local/iac/runs.yaml`, then `apd-gauntlet eval run eval/iac/corpus.yaml --set heldout --evaluator iac-delta` and `--evaluator iac-index`.
-Expected: `gate_pass: 1.0` in the `iac-delta` totals (recall of labelled issues ≥ the 1.7 baseline in every category, master plan M6). If it fails, fix the defect; any tunable change after this point needs a new held-out set (`eval freeze --new-heldout-set`).
+Run the 2.0 gauntlet twice per held-out entry, record each as `candidate` in `eval/local/iac/runs.yaml`, then `apd-gauntlet eval run eval/iac/corpus.yaml --set heldout --evaluator iac-delta` and `--evaluator iac-index` (`iac-index` runs once; it is deterministic, register A13.24). Because `Workflow({name: "apd-gauntlet"})` runs the copy of the script registered when the Claude Code session started, every run that exercises a changed runner runs it by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`, as `/apd-gauntlet:run` does, or starts a new session (register A15.12).
+Expected: `gate_pass: 1.0` in the `iac-delta` totals (mean per-category recall of labelled issues over the two runs ≥ the 1.7.1 baseline in every category, register A13.24; master plan M6). If it fails, fix the defect; any tunable change after this point needs a new held-out set (`eval freeze --new-heldout-set`).
 
 - [ ] **Step 7: Record the results and the release line**
 
-`docs/iac-evaluation.md` "Evaluation": the corpus (ids, kinds, licences), how to reproduce Steps 2–6, the metrics table (per-category P/R/F1 for the index and end to end, unknown rate, packet tokens per goal against the baseline's raw IaC tokens) and the frozen parameter values. `docs/measuring-changes.md` points at it. `RELEASING.md` `v2.0.0b1` checklist gains "Held-out `iac-delta` totals report `gate_pass: 1.0`". `CHANGELOG.md` notes the evaluation.
+`docs/iac-evaluation.md` "Evaluation": the corpus (ids, kinds, licences), how to reproduce Steps 2–6, the metrics table (per-category P/R/F1 for the index and end to end, unknown rate, packet tokens per goal against the baseline's raw IaC tokens) and the frozen parameter values. `docs/measuring-changes.md` points at it. `RELEASING.md` gains a `### Beta gates (v2.0.0b1)` checklist in "Cutting a 2.0 pre-release" (none exists yet, register A13.23) with "Held-out `iac-delta` totals report `gate_pass: 1.0`". `CHANGELOG.md` notes the evaluation.
 
 Run: `markdownlint-cli2 docs/iac-evaluation.md docs/measuring-changes.md RELEASING.md CHANGELOG.md`
 Expected: 0 lint errors
@@ -464,5 +472,5 @@ Expected: 0 lint errors
 
 ```bash
 git add docs/iac-evaluation.md docs/measuring-changes.md RELEASING.md CHANGELOG.md eval/iac/labels
-git commit -m "docs(iac): record the held-out evaluation against the 1.7 baseline"
+git commit -m "docs(iac): record the held-out evaluation against the 1.7.1 baseline"
 ```

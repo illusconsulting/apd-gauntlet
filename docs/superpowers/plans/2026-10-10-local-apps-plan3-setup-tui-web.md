@@ -10,10 +10,12 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md` (§8 local interfaces, §8.5 web security, §8.6 input safety, §8.7 egress notice). Depends on Plans 1 and 2. Plan 3 of 3.
 
+**Amended 2026-10-17** per the amendments register (A3.1, A3.2, A3.3, A3.4, A11.1, A11.5, A11.7, A11.8, A11.9).
+
 ## Global Constraints
 
 - Everything in Plans 1 and 2's Global Constraints still applies.
-- Extras: `tui = ["textual>=0.80"]`; `web = ["starlette>=0.40", "uvicorn>=0.30", "jinja2>=3.1", "python-multipart>=0.0.9"]`; `app = ["apd-gauntlet[decide,runner,tui,web]"]`. `tui` and `web` commands print `pip install "apd-gauntlet[app]"` and exit 1 when their extra is missing.
+- Extras: `tui = ["textual>=8.2,<9"]`; `web = ["starlette>=1.0,<2", "uvicorn>=0.30", "jinja2>=3.1", "python-multipart>=0.0.9"]`; `app = ["apd-gauntlet[decide,runner,tui,web]"]`. `tui` and `web` commands print `pip install "apd-gauntlet[app]"` and exit 1 when their extra is missing.
 - Input limits for a new run, from a folder or an upload: 200 MB (209,715,200 bytes) and 2,000 files; no symlink resolving outside the input root; the run id must not already exist.
 - Web server binds `127.0.0.1` only. Token: `secrets.token_urlsafe(32)`. Cookie `apd_session`: `HttpOnly`, `SameSite=Strict`, `Path=/`. CSRF via header `X-APD-CSRF` or form field `csrf`. Allowed `Host`: `127.0.0.1:<port>` and `localhost:<port>`.
 - Response headers on every web response: `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`. No CORS headers.
@@ -58,11 +60,11 @@
 
 **Interfaces:**
 
-- Consumes: `UserConfig`, `scaffold_run`, `Ledger`, `read_events`, `lock_holder`, `run_decision_model`
+- Consumes: `UserConfig`, `scaffold_run`, `init_run.find_escaping_links` (N1), `Ledger`, `read_events`, `lock_holder`, `run_decision_model`
 - Produces:
   - `MAX_INPUT_BYTES = 209_715_200`, `MAX_INPUT_FILES = 2000`
   - `class InputsRejected(Exception): reason: str`
-  - `def check_inputs(inputs: Path) -> tuple[int, int]` (files, bytes; raises `InputsRejected`)
+  - `def check_inputs(inputs: Path) -> tuple[int, int]` (files, bytes; raises `InputsRejected`; calls `init_run.find_escaping_links(inputs)` (N1) and raises `InputsRejected` naming every escaping link)
   - `@dataclass class NewRunSpec: run_id: str; inputs: Path; domains: list[str]; code_recon: Literal["disabled","auto","enabled"] = "auto"; decision_provider: str = "none"; decision_model: str | None = None; subject: str | None = None; threat_model: str | None = None; crown_jewels: list[str] | None = None`
   - `def create_run(cfg: UserConfig, spec: NewRunSpec) -> Path` → `cfg.workspace / "runs" / spec.run_id`
   - `@dataclass class RunSummary: run_id: str; path: Path; state: str; phase: str | None; spent_usd: float; report_ready: bool; decision_provider: str; updated_at: str | None; pid: int | None`
@@ -70,7 +72,7 @@
   - `def run_summary(cfg: UserConfig, run_id: str) -> RunSummary`
   - re-exports Plan 1's `egress_notice`, `has_consent` and `record_consent` from `apd_gauntlet.decide.factory`
 
-`create_run` order: refuse an existing run directory → `check_inputs` → `scaffold_run(spec.run_id, spec.inputs, spec.domains, cfg.workspace / "runs", threat_model=spec.threat_model)` → load `.apd-run.yaml`, set `code_recon`, `subject`, `crown_jewels` and `decision_model` (only when the provider isn't `none`) → dump with `sort_keys=False` → `validate-run-config` via the existing schema; on failure delete the new directory and raise `ValueError` with the errors.
+`create_run` order: refuse an existing run directory → `check_inputs` → `scaffold_run(spec.run_id, spec.inputs, spec.domains, cfg.workspace / "runs", threat_model=spec.threat_model)` → load `.apd-run.yaml`, set `code_recon`, `subject`, `crown_jewels` and `decision_model` (only when the provider isn't `none`) → dump with `sort_keys=False` → `validate-run-config` via the existing schema; on failure delete the new directory and raise `ValueError` with the errors. `create_run` calls the unchanged `scaffold_run`, which refuses the same links (N1), so `init-run` and `new` share one rule.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -108,6 +110,8 @@ def test_existing_run_refused_before_copy(cfg_ws, inputs_dir):
         create_run(cfg_ws, NewRunSpec("r3", inputs_dir, ["pbm"]))
     assert not (cfg_ws.workspace / "runs/r3/inputs/new.md").exists()
 
+def test_create_run_rejects_escaping_link(cfg_ws, inputs_dir, tmp_path): ...  # inputs_dir/keys -> outside; InputsRejected names "keys"; no runs/<id> directory
+
 def test_list_runs_states(cfg_ws, inputs_dir):
     create_run(cfg_ws, NewRunSpec("a", inputs_dir, ["pbm"]))
     run_b = create_run(cfg_ws, NewRunSpec("b", inputs_dir, ["pbm"])); Ledger(run_b).set_state("failed")
@@ -126,7 +130,7 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement the functions**
 
-`check_inputs` walks with `os.walk(followlinks=False)`; for each symlink, `Path.resolve()` must stay under `inputs.resolve()`; counts files and bytes as it goes and stops at the first limit exceeded.
+`check_inputs` calls `init_run.find_escaping_links(inputs)` (N1) and raises `InputsRejected` naming every escaping link; it then walks with `os.walk(followlinks=False)`, counts files and bytes as it goes and stops at the first limit exceeded.
 
 - [ ] **Step 4: Run to verify pass**
 
@@ -214,24 +218,27 @@ git commit -m "feat(app): start, cancel and report services"
 **Files:**
 
 - Create: `tools/apd_gauntlet/app/setup.py`
-- Modify: `tools/apd_gauntlet/app/services.py` (doctor), `tools/apd_gauntlet/cli.py`
+- Modify: `tools/apd_gauntlet/app/services.py` (doctor; adds `register_doctor_check`), `tools/apd_gauntlet/cli.py`
 - Test: `tests/app/test_setup.py`, `tests/app/test_doctor.py`, `tests/test_cli_setup.py`
 
 **Interfaces:**
 
 - Consumes: `load_config`, `save_config`, `credentials`, `client_for`, `claude_auth_problem`, `materialize`, `bundle_digest`
 - Produces:
-  - `@dataclass class SetupAnswers: workspace: Path; llm_provider: Literal["anthropic","bedrock","vertex","foundry"]; anthropic_key: str | None; decision_provider: str; decision_model: str | None; decision_key: str | None; cloudflare_account_id: str | None; domains: list[str]`
+  - `@dataclass class SetupAnswers: workspace: Path; llm_provider: Literal["anthropic","bedrock","vertex","foundry"]; anthropic_key: str | None; decision_provider: str; decision_model: str | None; decision_key: str | None; cloudflare_account_id: str | None; domains: list[str]; decision_base_url: str | None = None; decision_context_window: int | None = None` (the last two are for `selfhosted`)
   - `@dataclass class SetupResult: config_path: Path; stored: list[str]; test_summary: str | None; warnings: list[str]`
   - `def detect_defaults(cfg: UserConfig) -> SetupAnswers` (LLM provider from `CLAUDE_CODE_USE_BEDROCK|VERTEX|FOUNDRY`, else `anthropic`)
   - `async def apply_setup(answers: SetupAnswers, *, test_decision: bool = True, transport: httpx.AsyncBaseTransport | None = None) -> SetupResult`
   - `@dataclass class Check: name: str; status: Literal["pass","warn","fail"]; detail: str; fix: str | None`
-  - `def doctor(cfg: UserConfig, *, online: bool = False, transport: httpx.AsyncBaseTransport | None = None) -> list[Check]` with check names, in order: `python`, `extras`, `workspace`, `claude`, `agent-sdk`, `keychain`, `decision-model`, `code-recon`
-  - CLI `setup [--workspace P] [--llm-provider X] [--decision-provider X] [--decision-model M] [--cloudflare-account-id ID] [--domain D]... [--yes] [--no-test]`; `doctor [--online] [--json]` (exit 1 when any check fails)
+  - `def doctor(cfg: UserConfig, *, online: bool = False, transport: httpx.AsyncBaseTransport | None = None) -> list[Check]` with check names, in order: `python`, `extras`, `workspace`, `claude`, `agent-sdk`, `keychain`, `decision-model`, `code-recon`. The `agent-sdk` check verifies the Claude Code CLI bundled in the SDK wheel (2.1.300 in 0.2.167).
+  - `def register_doctor_check(name: str, fn: Callable[[UserConfig], Check]) -> None` — registered checks run after the eight built-in checks, in registration order; a duplicate or built-in name raises `ValueError`; an exception inside `fn` becomes `Check(name, "fail", <exception class and first 200 characters>, None)`; `doctor --json` lists registered checks; IAC1 and CF1 register theirs at import
+  - CLI `setup [--workspace P] [--llm-provider X] [--decision-provider X] [--decision-model M] [--decision-base-url URL] [--decision-context-window N] [--cloudflare-account-id ID] [--domain D]... [--yes] [--no-test]`; `doctor [--online] [--json]` (exit 1 when any check fails)
 
 `apply_setup`: create the workspace, `materialize`, store keys (a `NoKeychainError` adds a warning naming the env var and continues), save config (decision defaults, account id, domains, LLM provider), then, when a decision provider is set and a key resolves, send the Plan 1 `keys test` question and put `"<model> · <ms> ms · $<cost> (<basis>)"` in `test_summary`. Keys never go into `SetupResult` or the config. `setup` also names where review content goes on the Claude side, for example "Review content will be sent to Claude through Amazon Bedrock."
 
 Interactive `setup` asks the four questions in spec §8.2 with defaults from `detect_defaults`, using `click.prompt(hide_input=True)` for keys. With `--yes`, it takes defaults and flags without prompting; a key must then come from the environment.
+
+Self-hosted provider (consolidated plan N5, LA1 Task 10): setup's decision-model prompt gains "Self-hosted (System One endpoint)", asking for the base URL and context window; flags `--decision-base-url` and `--decision-context-window` set `decision_model.base_url` and `decision_model.context_window`; `--decision-provider` accepts `selfhosted`. `doctor --online` sends one `noul` question to the self-hosted endpoint and reports latency.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -265,6 +272,11 @@ def test_cli_setup_noninteractive(tmp_path, memory_keyring, cfg_path, monkeypatc
 
 def test_cli_setup_interactive_hides_key(tmp_path, memory_keyring, cfg_path, mock_transport): ...  # input stream; key absent from output
 def test_cli_doctor_json(cfg_ws): ...   # --json → list of {name,status,detail,fix}
+def test_registered_check_runs_after_builtins(cfg_ws): ...   # register_doctor_check("sample", fn) → "sample" comes after "code-recon"; --json lists it
+def test_register_duplicate_rejected(): ...                  # a second "sample", or a built-in name such as "python" → ValueError
+def test_registered_check_exception_is_fail(cfg_ws): ...     # fn raises → Check("sample", "fail", <exception class and first 200 characters>, None)
+def test_setup_selfhosted_flags_write_config(tmp_path, memory_keyring, cfg_path): ...  # --decision-provider selfhosted --decision-base-url --decision-context-window → decision_model.base_url and context_window in config
+def test_doctor_online_uses_selfhosted(cfg_ws, mock_transport): ...  # mock transport; online=True → one noul question to the self-hosted endpoint; decision-model detail reports latency
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -510,6 +522,7 @@ git commit -m "feat(web): add local web UI for setup, runs and reports"
 
 - Create: `tools/apd_gauntlet/app/tui/{__init__,app,screens}.py`
 - Modify: `tools/apd_gauntlet/cli.py` (`tui`)
+- Modify: `pyproject.toml` — the async tests need `pytest-asyncio>=1.0` in the `dev` extra and `asyncio_mode = "auto"` under `[tool.pytest.ini_options]` (pytest 9.1.1 fails bare `async def` tests); LA1 Task 4 adds the same, so skip this when it is already there
 - Test: `tests/app/test_tui.py`
 
 **Interfaces:**
@@ -541,7 +554,7 @@ async def test_start_shows_consent_for_decision_model(cfg_ws, inputs_dir, monkey
     started = []; monkeypatch.setattr(services, "start_run", lambda *a, **k: started.append(k) or 1)
     async with ApdApp(cfg_ws).run_test(size=(80, 24)) as pilot:
         await pilot.press("enter", "g")
-        assert "will be sent to Cloudflare Workers AI" in pilot.app.screen.query_one("#consent-text").renderable
+        assert "will be sent to Cloudflare Workers AI" in pilot.app.screen.query_one("#consent-text").content
         await pilot.click("#consent-yes")
         assert started and started[0]["consent"] is True
 
@@ -565,7 +578,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/apd_gauntlet/app/tui tools/apd_gauntlet/cli.py tests/app/test_tui.py
+git add tools/apd_gauntlet/app/tui tools/apd_gauntlet/cli.py pyproject.toml tests/app/test_tui.py
 git commit -m "feat(tui): add Textual interface for setup, runs and reports"
 ```
 
@@ -586,6 +599,8 @@ Run: `pytest -m wheel tests/integration/test_wheel_install_smoke.py -v`
 Expected: FAIL until the extras and package data are added
 
 - [ ] **Step 3: Add extras and package data; write the docs**
+
+The extras take the Global Constraints pins (`textual>=8.2,<9`, `starlette>=1.0,<2`). CI runs the app tests on Python 3.10 and 3.12 (Starlette 1.8 and platformdirs 4.13 need 3.11; 3.10 resolves older versions).
 
 Below the 2.0 pre-release notice, the README opens with the golden path from spec §8.1. The CHANGELOG entry goes under "Unreleased — 2.0 line". `docs/QUICKSTART.md` becomes that path plus one section each for the TUI and web UI. `docs/local-apps.md` covers the screens, the web security posture and the data-egress notice. ADR-0026 records spec §8.5.
 
