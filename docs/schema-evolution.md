@@ -133,6 +133,16 @@ schema. See ADR-0019. The upstream CBM provider-discovery defect (partial
 index) is detected via a non-blocking `validate` warning and tracked
 out-of-band; pin a minimum CBM version here once the upstream fix ships.
 
+**v1.7.1 CBM version recommendation (documentation only).** The docs now
+recommend codebase-memory-mcp v0.10.8 or later (index coverage reported in
+`index_status`; `check_index_coverage` tool). v0.10.0 added both. v0.10.8
+fixed index responses that dropped the parse gaps already recorded for files an
+incremental reindex did not revisit, and it supersedes v0.10.7, which was
+published under a broken tag. This is a recommendation, not the minimum pin
+above: it rests on coverage reporting, not on the provider-discovery fix.
+Nothing checks the CBM version, and no schema changes. See
+[Running the gauntlet](running-the-gauntlet.md#setup).
+
 ## v1.7.0 — Cross-cutting connective tissue (dated additive entries)
 
 The framework version is held at 1.7.0; these are dated, additive, non-breaking

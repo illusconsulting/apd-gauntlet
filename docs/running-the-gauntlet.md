@@ -122,7 +122,9 @@ Skip code recon (`code_recon: disabled`) for tech-plan-only reviews where no cod
 
 ### Setup
 
-1. Install and run `codebase-memory-mcp` per its [project README](https://github.com/DeusData/codebase-memory-mcp).
+1. Install and run `codebase-memory-mcp` per its [project README](https://github.com/DeusData/codebase-memory-mcp). **Recommended codebase-memory-mcp: v0.10.8 or later** (index coverage reported in `index_status`; `check_index_coverage` tool).
+
+   v0.10.0 added both: `index_status` includes index coverage, and `check_index_coverage` reports the files the index skipped or only partly parsed. `apd-code-recon` calls `index_status` but does not record the coverage it reports, and it does not call `check_index_coverage`; to see what the index missed, run that tool yourself. Earlier 0.10.x releases have defects in coverage reporting and in the core query tools. v0.10.0 returned empty `{}` replies from tools such as `search_graph` and `trace_path` to MCP clients such as Claude Code (fixed in v0.10.1). Before v0.10.5, `check_index_coverage` reported every path as unavailable in a repository with more than 2,000 ignored files. Before v0.10.8, the response to an incremental reindex that did not revisit a file with recorded parse gaps reported those gaps as gone. v0.10.8 supersedes v0.10.7, which carried the same code but was published under a broken tag. Nothing in the gauntlet checks the CBM version, and this recommendation is not the provider-discovery pin described under [Multi-repo systems](#multi-repo-systems).
 2. Index the codebase you intend to review.
 3. Register the CBM server in your Claude Code configuration so its tools (`mcp__codebase-memory-mcp__*`) are reachable from the agent runtime.
 

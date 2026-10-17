@@ -987,7 +987,12 @@ def _write_blocked_finding(synth: Path, *, reason: str) -> None:
                     "crown_jewels[] in the domain pack or .apd-run.yaml to "
                     "enable attack-path analysis."
                 ),
-                # TODO: reference ADR-0010 once C-27 lands
+                # Per docs/adrs/0010-attack-path-analysis-on-partial-graphs.md
+                # (decision rule 2), a missing crown-jewel declaration yields
+                # this single blocked finding instead of an enumeration or a
+                # guessed target. The builder applies the same rule to missing
+                # attacker positions and ambiguous node names. The ADR's
+                # apath-blocked- id prefix is not used; the id is apath-<hash>.
                 "detail": (
                     "Attack-path analysis requires at least one "
                     "(attacker_position, crown_jewel) pair declared in either "
