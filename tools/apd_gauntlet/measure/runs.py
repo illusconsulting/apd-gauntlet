@@ -9,6 +9,7 @@ over different inputs are never compared.
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,8 @@ from typing import Any
 import yaml
 
 from ..synthesis.loader import load_corpus
+
+_CHUNK = 1 << 20
 
 
 class RunLoadError(Exception):
@@ -37,28 +40,72 @@ def is_run_dir(path: Path) -> bool:
     return (path / ".apd-run.yaml").is_file()
 
 
+def _unreadable(path: object, exc: OSError) -> RunLoadError:
+    return RunLoadError(f"{path}: cannot read: {exc.strerror or exc}")
+
+
+def _walk_error(exc: OSError) -> None:
+    raise _unreadable(exc.filename, exc) from exc
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(_CHUNK), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise _unreadable(path, exc) from exc
+    return digest.hexdigest()
+
+
 def inputs_digest(run_dir: Path) -> str | None:
     """SHA-256 over every file under ``<run>/inputs/``; ``None`` when it is absent.
 
     Each file contributes the line ``"<posix path relative to inputs/>\\0<sha256>\\n"``;
     the lines are sorted before hashing, so the digest depends only on paths and bytes.
+    Dotfiles count like any other file. A file or directory that cannot be read
+    raises ``RunLoadError`` naming it, so no file is silently left out.
     """
     inputs = run_dir / "inputs"
     if not inputs.is_dir():
         return None
-    lines = sorted(
-        f"{p.relative_to(inputs).as_posix()}\0{hashlib.sha256(p.read_bytes()).hexdigest()}\n"
-        for p in inputs.rglob("*")
-        if p.is_file()
-    )
+    lines: list[str] = []
+    for root, _dirs, files in os.walk(inputs, onerror=_walk_error):
+        for name in files:
+            p = Path(root, name)
+            if p.is_file():
+                lines.append(f"{p.relative_to(inputs).as_posix()}\0{_file_sha256(p)}\n")
+    lines.sort()
     return hashlib.sha256("".join(lines).encode("utf-8", "surrogateescape")).hexdigest()
 
 
 def _parse(path: Path) -> Any:
+    """Parse one YAML file; any read or parse failure becomes ``RunLoadError``."""
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise RunLoadError(f"{path}: not UTF-8 text: {exc}") from exc
+    except OSError as exc:
+        raise _unreadable(path, exc) from exc
+    try:
+        return yaml.safe_load(text)
+    except (yaml.YAMLError, ValueError) as exc:  # ValueError: e.g. an impossible date
         raise RunLoadError(f"{path}: invalid YAML: {exc}") from exc
+
+
+def _not_a_mapping(path: Path, doc: Any) -> RunLoadError:
+    return RunLoadError(f"{path}: top level is a {type(doc).__name__}, not a mapping")
+
+
+def _parse_mapping(path: Path) -> dict[str, Any]:
+    """``_parse`` a file whose top level must be a mapping; an empty file is ``{}``."""
+    doc = _parse(path)
+    if doc is None:
+        return {}
+    if not isinstance(doc, dict):
+        raise _not_a_mapping(path, doc)
+    return doc
 
 
 def _corpus_files(run_dir: Path) -> list[Path]:
@@ -68,21 +115,7 @@ def _corpus_files(run_dir: Path) -> list[Path]:
     )
 
 
-def _load_corpus(
-    run_dir: Path,
-) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-    try:
-        findings, capabilities = load_corpus(run_dir, include_attack_path=True)
-    except yaml.YAMLError as exc:
-        for f in _corpus_files(run_dir):
-            _parse(f)  # raises RunLoadError naming the first unreadable file
-        raise RunLoadError(f"{run_dir}: invalid YAML: {exc}") from exc
-    return findings, {c["id"]: c for c in capabilities}
-
-
-def _records(doc: Any, key: str) -> list[dict[str, Any]]:
-    if not isinstance(doc, dict):
-        return []
+def _records(doc: dict[str, Any], key: str) -> list[dict[str, Any]]:
     raw = doc.get(key)
     if raw is None:
         raw = doc.get(key + "s")
@@ -90,10 +123,47 @@ def _records(doc: Any, key: str) -> list[dict[str, Any]]:
     return [r for r in items if isinstance(r, dict)]
 
 
-def _graph_targets(graph: Any) -> dict[str, list[str]]:
+def _corpus_problem(run_dir: Path) -> RunLoadError | None:
+    """The error for the first corpus file ``load_corpus`` cannot use, if any.
+
+    A file fails when it cannot be read or parsed, when its top level is not a
+    mapping (``load_corpus`` reads every falsy document as empty), or when a
+    record's ``id`` is not a string.
+    """
+    for f in _corpus_files(run_dir):
+        try:
+            doc = _parse(f) or {}
+        except RunLoadError as exc:
+            return exc
+        if not isinstance(doc, dict):
+            return _not_a_mapping(f, doc)
+        key = "finding" if f.name.endswith(".findings.yaml") else "capability"
+        for rec in _records(doc, key):
+            rid = rec.get("id", "")
+            if not isinstance(rid, str):
+                return RunLoadError(f"{f}: a {key} id is a {type(rid).__name__}, not a string")
+    return None
+
+
+def _load_corpus(
+    run_dir: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    try:
+        findings, capabilities = load_corpus(run_dir, include_attack_path=True)
+    except (yaml.YAMLError, ValueError, OSError, AttributeError, TypeError) as exc:
+        problem = _corpus_problem(run_dir)
+        if problem is None:
+            raise
+        raise problem from exc
+    if not all(isinstance(rid, str) for rid in findings) or not all(
+        isinstance(c["id"], str) for c in capabilities
+    ):
+        raise _corpus_problem(run_dir) or RunLoadError(f"{run_dir}: a record id is not a string")
+    return findings, {c["id"]: c for c in capabilities}
+
+
+def _graph_targets(graph: dict[str, Any]) -> dict[str, list[str]]:
     """Map each ``finding_id``/``capability_id`` on an edge to its ``to`` node's name."""
-    if not isinstance(graph, dict):
-        return {}
     nodes = graph.get("nodes")
     edges = graph.get("edges")
     names: dict[str, str] = {}
@@ -124,14 +194,21 @@ def _rank(entry: dict[str, Any]) -> tuple[int, int]:
     return (0, rank) if isinstance(rank, int) else (1, 0)
 
 
-def _headlines(report_data: Any, deduped: Any) -> tuple[frozenset[str], ...]:
-    """Headline ids in ``rank`` order, each expanded through ``merged_from``."""
+def _headlines(
+    report_data: dict[str, Any], deduped: dict[str, Any]
+) -> tuple[frozenset[str], ...]:
+    """Headline ids in ``rank`` order, each expanded through ``merged_from``.
+
+    Only string members count; an id with none expands to itself.
+    """
     merged: dict[str, frozenset[str]] = {}
     for rec in _records(deduped, "finding"):
         rid, members = rec.get("id"), rec.get("merged_from")
-        if isinstance(rid, str) and isinstance(members, list) and members:
-            merged[rid] = frozenset(str(m) for m in members)
-    raw = report_data.get("headline_findings") if isinstance(report_data, dict) else None
+        if isinstance(rid, str) and isinstance(members, list):
+            ids = frozenset(m for m in members if isinstance(m, str))
+            if ids:
+                merged[rid] = ids
+    raw = report_data.get("headline_findings")
     entries = [
         h for h in (raw if isinstance(raw, list) else [])
         if isinstance(h, dict) and isinstance(h.get("id"), str)
@@ -143,18 +220,21 @@ def _headlines(report_data: Any, deduped: Any) -> tuple[frozenset[str], ...]:
 def load_run(path: Path) -> RunSnapshot:
     """Read the run directory at ``path``.
 
-    A ``yaml.YAMLError`` in any file read becomes ``RunLoadError`` naming that file.
-    ``headlines`` is ``None`` when ``report-data.yaml`` or ``deduped-findings.yaml``
-    is missing; ``inputs_sha256`` is ``None`` when the run has no ``inputs/``.
+    Any file that cannot be read or parsed (``yaml.YAMLError``, a ``ValueError``
+    from PyYAML, text that is not UTF-8, an ``OSError``), or whose top level is
+    not a mapping, becomes ``RunLoadError`` naming that file; so does a corpus
+    record whose ``id`` is not a string. ``headlines`` is ``None`` when
+    ``report-data.yaml`` or ``deduped-findings.yaml`` is missing;
+    ``inputs_sha256`` is ``None`` when the run has no ``inputs/``.
     """
     findings, capabilities = _load_corpus(path)
     synth = path / "40-synthesis"
     graph_file = synth / "asset-graph.yaml"
-    graph_targets = _graph_targets(_parse(graph_file)) if graph_file.is_file() else {}
+    graph_targets = _graph_targets(_parse_mapping(graph_file)) if graph_file.is_file() else {}
     report_file = synth / "report-data.yaml"
     deduped_file = synth / "deduped-findings.yaml"
     headlines = (
-        _headlines(_parse(report_file), _parse(deduped_file))
+        _headlines(_parse_mapping(report_file), _parse_mapping(deduped_file))
         if report_file.is_file() and deduped_file.is_file()
         else None
     )

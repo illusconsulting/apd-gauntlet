@@ -5,6 +5,7 @@ import pathlib
 
 import pytest
 from apd_gauntlet.measure.match import (
+    Match,
     MatchResult,
     asset_keys,
     match_records,
@@ -61,3 +62,66 @@ def test_disjoint_assets_block_match():
     b = {"b": rec("b", "ephemeral", "Refresh tokens never rotate", ("a.md", "#x"))}
     c = {"c": rec("c", "ephemeral", "Refresh tokens never rotate", ("b.md", "#x"))}
     assert match_records(b, c).matched == ()
+
+
+# --- review fixes (Task 1) -------------------------------------------------
+
+TITLE = "Refresh tokens never rotate"
+
+
+def test_title_tokens_applies_nfkc_and_splits_underscores():
+    # NFKC folds full-width letters and the "fi" ligature; "_" separates words.
+    assert title_tokens("ＴＬＳ_cert-rotation ﬁle") == frozenset(
+        {"tls", "cert", "rotation", "file"})
+
+
+@pytest.mark.parametrize(
+    "locator", ["code:pkg.Mod.Fn@abc", "code:pkg.Mod.Fn", " code:pkg.Mod.Fn:L1-L9 "])
+def test_code_locator_keys_on_the_symbol_with_or_without_a_line_range(locator):
+    r = rec("conf-00000001", "confidentiality", "t", ("code-evidence-index.yaml", locator))
+    assert asset_keys(r, {}) == frozenset({"code:pkg.mod.fn"})
+
+
+def test_more_asset_overlap_wins_a_title_tie():
+    b = {"b": rec("b", "ephemeral", TITLE, ("a.md", "#x"), ("b.md", "#x"))}
+    c = {"c1": rec("c1", "ephemeral", TITLE, ("a.md", "#x")),
+         "c2": rec("c2", "ephemeral", TITLE, ("a.md", "#x"), ("b.md", "#x"))}
+    assert match_records(b, c) == MatchResult((Match("b", "c2", 1.0, 1.0),), (), ("c1",))
+
+
+def test_same_id_pair_wins_a_full_tie():
+    b = {"a": rec("a", "ephemeral", TITLE, ("a.md", "#x")),
+         "m": rec("m", "ephemeral", TITLE, ("a.md", "#x"))}
+    c = {"m": rec("m", "ephemeral", TITLE, ("a.md", "#x"))}
+    assert match_records(b, c) == MatchResult((Match("m", "m", 1.0, 1.0),), ("a",), ())
+
+
+def test_lower_ids_win_a_full_tie():
+    b = {"b2": rec("b2", "ephemeral", TITLE, ("a.md", "#x")),
+         "b1": rec("b1", "ephemeral", TITLE, ("a.md", "#x"))}
+    c = {"c2": rec("c2", "ephemeral", TITLE, ("a.md", "#x"))}
+    assert match_records(b, c) == MatchResult((Match("b1", "c2", 1.0, 1.0),), ("b2",), ())
+    c = {"c2": rec("c2", "ephemeral", TITLE, ("a.md", "#x")),
+         "c1": rec("c1", "ephemeral", TITLE, ("a.md", "#x"))}
+    assert match_records({"b1": b["b1"]}, c) == MatchResult(
+        (Match("b1", "c1", 1.0, 1.0),), (), ("c2",))
+
+
+def test_result_does_not_depend_on_insertion_order():
+    recs = [rec(rid, "ephemeral", TITLE, ("a.md", "#x")) for rid in ("r3", "r1", "r2")]
+    forward = {r["id"]: r for r in recs}
+    backward = {r["id"]: r for r in reversed(recs)}
+    cand = {"r9": rec("r9", "ephemeral", TITLE, ("a.md", "#x")),
+            "r0": rec("r0", "ephemeral", TITLE, ("a.md", "#x"))}
+    cand_rev = dict(reversed(list(cand.items())))
+    expected = MatchResult(
+        (Match("r1", "r0", 1.0, 1.0), Match("r2", "r9", 1.0, 1.0)), ("r3",), ())
+    assert match_records(forward, cand) == expected
+    assert match_records(backward, cand_rev) == expected
+
+
+def test_title_jaccard_exactly_at_threshold_matches():
+    b = {"b": rec("b", "ephemeral", "Refresh tokens never", ("a.md", "#x"))}
+    c = {"c": rec("c", "ephemeral", "Refresh tokens rotate", ("a.md", "#x"))}
+    (m,) = match_records(b, c).matched
+    assert m.title_similarity == 0.5

@@ -24,7 +24,9 @@ STOPWORDS: frozenset[str] = frozenset(
 TITLE_MIN_JACCARD: float = 0.5
 
 _NON_WORD = re.compile(r"[\W_]+")
-_CODE_LOCATOR = re.compile(r"^code:([^:]+):")
+# A ``code:<qualified_name>[:Lx-Ly][@sha]`` locator; group 1 is the symbol, which
+# stops at the first ':' or '@' (the grammar of assemble_c4._CODE_LOCATOR_RE).
+_CODE_LOCATOR = re.compile(r"^code:([^:@]+)")
 
 
 def title_tokens(title: str) -> frozenset[str]:
@@ -57,8 +59,8 @@ def asset_keys(
 ) -> frozenset[str]:
     """Derive the asset keys of ``record``.
 
-    Per evidence item: ``code:<symbol casefolded>`` when the locator starts with
-    ``code:<symbol>:``, else ``artifact:<normalised artifact>``. Plus
+    Per evidence item: ``code:<symbol casefolded>`` when the locator is a
+    ``code:<symbol>[:Lx-Ly][@sha]`` locator, else ``artifact:<normalised artifact>``. Plus
     ``graph:<node name>`` (casefolded, whitespace collapsed) for each asset-graph
     node an edge for this record's id points to.
     """
