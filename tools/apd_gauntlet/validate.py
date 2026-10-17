@@ -851,21 +851,9 @@ def _validate_report_data_cross_refs(
     # filenames do NOT match the *.findings.yaml / *.capabilities.yaml globs, so
     # _iter_records never sees them. The report legitimately headlines such a
     # merged-* id, so it must resolve (mirrors _validate_domain_improvements_cross_refs).
-    for fname, idset in (
-        ("deduped-findings.yaml", finding_ids),
-        ("deduped-capabilities.yaml", capability_ids),
-    ):
-        deduped_path = run_dir / "40-synthesis" / fname
-        if not deduped_path.exists():
-            continue
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            continue  # the schema pass already complained
-        root_key = "finding" if "findings" in fname else "capability"
-        for rec in deduped.get(root_key) or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                idset.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
     for entry in data.get("headline_findings") or []:
         rid = entry.get("id")
@@ -912,8 +900,8 @@ def _validate_domain_improvements_cross_refs(
     # unioned:
     #   (a) _iter_records — globs *.findings.yaml (the per-lens / attack-path /
     #       (legacy) merged.findings.yaml files), the synthesizer-fallback path.
-    #   (b) 40-synthesis/deduped-findings.yaml (root key 'finding') — the DEDUPED
-    #       corpus. Its filename does NOT match the *.findings.yaml glob, so
+    #   (b) 40-synthesis/deduped-findings.yaml (read by _deduped_record_ids) — the
+    #       DEDUPED corpus. Its filename does NOT match the *.findings.yaml glob, so
     #       _iter_records never sees it; yet a multi-member cluster minted by
     #       apply.py gets a 'merged-<sha8>' id that exists ONLY here in a decomposed
     #       run (the decomposed apply path writes no merged.findings.yaml). The
@@ -925,15 +913,8 @@ def _validate_domain_improvements_cross_refs(
             continue
         if kind == "finding":
             finding_ids.add(rec["id"])
-    deduped_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_path.exists():
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            deduped = {}
-        for rec in deduped.get("finding") or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
 
     # Real asset/identity/boundary ids in the inventory.
     inv_path = run_dir / "00-context" / "asset-inventory.yaml"

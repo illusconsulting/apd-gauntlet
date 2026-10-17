@@ -267,10 +267,16 @@ All notable changes to this project will be documented in this file. Format base
   merged capability ids (`cap-merged-*`, from
   `40-synthesis/deduped-capabilities.yaml`) after synthesis. Those merged ids also
   resolve now in the asset-graph `mitigated_by_capability` edge check and the
-  `contradictions.yaml` `capability_id` check. This cross-file check reads a
-  malformed `deduped-findings.yaml` or `deduped-capabilities.yaml` as holding no
-  ids and reports the references left unresolved. On a malformed
-  `deduped-findings.yaml` it used to crash.
+  `contradictions.yaml` `capability_id` check. Every whole-run check that reads
+  `deduped-findings.yaml` or `deduped-capabilities.yaml` (the `cross_references` /
+  `merged_from` check and the `report-data.yaml` and `domain-improvements.yaml`
+  checks) now reads a malformed one as holding no ids and reports the references
+  left unresolved. Each of them used to crash on a malformed
+  `deduped-findings.yaml`, and the `report-data.yaml` check on a malformed
+  `deduped-capabilities.yaml` too. They all read the deduped files the same way
+  now, so the `report-data.yaml` check also accepts a deduped file with a plural
+  root key (`findings:`, `capabilities:`) or a single-record mapping, and the
+  `domain-improvements.yaml` check does the same for `deduped-findings.yaml`.
 
 ## v1.7.0 — 2026-06-09
 

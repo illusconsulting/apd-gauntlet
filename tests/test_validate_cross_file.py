@@ -7,7 +7,8 @@ import shutil
 import pytest
 import yaml
 from apd_gauntlet.cli import main
-from apd_gauntlet.linters import compute_capability_id, compute_id
+from apd_gauntlet.linters import compute_capability_id, compute_id, compute_improvement_id
+from apd_gauntlet.validate import run_cross_file_pass
 from click.testing import CliRunner
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "runs"
@@ -359,11 +360,14 @@ def test_merged_capability_ref_resolved_from_deduped(tmp_path, field, doc):
 
 
 # Malformed deduped corpora (written by an LLM on the synthesizer-fallback path):
-# a top-level list, a top-level scalar, and a root key whose value is a scalar.
+# a top-level list, a top-level scalar, a root key whose value is a scalar, a YAML
+# syntax error, and a record whose id is not a string (a list, so unhashable).
 MALFORMED_DEDUPED_BODIES = {
     "top-level-list": "- id: {id}\n",
     "top-level-scalar": "5\n",
     "scalar-root-value": "{root}: 5\n",
+    "invalid-yaml": "{root}: [\n",
+    "non-string-id": "{root}:\n- id: [{id}]\n",
 }
 
 
@@ -404,6 +408,103 @@ def test_malformed_deduped_findings_reports_not_found(tmp_path, body):
     assert isinstance(result.exception, SystemExit), result.exception
     assert result.exit_code == 1, result.output
     assert "cross_reference merged-abcd1234 not found" in result.output, result.output
+
+
+# The report-data.yaml check reads both deduped files. Per kind: the deduped
+# file, the report-data section and the error a dangling merged id gets there.
+REPORT_DATA_DEDUPED = {
+    "finding": (
+        "deduped-findings.yaml", "headline_findings", "merged-abcd1234",
+        "headline_findings references unknown finding 'merged-abcd1234'",
+    ),
+    "capability": (
+        "deduped-capabilities.yaml", "strengths", "cap-merged-abcd1234",
+        "strengths references unknown capability 'cap-merged-abcd1234'",
+    ),
+}
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+@pytest.mark.parametrize("kind", list(REPORT_DATA_DEDUPED))
+def test_malformed_deduped_with_report_data_reports_unknown(tmp_path, kind, body):
+    """The report-data.yaml check reads a malformed deduped file as holding no
+    ids. validate must report the merged id it headlines as unknown, not crash."""
+    fname, section, rid, message = REPORT_DATA_DEDUPED[kind]
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / fname).write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id=rid, root=kind), encoding="utf-8"
+    )
+    (synth / "report-data.yaml").write_text(
+        yaml.safe_dump({section: [{"id": rid}]}), encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert message in result.output, result.output
+
+
+@pytest.mark.parametrize("doc", list(DEDUPED_CAPABILITY_DOCS))
+def test_report_data_strength_resolves_merged_capability(tmp_path, doc):
+    """The report-data.yaml check reads deduped-capabilities.yaml with the shared
+    extract_records rule, so a cap-merged-* strength resolves in every
+    well-formed shape (singular or plural root key, single record)."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        DEDUPED_CAPABILITY_DOCS[doc], encoding="utf-8"
+    )
+    (synth / "report-data.yaml").write_text(
+        yaml.safe_dump({"strengths": [{"id": "cap-merged-abcd1234"}]}), encoding="utf-8"
+    )
+    report = run_cross_file_pass(dst)
+    assert report.is_clean, report.render()
+
+
+@pytest.mark.parametrize("body", list(MALFORMED_DEDUPED_BODIES))
+def test_malformed_deduped_findings_with_domain_improvements_reports_not_found(
+    tmp_path, body
+):
+    """The domain-improvements.yaml check reads a malformed deduped-findings.yaml
+    as holding no ids. validate must report the merged-* evidence ref as not
+    found, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-findings.yaml").write_text(
+        MALFORMED_DEDUPED_BODIES[body].format(id="merged-abcd1234", root="finding"),
+        encoding="utf-8",
+    )
+    itype, pack, tfile = "missing_severity_clause", "pbm", "severity-rubric.md"
+    improvements = {
+        "schema_version": 1,
+        "generated_by": "domain-auditor",
+        "examined_domains": [pack],
+        "improvements": [{
+            "id": compute_improvement_id(itype, pack, tfile, "merged-abcd1234"),
+            "improvement_type": itype,
+            "target_pack": pack,
+            "target_file": tfile,
+            "source": "deterministic",
+            "priority": "high",
+            "evidence": [{"kind": "finding", "ref": "merged-abcd1234"}],
+            "rationale": "The run raised a finding no selected pack's rubric covers.",
+            "suggested_action": "add the missing severity clause to the pack",
+            "draft_snippet": "- clause: grounded in the merged finding\n",
+        }],
+    }
+    (synth / "domain-improvements.yaml").write_text(
+        yaml.safe_dump(improvements, sort_keys=False), encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert (
+        "evidence[0].ref 'merged-abcd1234' (kind: finding) not found in run corpus"
+        in result.output
+    ), result.output
 
 
 # ---------------------------------------------------------------------------
