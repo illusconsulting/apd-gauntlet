@@ -34,17 +34,17 @@ Outbound calls — HTTP, gRPC, queues, blob storage. Relevant to Distributed and
 
 Two to five most-relevant code paths per APD goal.
 
-| APD goal | Entry IDs from index | One-line summary |
+| APD goal | Code anchors (`qualified_name:Lx-Ly`) | One-line summary |
 |---|---|---|
-| Confidentiality | cev-... | ... |
-| Integrity | cev-... | ... |
-| Availability | cev-... | ... |
-| Distributed | cev-... | ... |
-| Resilient | cev-... | ... |
-| Ephemeral | cev-... | ... |
-| Authenticity | cev-... | ... |
-| Non-Repudiation | cev-... | ... |
-| Immutability | cev-... | ... |
+| Confidentiality | `qualified_name:Lx-Ly` | ... |
+| Integrity | `qualified_name:Lx-Ly` | ... |
+| Availability | `qualified_name:Lx-Ly` | ... |
+| Distributed | `qualified_name:Lx-Ly` | ... |
+| Resilient | `qualified_name:Lx-Ly` | ... |
+| Ephemeral | `qualified_name:Lx-Ly` | ... |
+| Authenticity | `qualified_name:Lx-Ly` | ... |
+| Non-Repudiation | `qualified_name:Lx-Ly` | ... |
+| Immutability | `qualified_name:Lx-Ly` | ... |
 
 ## 7. Gaps and limitations
 

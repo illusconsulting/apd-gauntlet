@@ -51,15 +51,11 @@ code-evidence edge, or domain-pack default). No surface is invented.
 | T | Tampering with claim payloads in transit | TLS 1.3 enforced; request signing | medium |
 | I | Information disclosure of PHI in request logs | log redaction policy | low |
 
-TM entry IDs: `tm-a1b2c3d4`, `tm-5e6f7a8b`, `tm-9c0d1e2f`
-
 ### phi-store (data store — applicable STRIDE: T, R, I, D)
 
 | Cat | Threat | Mitigation (design intent) | Confidence |
 |---|---|---|---|
 | I | Unauthorized read of PHI at rest | envelope encryption (KMS) | high |
-
-TM entry IDs: `tm-3a4b5c6d`
 
 ---
 
@@ -68,7 +64,7 @@ TM entry IDs: `tm-3a4b5c6d`
 Blocked entries carry a non-empty `prerequisite_evidence[]` and `mitigation: null`.
 They are gap-markers, NOT coverage — the evaluator never counts them as covered.
 
-### `tm-7e8f9a0b` — Repudiation on audit-log-writer (BLOCKED)
+### R/audit-log-writer — Repudiation (BLOCKED)
 
 **Confidence:** low
 **prerequisite_evidence:**
@@ -91,9 +87,9 @@ applicable and ungrounded → blocked, not fabricated.
 
 | Bucket | Count | Entries |
 |---|---|---|
-| `baseline_only_threats` (authored found, supplied omitted) | 2 | `tm-3a4b5c6d` (I/phi-store), `tm-7e8f9a0b` (R/audit-log-writer) |
-| `supplied_only_threats` (supplied has, baseline did not) | 1 | `tm-c1d2e3f4` (D/gateway) |
-| `shared` (both) | 3 | `tm-a1b2c3d4`, `tm-5e6f7a8b`, `tm-9c0d1e2f` |
+| `baseline_only_threats` (authored found, supplied omitted) | 2 | `I/phi-store`, `R/audit-log-writer` |
+| `supplied_only_threats` (supplied has, baseline did not) | 1 | `D/gateway` |
+| `shared` (both) | 3 | `S/claim-ingress-api`, `T/claim-ingress-api`, `I/claim-ingress-api` |
 
 Material `baseline_only` threats (corroborated by an independent specialist
 finding on the same surface+goal) become `disposition: gap` omission findings in
@@ -105,6 +101,9 @@ the evaluator's output.
 - **Generated-by line** is mandatory and must read `apd-threat-model-author`;
   the normalized YAML's `generated_by` is `threat_model_author`. Downstream
   consumers (report transform, attack-path build guard) key on this value.
+- **Entry labels** are `<letter>/<surface>` (for example `R/audit-log-writer`). The
+  render carries no `tm-` ids: `entry_id` values live only in the normalized YAML,
+  where `apd-gauntlet canonicalize` mints them.
 - **Blocked placeholders** are always a distinct, visible section so reviewers
   see thin-evidence surfaces — never silently dropped, never counted as coverage.
 - **Supplied-vs-authored delta** appears only when the supplied sibling exists;

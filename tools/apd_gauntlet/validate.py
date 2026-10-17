@@ -1,9 +1,11 @@
 """Validation engine — Pass 1 (schema), Pass 2 (semantic lints), Pass 3 (cross-file)."""
 from __future__ import annotations
 
+import fnmatch
 import json
 import pathlib
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -207,6 +209,250 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
     "40-synthesis/deduped-capabilities.yaml",  # threat-model evaluator + attack-path analyzer
 })
 
+_ELLIPSIS = re.compile(r"\.\.\.|\u2026")  # "..." or the single character U+2026
+_STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
+# The inputs/ files are untrusted, and this check only warns, so it must stay cheap and
+# never raise. A cited file larger than this is skipped without being read.
+_MAX_EXCERPT_INPUT_BYTES = 20 * 1024 * 1024
+# A YAML or JSON input larger than this is searched as plain text only (never parsed).
+_MAX_STRUCTURED_PARSE_BYTES = 1024 * 1024
+# At most this many string scalars, and this many characters in all, of one parsed input
+# become haystacks.
+_MAX_SCALAR_HAYSTACKS = 100_000
+_MAX_SCALAR_HAYSTACK_CHARS = 4 * 1024 * 1024
+# A YAML input nesting deeper than this is searched as plain text only: PyYAML's scanner
+# spends about 2 ms per level, so a megabyte of "[" would otherwise pin a gate for minutes.
+_MAX_YAML_DEPTH = 100
+
+
+def normalize_excerpt_text(text: str) -> str:
+    """Drop the Markdown inline markers (backtick, ``*``) and collapse whitespace.
+
+    Applied to both the excerpt and the artifact text, so an excerpt quoted from
+    rendered Markdown still matches the source that carries the markers, and
+    re-wrapped lines still match.
+    """
+    return " ".join(text.replace("`", "").replace("*", "").split())
+
+
+def excerpt_fragments(excerpt: str) -> list[str]:
+    """Split an excerpt at every ``...`` and ``…``; normalize each piece, drop the
+    empty ones. An excerpt with no ellipsis is a single fragment."""
+    pieces = (normalize_excerpt_text(piece) for piece in _ELLIPSIS.split(excerpt))
+    return [piece for piece in pieces if piece]
+
+
+def _is_parenthesized(text: str) -> bool:
+    """True when one pair of parentheses wraps all of ``text`` (an absence marker
+    such as ``(absent in supplied TM)``); ``(1) a (see b)`` is not."""
+    text = text.strip()
+    if not (text.startswith("(") and text.endswith(")")):
+        return False
+    depth = 0
+    for i, ch in enumerate(text):
+        depth += (ch == "(") - (ch == ")")
+        if depth <= 0:
+            return depth == 0 and i == len(text) - 1
+    return False
+
+
+def _string_scalars(
+    root: Any, limit: int, max_chars: int = _MAX_SCALAR_HAYSTACK_CHARS
+) -> list[str]:
+    """String scalars (mapping keys included) of a parsed document, at most ``limit`` of
+    them and, once ``max_chars`` characters are collected, no more.
+
+    Iterative, so nesting depth cannot overflow the stack. Each container and each string
+    object is visited once, so a YAML alias cycle, or one large anchored string aliased
+    many times, costs one visit and one copy.
+    """
+    found: list[str] = []
+    chars = 0
+    seen: set[int] = set()
+    pending = [root]
+    while pending and len(found) < limit and chars < max_chars:
+        node = pending.pop()
+        if not isinstance(node, (str, dict, list)) or id(node) in seen:
+            continue
+        seen.add(id(node))
+        if isinstance(node, str):
+            found.append(node)
+            chars += len(node)
+        elif isinstance(node, dict):
+            pending.extend(node.keys())
+            pending.extend(node.values())
+        else:
+            pending.extend(node)
+    return found
+
+
+def _yaml_is_plain_tree(text: str) -> bool:
+    """True when ``text`` can be safely constructed: no alias anywhere and nesting within
+    ``_MAX_YAML_DEPTH``. Reads the event stream, which builds nothing.
+
+    An alias is what amplifies construction (a fan-out of one big string, a chain of merge
+    keys, a cycle), so any alias sends the input to whole-text matching. Raises on a YAML
+    error; the caller's guard turns that into whole-text matching as well.
+    """
+    depth = 0
+    for event in yaml.parse(text, Loader=yaml.SafeLoader):
+        if isinstance(event, yaml.AliasEvent):
+            return False
+        if isinstance(event, (yaml.SequenceStartEvent, yaml.MappingStartEvent)):
+            depth += 1
+            if depth > _MAX_YAML_DEPTH:
+                return False
+        elif isinstance(event, (yaml.SequenceEndEvent, yaml.MappingEndEvent)):
+            depth -= 1
+    return True
+
+
+class _ExcerptInput:
+    """One cited input, read once. Matching tries the whole normalized text first;
+    for a YAML or JSON input small enough to parse, the parsed string scalars are
+    built only on a miss (so a quoted or escaped value matches what it means, not
+    how it is spelled). A YAML input with an alias or deep nesting, and any failure
+    to parse or walk, leaves the whole text."""
+
+    def __init__(self, text: str, *, parse_as: str | None) -> None:
+        self._whole = normalize_excerpt_text(text)
+        self._raw = text if parse_as else None
+        self._parse_as = parse_as
+        self._scalars: list[str] | None = None
+
+    def contains(self, fragments: list[str]) -> bool:
+        if _fragments_in_order(fragments, self._whole):
+            return True
+        if self._scalars is None:
+            self._scalars = self._parse_scalars()
+        return any(_fragments_in_order(fragments, scalar) for scalar in self._scalars)
+
+    def _parse_scalars(self) -> list[str]:
+        raw, self._raw = self._raw, None  # parse once; drop the text either way
+        if raw is None:
+            return []
+        try:
+            if self._parse_as == ".json":
+                docs = [json.loads(raw)]
+            elif _yaml_is_plain_tree(raw):
+                docs = list(yaml.safe_load_all(raw))
+            else:
+                return []
+            return [
+                normalize_excerpt_text(scalar)
+                for scalar in _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
+            ]
+        except Exception:  # untrusted input: RecursionError, MemoryError, a parse error, ...
+            return []
+
+
+def _load_excerpt_input(path: pathlib.Path) -> _ExcerptInput | None:
+    """``None`` when the file is over ``_MAX_EXCERPT_INPUT_BYTES`` (not read), unreadable,
+    or not UTF-8 text."""
+    try:
+        size = path.stat().st_size
+        if size > _MAX_EXCERPT_INPUT_BYTES:
+            return None
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    suffix = path.suffix.lower()
+    structured = suffix in _STRUCTURED_INPUT_SUFFIXES and size <= _MAX_STRUCTURED_PARSE_BYTES
+    return _ExcerptInput(text, parse_as=suffix if structured else None)
+
+
+def _fragments_in_order(fragments: list[str], haystack: str) -> bool:
+    pos = 0
+    for fragment in fragments:
+        found = haystack.find(fragment, pos)
+        if found < 0:
+            return False
+        pos = found + len(fragment)
+    return True
+
+
+def _resolve_input(
+    run_dir: pathlib.Path, inputs_dir: pathlib.Path, artifact: str
+) -> pathlib.Path | None:
+    """The file a citation names under the run's ``inputs/``, or ``None``.
+
+    Tries ``run_dir/inputs/<artifact>`` then ``run_dir/<artifact>``; a candidate
+    counts only when it is a file whose resolved path (symlinks and ``..``
+    followed) is inside ``inputs_dir``. Run-internal artifacts (``00-context/``,
+    ``40-synthesis/``, the tier dirs) therefore resolve to nothing here.
+    """
+    for base in (run_dir / "inputs", run_dir):
+        try:
+            candidate = (base / artifact).resolve()
+            if candidate.is_file() and candidate.is_relative_to(inputs_dir):
+                return candidate
+        except (OSError, RuntimeError, ValueError):
+            continue
+    return None
+
+
+def check_excerpts_verbatim(
+    run_dir: pathlib.Path, *, records_dir: pathlib.Path | None = None
+) -> list[Violation]:
+    """Flag each evidence excerpt that is not verbatim in the input file it cites.
+
+    Checks the records under ``records_dir`` (default ``run_dir``), resolving
+    artifacts against ``run_dir``. Only citations of files under
+    ``run_dir/inputs/`` are checked; run-internal artifacts, unresolvable or
+    escaping paths, non-UTF-8 files and excerpts wholly in parentheses (absence
+    markers) are skipped silently. Whitespace, backticks and ``*`` are ignored,
+    and an ellipsis joins fragments that must each appear, in order, in the
+    artifact's text or, for a YAML or JSON input, in one of its string scalars.
+    Inputs are untrusted: a file over ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread,
+    one over ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, a YAML input with an alias
+    or nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, and the check
+    never raises on a malformed or hostile YAML or JSON input.
+    """
+    inputs_dir = (run_dir / "inputs").resolve()
+    cache: dict[pathlib.Path, _ExcerptInput | None] = {}
+    violations: list[Violation] = []
+    for path, _kind, record in _iter_records(records_dir if records_dir is not None else run_dir):
+        if "_parse_error" in record:
+            continue
+        evidence = record.get("evidence")
+        for i, ev in enumerate(evidence if isinstance(evidence, list) else []):
+            if not isinstance(ev, dict):
+                continue
+            artifact, excerpt = ev.get("artifact"), ev.get("excerpt")
+            if not isinstance(artifact, str) or not isinstance(excerpt, str):
+                continue
+            fragments = excerpt_fragments(excerpt)
+            if not fragments or _is_parenthesized(excerpt):
+                continue
+            source = _resolve_input(run_dir, inputs_dir, artifact)
+            if source is None:
+                continue
+            if source not in cache:
+                cache[source] = _load_excerpt_input(source)
+            cited = cache[source]
+            if cited is not None and not cited.contains(fragments):
+                violations.append(Violation(
+                    path,
+                    record.get("id"),
+                    f"evidence[{i}].excerpt not found verbatim in artifact '{artifact}'",
+                ))
+    return violations
+
+
+def add_excerpt_violations(
+    report: ValidationReport,
+    run_dir: pathlib.Path,
+    *,
+    records_dir: pathlib.Path | None = None,
+    strict_excerpts: bool = False,
+) -> None:
+    """Run ``check_excerpts_verbatim`` and append its violations to ``report.warnings``,
+    or to ``report.errors`` when ``strict_excerpts``. The one severity rule for the
+    check, shared by the tier gate and the whole-run pass."""
+    found = check_excerpts_verbatim(run_dir, records_dir=records_dir)
+    (report.errors if strict_excerpts else report.warnings).extend(found)
+
+
 # FW-3: 00-context generated run-context artifacts. Specialists — especially
 # the tier-4 threat-model evaluator (which MUST cite the normalized threat
 # model) and attack-path analyzer — legitimately cite these derived context
@@ -300,11 +546,81 @@ CONTEXT_ROLLUPS: dict[str, str] = {
     # C-21: Phase C intake artifact (emitted by the intake step).
     "asset-inventory.yaml":         "asset-inventory.schema.json",
     # C4: grounded C4 input authored by code-recon. OPTIONAL (presence-gated,
-    # like asset-graph) — _validate_context_rollups silently skips it when
+    # like asset-graph) — _validate_rollups silently skips it when
     # absent; the deterministic assemble-c4 step consumes it into
     # 40-synthesis/c4-model.yaml.
     "c4-recon.yaml":                "c4-recon.schema.json",
 }
+
+
+CODE_EVIDENCE_INDEX_SCHEMA = "code-evidence-index.schema.json"
+
+# Run subdir -> its whole-document rollup table. The one place the subdir -> table
+# routing lives; ``schema_for_run_file`` and the rollup validators both read it.
+_ROLLUP_TABLES: dict[str, dict[str, str]] = {
+    "00-context": CONTEXT_ROLLUPS,
+    "40-synthesis": SYNTHESIS_ROLLUPS,
+}
+
+
+def schema_for_run_file(rel: str) -> tuple[str, str | None] | None:
+    """The single file -> schema lookup shared by ``validate`` and ``resume-plan``.
+
+    ``rel`` is a run-relative POSIX path. Returns ``(schema filename, record kind)``
+    or ``None`` when no schema applies:
+
+    - ``*.findings.yaml`` / ``*.capabilities.yaml`` (any depth, as ``_iter_records``
+      discovers them) -> the ``RECORD_KINDS`` schema and that kind; every extracted
+      record is validated against it.
+    - ``00-context/code-evidence-index.yaml`` -> its own schema, whole document.
+    - ``00-context/<name>`` / ``40-synthesis/<name>`` listed in ``CONTEXT_ROLLUPS`` /
+      ``SYNTHESIS_ROLLUPS`` -> that schema, whole document.
+    """
+    parts = pathlib.PurePosixPath(rel).parts
+    if not parts:
+        return None
+    name = parts[-1]
+    for kind, (schema, _root_key, glob) in RECORD_KINDS.items():
+        if fnmatch.fnmatchcase(name, glob):
+            return schema, kind
+    if len(parts) != 2:
+        return None
+    subdir = parts[0]
+    if subdir == "00-context" and name == CODE_EVIDENCE_INDEX_FILENAME:
+        return CODE_EVIDENCE_INDEX_SCHEMA, None
+    rollup_schema = _ROLLUP_TABLES.get(subdir, {}).get(name)
+    return (rollup_schema, None) if rollup_schema else None
+
+
+def _schema_violations(
+    path: pathlib.Path,
+    schema_name: str,
+    record_kind: str | None,
+    registry: Registry,
+) -> list[Violation]:
+    """YAML-parse ``path`` and schema-validate it; the envelope check is not applied.
+
+    ``record_kind`` None validates the whole document against ``schema_name``;
+    otherwise every ``extract_records`` record is validated against it.
+    """
+    schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        return [Violation(path, None, f"YAML parse error: {e}")]
+    validator = Draft202012Validator(schema, registry=registry)
+    if record_kind is None:
+        return [
+            Violation(path, None, err.message, "/".join(map(str, err.path)))
+            for err in validator.iter_errors(data)
+        ]
+    if not isinstance(data, dict):
+        return [Violation(path, None, f"expected a YAML mapping, got {type(data).__name__}")]
+    return [
+        Violation(path, record.get("id"), err.message, "/".join(map(str, err.path)))
+        for record in extract_records(data, RECORD_KINDS[record_kind][1])
+        for err in validator.iter_errors(record)
+    ]
 
 
 def _code_evidence_index_path(run_dir: pathlib.Path) -> pathlib.Path:
@@ -319,7 +635,7 @@ def _validate_code_evidence_index(
     if not path.exists():
         return
     schema = json.loads(
-        (SCHEMAS_DIR / "code-evidence-index.schema.json").read_text(encoding="utf-8")
+        (SCHEMAS_DIR / CODE_EVIDENCE_INDEX_SCHEMA).read_text(encoding="utf-8")
     )
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -355,72 +671,41 @@ def _validate_code_evidence_index(
                 )
 
 
-def _validate_synthesis_rollups(
+def _rollup_files(run_dir: pathlib.Path, subdir: str) -> Iterator[tuple[pathlib.Path, str]]:
+    """Yield ``(path, schema filename)`` for each rollup present under ``run_dir/subdir``.
+
+    Table order; absent directories and files are silent (these files are
+    optional). The schema is chosen by ``schema_for_run_file``, so ``validate`` and
+    ``resume-plan`` cannot disagree about which schema a file gets.
+    """
+    directory = run_dir / subdir
+    if not directory.exists():
+        return
+    for filename in _ROLLUP_TABLES[subdir]:
+        path = directory / filename
+        found = schema_for_run_file(f"{subdir}/{filename}")
+        if found is not None and path.exists():
+            yield path, found[0]
+
+
+def _validate_rollups(
     run_dir: pathlib.Path,
+    subdir: str,
     report: ValidationReport,
     registry: Registry,
     seen_files: set[pathlib.Path],
 ) -> None:
-    """Schema-validate each present coverage rollup under 40-synthesis/.
+    """Schema-validate each present whole-document rollup under ``subdir``.
 
-    Walks ``SYNTHESIS_ROLLUPS`` so the validator catches malformed CWE / OWASP /
-    D3FEND coverage rollups the same way it catches malformed findings. Missing
-    rollups are silent (these files are optional). Discovered files are added
-    to ``seen_files`` so ``files_seen`` reflects them.
+    ``subdir`` is ``00-context`` (``CONTEXT_ROLLUPS``: threat-model rollups, the
+    asset inventory, c4-recon) or ``40-synthesis`` (``SYNTHESIS_ROLLUPS``: the
+    coverage rollups and other synthesis artifacts), so the validator catches a
+    malformed rollup the same way it catches malformed findings. Discovered files
+    are added to ``seen_files`` so ``files_seen`` reflects them.
     """
-    synthesis_dir = run_dir / "40-synthesis"
-    if not synthesis_dir.exists():
-        return
-    for filename, schema_name in SYNTHESIS_ROLLUPS.items():
-        path = synthesis_dir / filename
-        if not path.exists():
-            continue
+    for path, schema_name in _rollup_files(run_dir, subdir):
         seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError as e:
-            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
-            continue
-        validator = Draft202012Validator(schema, registry=registry)
-        for err in validator.iter_errors(data):
-            report.errors.append(
-                Violation(path, None, err.message, "/".join(map(str, err.path)))
-            )
-
-
-def _validate_context_rollups(
-    run_dir: pathlib.Path,
-    report: ValidationReport,
-    registry: Registry,
-    seen_files: set[pathlib.Path],
-) -> None:
-    """Schema-validate each present rollup under 00-context/.
-
-    Walks ``CONTEXT_ROLLUPS`` so the validator catches malformed threat-model
-    rollups the same way it catches malformed findings. Missing rollups are
-    silent (these files are optional). Discovered files are added to
-    ``seen_files`` so ``files_seen`` reflects them.
-    """
-    context_dir = run_dir / "00-context"
-    if not context_dir.exists():
-        return
-    for filename, schema_name in CONTEXT_ROLLUPS.items():
-        path = context_dir / filename
-        if not path.exists():
-            continue
-        seen_files.add(path)
-        schema = json.loads((SCHEMAS_DIR / schema_name).read_text(encoding="utf-8"))
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError as e:
-            report.errors.append(Violation(path, None, f"YAML parse error: {e}"))
-            continue
-        validator = Draft202012Validator(schema, registry=registry)
-        for err in validator.iter_errors(data):
-            report.errors.append(
-                Violation(path, None, err.message, "/".join(map(str, err.path)))
-            )
+        report.errors.extend(_schema_violations(path, schema_name, None, registry))
 
 
 def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
@@ -448,11 +733,28 @@ def run_schema_pass(run_dir: pathlib.Path) -> ValidationReport:
         for err in validator.iter_errors(record):
             report.errors.append(Violation(path, rid, err.message, "/".join(map(str, err.path))))
     _validate_code_evidence_index(run_dir, report, registry)
-    _validate_context_rollups(run_dir, report, registry, seen_files)
-    _validate_synthesis_rollups(run_dir, report, registry, seen_files)
+    _validate_rollups(run_dir, "00-context", report, registry, seen_files)
+    _validate_rollups(run_dir, "40-synthesis", report, registry, seen_files)
     _check_envelopes(run_dir, report)
     report.files_seen = len(seen_files)
     return report
+
+
+def schema_errors_for_file(run_dir: pathlib.Path, rel: str) -> list[str]:
+    """YAML-parse one run file and validate it against the schema ``validate`` applies.
+
+    ``rel`` is a run-relative path to an existing file. The schema comes from
+    ``schema_for_run_file``; ``[]`` is returned when none applies (so a clean result
+    does not by itself prove the file is YAML). A parse failure is a single
+    ``YAML parse error: ...`` entry. Only the schema checks run: the envelope check is
+    skipped because ``canonicalize`` normalizes envelopes.
+    """
+    found = schema_for_run_file(rel)
+    if found is None:
+        return []
+    schema_name, record_kind = found
+    violations = _schema_violations(run_dir / rel, schema_name, record_kind, build_registry())
+    return [f"{v.path}: {v.message}" if v.path else v.message for v in violations]
 
 
 def parse_intake_brief(brief_path: pathlib.Path) -> dict[str, Any]:
@@ -549,21 +851,9 @@ def _validate_report_data_cross_refs(
     # filenames do NOT match the *.findings.yaml / *.capabilities.yaml globs, so
     # _iter_records never sees them. The report legitimately headlines such a
     # merged-* id, so it must resolve (mirrors _validate_domain_improvements_cross_refs).
-    for fname, idset in (
-        ("deduped-findings.yaml", finding_ids),
-        ("deduped-capabilities.yaml", capability_ids),
-    ):
-        deduped_path = run_dir / "40-synthesis" / fname
-        if not deduped_path.exists():
-            continue
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            continue  # the schema pass already complained
-        root_key = "finding" if "findings" in fname else "capability"
-        for rec in deduped.get(root_key) or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                idset.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
     for entry in data.get("headline_findings") or []:
         rid = entry.get("id")
@@ -610,8 +900,8 @@ def _validate_domain_improvements_cross_refs(
     # unioned:
     #   (a) _iter_records — globs *.findings.yaml (the per-lens / attack-path /
     #       (legacy) merged.findings.yaml files), the synthesizer-fallback path.
-    #   (b) 40-synthesis/deduped-findings.yaml (root key 'finding') — the DEDUPED
-    #       corpus. Its filename does NOT match the *.findings.yaml glob, so
+    #   (b) 40-synthesis/deduped-findings.yaml (read by _deduped_record_ids) — the
+    #       DEDUPED corpus. Its filename does NOT match the *.findings.yaml glob, so
     #       _iter_records never sees it; yet a multi-member cluster minted by
     #       apply.py gets a 'merged-<sha8>' id that exists ONLY here in a decomposed
     #       run (the decomposed apply path writes no merged.findings.yaml). The
@@ -623,15 +913,8 @@ def _validate_domain_improvements_cross_refs(
             continue
         if kind == "finding":
             finding_ids.add(rec["id"])
-    deduped_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_path.exists():
-        try:
-            deduped = yaml.safe_load(deduped_path.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            deduped = {}
-        for rec in deduped.get("finding") or []:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    # A malformed deduped file gives no ids, so the ref is reported, not a crash.
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
 
     # Real asset/identity/boundary ids in the inventory.
     inv_path = run_dir / "00-context" / "asset-inventory.yaml"
@@ -699,8 +982,98 @@ def _check_record_file_locations(
                 )
 
 
-def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
-    """Pass 3: cross-file ID and artifact resolution."""
+def _context_entries(
+    run_dir: pathlib.Path, filename: str, root_key: str | None
+) -> Iterator[tuple[pathlib.Path, int, dict[str, Any]]]:
+    """Yield ``(path, index, entry)`` for each mapping in ``entries`` of one
+    ``00-context`` file, whose list sits under ``root_key`` (or at the top when
+    ``None``). A file that is absent, does not parse or is not shaped that way yields
+    nothing; the schema pass reports it."""
+    path = run_dir / "00-context" / filename
+    if not path.is_file():
+        return
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+        return
+    body = doc.get(root_key) if root_key and isinstance(doc, dict) else doc
+    entries = body.get("entries") if isinstance(body, dict) else None
+    for i, entry in enumerate(entries if isinstance(entries, list) else []):
+        if isinstance(entry, dict):
+            yield path, i, entry
+
+
+def _validate_context_ids(run_dir: pathlib.Path, report: ValidationReport) -> None:
+    """Require the fields ``canonicalize`` fills in ``00-context``: ``id`` on each
+    code-evidence-index entry; ``entry_id`` and ``inferred_apd_goals`` on each entry
+    of the normalized threat models. One ERROR per entry missing any of them.
+
+    The schemas treat these fields as optional-at-emission (agents no longer emit the
+    ids and may omit the goals), so this is the backstop that a run was canonicalized.
+    Presence only: an existing id is never compared with the hash, because older runs
+    carry hand-assigned ids that findings and ``c4-recon.yaml`` already cite.
+    """
+    from .canonicalize import THREAT_MODEL_CONTEXT_FILES  # canonicalize imports this module
+
+    def flag(path: pathlib.Path, index: int, missing: list[str]) -> None:
+        if missing:
+            report.errors.append(Violation(
+                path, None,
+                f"context id missing: {path.relative_to(run_dir).as_posix()}: "
+                f"entries[{index}] has no {' and '.join(missing)}; "
+                "run 'apd-gauntlet canonicalize'",
+            ))
+
+    for path, i, entry in _context_entries(
+        run_dir, CODE_EVIDENCE_INDEX_FILENAME, "code_evidence_index"
+    ):
+        flag(path, i, [] if entry.get("id") else ["id"])
+    for filename in THREAT_MODEL_CONTEXT_FILES:
+        for path, i, entry in _context_entries(run_dir, filename, None):
+            flag(path, i, [
+                *([] if entry.get("entry_id") else ["entry_id"]),
+                *([] if entry.get("inferred_apd_goals") is not None else ["inferred_apd_goals"]),
+            ])
+
+
+def _deduped_record_ids(run_dir: pathlib.Path, kind: str) -> set[str]:
+    """Return the record ids in ``40-synthesis/deduped-<plural>.yaml`` for
+    ``kind`` (``finding`` or ``capability``), for id resolution only.
+
+    The file is written by ``synthesis/apply.py`` or, on the fallback path, by
+    the synthesizer agent, so it may be malformed. A missing or unreadable file
+    (not a regular file, not UTF-8), a YAML error, a document that is not a
+    mapping or a root value that is not a list or a record all give no ids
+    instead of raising; any ref that needed one is then
+    reported "not found" as usual. Records come from the shared
+    ``extract_records`` rule (singular or plural root key, per-record wrappers).
+    """
+    root_key = RECORD_KINDS[kind][1]
+    path = run_dir / "40-synthesis" / f"deduped-{_PLURAL_ROOT[root_key]}.yaml"
+    if not path.is_file():
+        return set()
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+        return set()
+    if not isinstance(doc, dict):
+        return set()
+    ids: set[str] = set()
+    for rec in extract_records(doc, root_key):
+        rid = rec.get("id")
+        if isinstance(rid, str) and rid:
+            ids.add(rid)
+    return ids
+
+
+def run_cross_file_pass(
+    run_dir: pathlib.Path, *, strict_excerpts: bool = False
+) -> ValidationReport:
+    """Pass 3: cross-file ID and artifact resolution.
+
+    The verbatim-excerpt check (``check_excerpts_verbatim``) lands in ``warnings``,
+    or in ``errors`` when ``strict_excerpts``.
+    """
     report = ValidationReport()
     _check_record_file_locations(run_dir, report)
     brief = parse_intake_brief(run_dir / "00-context" / "context-brief.md")
@@ -747,22 +1120,18 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
     # Pre-synthesis the file is absent, so this is a no-op and the raw-set gate
     # is unchanged. (Resolution-only: these records are not schema-validated
     # here, and adding ids can only clear false "not found" errors.)
-    deduped_findings_path = run_dir / "40-synthesis" / "deduped-findings.yaml"
-    if deduped_findings_path.exists():
-        try:
-            deduped_doc = yaml.safe_load(
-                deduped_findings_path.read_text(encoding="utf-8")
-            ) or {}
-        except yaml.YAMLError:
-            deduped_doc = {}
-        deduped_recs = deduped_doc.get("finding") or deduped_doc.get("findings") or []
-        for rec in deduped_recs:
-            if isinstance(rec, dict) and rec.get("id"):
-                finding_ids.add(rec["id"])
+    finding_ids |= _deduped_record_ids(run_dir, "finding")
+    # The same for capabilities: a merged capability's 'cap-merged-<sha8>' id
+    # exists only in 40-synthesis/deduped-capabilities.yaml (not matched by the
+    # ``*.capabilities.yaml`` glob), and capability.schema.json allows a
+    # capability's cross_references / merged_from to name it.
+    capability_ids |= _deduped_record_ids(run_dir, "capability")
 
-    # Verify cross_references, merged_from, and evidence artifacts.
+    # Verify cross_references, merged_from, and evidence artifacts. Both name ids
+    # of the record's OWN kind (finding.schema.json: finding ids;
+    # capability.schema.json: capability ids), so resolve against that kind's set.
     seen_files: set[pathlib.Path] = set()
-    for path, _kind, record in _iter_records(run_dir):
+    for path, kind, record in _iter_records(run_dir):
         if "_parse_error" in record:
             continue
         seen_files.add(path)
@@ -773,11 +1142,12 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
                 report.errors.append(
                     Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief")
                 )
+        own_kind_ids = finding_ids if kind == "finding" else capability_ids
         for ref in record.get("cross_references", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"cross_reference {ref} not found"))
         for ref in record.get("merged_from", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"merged_from {ref} not found"))
 
     # Re-run the maturity-vs-evidence lint with the real tech-plan set.
@@ -859,7 +1229,9 @@ def run_cross_file_pass(run_dir: pathlib.Path) -> ValidationReport:
                     )
                 )
 
+    _validate_context_ids(run_dir, report)
     _validate_report_data_cross_refs(run_dir, report)
     _validate_domain_improvements_cross_refs(run_dir, report)
+    add_excerpt_violations(report, run_dir, strict_excerpts=strict_excerpts)
     report.files_seen = len(seen_files)
     return report

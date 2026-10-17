@@ -39,12 +39,13 @@ plugin still requires the `apd-gauntlet` CLI on your `PATH`.
 The CLI exposes the following operator subcommands:
 
 ```
-apd-gauntlet validate <run-dir>                  # three-pass validation
+apd-gauntlet validate <run-dir> [--strict-excerpts]   # three-pass validation
 apd-gauntlet init-run <run-id> --inputs DIR --domain pbm [--domain api-security] ...
 apd-gauntlet build-domain-skill <pack...>        # compile one or more packs into the apd-domain skill
 apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
 apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml against the schema
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
+apd-gauntlet resume-plan <run-dir> [--json]      # which agent steps are already complete (read-only; the runner resumes from it)
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
@@ -85,6 +86,8 @@ apd-gauntlet init-run apd-20260601-claim-event-bus \
 
 This creates `runs/apd-20260601-claim-event-bus/` with subdirectories for each phase output, copies your artifacts into `inputs/`, and records the active domain.
 
+Links inside the inputs folder are copied as links. If any link points outside it, `init-run` exits 1, names each such link, and creates nothing; copy the files it points at into the folder instead.
+
 To review a change against more than one domain pack, repeat the `--domain` flag:
 
 ```bash
@@ -119,7 +122,9 @@ Skip code recon (`code_recon: disabled`) for tech-plan-only reviews where no cod
 
 ### Setup
 
-1. Install and run `codebase-memory-mcp` per its [project README](https://github.com/DeusData/codebase-memory-mcp).
+1. Install and run `codebase-memory-mcp` per its [project README](https://github.com/DeusData/codebase-memory-mcp). **Recommended codebase-memory-mcp: v0.10.8 or later** (index coverage reported in `index_status`; `check_index_coverage` tool).
+
+   v0.10.0 added both: `index_status` includes index coverage, and `check_index_coverage` reports the files the index skipped or only partly parsed. `apd-code-recon` calls `index_status` but does not record the coverage it reports, and it does not call `check_index_coverage`; to see what the index missed, run that tool yourself. Earlier 0.10.x releases have defects in coverage reporting and in the core query tools. v0.10.0 returned empty `{}` replies from tools such as `search_graph` and `trace_path` to MCP clients such as Claude Code (fixed in v0.10.1). Before v0.10.5, `check_index_coverage` reported every path as unavailable in a repository with more than 2,000 ignored files. Before v0.10.8, the response to an incremental reindex that did not revisit a file with recorded parse gaps reported those gaps as gone. v0.10.8 supersedes v0.10.7, which carried the same code but was published under a broken tag. Nothing in the gauntlet checks the CBM version, and this recommendation is not the provider-discovery pin described under [Multi-repo systems](#multi-repo-systems).
 2. Index the codebase you intend to review.
 3. Register the CBM server in your Claude Code configuration so its tools (`mcp__codebase-memory-mcp__*`) are reachable from the agent runtime.
 
@@ -386,10 +391,12 @@ not meant to be driven headlessly.
 > launch can interrupt the specialist dispatches mid-flight (the subagents are
 > cancelled and no phase output is written), leaving an empty or partial run
 > directory. If a run is interrupted, **re-invoke it in the foreground**; the
-> runner is resumable and idempotency guards replay completed phases.
+> runner is resumable: the runner calls `apd-gauntlet resume-plan` once and skips
+> every agent step whose outputs are already present and valid.
 >
 > For the explicit foreground drive, run the deterministic CLI phases yourself
-> (`build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
+> (`resume-plan` first, whose step map tells you which agent steps to skip, then
+> `build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
 > `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the LLM
 > specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
 > the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
@@ -412,9 +419,14 @@ The runner (`.claude/workflows/apd-gauntlet.js`) is deterministic: it phases the
 run end-to-end and branches only on the receipts its dispatched agents return.
 It:
 
-1. Builds the `apd-domain` skill from the active pack(s) and validates them.
+1. Calls `apd-gauntlet resume-plan` once to learn which agent steps are already
+   complete (none, on a fresh run), then builds the `apd-domain` skill from the
+   active pack(s) and validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
-   agents when their preconditions are met).
+   agents when their preconditions are met). The code-recon and threat-model
+   agents emit entries without ids, so the runner runs `canonicalize` after
+   code-recon and again after the threat-model phase to mint the `cev-` and `tm-`
+   ids before anything reads them.
 3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
    each tier's validate gate, the runner runs `canonicalize` (idempotent
    structural canonicalizer: normalizes envelopes, recomputes deterministic IDs,
@@ -429,8 +441,16 @@ It:
 5. Returns the final summary at closeout.
 
 The runner is resumable: re-running it against the same directory replays
-completed steps from cache, and each agent re-checks whether its outputs already
-exist and validate, so a partially completed run picks up where it left off.
+completed steps from cache within a session. In a fresh session the runner calls
+`apd-gauntlet resume-plan` once and skips every agent step whose outputs are
+already present and valid, so a partially completed run picks up where it left
+off. A step whose outputs are missing, truncated or schema-invalid is not
+complete and runs again, and report-writer remediation passes always run. The
+runner stops before dispatching any other step when the run directory was created
+by another framework major (`resume-plan` exits 3: resume it with the matching
+engine) or when the installed engine is older than the plugin and has no
+`resume-plan` command (upgrade `apd-gauntlet` to 1.7.1 with
+`pip install --upgrade "apd-gauntlet>=1.7.1,<2"`).
 
 ## Step 3: Read the advisory report
 
@@ -515,6 +535,7 @@ Read the error message carefully — it cites the file, the record id, and the s
 
 - **Schema validation**: missing required fields, wrong enum values, malformed IDs. Fix the agent output; re-validate.
 - **Excerpt too long (semantic lint)**: trim the evidence excerpt to ≤ 25 whitespace-separated tokens.
+- **Excerpt not found verbatim**: a `WARNING` (an `ERROR` with `--strict-excerpts`) saying `evidence[N].excerpt not found verbatim in artifact '<file>'`. It means the excerpt is not in the input file the evidence cites, usually because the model paraphrased instead of quoting. Only citations of files under the run's `inputs/` directory are checked, in the whole-run pass and at tier gates; run-internal artifacts such as `00-context/` files are not. Whitespace, backticks and `*` are ignored on both sides, and `...` or `…` joins fragments that must each appear in the file, in order. An excerpt wholly in parentheses, such as `(absent in supplied TM)`, marks an absence and is not checked. A file over 20 MiB is skipped, and a YAML or JSON input over 1 MiB, or a YAML input that uses aliases or nests more than 100 levels, is searched as plain text only (its parsed values are not tried). On 1.7.1 the warning is visible in a manual `apd-gauntlet validate <run-dir>` run; the workflow's gates ignore warnings (they run `--errors-only`, and tier gates act only on errors), so the warning does not appear during a workflow run. To see it as an error, run `apd-gauntlet validate <run-dir> --strict-excerpts`. Fix the excerpt by copying the exact words from the cited file. A later release makes this an error by default.
 - **ID mismatch (semantic lint)**: the deterministic ID didn't match the recomputed hash. Either the title or the first evidence locator changed; recompute and update.
 - **Unknown artifact**: the evidence cites an artifact that isn't in the intake brief's frontmatter. Either fix the citation or update the brief.
 - **maturity ≥ implemented without non-tech-plan evidence**: either downgrade to `designed` or add evidence from a non-tech-plan artifact (IaC, code, test report, runbook).
@@ -527,9 +548,16 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 - Finding cited the wrong artifact section; correct the citation.
 - Both are partially right; the contradiction notes the disagreement and is annotated `Reviewer determine`.
 
-### Specialist hit two retries and was dropped
+### A tier gate failed
 
-The runner allows up to two retries per agent when validation fails. If a specialist still fails after two retries, the runner surfaces the failure and proceeds without that agent's output for the affected record. This is rare; investigate the agent's input (sometimes the tech plan section it's being asked about is genuinely undecidable).
+After each tier's lenses finish and `canonicalize` runs, the runner validates the tier with `apd-gauntlet validate <run-dir> --tier <tier-dir>`. That gate blocks the run: a failing tier never flows on to synthesis.
+
+- A lens whose dispatch fails (an agent error or an interrupted subagent) is retried up to twice before the gate runs.
+- A schema or semantic failure at the gate gets one repair per failing file. A repair agent (`apd-tier-repair`, which has only the Read and Edit tools) receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.
+- If the tier still fails after the repairs, the lenses that own the files that are still failing are re-run from scratch, once.
+- If the tier still fails after the re-run, the runner halts and names the failing files and their first errors.
+
+To recover from a halt, fix the named files under `runs/<run-id>/<tier-dir>/`, check them with `apd-gauntlet validate runs/<run-id> --tier <tier-dir>`, then re-invoke the runner. It skips the agent steps that are already complete and runs the gate again. Investigate the agent's input too: sometimes the tech plan section a lens is asked about is genuinely undecidable, and no repair can fix that.
 
 ## Local accuracy benchmark (out-of-band)
 

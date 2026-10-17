@@ -11,19 +11,262 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 
 ### Changed
 
-- **Version stays `1.7.0` for now.** The first 2.0 pre-release (`2.0.0a1`,
-  plugin `2.0.0-alpha.1`) has not been cut. When it is, it publishes to PyPI as
-  a pre-release (`pip install --pre apd-gauntlet`) and to the
+- **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
+  The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
+  cut. When it is, it publishes to PyPI as a pre-release
+  (`pip install --pre apd-gauntlet`) and to the
   `apd-security-next` plugin marketplace from the `next` branch.
 - **Domain packs accept framework 2.x.** All six bundled packs now declare
   `framework_compat: ">=1.0.0,<3.0.0"`. The 2.0 changes leave the pack format
   untouched. Third-party packs that declare `<2.0.0` need the same change
   before they will build against a 2.0 engine.
 
-## [Unreleased]
+## v1.7.1 — 2026-10-17
 
 ### Added
 
+- **Quickstart guide.** [docs/QUICKSTART.md](docs/QUICKSTART.md) walks a
+  first-time user through installing the gauntlet and running a review by
+  chatting with Claude, with example prompts for scaffolding a run, running it,
+  code recon, threat models, working with the findings and rebuilding the
+  report. It then covers the explicit CLI path, the commands you will actually
+  type, optional add-ons and troubleshooting. The README links to it at the top.
+  (#7)
+
+### Changed
+
+- **Two release lines.** `main` keeps shipping the stable 1.7 line; `next`
+  carries the 2.0 pre-releases. A new release gate
+  (`tools/check_release_tag.py`) runs first in the `release` workflow. It
+  refuses a tag that does not match the package version or that sits on the
+  wrong branch for its kind of version, and it flags pre-releases on GitHub so
+  that only the highest stable version is marked Latest. CI now also runs on
+  `next` and `release/**`. See [RELEASING.md](RELEASING.md). (#27)
+- **Pre-release engines stamp a release framework version.** `init-run` and
+  `build-domain-skill` now use `FRAMEWORK_VERSION`, which is the package version
+  with any pre-release, dev or post suffix removed (`2.0.0a1` → `2.0.0`).
+  Stamping `__version__` directly would have written a `framework_version` that
+  `run-config.schema.json` rejects, and it would have crashed the
+  `framework_compat` check on the first pre-release. Stable versions are
+  unaffected. (#27)
+- **Plugin-channel guardrails.** A loader-contract test now checks
+  `.claude-plugin/plugin.json` against the Claude Code plugin loader's rules:
+  every `skills` entry must be a directory that holds a `SKILL.md`, and every
+  `agents` and `commands` entry a `.md` file. Fixtures prove the test catches
+  each broken form, and the `commands` array must list exactly the files in
+  `commands/`. A new `apd-gauntlet lint-skills` command checks each skill's
+  frontmatter: `name` must match its directory, be in lowercase-hyphen form and
+  be at most 64 characters, and `description` must be present and at most 1,536
+  characters. CI runs it next to `lint-agents`, and a new CI job runs `claude
+  plugin validate` on `plugin.json` and `marketplace.json` with a pinned Claude
+  Code CLI (2.0.76). `CONTRIBUTING.md` gains a plugin-channel section. (#10)
+- **The report bundle is rebuilt with newer graph and UI libraries.** The report
+  template now builds with Cytoscape.js 3.34.3 (was 3.30.2), React and React DOM
+  19.3.0 (was 18.3.1) and cytoscape-dagre 4.0.1 (was 2.5.0). The committed
+  report bundle and its `vendor-licenses.txt` were regenerated, and after the
+  React and dagre update the Home Assistant example report renders the same text
+  on all nine tabs and the same dagre layouts. (#44, #45)
+
+### Fixed
+
+- **A resumed run decides agent skips from the new `apd-gauntlet resume-plan`
+  command, and agent prompts no longer carry a resume guard they cannot run.**
+  The read-only `apd-gauntlet resume-plan <run-dir> [--json]` reports, for each
+  first-attempt agent step, whether its outputs are present and valid (a lens
+  interrupted between its findings and capabilities files is not complete and
+  re-runs). The workflow calls it once in setup and skips every complete agent
+  step without dispatching it. CLI steps keep their own guard; retries and
+  report-writer remediation passes always run. `resume-plan` refuses a run
+  directory created by another framework major (exit 3) and the workflow halts
+  before dispatching any other step. The workflow also halts, telling you to run
+  `pip install --upgrade "apd-gauntlet>=1.7.1,<2"`, when the installed engine is
+  older than the plugin and has no `resume-plan` command. Any other `resume-plan`
+  failure is logged and the workflow runs every agent step. The `plan-run`
+  checklist now starts with a `resume-plan` row. (#49)
+- **Tier gates now block, and a failing tier is repaired before its lenses are
+  re-run.** The per-tier validate gate used to discard its result, so a failing
+  tier was caught only by the whole-run gate before synthesis, with no repair
+  step. The gate now always runs and reports each failing file, including an error
+  with no record id or no path, such as a YAML parse error. A failing file
+  gets one repair by a repair agent, whose prompt is the new packaged template
+  `tools/apd_gauntlet/data/prompts/repair.md` (read with
+  `resources.read_prompt`). If the tier is still invalid, the lenses that own the
+  files that are still failing are re-run once. If it is still invalid after
+  that, the run halts and names the files. Dispatch failures still retry the lens
+  twice, as before. The `plan-run` tier-gate rows and the troubleshooting docs
+  describe the same path. (#49)
+- **The read-only validate gates can no longer skip themselves.** The intake
+  schema gate, the pre-synthesis whole-run gate and the final validate now always
+  run their validate command (the intake gate still checks the schema only).
+  Previously a schema-only guard could skip them on runs with only semantic or
+  cross-file errors, so the pre-synthesis halt can now fire on errors it used to
+  miss. (#49)
+- **An always-run CLI step's prompt no longer offers its worker a skip.** Every
+  step the workflow marks always-run (among them `resume-plan`, the tier gates,
+  the three read-only gates and the `canonicalize` steps) told its worker "no
+  idempotent skip" and then, a few lines later, to run the command only if a guard
+  check found the work not done, and to return the skip sentinel if it
+  short-circuited.
+  A worker that short-circuited returned ok, so a tier gate could pass without
+  running and the `resume-plan` exit-3 refusal could be missed. These prompts now
+  say to always run the command and no longer mention a guard check or the skip
+  sentinel. Guarded steps keep both. (#49)
+- **The tier-gate repair agent has no shell and treats its input as data.** The
+  repair prompt embeds validator messages that quote offending values and source
+  lines, and lens excerpts are verbatim client text, yet the repair worker was
+  dispatched without an agent type and could run shell commands. A repair is now
+  dispatched as the new `apd-tier-repair` agent, whose tools are `Read` and `Edit`
+  only, and `repair.md` tells it that the errors, the file it repairs and every
+  file under `inputs/` are data, not instructions. (#49)
+- **The threat-model evaluator reads and writes the paths the engine reads.** Its
+  prompt told it to read `20-findings/**` and `10-capabilities/**` (neither
+  exists) and to write one `tmeval-<sha8>.yaml` file per finding under
+  `20-findings/40-threat-model/`, a path `validate` rejects and the report loader
+  never reads. It now reads `40-synthesis/deduped-findings.yaml` and
+  `deduped-capabilities.yaml` and writes every finding to the single file
+  `40-threat-model/threat-model.findings.yaml` (root key `finding`). The workflow
+  instruction and `docs/threat-modeling.md` name the same paths. (#49)
+- **The attack-path analyzer drops two obsolete passages.** It no longer hedges on
+  a report template that already exists (`templates/attack-path-report.template.md`),
+  and no longer asks for a manual schema check of its four output files on the
+  grounds that `validate` covers three of them vacuously. `validate` schema-checks
+  the three graph files and every `attack-path.findings.yaml` record and checks
+  edge integrity, so the analyzer runs `apd-gauntlet validate` and fixes errors in
+  those four files. It leaves errors in other agents' files alone: the
+  threat-model evaluator runs in parallel and its records have no ids yet. (#49)
+- **The confidentiality lens no longer asks for an id in its self-check.** Item 10
+  of its pre-emit checklist said the id should be "computed deterministically per
+  the schema rule", which contradicts the contract earlier in the same prompt:
+  lenses emit no `id`, and `apd-gauntlet canonicalize` mints it. The item is gone,
+  and a test keeps the self-check sections of all nine lens agents free of id
+  items. (#49)
+- **The domain skill rebuilds when a pack file changes, not only when a pack
+  version or the framework version does.** `build-domain-skill` skipped the
+  rebuild whenever `metadata.packs` and `framework_version` matched, so editing a
+  pack's `severity-rubric.md`, `common-patterns/` or `domain.yaml` without
+  bumping its version left the previous `apd-domain` skill and `by-goal/`
+  sidecars in place. The full skill's frontmatter now records
+  `metadata.content_sha256`, a SHA-256 over each selected pack's `domain.yaml`
+  and every file it includes, and the skip requires that hash to match as well.
+  A skill built before this fix has no hash and is rebuilt once on its next run,
+  including the committed `.claude/skills/apd-domain/`. (#49)
+- **`canonicalize` mints the `cev-` and `tm-` ids agents were asked to compute.**
+  The code-evidence-index `id` (`cev-<sha8(qualified_name|line_range)>`,
+  repo-qualified when the index declares `repos`) and the normalized threat-model
+  `entry_id` (`tm-<sha8(asset + threat + source_locator)>`) were hashed by LLM
+  agents, which cannot do that reliably. `canonicalize` now mints each one that is
+  absent, and the schemas make them optional-at-emission. It also fills an absent
+  `inferred_apd_goals` from the entry's STRIDE or LINDDUN letter; that field stays
+  agent-authorable, because attack-tree, MAESTRO and free-form entries and the PBM
+  `N_compliance` override are set by judgement, and an authored value is never
+  replaced. An id that is already present is never rewritten, so
+  the hand-assigned ids in older runs and in the committed Home Assistant example,
+  which findings and `c4-recon.yaml` cite, stay byte-identical. `validate` reports
+  `context id missing: <file>: entries[<n>] ...` for an entry that was never
+  canonicalized, and `canonicalize` reports an unparseable context file instead of
+  raising. The CLI summary adds `N context ids minted` when it minted any
+  ([ADR-0020](docs/adrs/0020-tooling-authored-derived-fields.md) Amendment v1.7.1). (#49)
+- **The code recon and threat-model agents emit content only, and the runner mints
+  their ids.** `apd-code-recon` told the model to compute a `cev-` id for every
+  index entry, `apd-threat-model-author` a `tm-` `entry_id` for every
+  threat-model entry and `apd-threat-model-recon` one for every free-form entry it
+  extracts, and both are hashes an LLM cannot compute reliably. The three prompts
+  now say not to emit them. The author also drops the `entry_id` from each cell it
+  copies out of the skeleton, because that id hashes the skeleton's stub threat
+  and would no longer match the grounded one. The author and the recon agent keep
+  setting `inferred_apd_goals`; `canonicalize` fills it only when they leave it
+  out. The workflow now runs `canonicalize` after code-recon, before the author
+  reads the index, and again after the threat-model phase, before the lenses cite
+  the entries; `plan-run` lists the same two steps. One prompt example was wrong
+  in two ways and is fixed: the `c4-recon.yaml` example used a `provenance.source`
+  the schema rejects, and told the model to cite a `cev-` id that does not exist
+  yet when that file is written. Containers and edges now cite
+  `file_path:Lstart-Lend` (or a `CROSS_*` edge's `<caller_qn> -> <callee_qn>`
+  pair), as the `apd-c4-discipline` skill asks. The
+  code recon prompt also says to keep provenance in fields such as `notes:`, not
+  YAML comments, because `canonicalize` rewrites the index and drops comments.
+  The code-architecture-brief and authored-threat-model templates no longer show
+  ids: the brief's lens table lists `qualified_name:Lx-Ly` code anchors and the
+  authored render labels entries `<letter>/<surface>`. (#49)
+- **`validate` checks that an evidence excerpt appears verbatim in the input it
+  cites.** A model that paraphrased instead of quoting went unnoticed, because only
+  the artifact name was checked. For each excerpt that cites a file under the run's
+  `inputs/` directory, `apd-gauntlet validate` now reports
+  `evidence[N].excerpt not found verbatim in artifact '<file>'`, in the whole-run
+  pass and at tier gates (`--tier`). It is a warning by default and an error with
+  the new `--strict-excerpts` flag. Whitespace, backticks and `*` are ignored, `...`
+  or `…` joins fragments that must appear in order, an excerpt wholly in parentheses
+  (an absence marker such as `(absent in supplied TM)`) is skipped, and so are
+  run-internal artifacts, unresolvable paths, files that are not UTF-8 and files
+  over 20 MiB. A YAML or JSON input over 1 MiB, and a YAML input with aliases
+  or more than 100 levels of nesting, is searched as plain text only, and a malformed or
+  hostile one never makes the check fail. The workflow's gates ignore warnings, so on
+  1.7.1 the warning shows in a manual `apd-gauntlet validate <run-dir>` run only. (#49)
+- **`init-run` refuses input links that point outside the inputs folder.** It used
+  to follow them, so a link such as `inputs/keys -> ~/.ssh` copied the files it
+  pointed at into the run, where the agents read them. `init-run` now checks every
+  link first, whether it points at a file, a directory or nothing. If any points
+  outside the inputs folder, it exits 1, names each link and its target, and
+  creates nothing. Links that stay inside are copied as links, and absolute ones
+  become relative links, so the run never points back at the original folder. (#49)
+- **The workflow runner now awaits every dispatch.** It was written for an older
+  Workflow runtime, where `agent()` returned the agent's result. On current Claude
+  Code, `agent()` and `parallel()` return Promises, and the runner awaited none of
+  them. Every receipt it checked was a pending Promise, which read as success, so
+  no agent ran to completion and every run failed at the report-audit gate with a
+  misleading `audit-report still FAILED a STRUCTURAL check` error. The runner now
+  awaits every dispatch, so each step finishes before the next one starts. Three
+  kinds of group still run in parallel: a tier's lenses; a red tier's repairs, and
+  then, if they did not fix it, its lens re-runs, each batch on its own; and the
+  threat-model evaluator with the attack-path analyzer. A `resume-plan` refusal now
+  halts the run before anything else is dispatched. (#50)
+- **`validate` resolves a capability's cross-references against capability ids.**
+  It resolved every `cross_references` and `merged_from` entry against finding ids, so a capability
+  that cross-referenced another capability (the form `capability.schema.json`
+  requires) was reported `cross_reference <id> not found`. That failed the
+  whole-run check and halted the gauntlet before synthesis. `cross_references` and
+  `merged_from` now resolve against the ids of the record's own kind, including
+  merged capability ids (`cap-merged-*`, from
+  `40-synthesis/deduped-capabilities.yaml`) after synthesis. Every id in that file
+  now also resolves in the asset-graph `mitigated_by_capability` edge check and the
+  `contradictions.yaml` `capability_id` check. Every whole-run check that reads
+  `deduped-findings.yaml` or `deduped-capabilities.yaml` (the `cross_references` /
+  `merged_from` check and the `report-data.yaml` and `domain-improvements.yaml`
+  checks) now reads a malformed or unreadable one as holding no ids and reports the references
+  left unresolved. Each of them used to crash on a malformed
+  `deduped-findings.yaml`, and the `report-data.yaml` check on a malformed
+  `deduped-capabilities.yaml` too. They all read the deduped files the same way
+  now, so the `report-data.yaml` check also accepts a deduped file with a plural
+  root key (`findings:`, `capabilities:`) or a single-record mapping, and the
+  `domain-improvements.yaml` check does the same for `deduped-findings.yaml`. (#50)
+- **The plugin's skills load.** Each `skills` entry in
+  `.claude-plugin/plugin.json` named a skill's `SKILL.md` file, but Claude Code
+  requires the directory that contains it and rejects a file path, so none of
+  the plugin's skills loaded. Every entry now names the skill directory, and a
+  manifest test fails if an entry points at a file again. (#8)
+- **The report-freshness gate no longer fails a correctly built bundle.**
+  `tools/check_report_template_freshness.py` hashed the report-template sources
+  but skipped dotfiles and `node_modules` only at the top level, while
+  `build.mjs` skips them at every depth, so a nested dotfile such as
+  `sub/.gitkeep` made the two hashes differ and turned the gate red. The Python
+  hash now skips them at every depth too. The Node walk moved into
+  `report-template/.build/source-hash.mjs`, which `build.mjs` imports, and a new
+  parity test checks that the Python and Node hashes agree on the same tree. A
+  new `bundle-rebuild-diff` CI job rebuilds the bundle and fails when the
+  committed bundle, new untracked files included, differs from a fresh build.
+  The report template's `package-lock.json` is now committed, so `npm ci`
+  installs the exact dependency tree. (#9)
+
+## v1.7.0 — 2026-06-09
+
+### Added
+
+- **OWASP MASVS / MASWE as first-class mobile taxonomies** — the `mobile-applications` pack declares `taxonomies: [masvs, maswe]` in `domain.yaml`, auto-seeded into a run's `taxonomies:` at `init-run`. Specialists emit `masvs` control IDs (`MASVS-<CATEGORY>-<n>`, on findings **and** capabilities) and `maswe` weakness IDs (`MASWE-####`, findings-only) in `control_mappings`, feeding two new gated synthesis rollups (`masvs-coverage.yaml`, `maswe-coverage.yaml` + their single-file schemas) and two new Coverage sub-tabs in the HTML report. New `apd-gauntlet refresh-mas` verb + bundled `masvs.json` (v2.1.0, 24 controls) and `maswe.json` (Beta, pinned per-refresh to an upstream commit). `data.meta.active_taxonomies` now lifts the run's taxonomy scope; `audit-report` gains `id_coverage_masvs` / `id_coverage_maswe` structural checks and `coverage_rollups_nonempty` extends to the MAS rollups.
+- **Optional `taxonomies` field on `domain.yaml`** — any pack can declare default taxonomies that `init-run` unions into the run config (pack -> run auto-seed). Packs that omit the field are unaffected.
+- **ADR 0014** — OWASP MAS (MASVS + MASWE) as mobile finding/capability taxonomies.
+- HTML report: a new "Start here" reading-guide tab (`✦`, leftmost) that orients first-time readers with an orientation map, a vocabulary glossary, a reading workflow, and per-role focus paths, reading the run's live data for contextual guidance. Overview remains the default tab.
+- **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, an interactive trust-boundary surface map, and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared interactive `GraphView`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
+- **HTML report — Attack-paths "Enumerated paths" link to findings.** Each enumerated path whose edges traverse a finding now shows a `⚑ N finding(s)` indicator in its header (titled with the finding ids). Clicking a finding/capability id pill copies the id to the clipboard (with a toast); clicking the red "finding" chip immediately left of the id opens that finding in the Findings view (the same `onOpenFinding` navigation Overview/Annexes already use).
 - **Two-channel distribution** ([ADR-0023](docs/adrs/0023-two-channel-distribution.md)) —
   additive packaging work that will ship under **1.7.0** (currently held); the
   gauntlet now distributes via two lockstep channels:
@@ -59,7 +302,7 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   declared and a bridge/suggestion exists; absence of a CAPEC link is silent
   (never a mismatch). New `apd-gauntlet refresh-capec` + bundled `data/capec.json`;
   CAPEC ids resolve to titles + `capec.mitre.org` URLs. Rendered as a `CAPEC bridge`
-  sub-tab in the report Coverage screen.
+  sub-tab in the report Coverage screen. (#110)
 - **ATT&CK detection overlay** (derived view, ADR-0022) — for each ATT&CK
   technique a finding exposes, the data components ATT&CK says are required to
   detect it (the telemetry side, complementing the existing mitigation mapping;
@@ -68,7 +311,7 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   catalog is projected from the enterprise STIX bundle's v17+
   detection-strategy → analytic → data-component chain (`refresh-mitre` now also
   writes `data/mitre-attack-detection.json`). New `detection-coverage.yaml` +
-  schema; rendered as an `ATT&CK detection` Coverage sub-tab.
+  schema; rendered as an `ATT&CK detection` Coverage sub-tab. (#110)
 - **Compliance projection layer** (derived view, ADR-0022) — the run's NIST
   800-53r5 coverage projected into the **HIPAA Security Rule** and **NIST CSF 2.0**
   via a published crosswalk, carrying the NIST IR 8477 STRM relationship and an
@@ -86,7 +329,7 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   NIST's scope.)
 
   None of the three derived views change `finding`/`capability` `control_mappings`
-  or the run-config `taxonomies` enum.
+  or the run-config `taxonomies` enum. (#110)
 - Per-finding attack-path "hop-strip" visualization in the Findings tab for
   `apath-*` risk findings — shows the path, the vulnerable hop, and layered
   fix-at-source + D3FEND choke-point recommendation markers, with a reverse
@@ -99,40 +342,36 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   the asset-inventory `asset-/idn-/tb-` ids and wires `trust_boundaries.crosses`
   (authored by asset name) to the minted ids. New backstop linters
   `check_id_present` / `check_tmeval_id`. ADR-0020; `docs/deterministic-field-register.md`.
-
-### Changed
-
-- **Agents emit content only — no `id` / `schema_version`.** The nine specialist
-  lens agents, the threat-model evaluator (now emits `tmeval_key`), the
-  domain-improvement auditor, and intake (emits inventory records without ids,
-  authors `crosses` by name) no longer author derived fields; the assembler is the
-  sole author. Finding/capability/domain-improvement/asset-inventory schemas
-  relaxed accordingly (permissive — existing valid records still validate).
-- **Two release lines.** `main` keeps shipping the stable 1.7 line; `next`
-  carries the 2.0 pre-releases. A new release gate
-  (`tools/check_release_tag.py`) runs first in the `release` workflow. It
-  refuses a tag that does not match the package version or that sits on the
-  wrong branch for its kind of version, and it flags pre-releases on GitHub so
-  that only the highest stable version is marked Latest. CI now also runs on
-  `next` and `release/**`. See [RELEASING.md](RELEASING.md).
-- **Pre-release engines stamp a release framework version.** `init-run` and
-  `build-domain-skill` now use `FRAMEWORK_VERSION`, which is the package version
-  with any pre-release, dev or post suffix removed (`2.0.0a1` → `2.0.0`).
-  Stamping `__version__` directly would have written a `framework_version` that
-  `run-config.schema.json` rejects, and it would have crashed the
-  `framework_compat` check on the first pre-release. Stable versions are
-  unaffected.
-
-## v1.7.0 — 2026-06-09
-
-### Added
-
-- **OWASP MASVS / MASWE as first-class mobile taxonomies** — the `mobile-applications` pack declares `taxonomies: [masvs, maswe]` in `domain.yaml`, auto-seeded into a run's `taxonomies:` at `init-run`. Specialists emit `masvs` control IDs (`MASVS-<CATEGORY>-<n>`, on findings **and** capabilities) and `maswe` weakness IDs (`MASWE-####`, findings-only) in `control_mappings`, feeding two new gated synthesis rollups (`masvs-coverage.yaml`, `maswe-coverage.yaml` + their single-file schemas) and two new Coverage sub-tabs in the HTML report. New `apd-gauntlet refresh-mas` verb + bundled `masvs.json` (v2.1.0, 24 controls) and `maswe.json` (Beta, pinned per-refresh to an upstream commit). `data.meta.active_taxonomies` now lifts the run's taxonomy scope; `audit-report` gains `id_coverage_masvs` / `id_coverage_maswe` structural checks and `coverage_rollups_nonempty` extends to the MAS rollups.
-- **Optional `taxonomies` field on `domain.yaml`** — any pack can declare default taxonomies that `init-run` unions into the run config (pack -> run auto-seed). Packs that omit the field are unaffected.
-- **ADR 0014** — OWASP MAS (MASVS + MASWE) as mobile finding/capability taxonomies.
-- HTML report: a new "Start here" reading-guide tab (`✦`, leftmost) that orients first-time readers with an orientation map, a vocabulary glossary, a reading workflow, and per-role focus paths, reading the run's live data for contextual guidance. Overview remains the default tab.
-- **Threat-model report scene** — a dedicated report tab (after Coverage, before Attack paths) detailing the threat model: STRIDE×asset matrix, entries table, coverage-by-surface, an interactive trust-boundary surface map, and a supplied-vs-authored comparator. Gracefully omitted when no threat model exists (no user-supplied TM and none authored). Renders in the existing report design language (shared interactive `GraphView`, `apd-matrix`/`coverage-bar`/`contradiction` classes).
-- **HTML report — Attack-paths "Enumerated paths" link to findings.** Each enumerated path whose edges traverse a finding now shows a `⚑ N finding(s)` indicator in its header (titled with the finding ids). Clicking a finding/capability id pill copies the id to the clipboard (with a toast); clicking the red "finding" chip immediately left of the id opens that finding in the Findings view (the same `onOpenFinding` navigation Overview/Annexes already use).
+- **Report-accuracy and generation-UX remediation.** A capability whose `scope`
+  is a mapping, not a string, is rejected: `validate` fails it, and a capability
+  merge in `apply-clusters` leaves that scope out of the merged capability's
+  scope and records a `failed_validation` reject instead of writing the
+  mapping's Python repr as text. A new
+  `SerializationIntegrityError` check runs just before `apply-clusters` writes
+  its output, and the command exits 3 if a finding's `title`, `summary` or
+  `detail`, or a capability's `title`, `description` or `scope`, holds a
+  non-string or repr-like value. The whole-run validate gate before synthesis
+  phase 5 now halts the workflow on error; it used to be advisory. The run
+  config gains an optional `infrastructure` block: `mode` is `disabled`,
+  `static` or `live` (reserved for a future release), and `static` lists IaC
+  globs under `inputs/` for Kubernetes, Istio or Linkerd, Terraform, Helm and
+  certificate or secret managers, with no leading `/` and no `..` allowed.
+  `init-run` scaffolds it as a commented skeleton. The new `apd-gauntlet
+  manual-audit-prompts <run-dir>` writes `40-synthesis/manual-audit-prompts.md`,
+  which lists each blocked finding with the `kubectl` or `istioctl` commands
+  its title or summary matches, to run against the live system. For multi-repo
+  code recon, the run config and the code-evidence index accept an optional
+  `repos[]` list (an index that declares one must tag every entry with its
+  `repo`), `validate` warns when a declared
+  repo has zero entries, and when the run config sets neither `subject` nor
+  `cbm_project` the report title uses the primary repo
+  ([ADR-0019](docs/adrs/0019-multi-repo-code-recon-and-cbm-boundary.md)). The
+  six knowledge-base refresh fetchers now share `kb_fetch.fetch_pinned`, which
+  caps the download size and returns a `source`, `source_sha256` and
+  `fetched_at` provenance block, and the new CI gate
+  `tools/check_kb_cache_freshness.py` checks that the fetched `data/*.json`
+  caches carry a source, a SHA-256 or commit, and a fetch date (the files
+  without that provenance are listed as exempt, with reasons). (#104)
 
 ### Changed
 
@@ -142,6 +381,12 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 - **`runs/` is now fully gitignored and no longer ships pre-built runs.** The three shipped example runs (crAPI, authentik, caldera) were removed from version control and `runs/` (the gauntlet's output directory) is ignored in its entirety, so a tool user cannot accidentally commit a sensitive security review. The single canonical fixture is now the synthetic `examples/apd-20260601-claim-event-bus/expected/` run; all tests, the report golden, and the dev-template demo data (`report-template/data.js`) were repointed to it, and the README quickstart now validates the example. The report transforms' divergent-shape regression coverage is preserved by the in-memory synthetic-shape unit tests in `test_transform_new_shapes.py` (no real-run fixtures required).
 - **Specialist agent guardrails hardened** against recurring output friction seen in multi-pack runs. The `apd-finding-schema` skill now stresses the 200-character `title` cap, mandatory YAML-quoting of colon/em-dash/leading-special scalars (an unquoted colon also aborts canonicalization), and writing findings only to the canonical tier path (no invented nested directories). The `apd-control-mappings` skill now stresses that every taxonomy mapping lives under `control_mappings` (never at the finding root) with the MITRE ATLAS key spelled `atlas` (not `mitre_atlas`), and that only concrete CWEs that resolve in the bundled catalog may be cited (no pillar/category CWEs such as CWE-320).
 - **Documentation: foreground-execution requirement made consistent + preflight checklist added.** `running-the-gauntlet.md` gains a "Preflight: confirm scaffolding is in place" section and lists `plan-run` in the CLI reference; its Step 2 foreground statement is now the canonical source that the README, `architecture.md`, `extending-agents.md`, the workflow `meta.description`, and the `apd-orchestrator` shim all point to (run the gauntlet in-session — a background or headless launch can interrupt the subagent dispatches and leave an empty run directory). The operator install path now recommends an isolated install (venv / `pipx`), mirroring `CONTRIBUTING.md`. Docs and descriptions only — no runtime, CLI, schema, or report-template change.
+- **Agents emit content only — no `id` / `schema_version`.** The nine specialist
+  lens agents, the threat-model evaluator (now emits `tmeval_key`), the
+  domain-improvement auditor, and intake (emits inventory records without ids,
+  authors `crosses` by name) no longer author derived fields; the assembler is the
+  sole author. Finding/capability/domain-improvement/asset-inventory schemas
+  relaxed accordingly (permissive — existing valid records still validate).
 
 ### Fixed
 

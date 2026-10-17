@@ -109,6 +109,27 @@ def compute_boundary_id(name: str, locator: str) -> str:
     return _inventory_id("tb", name, locator)
 
 
+def compute_cev_id(qualified_name: str, line_range: str, repo: str | None = None) -> str:
+    """Deterministic cev- id: cev-<sha8(qualified_name|line_range)>.
+
+    A multi-repo index qualifies the input with the entry's repo, since the same
+    qualified name and line range can occur in two repositories:
+    cev-<sha8(repo|qualified_name|line_range)>.
+    """
+    parts = (qualified_name, line_range) if repo is None else (repo, qualified_name, line_range)
+    return f"cev-{hashlib.sha256('|'.join(parts).encode()).hexdigest()[:8]}"
+
+
+def compute_tm_entry_id(asset: str, threat: str, source_locator: str) -> str:
+    """Deterministic tm- entry id: tm-<sha8(asset + threat + source_locator)>.
+
+    The parts are joined with no separator, the formula the threat-model skeleton
+    builder has always used. The deterministic parsers (STRIDE/LINDDUN tables,
+    attack trees, TMT, Threat Dragon) keep pipe-joined variants of their own.
+    """
+    return f"tm-{hashlib.sha256((asset + threat + source_locator).encode()).hexdigest()[:8]}"
+
+
 def check_domain_improvement_id(record: dict[str, Any]) -> list[str]:
     """Recompute the dimpr-<sha8> via compute_improvement_id and flag a mismatch.
 

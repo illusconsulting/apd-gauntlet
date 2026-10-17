@@ -120,7 +120,7 @@ For each entry, apply enrichment passes as appropriate to its methodology:
 - Read the source artifact directly
 - Identify each (asset, threat, mitigation) claim in the prose
 - For each claim, construct an entry with:
-  - `entry_id`: `tm-<sha8>` over (asset + threat + source_locator)
+  - Do NOT emit `entry_id`: `apd-gauntlet canonicalize` mints it after this phase.
   - `extraction_confidence: low`
   - `source_locator`: the file path + a quoted excerpt (≤200 chars) from
     which you extracted
@@ -132,7 +132,7 @@ For each entry, apply enrichment passes as appropriate to its methodology:
 
 - Extract from prose exactly like free-form (read the source, identify each
   asset/threat/mitigation claim, `extraction_confidence: low`, quoted
-  `source_locator`).
+  `source_locator`, no `entry_id`).
 - Additionally tag each entry with the MAESTRO layer (L1–L7) it sits at, named
   in the threat text / `source_locator` (there is no structured `maestro_layer`
   field in the normalized schema).

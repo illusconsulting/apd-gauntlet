@@ -1,7 +1,8 @@
 # Guardrail hardening (post-PR #8) — design
 
 - **Date:** 2026-07-14
-- **Status:** Approved (design), pending implementation
+- **Status:** Implemented: PR B #9, PR A #10; no further PR. (The optional
+  `$schema` manifest pointers were dropped by design; see Amendments item 8.)
 - **Amended:** 2026-08-02 — every claim re-verified against
   `illusconsulting/apd-gauntlet` `main` (`27270d5`), experiments re-run,
   corrections folded in; see the Amendments section at the end.
