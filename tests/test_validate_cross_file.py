@@ -5,7 +5,9 @@ import pathlib
 import shutil
 
 import pytest
+import yaml
 from apd_gauntlet.cli import main
+from apd_gauntlet.linters import compute_capability_id, compute_id
 from click.testing import CliRunner
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "runs"
@@ -176,6 +178,170 @@ def test_merged_cross_reference_resolved_from_deduped(tmp_path):
     runner = CliRunner()
     result = runner.invoke(main, ["validate", str(dst)])
     assert "merged-abcd1234" not in result.output, result.output
+    assert "not found" not in result.output.lower(), result.output
+
+
+# ---------------------------------------------------------------------------
+# Kind-aware resolution: a record's cross_references and merged_from name ids of
+# its OWN kind (capability.schema.json: capability ids; finding.schema.json:
+# finding ids), so each must resolve against that kind's id set only.
+# ---------------------------------------------------------------------------
+
+# The clean-run fixture's two records (10-trustworthiness/confidentiality.*).
+CLEAN_FINDING_ID = "conf-7aa376c5"
+CLEAN_CAPABILITY_ID = "conf-cap-53b6f810"
+
+# Record field -> the label the cross-file pass uses in its "not found" message.
+REF_FIELDS = {"cross_references": "cross_reference", "merged_from": "merged_from"}
+
+
+def _write_integrity_capability(dst, field, refs):
+    """Write a second, schema-valid capability file (integrity lens) whose
+    ``field`` lists ``refs``; return the new record's id."""
+    title = "Signed claim-event payloads verified by consumers"
+    locator = "§4.2 paragraph 5"
+    rid = compute_capability_id("intg", title, locator)
+    doc = {"capability": {
+        "schema_version": 1,
+        "id": rid,
+        "agent": "integrity",
+        "apd_tier": "trustworthiness",
+        "apd_goal": "integrity",
+        "title": title,
+        "description": "Consumers verify an HMAC over each claim-event payload.",
+        "maturity": "designed",
+        "scope": "Confirmed for: claim-events topic consumers.",
+        "evidence": [{
+            "artifact": "tech_plan.md",
+            "locator": locator,
+            "excerpt": "Consumers verify the payload HMAC before processing",
+        }],
+        "control_mappings": {"nist_800_53r5": ["SI-7"]},
+        field: list(refs),
+    }}
+    path = dst / "10-trustworthiness" / "integrity.capabilities.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return rid
+
+
+def _write_integrity_finding(dst, field, refs):
+    """Write a second, schema-valid finding file (integrity lens) whose
+    ``field`` lists ``refs``; return the new record's id."""
+    title = "Claim-event consumers do not verify payload integrity"
+    locator = "§4.2 paragraph 4"
+    rid = compute_id("intg", title, locator)
+    doc = {"finding": {
+        "schema_version": 1,
+        "id": rid,
+        "agent": "integrity",
+        "apd_tier": "trustworthiness",
+        "apd_goal": "integrity",
+        "disposition": "gap",
+        "severity": "medium",
+        "confidence": "high",
+        "title": title,
+        "summary": "Consumers trust claim-event payloads without an integrity check.",
+        "detail": "A tampered event would be processed as authentic.",
+        "evidence": [{
+            "artifact": "tech_plan.md",
+            "locator": locator,
+            "excerpt": "Consumers deserialize claim events directly",
+        }],
+        "control_mappings": {"nist_800_53r5": ["SI-7"]},
+        "recommendation": {
+            "posture": "required",
+            "summary": "Verify a payload MAC before processing.",
+            "detail": "Add an HMAC over each event payload and verify it in every consumer.",
+        },
+        field: list(refs),
+    }}
+    path = dst / "10-trustworthiness" / "integrity.findings.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return rid
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_capability_in_other_file_resolves(tmp_path, field):
+    """A capability naming an existing capability id from another file (the only
+    form capability.schema.json allows) must not be reported 'not found'."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, [CLEAN_CAPABILITY_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert f"{REF_FIELDS[field]} {CLEAN_CAPABILITY_ID} not found" not in result.output, (
+        result.output
+    )
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_missing_capability_caught(tmp_path, field):
+    """A capability naming a capability id that exists nowhere is still reported."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, ["dist-cap-deadbeef"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} dist-cap-deadbeef not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_capability_ref_to_finding_id_caught(tmp_path, field):
+    """Resolution is per kind, not over the union: a capability naming an
+    existing FINDING id does not resolve (it is not a capability id)."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_capability(dst, field, [CLEAN_FINDING_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} {CLEAN_FINDING_ID} not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_finding_in_other_file_resolves(tmp_path, field):
+    """Unchanged behaviour: a finding naming an existing finding id resolves."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, [CLEAN_FINDING_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert "not found" not in result.output.lower(), result.output
+    assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_missing_finding_caught(tmp_path, field):
+    """Unchanged behaviour: a finding naming a finding id that exists nowhere is
+    reported."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, ["conf-deadbeef"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} conf-deadbeef not found" in result.output, result.output
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_finding_ref_to_capability_id_caught(tmp_path, field):
+    """Unchanged behaviour: a finding naming an existing CAPABILITY id does not
+    resolve (it is not a finding id)."""
+    dst = _copy_clean_run(tmp_path)
+    _write_integrity_finding(dst, field, [CLEAN_CAPABILITY_ID])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert result.exit_code == 1
+    assert f"{REF_FIELDS[field]} {CLEAN_CAPABILITY_ID} not found" in result.output, (
+        result.output
+    )
+
+
+@pytest.mark.parametrize("field", list(REF_FIELDS))
+def test_merged_capability_ref_resolved_from_deduped(tmp_path, field):
+    """Mirror of FW-3 for capabilities: a cap-merged-* id that exists only in
+    40-synthesis/deduped-capabilities.yaml (hyphenated, so not matched by the
+    ``*.capabilities.yaml`` record glob) resolves once that corpus is present."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    (synth / "deduped-capabilities.yaml").write_text(
+        "capability:\n- id: cap-merged-abcd1234\n", encoding="utf-8"
+    )
+    _write_integrity_capability(dst, field, ["cap-merged-abcd1234"])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert "cap-merged-abcd1234" not in result.output, result.output
     assert "not found" not in result.output.lower(), result.output
 
 

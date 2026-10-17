@@ -258,6 +258,14 @@ All notable changes to this project will be documented in this file. Format base
   then, if they did not fix it, its lens re-runs, each batch on its own; and the
   threat-model evaluator with the attack-path analyzer. A `resume-plan` refusal now
   halts the run before anything else is dispatched.
+- **`validate` resolves a capability's cross-references against capability ids.**
+  It resolved every `cross_references` entry against finding ids, so a capability
+  that cross-referenced another capability (the form `capability.schema.json`
+  requires) was reported `cross_reference <id> not found`. That failed the
+  whole-run check and halted the gauntlet before synthesis. `cross_references` and
+  `merged_from` now resolve against the ids of the record's own kind, including
+  merged capability ids (`cap-merged-*`, from
+  `40-synthesis/deduped-capabilities.yaml`) after synthesis.
 
 ## v1.7.0 — 2026-06-09
 

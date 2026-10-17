@@ -1121,10 +1121,30 @@ def run_cross_file_pass(
         for rec in deduped_recs:
             if isinstance(rec, dict) and rec.get("id"):
                 finding_ids.add(rec["id"])
+    # The same for capabilities: a merged capability's 'cap-merged-<sha8>' id
+    # exists only in 40-synthesis/deduped-capabilities.yaml (not matched by the
+    # ``*.capabilities.yaml`` glob), and capability.schema.json allows a
+    # capability's cross_references / merged_from to name it.
+    deduped_caps_path = run_dir / "40-synthesis" / "deduped-capabilities.yaml"
+    if deduped_caps_path.exists():
+        try:
+            deduped_doc = yaml.safe_load(
+                deduped_caps_path.read_text(encoding="utf-8")
+            ) or {}
+        except yaml.YAMLError:
+            deduped_doc = {}
+        deduped_recs = (
+            deduped_doc.get("capability") or deduped_doc.get("capabilities") or []
+        )
+        for rec in deduped_recs:
+            if isinstance(rec, dict) and rec.get("id"):
+                capability_ids.add(rec["id"])
 
-    # Verify cross_references, merged_from, and evidence artifacts.
+    # Verify cross_references, merged_from, and evidence artifacts. Both name ids
+    # of the record's OWN kind (finding.schema.json: finding ids;
+    # capability.schema.json: capability ids), so resolve against that kind's set.
     seen_files: set[pathlib.Path] = set()
-    for path, _kind, record in _iter_records(run_dir):
+    for path, kind, record in _iter_records(run_dir):
         if "_parse_error" in record:
             continue
         seen_files.add(path)
@@ -1135,11 +1155,12 @@ def run_cross_file_pass(
                 report.errors.append(
                     Violation(path, rid, f"evidence[{i}].artifact '{art}' not in intake brief")
                 )
+        own_kind_ids = finding_ids if kind == "finding" else capability_ids
         for ref in record.get("cross_references", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"cross_reference {ref} not found"))
         for ref in record.get("merged_from", []):
-            if ref not in finding_ids:
+            if ref not in own_kind_ids:
                 report.errors.append(Violation(path, rid, f"merged_from {ref} not found"))
 
     # Re-run the maturity-vs-evidence lint with the real tech-plan set.
