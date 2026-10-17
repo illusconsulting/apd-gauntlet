@@ -1041,19 +1041,20 @@ def _deduped_record_ids(run_dir: pathlib.Path, kind: str) -> set[str]:
     ``kind`` (``finding`` or ``capability``), for id resolution only.
 
     The file is written by ``synthesis/apply.py`` or, on the fallback path, by
-    the synthesizer agent, so it may be malformed. A missing file, a YAML error,
-    a document that is not a mapping or a root value that is not a list or a
-    record all give no ids instead of raising; any ref that needed one is then
+    the synthesizer agent, so it may be malformed. A missing or unreadable file
+    (not a regular file, not UTF-8), a YAML error, a document that is not a
+    mapping or a root value that is not a list or a record all give no ids
+    instead of raising; any ref that needed one is then
     reported "not found" as usual. Records come from the shared
     ``extract_records`` rule (singular or plural root key, per-record wrappers).
     """
     root_key = RECORD_KINDS[kind][1]
     path = run_dir / "40-synthesis" / f"deduped-{_PLURAL_ROOT[root_key]}.yaml"
-    if not path.exists():
+    if not path.is_file():
         return set()
     try:
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError:
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
         return set()
     if not isinstance(doc, dict):
         return set()

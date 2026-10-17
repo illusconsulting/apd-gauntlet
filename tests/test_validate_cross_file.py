@@ -410,6 +410,35 @@ def test_malformed_deduped_findings_reports_not_found(tmp_path, body):
     assert "cross_reference merged-abcd1234 not found" in result.output, result.output
 
 
+# Deduped files that cannot be read as UTF-8 text: bytes that are not UTF-8, and
+# a directory where the file should be.
+UNREADABLE_DEDUPED = ("non-utf8-bytes", "directory")
+DEDUPED_REF = {
+    "capability": ("deduped-capabilities.yaml", "cap-merged-abcd1234", _write_integrity_capability),
+    "finding": ("deduped-findings.yaml", "merged-abcd1234", _write_integrity_finding),
+}
+
+
+@pytest.mark.parametrize("shape", UNREADABLE_DEDUPED)
+@pytest.mark.parametrize("kind", list(DEDUPED_REF))
+def test_unreadable_deduped_file_reports_not_found(tmp_path, kind, shape):
+    """An unreadable deduped file contributes no ids. validate must report the
+    unresolved merged ref as a normal error, not crash."""
+    dst = _copy_clean_run(tmp_path)
+    synth = dst / "40-synthesis"
+    synth.mkdir(exist_ok=True)
+    filename, ref, write_record = DEDUPED_REF[kind]
+    if shape == "directory":
+        (synth / filename).mkdir()
+    else:
+        (synth / filename).write_bytes(b"\xff\xfe\x00bad")
+    write_record(dst, "cross_references", [ref])
+    result = CliRunner().invoke(main, ["validate", str(dst)])
+    assert isinstance(result.exception, SystemExit), result.exception
+    assert result.exit_code == 1, result.output
+    assert f"cross_reference {ref} not found" in result.output, result.output
+
+
 # The report-data.yaml check reads both deduped files. Per kind: the deduped
 # file, the report-data section and the error a dangling merged id gets there.
 REPORT_DATA_DEDUPED = {

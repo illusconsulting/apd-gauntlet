@@ -259,18 +259,18 @@ All notable changes to this project will be documented in this file. Format base
   threat-model evaluator with the attack-path analyzer. A `resume-plan` refusal now
   halts the run before anything else is dispatched.
 - **`validate` resolves a capability's cross-references against capability ids.**
-  It resolved every `cross_references` entry against finding ids, so a capability
+  It resolved every `cross_references` and `merged_from` entry against finding ids, so a capability
   that cross-referenced another capability (the form `capability.schema.json`
   requires) was reported `cross_reference <id> not found`. That failed the
   whole-run check and halted the gauntlet before synthesis. `cross_references` and
   `merged_from` now resolve against the ids of the record's own kind, including
   merged capability ids (`cap-merged-*`, from
-  `40-synthesis/deduped-capabilities.yaml`) after synthesis. Those merged ids also
-  resolve now in the asset-graph `mitigated_by_capability` edge check and the
+  `40-synthesis/deduped-capabilities.yaml`) after synthesis. Every id in that file
+  now also resolves in the asset-graph `mitigated_by_capability` edge check and the
   `contradictions.yaml` `capability_id` check. Every whole-run check that reads
   `deduped-findings.yaml` or `deduped-capabilities.yaml` (the `cross_references` /
   `merged_from` check and the `report-data.yaml` and `domain-improvements.yaml`
-  checks) now reads a malformed one as holding no ids and reports the references
+  checks) now reads a malformed or unreadable one as holding no ids and reports the references
   left unresolved. Each of them used to crash on a malformed
   `deduped-findings.yaml`, and the `report-data.yaml` check on a malformed
   `deduped-capabilities.yaml` too. They all read the deduped files the same way
