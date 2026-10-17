@@ -7,6 +7,7 @@ Repairs ONLY what is derivable / structural:
     unwrap, per-record ``schema_version``
   - deterministic IDs (tooling-authoritative; overwrites whatever agents wrote)
   - ``cross_references`` rewritten through the global old->new id map
+  - missing ``00-context`` ids (see below)
 
 Does NOT edit semantic content (titles, excerpts, evidence). A file is rewritten
 only when it contains at least one IN-SCOPE record — one whose ``agent`` maps to
@@ -23,6 +24,17 @@ It DOES mint ids for:
     ``threat_model_evaluator``) — records that carry a ``tmeval_key`` are
     in-scope and receive a deterministic ``tmeval-<sha8>`` id (computed from the
     structured key, not title|locator); records without one are skipped.
+
+It also fills the ``00-context`` ids agents no longer emit, but unlike the ids
+above they are minted ONLY WHEN ABSENT and an existing one is never rewritten
+(findings, ``c4-recon.yaml`` and tmeval keys may already cite it; runs from before
+1.7.1 carry hand-assigned ids that do not match the hash):
+  - ``code-evidence-index.yaml`` — ``id`` (``cev-<sha8>``) on each entry;
+  - ``threat-model-normalized.yaml`` and ``threat-model-supplied-normalized.yaml``
+    — ``entry_id`` (``tm-<sha8>``) on each entry, and ``inferred_apd_goals`` (from
+    the STRIDE/LINDDUN letter) when the agent authored none.
+A context file is rewritten only when a field was filled; one that does not parse
+is left untouched and reported in ``parse_errors`` / ``context_parse_errors``.
 """
 from __future__ import annotations
 
@@ -35,16 +47,27 @@ import yaml
 from .linters import (
     _PREFIX_BY_AGENT,
     compute_capability_id,
+    compute_cev_id,
     compute_id,
     compute_improvement_id,
+    compute_tm_entry_id,
     compute_tmeval_id,
 )
-from .validate import extract_records
+from .threat_model.mappings import linddun_letter_to_apd_goals, stride_letter_to_apd_goals
+from .validate import CODE_EVIDENCE_INDEX_FILENAME, extract_records
 
 # (singular root key, glob) per record kind. Mirrors validate.RECORD_KINDS.
 _KINDS: tuple[tuple[str, str], ...] = (
     ("finding", "*.findings.yaml"),
     ("capability", "*.capabilities.yaml"),
+)
+
+# The normalized threat-model files in 00-context/ whose entries get an ``entry_id``
+# and ``inferred_apd_goals``: the authored baseline and the recon-parsed supplied
+# sibling (both validate against threat-model-normalized.schema.json).
+THREAT_MODEL_CONTEXT_FILES = (
+    "threat-model-normalized.yaml",
+    "threat-model-supplied-normalized.yaml",
 )
 
 # Taxonomy sub-keys allowed UNDER ``control_mappings`` per record kind. Mirrors
@@ -125,6 +148,12 @@ class CanonicalizeResult:
     # their YAML could not be loaded. A single malformed file no longer aborts
     # the whole pass; it is skipped, recorded here, and surfaced to the caller.
     parse_errors: list[tuple[str, str]] = field(default_factory=list)
+    # Context ids minted (``cev-`` / ``tm-``): a count of ids, not of files. Filling
+    # only ``inferred_apd_goals`` on an entry that already has its id counts none.
+    context_ids_minted: int = 0
+    # Run-relative paths of the 00-context files that did not parse (a subset of
+    # ``parse_errors``): left untouched and skipped while the pass went on.
+    context_parse_errors: list[str] = field(default_factory=list)
 
 
 def _first_locator(record: dict[str, Any]) -> str | None:
@@ -269,6 +298,129 @@ def _mint_dimpr_ids(run_dir: Path) -> int:
     return changed
 
 
+def _load_context_doc(
+    path: Path, parse_errors: list[tuple[str, str]] | None
+) -> dict[str, Any] | None:
+    """Load one 00-context YAML file; ``None`` when it is absent, is not a mapping, or
+    does not parse (the failure is then appended to ``parse_errors``, never raised)."""
+    if not path.is_file():
+        return None
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as exc:
+        if parse_errors is not None:
+            parse_errors.append((str(path), str(exc)))
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
+def _write_context_doc(path: Path, doc: dict[str, Any]) -> None:
+    path.write_text(
+        yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=4096),
+        encoding="utf-8",
+    )
+
+
+def _id_first(entry: dict[str, Any], key: str, value: str) -> dict[str, Any]:
+    """``entry`` with ``key`` set to ``value`` and moved to the front."""
+    return {key: value, **{k: v for k, v in entry.items() if k != key}}
+
+
+def _nonempty_str(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _mint_code_evidence_ids(
+    run_dir: Path, parse_errors: list[tuple[str, str]] | None = None
+) -> int:
+    """Mint ``cev-<sha8>`` for each code-evidence-index entry that has no ``id``.
+
+    The id is the entry's first key. It is repo-qualified only when the index
+    declares top-level ``repos`` and the entry names its ``repo``. An existing id
+    is never rewritten, and an entry lacking ``qualified_name`` or ``line_range`` is
+    left for the schema to flag. The file is rewritten only when an id was minted.
+    No-op when the file is absent. Returns the number of ids minted."""
+    path = run_dir / "00-context" / CODE_EVIDENCE_INDEX_FILENAME
+    doc = _load_context_doc(path, parse_errors)
+    if doc is None:
+        return 0
+    index = doc.get("code_evidence_index")
+    entries = index.get("entries") if isinstance(index, dict) else None
+    if not isinstance(index, dict) or not isinstance(entries, list):
+        return 0
+    multi_repo = bool(index.get("repos"))
+    minted = 0
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or entry.get("id"):
+            continue
+        name = _nonempty_str(entry.get("qualified_name"))
+        line_range = _nonempty_str(entry.get("line_range"))
+        if name is None or line_range is None:
+            continue
+        repo = _nonempty_str(entry.get("repo")) if multi_repo else None
+        entries[i] = _id_first(entry, "id", compute_cev_id(name, line_range, repo=repo))
+        minted += 1
+    if minted:
+        _write_context_doc(path, doc)
+    return minted
+
+
+def _inferred_apd_goals(entry: dict[str, Any]) -> list[str]:
+    """Fallback APD goals for a normalized-TM entry: from its ``stride_letter``, else its
+    ``linddun_letter``, else ``[]``. Only the letter mapping is derivable; attack-tree,
+    MAESTRO and free-form entries and domain overrides are authored by the agent, and
+    callers use this only when the entry has no ``inferred_apd_goals``."""
+    refs = entry.get("framework_refs")
+    refs = refs if isinstance(refs, dict) else {}
+    stride = _nonempty_str(refs.get("stride_letter"))
+    linddun = _nonempty_str(refs.get("linddun_letter"))
+    goals = stride_letter_to_apd_goals(stride) if stride else []
+    if not goals and linddun:
+        goals = linddun_letter_to_apd_goals(linddun)
+    return goals
+
+
+def _mint_threat_model_ids(
+    run_dir: Path, parse_errors: list[tuple[str, str]] | None = None
+) -> int:
+    """Mint ``tm-<sha8>`` ``entry_id`` and fill an absent ``inferred_apd_goals`` on each
+    entry of ``THREAT_MODEL_CONTEXT_FILES``.
+
+    ``entry_id`` is the entry's first key and hashes ``asset + threat +
+    source_locator`` (an absent ``source_locator`` hashes as ``""``); an entry
+    without an ``asset`` or ``threat`` is left for the schema to flag. An existing
+    ``entry_id`` or ``inferred_apd_goals`` (even ``[]``) is never rewritten. A file is
+    rewritten only when a field was filled. Returns the number of ids minted
+    (goals filled are not counted)."""
+    minted = 0
+    for filename in THREAT_MODEL_CONTEXT_FILES:
+        path = run_dir / "00-context" / filename
+        doc = _load_context_doc(path, parse_errors)
+        entries = doc.get("entries") if doc is not None else None
+        if doc is None or not isinstance(entries, list):
+            continue
+        changed = False
+        for i, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                continue
+            asset = _nonempty_str(entry.get("asset"))
+            threat = _nonempty_str(entry.get("threat"))
+            if not entry.get("entry_id") and asset is not None and threat is not None:
+                locator = entry.get("source_locator")
+                entry = entries[i] = _id_first(
+                    entry, "entry_id",
+                    compute_tm_entry_id(asset, threat, locator if isinstance(locator, str) else ""),
+                )
+                minted += 1
+                changed = True
+            if entry.get("inferred_apd_goals") is None:
+                entry["inferred_apd_goals"] = _inferred_apd_goals(entry)
+                changed = True
+        if changed:
+            _write_context_doc(path, doc)
+    return minted
+
+
 def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
     """Canonicalize every in-scope lens file under ``run_dir`` in place."""
     id_map: dict[str, str] = {}
@@ -276,6 +428,13 @@ def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
     pending: list[tuple[Path, str, list[dict[str, Any]]]] = []
     records_canonicalized = 0
     parse_errors: list[tuple[str, str]] = []
+
+    # Pass 0 — 00-context: fill the ids agents no longer emit (only when absent).
+    # An unparseable context file is left untouched and recorded, as in Pass 1.
+    context_errors: list[tuple[str, str]] = []
+    context_ids_minted = _mint_code_evidence_ids(run_dir, context_errors)
+    context_ids_minted += _mint_threat_model_ids(run_dir, context_errors)
+    parse_errors.extend(context_errors)
 
     # Pass 1 — global: recompute ids file-by-file (deterministic file order).
     # A single unparseable/unreadable file must NOT abort the whole pass: skip
@@ -307,4 +466,12 @@ def canonicalize_run(run_dir: Path) -> CanonicalizeResult:
 
     records_canonicalized += _mint_dimpr_ids(run_dir)
 
-    return CanonicalizeResult(records_canonicalized, cross_refs_rewritten, parse_errors)
+    return CanonicalizeResult(
+        records_canonicalized,
+        cross_refs_rewritten,
+        parse_errors,
+        context_ids_minted=context_ids_minted,
+        context_parse_errors=[
+            Path(path).relative_to(run_dir).as_posix() for path, _msg in context_errors
+        ],
+    )

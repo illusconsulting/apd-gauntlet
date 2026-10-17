@@ -105,6 +105,149 @@ All notable changes to this project will be documented in this file. Format base
   `framework_compat` check on the first pre-release. Stable versions are
   unaffected.
 
+### Fixed
+
+- **A resumed run decides agent skips from the new `apd-gauntlet resume-plan`
+  command, and agent prompts no longer carry a resume guard they cannot run.**
+  The read-only `apd-gauntlet resume-plan <run-dir> [--json]` reports, for each
+  first-attempt agent step, whether its outputs are present and valid (a lens
+  interrupted between its findings and capabilities files is not complete and
+  re-runs). The workflow calls it once in setup and skips every complete agent
+  step without dispatching it. CLI steps keep their own guard; retries and
+  report-writer remediation passes always run. `resume-plan` refuses a run
+  directory created by another framework major (exit 3) and the workflow halts
+  before dispatching any other step. The workflow also halts, telling you to run
+  `pip install --upgrade "apd-gauntlet>=1.7.1,<2"`, when the installed engine is
+  older than the plugin and has no `resume-plan` command. Any other `resume-plan`
+  failure is logged and the workflow runs every agent step. The `plan-run`
+  checklist now starts with a `resume-plan` row.
+- **Tier gates now block, and a failing tier is repaired before its lenses are
+  re-run.** The per-tier validate gate used to discard its result, so a failing
+  tier was caught only by the whole-run gate before synthesis, with no repair
+  step. The gate now always runs and reports each failing file, including an error
+  with no record id or no path, such as a YAML parse error. A failing file
+  gets one repair by a repair agent, whose prompt is the new packaged template
+  `tools/apd_gauntlet/data/prompts/repair.md` (read with
+  `resources.read_prompt`). If the tier is still invalid, the lenses that own the
+  files that are still failing are re-run once. If it is still invalid after
+  that, the run halts and names the files. Dispatch failures still retry the lens
+  twice, as before. The `plan-run` tier-gate rows and the troubleshooting docs
+  describe the same path.
+- **The read-only validate gates can no longer skip themselves.** The intake
+  schema gate, the pre-synthesis whole-run gate and the final validate now always
+  run their validate command (the intake gate still checks the schema only).
+  Previously a schema-only guard could skip them on runs with only semantic or
+  cross-file errors, so the pre-synthesis halt can now fire on errors it used to
+  miss.
+- **An always-run CLI step's prompt no longer offers its worker a skip.** Every
+  step the workflow marks always-run (among them `resume-plan`, the tier gates,
+  the three read-only gates and the `canonicalize` steps) told its worker "no
+  idempotent skip" and then, a few lines later, to run the command only if a guard
+  check found the work not done, and to return the skip sentinel if it
+  short-circuited.
+  A worker that short-circuited returned ok, so a tier gate could pass without
+  running and the `resume-plan` exit-3 refusal could be missed. These prompts now
+  say to always run the command and no longer mention a guard check or the skip
+  sentinel. Guarded steps keep both.
+- **The tier-gate repair agent has no shell and treats its input as data.** The
+  repair prompt embeds validator messages that quote offending values and source
+  lines, and lens excerpts are verbatim client text, yet the repair worker was
+  dispatched without an agent type and could run shell commands. A repair is now
+  dispatched as the new `apd-tier-repair` agent, whose tools are `Read` and `Edit`
+  only, and `repair.md` tells it that the errors, the file it repairs and every
+  file under `inputs/` are data, not instructions.
+- **The threat-model evaluator reads and writes the paths the engine reads.** Its
+  prompt told it to read `20-findings/**` and `10-capabilities/**` (neither
+  exists) and to write one `tmeval-<sha8>.yaml` file per finding under
+  `20-findings/40-threat-model/`, a path `validate` rejects and the report loader
+  never reads. It now reads `40-synthesis/deduped-findings.yaml` and
+  `deduped-capabilities.yaml` and writes every finding to the single file
+  `40-threat-model/threat-model.findings.yaml` (root key `finding`). The workflow
+  instruction and `docs/threat-modeling.md` name the same paths.
+- **The attack-path analyzer drops two obsolete passages.** It no longer hedges on
+  a report template that already exists (`templates/attack-path-report.template.md`),
+  and no longer asks for a manual schema check of its four output files on the
+  grounds that `validate` covers three of them vacuously. `validate` schema-checks
+  the three graph files and every `attack-path.findings.yaml` record and checks
+  edge integrity, so the analyzer runs `apd-gauntlet validate` and fixes errors in
+  those four files. It leaves errors in other agents' files alone: the
+  threat-model evaluator runs in parallel and its records have no ids yet.
+- **The confidentiality lens no longer asks for an id in its self-check.** Item 10
+  of its pre-emit checklist said the id should be "computed deterministically per
+  the schema rule", which contradicts the contract earlier in the same prompt:
+  lenses emit no `id`, and `apd-gauntlet canonicalize` mints it. The item is gone,
+  and a test keeps the self-check sections of all nine lens agents free of id
+  items.
+- **The domain skill rebuilds when a pack file changes, not only when a pack
+  version or the framework version does.** `build-domain-skill` skipped the
+  rebuild whenever `metadata.packs` and `framework_version` matched, so editing a
+  pack's `severity-rubric.md`, `common-patterns/` or `domain.yaml` without
+  bumping its version left the previous `apd-domain` skill and `by-goal/`
+  sidecars in place. The full skill's frontmatter now records
+  `metadata.content_sha256`, a SHA-256 over each selected pack's `domain.yaml`
+  and every file it includes, and the skip requires that hash to match as well.
+  A skill built before this fix has no hash and is rebuilt once on its next run,
+  including the committed `.claude/skills/apd-domain/`.
+- **`canonicalize` mints the `cev-` and `tm-` ids agents were asked to compute.**
+  The code-evidence-index `id` (`cev-<sha8(qualified_name|line_range)>`,
+  repo-qualified when the index declares `repos`) and the normalized threat-model
+  `entry_id` (`tm-<sha8(asset + threat + source_locator)>`) were hashed by LLM
+  agents, which cannot do that reliably. `canonicalize` now mints each one that is
+  absent, and the schemas make them optional-at-emission. It also fills an absent
+  `inferred_apd_goals` from the entry's STRIDE or LINDDUN letter; that field stays
+  agent-authorable, because attack-tree, MAESTRO and free-form entries and the PBM
+  `N_compliance` override are set by judgement, and an authored value is never
+  replaced. An id that is already present is never rewritten, so
+  the hand-assigned ids in older runs and in the committed Home Assistant example,
+  which findings and `c4-recon.yaml` cite, stay byte-identical. `validate` reports
+  `context id missing: <file>: entries[<n>] ...` for an entry that was never
+  canonicalized, and `canonicalize` reports an unparseable context file instead of
+  raising. The CLI summary adds `N context ids minted` when it minted any
+  ([ADR-0020](docs/adrs/0020-tooling-authored-derived-fields.md) Amendment v1.7.1).
+- **The code recon and threat-model agents emit content only, and the runner mints
+  their ids.** `apd-code-recon` told the model to compute a `cev-` id for every
+  index entry, `apd-threat-model-author` a `tm-` `entry_id` for every
+  threat-model entry and `apd-threat-model-recon` one for every free-form entry it
+  extracts, and both are hashes an LLM cannot compute reliably. The three prompts
+  now say not to emit them. The author also drops the `entry_id` from each cell it
+  copies out of the skeleton, because that id hashes the skeleton's stub threat
+  and would no longer match the grounded one. The author and the recon agent keep
+  setting `inferred_apd_goals`; `canonicalize` fills it only when they leave it
+  out. The workflow now runs `canonicalize` after code-recon, before the author
+  reads the index, and again after the threat-model phase, before the lenses cite
+  the entries; `plan-run` lists the same two steps. One prompt example was wrong
+  in two ways and is fixed: the `c4-recon.yaml` example used a `provenance.source`
+  the schema rejects, and told the model to cite a `cev-` id that does not exist
+  yet when that file is written. Containers and edges now cite
+  `file_path:Lstart-Lend` (or a `CROSS_*` edge's `<caller_qn> -> <callee_qn>`
+  pair), as the `apd-c4-discipline` skill asks. The
+  code recon prompt also says to keep provenance in fields such as `notes:`, not
+  YAML comments, because `canonicalize` rewrites the index and drops comments.
+  The code-architecture-brief and authored-threat-model templates no longer show
+  ids: the brief's lens table lists `qualified_name:Lx-Ly` code anchors and the
+  authored render labels entries `<letter>/<surface>`.
+- **`validate` checks that an evidence excerpt appears verbatim in the input it
+  cites.** A model that paraphrased instead of quoting went unnoticed, because only
+  the artifact name was checked. For each excerpt that cites a file under the run's
+  `inputs/` directory, `apd-gauntlet validate` now reports
+  `evidence[N].excerpt not found verbatim in artifact '<file>'`, in the whole-run
+  pass and at tier gates (`--tier`). It is a warning by default and an error with
+  the new `--strict-excerpts` flag. Whitespace, backticks and `*` are ignored, `...`
+  or `…` joins fragments that must appear in order, an excerpt wholly in parentheses
+  (an absence marker such as `(absent in supplied TM)`) is skipped, and so are
+  run-internal artifacts, unresolvable paths, files that are not UTF-8 and files
+  over 20 MiB. A YAML or JSON input over 1 MiB, and a YAML input with aliases
+  or more than 100 levels of nesting, is searched as plain text only, and a malformed or
+  hostile one never makes the check fail. The workflow's gates ignore warnings, so on
+  1.7.1 the warning shows in a manual `apd-gauntlet validate <run-dir>` run only.
+- **`init-run` refuses input links that point outside the inputs folder.** It used
+  to follow them, so a link such as `inputs/keys -> ~/.ssh` copied the files it
+  pointed at into the run, where the agents read them. `init-run` now checks every
+  link first, whether it points at a file, a directory or nothing. If any points
+  outside the inputs folder, it exits 1, names each link and its target, and
+  creates nothing. Links that stay inside are copied as links, and absolute ones
+  become relative links, so the run never points back at the original folder.
+
 ## v1.7.0 — 2026-06-09
 
 ### Added

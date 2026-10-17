@@ -28,7 +28,8 @@
     "./.claude/agents/apd-synthesizer.md",
     "./.claude/agents/apd-threat-model-author.md",
     "./.claude/agents/apd-threat-model-evaluator.md",
-    "./.claude/agents/apd-threat-model-recon.md"
+    "./.claude/agents/apd-threat-model-recon.md",
+    "./.claude/agents/apd-tier-repair.md"
   ],
   "skills": [
     "./.claude/skills/apd-attack-path-discipline",

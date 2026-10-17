@@ -419,13 +419,10 @@ def test_canonicalize_pystep_uses_always_run() -> None:
 
 def test_canonicalize_precedes_tier_validate_gate() -> None:
     text = _text()
-    # inside runTier, the canonicalize pyStep must appear before the tier
-    # validate gate pyStep.
+    # inside runTier, the canonicalize pyStep must appear before the tier gate call.
     run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
     assert "pyStep('canonicalize'" in run_tier
-    assert run_tier.index("pyStep('canonicalize'") < run_tier.index(
-        "pyStep('validate'"
-    )
+    assert run_tier.index("pyStep('canonicalize'") < run_tier.index("tierGate(")
 
 
 # ---------------------------------------------------------------------------
@@ -1295,3 +1292,319 @@ def test_c4_short_edge_label_helper_present():
         REPO / "tools" / "apd_gauntlet" / "data" / "report-template" / "app.js"
     ).read_text(encoding="utf-8")
     assert "c4ShortEdgeLabel" in bundle
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 2 — the runner resumes from `apd-gauntlet resume-plan`; agent (llmStep)
+# prompts carry no idempotency-guard text. pyStep prompts keep their guard.
+# ---------------------------------------------------------------------------
+
+LENSES = {"confidentiality", "integrity", "availability", "distributed", "resilient",
+          "ephemeral", "authenticity", "non-repudiation", "immutability"}
+
+
+def _fn_body(text: str, name: str) -> str:
+    return text.split(f"function {name}(", 1)[1].split("\nfunction ", 1)[0]
+
+
+def _llmstep_calls(text: str) -> list[str]:
+    # The comma requirement skips the header comment's "llmStep('apd-threat-model-author')";
+    # on today's file this yields the 15 real call sites.
+    return re.findall(r"llmStep\('[^'\n]*'(?: \+ \w+)?,.*?\}\);", text, re.DOTALL)
+
+
+def test_llmstep_call_sites_are_all_found() -> None:
+    # Guards the regex above: if it silently matched fewer calls, the no-guard-options
+    # test would pass vacuously.
+    assert len(_llmstep_calls(_text())) == 15
+
+
+def test_llmstep_prompt_has_no_guard() -> None:
+    body = _fn_body(_text(), "llmStep")
+    assert "guard(" not in body and "IDEMPOTENCY" not in body
+
+
+def test_llmstep_skips_steps_resume_plan_marks_complete() -> None:
+    body = _fn_body(_text(), "llmStep")
+    assert "RESUME_DONE" in body and "'.skipped'" in body
+
+
+def test_llmstep_calls_carry_no_guard_options() -> None:
+    for call in _llmstep_calls(_text()):
+        assert "validateScope" not in call and "validateFlags" not in call, call[:80]
+
+
+def test_llmstep_calls_carry_no_outputs_option() -> None:
+    # The guard was the only reader of opts.outputs; the instructions name the outputs.
+    for call in _llmstep_calls(_text()):
+        assert not re.search(r"\boutputs:", call), call[:80]
+
+
+def test_resume_done_declared_next_to_run_dir() -> None:
+    t = _text()
+    assert "let RESUME_DONE = {};" in t
+    assert t.index("const runDir =") < t.index("let RESUME_DONE = {};") < t.index("function guard(")
+
+
+def test_resume_plan_is_first_setup_step() -> None:
+    t = _text()
+    assert t.index("phase('setup')") < t.index("pyStep('resume-plan'") < t.index(
+        "label: 'validate-scaffold'"
+    )
+
+
+def test_resume_plan_precedes_every_dispatch() -> None:  # Review Focus 1: halt before dispatch
+    t = _text()
+    before = t[t.index("phase('setup')"):t.index("pyStep('resume-plan'")]
+    code = "\n".join(ln for ln in before.splitlines() if not ln.lstrip().startswith("//"))
+    assert "pyStep(" not in code and "llmStep(" not in code and "agent(" not in code
+
+
+def test_resume_plan_refusal_halts_and_failure_falls_back() -> None:  # Review Focus 1 and 5
+    t = _text()
+    block = t[t.index("pyStep('resume-plan'"):t.index("label: 'validate-scaffold'")]
+    # exit 3: the run is from another framework major -> halt before any dispatch.
+    assert "/exit=3/" in block and "refusing to resume" in block
+    # click's "No such command": an older (1.7.0) engine -> halt, tell the user to upgrade.
+    assert "/No such command/" in block
+    assert "older than this plugin" in block and "upgrade apd-gauntlet to 1.7.1" in block
+    # the advice stays on the 1.x line (an unpinned upgrade resolves to 2.x after 2.0 GA),
+    # and only agent steps are undispatched: the resume-plan worker itself ran.
+    assert '`pip install --upgrade "apd-gauntlet>=1.7.1,<2"`' in block
+    assert "no agent step was dispatched" in block and "nothing was dispatched" not in block
+    # exactly those two branches throw; every other failure logs and runs every agent step.
+    assert block.count("throw new Error(") == 2
+    assert "resume-plan unavailable" in block and "running every agent step" in block
+
+
+def test_receipt_carries_resume_plan() -> None:
+    block = re.search(r"const RECEIPT\s*=.*?^\};", _text(), re.DOTALL | re.MULTILINE).group(0)
+    for key in ("resume_plan", "engine_version", "steps", "complete", "reason"):
+        assert key in block
+
+
+def test_receipt_resume_plan_mirrors_schema() -> None:
+    schema = json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8"))["properties"]["resume_plan"]
+    block = re.search(r"const RECEIPT\s*=.*?^\};", _text(), re.DOTALL | re.MULTILINE).group(0)
+    rp = block[block.index("resume_plan:"):]
+    assert "additionalProperties: false" in rp
+    assert set(re.findall(r"required: \[([^\]]*)\]", rp)) == {
+        "'engine_version', 'steps'", "'label', 'complete', 'reason'",
+    }
+    assert schema["required"] == ["engine_version", "steps"]
+    assert schema["properties"]["steps"]["items"]["required"] == ["label", "complete", "reason"]
+
+
+def test_pystep_lifts_resume_plan_json_verbatim() -> None:
+    body = _fn_body(_text(), "pyStep")
+    assert "opts.resumePlan" in body and "VERBATIM" in body
+
+
+def test_resumable_labels_match_workflow_llmstep_labels() -> None:
+    from apd_gauntlet.resume_plan import RESUMABLE_STEPS
+
+    quoted = {m for c in _llmstep_calls(_text()) for m in re.findall(r"label:\s*'([^']+)'", c)}
+    first = {lb for lb in quoted if "retry" not in lb and "build-fix" not in lb
+             and not lb.endswith("-")}
+    assert {s.label for s in RESUMABLE_STEPS} == first | LENSES
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 3 — tier gates block: one repair per failing file, then one lens re-run,
+# then a halt that names the files. The repair prompt ships as a packaged template.
+# ---------------------------------------------------------------------------
+
+
+def test_repair_template_embedded_verbatim() -> None:
+    from apd_gauntlet.resources import read_prompt
+
+    js = _text()
+    assert [ln for ln in read_prompt("repair").splitlines() if ln and f"'{ln}'" not in js] == []
+
+
+def test_tier_gate_always_runs_and_reports_json_errors() -> None:
+    body = _fn_body(_text(), "tierGate")
+    assert "pyStep('validate'" in body and "alwaysRun: true" in body
+    assert "errorsFromJson: true" in body and "' --json'" in body
+
+
+def test_run_tier_repairs_before_rerunning_lens() -> None:
+    assert "repairTierGate(phaseName, tierDir, lenses, gate)" in _fn_body(_text(), "runTier")
+    rep = _fn_body(_text(), "repairTierGate")
+    assert rep.index("agent(repairPrompt(") < rep.index("'-after-repair'") < rep.index("'-rerun'")
+
+
+def test_tier_gate_halts_when_repair_and_rerun_fail() -> None:
+    rep = _fn_body(_text(), "repairTierGate")
+    assert rep.count("throw new Error(") >= 2
+    assert "after repair and lens re-run" in rep and "no attributable file" in rep
+
+
+def test_pystep_maps_validate_json_errors() -> None:
+    body = _fn_body(_text(), "pyStep")
+    assert "opts.errorsFromJson" in body and "at most 50" in body
+    # A YAML parse error has id null and path "": the worker keeps the entry, because an
+    # empty error list halts the run with "no attributable file" instead of repairing it.
+    assert "(when id is null or path is empty, leave that part out of the message; " in body
+    assert "never drop an entry)" in body
+    assert "leave out an empty or null" not in body
+
+
+def test_gate_helpers_are_defined_before_run_tier() -> None:
+    # Every helper the repair path calls must be a declaration the file defines, ahead of
+    # runTier, so a call to an undefined name cannot ship.
+    t = _text()
+    for name in ("baseName", "errorText", "failingFiles", "lensesOf", "repairPrompt",
+                 "tierGate", "regate", "repairTierGate"):
+        assert f"function {name}(" in t, name
+        assert t.index(f"function {name}(") < t.index("function runTier("), name
+    assert t.index("const REPAIR_TEMPLATE") < t.index("function runTier(")
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 4 — the read-only validate gates always run the command. The guard runs only
+# `validate --schema-only`, so a run with only semantic or cross-file errors made these
+# gates return a skip receipt.
+# ---------------------------------------------------------------------------
+
+READ_ONLY_GATES = ("intake-schema-gate", "validate-full-prephase5", "validate-final")
+
+
+def test_read_only_gates_always_run() -> None:
+    t = _text()
+    for label in READ_ONLY_GATES:
+        at = t.index(f"label: '{label}'")
+        block = t[t.rindex("pyStep('validate'", 0, at):t.index("});", at)]
+        assert "alwaysRun: true" in block, label
+        assert "validateScope" not in block and "validateFlags" not in block, label
+
+
+def test_tmeval_instruction_names_canonical_inputs_and_output() -> None:
+    match = re.search(r"llmStep\('apd-threat-model-evaluator'.*?\}\);", _text(), re.DOTALL)
+    assert match is not None
+    call = match.group(0)
+    for path in (
+        "40-synthesis/deduped-findings.yaml",
+        "40-synthesis/deduped-capabilities.yaml",
+        "40-threat-model/threat-model.findings.yaml",
+        "40-synthesis/threat-model-coverage.yaml",
+    ):
+        assert path in call
+
+
+# ---------------------------------------------------------------------------
+# WS1 Task 10 — context ids are minted by canonicalize before their consumers read them.
+# ---------------------------------------------------------------------------
+
+
+def test_context_ids_minted_before_their_consumers() -> None:
+    t = _text()
+    assert (
+        t.index("llmStep('apd-code-recon'")
+        < t.index("label: 'canonicalize-code-evidence'")
+        < t.index("phase('threat-model-author')")
+    )
+    assert (
+        t.index("phase('tm-recon')")
+        < t.index("label: 'canonicalize-threat-model'")
+        < t.index("function runTier")
+    )
+
+
+def _canonicalize_block(t: str, label: str) -> str:
+    at = t.index(f"label: '{label}'")
+    return t[t.rindex("pyStep('canonicalize'", 0, at):t.index("});", at)]
+
+
+def test_context_canonicalize_steps_always_run_in_the_canonicalize_phase() -> None:
+    t = _text()
+    for label in ("canonicalize-code-evidence", "canonicalize-threat-model"):
+        block = _canonicalize_block(t, label)
+        assert "alwaysRun: true" in block and "phase: 'canonicalize'" in block, label
+
+
+def test_code_evidence_canonicalize_sits_inside_the_code_recon_branch_after_the_halt() -> None:
+    t = _text()
+    halt = t.index("throw new Error('Phase 1.5 code-recon failed")
+    mint = t.index("label: 'canonicalize-code-evidence'")
+    assert halt < mint < t.index("log('code-recon: disabled")
+
+
+# ---------------------------------------------------------------------------
+# WS1 final review — an always-run pyStep prompt has no guard, no sentinel and no skip.
+# ---------------------------------------------------------------------------
+
+
+def _render_pystep_prompts(tmp_path: pathlib.Path, calls: list[tuple[str, dict]]) -> list[str]:
+    """Run the runner's real guard() and pyStep() under node with a stub agent() and
+    return the prompt each call dispatches. Skipped where node is absent (GitHub-hosted
+    runners ship node, so CI enforces it)."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not available")
+    t = _text()
+    fns = "\n".join(f"function {name}(" + _fn_body(t, name) for name in ("guard", "pyStep"))
+    script = (
+        "const runDir = 'runs/r1';\nconst RECEIPT = {};\nconst captured = [];\n"
+        "function agent(prompt, opts) { captured.push(prompt); return { status: 'ok' }; }\n"
+        + fns + "\n"
+        + "\n".join(f"pyStep({json.dumps(cmd)}, {json.dumps(opts)});" for cmd, opts in calls)
+        + "\nconsole.log(JSON.stringify(captured));\n"
+    )
+    path = tmp_path / "pystep_prompts.js"
+    path.write_text(script, encoding="utf-8")
+    proc = subprocess.run([node, str(path)], capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_always_run_pystep_prompt_offers_no_skip(tmp_path: pathlib.Path) -> None:
+    always, guarded = _render_pystep_prompts(tmp_path, [
+        ("validate", {"alwaysRun": True, "errorsFromJson": True,
+                      "cliArgs": "--tier 10-trustworthiness --json"}),
+        ("validate", {"validateScope": "runs/r1", "outputs": "the scaffold"}),
+    ])
+    assert "Always run this command; this step has no idempotency check and no skip." in always
+    assert "WORK COMMAND \u2014 via Bash, run:" in always
+    assert "apd-gauntlet validate runs/r1 --tier 10-trustworthiness --json" in always
+    for phrase in ("GUARD CHECK", "short-circuited", "IDEMPOTENCY GUARD", "NOT-DONE",
+                   ".skipped", "skip sentinel", "setup"):
+        assert phrase not in always, phrase
+    # A guarded step keeps the guard, the NOT-DONE condition and the sentinel clause.
+    for phrase in ("IDEMPOTENCY GUARD", "GUARD CHECK", "NOT-DONE", "short-circuited"):
+        assert phrase in guarded, phrase
+    assert "Always run this command" not in guarded
+
+
+def test_always_run_prompt_keeps_the_gate_error_contract(tmp_path: pathlib.Path) -> None:
+    (always,) = _render_pystep_prompts(tmp_path, [
+        ("validate", {"alwaysRun": True, "errorsFromJson": True, "cliArgs": "--json"}),
+    ])
+    assert "never drop an entry" in always and "at most 50 entries" in always
+
+
+def test_pystep_always_run_branch_is_pinned_in_the_source() -> None:
+    # The node test above is skipped where node is absent; this keeps the wording pinned.
+    t = _text()
+    body = _fn_body(t, "pyStep")
+    assert "'Always run this command; this step has no idempotency check and no skip.'" in body
+    assert "'WORK COMMAND \u2014 via Bash, run:'" in body
+    assert "NO IDEMPOTENT SKIP" not in t
+    # The skip sentinel clause and the GUARD CHECK wording sit on the guarded side only.
+    assert body.count("short-circuited") == 1 and body.count("GUARD CHECK") == 1
+    assert body.index("opts.alwaysRun") < body.index("short-circuited")
+
+
+def test_skip_convention_comment_describes_the_pystep_sentinel() -> None:
+    t = _text()
+    comment = t[t.index("// SKIP CONVENTION"):t.index("export const meta")]
+    # guard() asks for one outputs entry per expected output plus the sentinel.
+    assert "one output entry per expected output" in comment
+    assert "{path:'<phase>.skipped', schema_valid:true}" in comment
+    assert "An alwaysRun pyStep has\n// no skip at all" in comment
+    assert "returns the same\n// sentinel form" not in comment

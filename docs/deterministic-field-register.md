@@ -25,6 +25,8 @@ that recomputes and flags drift. Agents never author these.
 | `asset-*` (inventory assets) | `linters.compute_asset_id` via `assemble_inventory.assemble_inventory` | `name \| provenance.locator` | inventory cross-ref pass in `validate` | emits NO `asset_id`; authors `crosses` by name |
 | `idn-*` (inventory identities) | `linters.compute_identity_id` via `assemble_inventory.assemble_inventory` | `name \| provenance.locator` | schema pattern (post-assembly) | emits NO `identity_id` |
 | `tb-*` (inventory trust boundaries) | `linters.compute_boundary_id` via `assemble_inventory.assemble_inventory` | `name \| provenance.locator` | schema pattern (post-assembly) | emits NO `boundary_id` |
+| `cev-*` (code-evidence index entries) | `linters.compute_cev_id` via `canonicalize._mint_code_evidence_ids` | `qualified_name \| line_range` (repo-qualified, `repo \| qualified_name \| line_range`, in multi-repo indexes); minted only when absent; an existing id is never rewritten | `validate._validate_context_ids` | emits NO `id` |
+| `tm-*` (normalized threat-model entries) | `linters.compute_tm_entry_id` via `canonicalize._mint_threat_model_ids`; the same pass fills an absent `inferred_apd_goals` from `framework_refs` | `asset + threat + source_locator` (no separator); minted only when absent; an existing id is never rewritten; the deterministic parsers keep their own pipe-joined variant | `validate._validate_context_ids` | emits NO `entry_id`; `inferred_apd_goals` stays agent-authored for attack-tree, MAESTRO and free-form entries and for the PBM N_compliance override, and `canonicalize` fills it from `stride_letter` / `linddun_letter` only when absent |
 | `apath-*` (attack-path analyzer) | `attack_path/findings.py` (Python emitter) | `sha8(path_id)` | emitter is deterministic | n/a — emitted by the deterministic analyzer floor |
 | `merged-*` (dedup) | `synthesis/apply.py` (apply-clusters) | cluster membership | apply-clusters is deterministic | n/a — minted by the synthesizer apply step |
 
@@ -49,6 +51,9 @@ their IDs:
 - **intake phase** — `assemble-inventory` after intake emits and before the
   `00-context` schema-gate (so the gate sees the canonical, id-bearing form), and
   well before specialists cite inventory IDs.
+- **after code-recon and after the threat-model phase** — `canonicalize` mints the
+  `cev-` ids of the code-evidence index and the `tm-` entry ids of the normalized
+  threat models, before the threat-model author and the lenses cite them.
 - **per tier** — `canonicalize` after the tier's specialists and before the tier
   validate gate.
 - **after the tmeval/apath barrier** — `canonicalize` before `rollup` (which

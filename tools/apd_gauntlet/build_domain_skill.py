@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime
+import hashlib
 import pathlib
 import re
 from collections.abc import Iterable
@@ -36,6 +37,18 @@ def _goal_name(stem: str) -> str:
     return stem.replace("-", "_")
 
 
+def _iter_included_paths(
+    metas: list[tuple[str, dict[str, Any], pathlib.Path]],
+) -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
+    """Yield ``(pack_name, rel_path, path)`` for every file a pack includes, in the
+    declared pack / include-glob / sorted-match order. The single source of that
+    order, shared by the rendered skill and the content hash."""
+    for name, meta, pack_dir in metas:
+        for include_glob in meta["includes"]:
+            for f in sorted(pack_dir.glob(include_glob)):
+                yield name, f.relative_to(pack_dir), f
+
+
 def _iter_pack_files(
     metas: list[tuple[str, dict[str, Any], pathlib.Path]],
 ) -> Iterable[tuple[str, str, str | None, str, str]]:
@@ -47,14 +60,11 @@ def _iter_pack_files(
     header/body match the full-skill rendering byte-for-byte so the full build is
     unchanged and the per-goal sidecars reuse the same chunks.
     """
-    for name, meta, pack_dir in metas:
-        for include_glob in meta["includes"]:
-            for f in sorted(pack_dir.glob(include_glob)):
-                rel = f.relative_to(pack_dir)
-                goal_stem = rel.stem if rel.parent.name == "common-patterns" else None
-                header = f"\n\n## Domain: {name} — Source: `{rel}`\n\n"
-                body = f.read_text(encoding="utf-8").rstrip()
-                yield name, str(rel), goal_stem, header, body
+    for name, rel, f in _iter_included_paths(metas):
+        goal_stem = rel.stem if rel.parent.name == "common-patterns" else None
+        header = f"\n\n## Domain: {name} — Source: `{rel}`\n\n"
+        body = f.read_text(encoding="utf-8").rstrip()
+        yield name, str(rel), goal_stem, header, body
 
 
 def _parse_semver_range(spec: str) -> tuple[SemverTuple | None, SemverTuple | None]:
@@ -141,11 +151,35 @@ def _render_surfaces_section(merged: dict[str, list[dict[str, Any]]]) -> str:
     return "".join(parts)
 
 
+def _pack_content_sha256(metas: list[tuple[str, dict[str, Any], pathlib.Path]]) -> str:
+    """SHA-256 hex over the bytes the skill is built from, so an edit to any pack file
+    changes the digest even when no pack ``version`` was bumped.
+
+    Per pack in declared order: its ``domain.yaml``, then every included file in
+    :func:`_iter_included_paths` order. Each file contributes
+    ``f"{name}\\0{rel}\\0"`` (``rel`` POSIX-style), its raw bytes and ``b"\\0"``.
+    """
+    digest = hashlib.sha256()
+
+    def feed(name: str, rel: str, path: pathlib.Path) -> None:
+        digest.update(f"{name}\0{rel}\0".encode())
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+
+    for pack in metas:
+        name, _, pack_dir = pack
+        feed(name, "domain.yaml", pack_dir / "domain.yaml")
+        for _, rel, path in _iter_included_paths([pack]):
+            feed(name, rel.as_posix(), path)
+    return digest.hexdigest()
+
+
 def _existing_pack_signature(
     out_path: pathlib.Path,
-) -> tuple[list[tuple[str, str]], str | None] | None:
-    """Return ([(name, version), ...], framework_version) from an existing skill's
-    frontmatter, or None when absent/unparseable."""
+) -> tuple[list[tuple[str, str]], str | None, str | None] | None:
+    """Return ([(name, version), ...], framework_version, content_sha256) from an
+    existing skill's frontmatter, or None when absent/unparseable. A skill built
+    before the content hash existed yields ``content_sha256 = None``."""
     if not out_path.exists():
         return None
     text = out_path.read_text(encoding="utf-8")
@@ -162,7 +196,12 @@ def _existing_pack_signature(
     packs: list[tuple[str, str]] = [
         (str(p["name"]), str(p["version"])) for p in meta.get("packs", []) or []
     ]
-    return (packs, meta.get("framework_version"))
+    content_sha256 = meta.get("content_sha256")
+    return (
+        packs,
+        meta.get("framework_version"),
+        None if content_sha256 is None else str(content_sha256),
+    )
 
 
 def _finalize(text: str) -> str:
@@ -274,10 +313,14 @@ def build_domain_skill(
 
     # Idempotency: skip the rebuild only when the full skill is current AND every
     # expected sidecar already exists (else a stale/partial by-goal/ would persist).
+    # "Current" means the same pack set, framework version AND pack content: a pack
+    # file edited without a version bump must still rebuild.
+    content_hash = _pack_content_sha256(metas)
     sidecars_ok = (not emit_sidecars) or all(
         (by_goal_dir / f"{s}.md").exists() for s in present_goal_stems
     )
-    if _existing_pack_signature(out_path) == (requested, framework_version) and sidecars_ok:
+    signature = (requested, framework_version, content_hash)
+    if _existing_pack_signature(out_path) == signature and sidecars_ok:
         return out_path
 
     surfaces = _render_surfaces_section(_merge_surfaces([(n, m) for (n, m, _) in metas]))
@@ -299,6 +342,7 @@ def build_domain_skill(
         f"{_packs_yaml(metas)}"
         f"{taxonomies_yaml}"
         f"  framework_version: {framework_version}\n"
+        f"  content_sha256: {content_hash}\n"
         f"  generated: {timestamp}\n"
         "---\n"
     )

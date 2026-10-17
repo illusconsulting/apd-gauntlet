@@ -38,6 +38,8 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
     Gates honored (mirroring apd-gauntlet.js):
       - code-recon: present unless cfg["code_recon"] == "disabled".
       - tm-recon: only when cfg["threat_model"] is truthy.
+      - canonicalize (context ids): after code-recon (same condition) and after the
+        tm-recon block (always).
       - apath: only when cfg["crown_jewels"] is a non-empty list.
       - tmeval: ALWAYS (the always-on authored baseline TM always exists).
     """
@@ -45,7 +47,13 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
     domains = " ".join(cfg.get("domains") or [])
     plan: list[dict[str, str]] = []
 
-    # 1 — setup
+    # 1 — setup. The runner's FIRST call is resume-plan: a read-only map of which
+    # agent steps already have complete outputs. An operator driving the plan by hand
+    # runs it first and skips the AGENT rows it marks complete.
+    plan.append(
+        _step("setup", "CLI", f"resume-plan {run_dir} --json",
+              "step completion map (read-only); skip AGENT steps marked complete")
+    )
     plan.append(
         _step("setup", "CLI", f"build-domain-skill {domains}".rstrip(),
               ".claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)")
@@ -76,6 +84,11 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
                   "00-context/code-evidence-index.yaml "
                   "(multi-repo: per-repo passes + cross-repo edges when repos[] declared)")
         )
+        # 3b — canonicalize mints the cev- ids code-recon no longer emits
+        plan.append(
+            _step("canonicalize", "CLI", f"canonicalize {run_dir}",
+                  "cev- ids minted in 00-context/code-evidence-index.yaml")
+        )
 
     # 4 — threat-model-author (always-on)
     plan.append(
@@ -94,6 +107,14 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
                   "00-context/threat-model-supplied-normalized.yaml")
         )
 
+    # 5b — canonicalize mints the tm- entry ids the author and recon no longer emit
+    # (always: the authored baseline always exists)
+    plan.append(
+        _step("canonicalize", "CLI", f"canonicalize {run_dir}",
+              "tm- entry ids minted in 00-context/threat-model-normalized.yaml "
+              "(and threat-model-supplied-normalized.yaml when a TM was supplied)")
+    )
+
     # 6/7/8 — the three parallel lens tiers, each canonicalize + tier gate.
     for tier_dir, lenses in _TIERS:
         for lens in lenses:
@@ -108,7 +129,9 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         plan.append(
             _step(tier_dir, "CLI", f"validate {run_dir} --tier {tier_dir} --errors-only",
                   f"tier {tier_dir} records (read-only gate)",
-                  gate=f"validate {run_dir} --tier {tier_dir} --errors-only")
+                  gate=(f"validate {run_dir} --tier {tier_dir} --errors-only; on failure repair "
+                        "each failing file (tools/apd_gauntlet/data/prompts/repair.md), "
+                        "re-run the lens if repair fails, then halt"))
         )
 
     # 9 — full pre-Phase-5 cross-file gate

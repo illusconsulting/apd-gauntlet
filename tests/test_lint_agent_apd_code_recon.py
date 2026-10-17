@@ -6,6 +6,7 @@ disciplines it reads. These tests pin the structural invariants the assembler
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from typing import Any
 import yaml
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
+from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AGENT = REPO_ROOT / ".claude" / "agents" / "apd-code-recon.md"
@@ -86,3 +88,62 @@ def test_agent_lints_clean() -> None:
     result = runner.invoke(main, ["lint-agents", "--agent-dir", str(agent_dir)])
     assert result.exit_code == 0, result.output
     assert "apd-code-recon.md" in {p.name for p in agent_dir.glob("*.md")}
+
+
+def test_agent_emits_no_cev_ids() -> None:
+    text = AGENT.read_text()
+    assert "Do NOT emit `id`" in text and "cev-0a000001" not in text
+
+
+def test_brief_template_cites_code_locators_not_ids() -> None:
+    template = (REPO_ROOT / "templates/code-architecture-brief.template.md").read_text()
+    assert "cev-" not in template
+    assert "Code anchors (`qualified_name:Lx-Ly`)" in template
+
+
+def _section(start: str, end: str) -> str:
+    return AGENT.read_text().split(start, 1)[1].split(end, 1)[0]
+
+
+def _c4_recon_example() -> dict[str, Any]:
+    section = _section("### `c4-recon.yaml` shape", "### Emission discipline")
+    block = re.search(r"```yaml\n(.*?)\n```", section, re.DOTALL)
+    assert block is not None, "c4-recon.yaml shape has no yaml example"
+    doc = yaml.safe_load(block.group(1))
+    assert isinstance(doc, dict)
+    return doc
+
+
+def test_c4_section_cites_no_evidence_id_that_does_not_exist_yet() -> None:
+    # c4-recon.yaml is written before canonicalize mints the evidence index ids.
+    assert "cev-" not in _section("## C4 architecture emission", "### Step 7")
+
+
+def test_c4_recon_example_validates_against_the_schema() -> None:
+    schema = json.loads((REPO_ROOT / "schemas" / "c4-recon.schema.json").read_text())
+    errors = [e.message for e in Draft202012Validator(schema).iter_errors(_c4_recon_example())]
+    assert errors == []
+
+
+def test_c4_recon_example_edge_uses_the_hand_read_citation_format() -> None:
+    # apd-c4-discipline: a hand_read edge cites a concrete file_path:Lstart-Lend.
+    edge = _c4_recon_example()["uses_edges"][0]
+    assert edge["machine_extracted"] is False
+    assert edge["provenance"]["source"] == "code_evidence"
+    assert re.fullmatch(r"[^\s:]+:L\d+-L\d+", edge["provenance"]["locator"])
+
+
+def test_c4_edge_rule_names_both_grounded_citation_forms() -> None:
+    rules = _section("### Emission discipline", "### Tag the evidence index")
+    assert "file_path:Lstart-Lend" in rules and "<caller_qn> -> <callee_qn>" in rules
+
+
+def test_self_check_requires_entries_without_ids() -> None:
+    check = _section("## Self-check before exit", "## Final message")
+    assert "carry an `id`" in check and "apd-gauntlet canonicalize" in check
+
+
+def test_agent_records_provenance_in_fields_not_yaml_comments() -> None:
+    # canonicalize rewrites code-evidence-index.yaml and drops YAML comments.
+    shape = _section("### `code-evidence-index.yaml` structure", "## Process")
+    assert "drops YAML comments" in shape and "`notes:`" in shape

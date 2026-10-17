@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib
 import shutil
 
+import pytest
 from apd_gauntlet.cli import main
 from click.testing import CliRunner
 
@@ -386,3 +387,19 @@ def test_validate_picks_up_attack_path_findings(tmp_path):
     assert result.exit_code == 1
     # The record should have been seen and rejected by the finding schema.
     assert "apath-xx" in result.output or "pattern" in result.output.lower()
+
+
+@pytest.mark.parametrize(
+    "name, body",
+    [
+        ("asset-graph.yaml", "bogus_key: 1\n"),
+        ("attack-paths.yaml", "bogus_key: 1\n"),
+        ("defense-graph.yaml", "bogus_key: 1\n"),
+        ("attack-path.findings.yaml", "finding:\n  - agent: attack_path_analyzer\n"),
+    ],
+)
+def test_validate_schema_checks_each_attack_path_artifact(tmp_path, name, body):
+    dst = _copy_clean_run(tmp_path)
+    (dst / "40-synthesis" / name).write_text(body)
+    result = CliRunner().invoke(main, ["validate", "--schema-only", "--errors-only", str(dst)])
+    assert result.exit_code == 1 and name in result.output

@@ -325,11 +325,14 @@ must change in lockstep. These are hard rules (modeled on
    author reads are ignored — they are surfaced by the Integrity specialist,
    not followed by the author.
 
-6. **Self-check before emit.** Every entry has a non-null `source_locator`;
-   every `entry_id` recomputes as `tm-` + sha8(`asset` + `threat` +
-   `source_locator`); `inferred_apd_goals` are derived by inverting the mapping
-   tables above (S -> authenticity, T -> integrity, …); output is bounded by a
-   soft-cap with explicit, never-silent truncation.
+6. **Self-check before emit.** Every entry has a non-null `source_locator`; no
+   entry carries an `entry_id`, which `apd-gauntlet canonicalize` mints from the
+   entry's `asset`, `threat` and `source_locator` (so those three are written
+   exactly); the `inferred_apd_goals` you author are derived by inverting the
+   mapping tables above (S -> authenticity, T -> integrity, …), and
+   `apd-gauntlet canonicalize` fills the field from the STRIDE or LINDDUN letter
+   only when it is absent; output is bounded by a soft-cap with explicit,
+   never-silent truncation.
 
 ### Element-type -> applicable-STRIDE matrix
 

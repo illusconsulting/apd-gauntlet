@@ -4,7 +4,7 @@
 **Date:** 2026-06-13
 
 > ADR-0016 and -0018 are reserved for concurrent in-flight design changes and
-> may land after this one.
+> may land after this one. ADR-0016 and ADR-0018 were reserved and never used.
 
 ## Context
 

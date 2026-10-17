@@ -56,6 +56,28 @@
         "structural_failed": { "type": "integer", "minimum": 0 },
         "editorial_failed": { "type": "integer", "minimum": 0 }
       }
+    },
+    "resume_plan": {
+      "description": "The `apd-gauntlet resume-plan --json` output, copied verbatim by the resume-plan worker, so the workflow can skip agent steps whose outputs are already complete. Optional.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine_version", "steps"],
+      "properties": {
+        "engine_version": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "complete", "reason"],
+            "properties": {
+              "label": { "type": "string" },
+              "complete": { "type": "boolean" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
     }
   }
 }
