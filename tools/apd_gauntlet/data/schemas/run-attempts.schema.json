@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/run-attempts.schema.json",
+  "title": "APD run attempts",
+  "description": "Per-run retry and repair counts in <run>/.apd-state/attempts.yaml: lens retries, first-pass schema failures, tier-gate failures, report-audit iterations and the tier repair loop. Written at closeout by `apd-gauntlet summarize --record-attempts` (or a runner's write_attempts); compare-runs reads it for the first-pass and audit gates. Runs from 1.7 have no such file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "recorded_by",
+    "lens_retries",
+    "first_pass_invalid",
+    "tier_gate_failures",
+    "skipped",
+    "audit_iterations",
+    "tier_repairs",
+    "lens_reruns"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "recorded_by": {
+      "description": "Who wrote the file: the Claude Code workflow, a local runner, or an operator by hand.",
+      "enum": ["workflow", "runner", "operator"]
+    },
+    "lens_retries": {
+      "description": "Retries per lens: lens name -> re-dispatches after its first attempt.",
+      "$ref": "#/$defs/counts"
+    },
+    "first_pass_invalid": {
+      "description": "Lenses whose first receipt was an error or listed an output that failed schema validation.",
+      "$ref": "#/$defs/names"
+    },
+    "tier_gate_failures": {
+      "description": "Tier directories whose first tier gate failed, before any repair.",
+      "$ref": "#/$defs/names"
+    },
+    "skipped": {
+      "description": "Lenses whose receipt listed a .skipped output (for example on a resumed run).",
+      "$ref": "#/$defs/names"
+    },
+    "audit_iterations": {
+      "description": "Report-audit attempts the run made, the last one included.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "tier_repairs": {
+      "description": "Files the tier repair loop repaired: tier directory -> files.",
+      "$ref": "#/$defs/counts"
+    },
+    "lens_reruns": {
+      "description": "Lenses the tier repair loop re-ran: lens name -> re-runs.",
+      "$ref": "#/$defs/counts"
+    }
+  },
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "propertyNames": { "type": "string", "minLength": 1 },
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "names": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

@@ -23,6 +23,9 @@ def compute_metrics(
     contradictions: list[dict[str, Any]],
     severity_disagreements: list[dict[str, Any]],
     unresolved_authored_merges: int = 0,
+    *,
+    findings_pre_dedup: int | None = None,
+    capabilities_pre_dedup: int | None = None,
 ) -> dict[str, Any]:
     """Return the canonical report summary block.
 
@@ -33,6 +36,10 @@ def compute_metrics(
     Unlike the legacy ``summary_rollup``, falsy/``None``/already-``info``
     severities normalize to ``info`` (rather than being dropped), which keeps
     the ``sum(bySeverity) == findings_total`` invariant intact.
+
+    ``findings_pre_dedup`` and ``capabilities_pre_dedup`` are the record counts
+    before apply-clusters merged any (``build_rollups`` passes them). ``None``
+    reports the deduped length, as before the counts were real.
     """
     by_sev = collections.Counter(_norm_sev(f.get("severity")) for f in findings)
     by_disp = collections.Counter(f.get("disposition") or "gap" for f in findings)
@@ -55,7 +62,9 @@ def compute_metrics(
     return {
         "schema_version": SCHEMA_VERSION,
         "findings_total": len(findings),
-        "findings_pre_dedup": len(findings),
+        "findings_pre_dedup": (
+            len(findings) if findings_pre_dedup is None else findings_pre_dedup
+        ),
         "cross_lens_merged_clusters": cross_lens_merged,
         "linked_clusters": linked_clusters,
         "unresolved_authored_merges": unresolved_authored_merges,
@@ -79,7 +88,9 @@ def compute_metrics(
             "auditability":    by_tier.get("auditability", 0),
         },
         "capabilities_total": len(capabilities),
-        "capabilities_pre_dedup": len(capabilities),
+        "capabilities_pre_dedup": (
+            len(capabilities) if capabilities_pre_dedup is None else capabilities_pre_dedup
+        ),
         "capabilitiesByMaturity": {
             "designed":        by_mat.get("designed", 0),
             "implemented":     by_mat.get("implemented", 0),

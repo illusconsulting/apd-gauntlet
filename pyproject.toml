@@ -60,6 +60,7 @@ apd_gauntlet = [
   "data/schemas/*.json",
   "data/domains/**/*",
   "data/prompts/*.md",
+  "data/decide/*.yaml",
 ]
 
 [tool.pytest.ini_options]

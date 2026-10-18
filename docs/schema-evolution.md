@@ -74,6 +74,69 @@ When a field or behavior is deprecated:
 2. Keep the deprecated surface working through at least one minor release.
 3. Remove in a major bump.
 
+## v2.0.0 — Measurement and evaluation (additive)
+
+Additive on the 2.0 line (`next`): these entries add new schemas only. No
+existing schema changes, no record `schema_version` is bumped, and no
+`framework_compat` range changes.
+
+### 2026-10-17 — run-attempts (new)
+
+`run-attempts.schema.json` describes `<run>/.apd-state/attempts.yaml`, the
+per-run record of retries and repairs that 1.7 runs never persist:
+
+- `lens_retries`: retries per lens.
+- `first_pass_invalid`: lenses whose first receipt was an error or listed an
+  output that failed schema validation.
+- `tier_gate_failures`: tier directories whose first tier gate failed, before
+  any repair.
+- `skipped`: lenses whose receipt listed a `.skipped` output.
+- `audit_iterations`: report-audit attempts (at least 1).
+- `tier_repairs` and `lens_reruns`: what the tier repair loop did, as files
+  repaired per tier directory and re-runs per lens.
+
+Every key is required, `additionalProperties` is false, `schema_version` is the
+constant 1 and `recorded_by` is `workflow`, `runner` or `operator`. Counts are
+integers of 0 or more, keyed by non-empty names; the name lists hold unique,
+non-empty strings. `apd-gauntlet summarize --record-attempts <json>` validates
+the object and writes the file, and `measure.attempts.write_attempts` does the
+same for a local runner. `measure.runs.load_run` reads it into
+`RunSnapshot.attempts`, which is `None` for a run without the file (every 1.7
+run), so a missing file never reads as zero retries.
+
+### 2026-10-17 — eval-corpus, eval-labels (new)
+
+`eval-corpus.schema.json` describes a corpus manifest, such as
+`eval/<area>/corpus.yaml`: `schema_version` (the constant 1), a `name`, an
+optional `description`, and `entries`. Each entry has an `id`, a `set` (`dev`
+or `heldout`), a `labels` file, an optional `licence`, and a `run` directory, a
+`repo` pinned by `url` and a 40-character `commit` (with an optional `path`),
+or both. The `name` and each `id` match `^[a-z0-9][a-z0-9-]*$`. `run` and
+`labels` are relative to the manifest's directory.
+
+`eval-labels.schema.json` describes the labels for one entry. `kind` selects
+the shape:
+
+- `findings`: the `entry` id and `items`, each with a `verdict`
+  (`true_positive`, `false_positive` or `unreviewed`), `apd_goal` and
+  `severity` from `_defs.schema.json`, a `title`, at least one `evidence`
+  pointer (`artifact`, `locator`, optional `excerpt`), and an optional `id` and
+  `note`.
+- `decisions`: the `set`, the decision `task` (`<task>` or `<task>.<flag>`),
+  and `records`, each with a record `path` (relative to the labels file's
+  directory) and at least one item `{ref, gold}`.
+
+Each kind is an `if`/`then` block under `allOf`, not `oneOf`, so an invalid
+item reports its own JSON path. A later kind (IAC4's `iac`, CAT4's `threats`)
+adds its value to `kind` and one more block, which leaves existing files valid.
+`additionalProperties` is false in every object.
+
+`eval.corpus.load_corpus_manifest` checks a manifest against the schema and
+also refuses a duplicate entry id and any run directory (compared after
+resolving links and `..`) or `(repo.url, repo.commit)` pair that appears in
+both sets. `eval.corpus.load_labels` checks a labels file against the schema.
+Both raise `CorpusError` naming the file, with each schema message's JSON path.
+
 ## v1.7.1 — Context ids minted by canonicalize
 
 Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-authored-derived-fields.md) (Amendment v1.7.1) and [deterministic-field-register.md](deterministic-field-register.md).

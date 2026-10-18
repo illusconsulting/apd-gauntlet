@@ -25,12 +25,16 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import shlex
 import shutil
 import subprocess
 from typing import Any
 
 import jsonschema
 import pytest
+import yaml
+from apd_gauntlet.cli import main
+from click.testing import CliRunner
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 RUNNER = REPO / ".claude" / "workflows" / "apd-gauntlet.js"
@@ -194,9 +198,10 @@ def _text() -> str:
 
 
 def _responder(
-    by_label: dict[str, dict[str, Any]] | None = None, reject: tuple[str, ...] = ()
+    by_label: dict[str, Any] | None = None, reject: tuple[str, ...] = ()
 ) -> str:
-    """JS source of a responder: the receipt for a dispatch's label, else GENERIC_OK.
+    """JS source of a responder: the answer for a dispatch's label (a receipt, or the
+    schema-less auditor's critique string), else GENERIC_OK.
     A label in `reject` throws instead, so that dispatch's Promise rejects.
     Every answer is a fresh copy, so the runner cannot share state between receipts."""
     return (
@@ -542,3 +547,166 @@ def test_no_other_function_is_async() -> None:
             pytest.fail(f"line {line}: async callback: {_text().splitlines()[line - 1].strip()}")
         names.append(decl.group(1))
     assert sorted(names) == sorted(ASYNC_HELPERS), names
+
+
+# ---------------------------------------------------------------------------
+# WS2 Task 7: the attempts the closeout summarize step records (node). The runner
+# counts lens retries, first-pass failures, skips, tier repairs and audit iterations,
+# and the summarize worker is told to pass them to `summarize --record-attempts`.
+# These tests run the command that worker is given.
+# ---------------------------------------------------------------------------
+
+# The responder logs the closeout summarize prompt after this mark.
+SUMMARIZE_MARK = "summarize prompt:\n"
+LENSES = [lens for group in LENS_GROUPS for lens in group]
+FAILED_INTEGRITY: dict[str, Any] = {
+    "agent": "apd-integrity", "status": "error", "outputs": [], "counts": {},
+}
+
+
+def _recording_responder(
+    by_label: dict[str, Any] | None = None, reject: tuple[str, ...] = ()
+) -> str:
+    """_responder, which also logs the prompt of the dispatch labelled `summarize`."""
+    return (
+        "function (prompt, opts, n) {\n"
+        f"  if (opts.label === 'summarize') {{ log({json.dumps(SUMMARIZE_MARK)} + prompt); }}\n"
+        f"  return ({_responder(by_label, reject)})(prompt, opts, n);\n"
+        "}"
+    )
+
+
+def _recorded_attempts(tmp_path: pathlib.Path, result: dict[str, Any]) -> dict[str, Any]:
+    """Run the command the summarize prompt names, split as a shell splits it, against an
+    empty run directory, and return the attempts.yaml it writes. The file must hold
+    exactly the object the command passed."""
+    prompts = [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
+    assert len(prompts) == 1, result["logs"]
+    commands = [line.strip() for line in prompts[0].splitlines()
+                if line.strip().startswith("apd-gauntlet summarize ")]
+    assert len(commands) == 1, prompts[0]
+    argv = shlex.split(commands[0])
+    assert argv[:4] == ["apd-gauntlet", "summarize", "runs/r1", "--record-attempts"], argv
+    assert len(argv) == 5, argv
+    run = tmp_path / "run"
+    run.mkdir()
+    r = CliRunner().invoke(main, ["summarize", str(run), *argv[3:]])
+    assert r.exit_code == 0, r.output
+    written = yaml.safe_load((run / ".apd-state" / "attempts.yaml").read_text(encoding="utf-8"))
+    assert written == json.loads(argv[4])
+    recorded: dict[str, Any] = written
+    return recorded
+
+
+def _red_gate(tier_dir: str, files: list[str]) -> dict[str, Any]:
+    gate = {
+        "agent": "pystep:validate", "status": "error", "outputs": [], "counts": {},
+        "errors": [{"path": f"runs/r1/{tier_dir}/{f}", "message": "fnd-1 title: too long"}
+                   for f in files],
+    }
+    jsonschema.validate(gate, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
+    return gate
+
+
+def test_green_run_records_attempts_at_closeout(tmp_path: pathlib.Path) -> None:
+    result = _run_runner(tmp_path, _recording_responder())
+    assert result["outcome"]["returned"], result["outcome"]
+    (prompt,) = [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
+    assert "Always run this command; this step has no idempotency check and no skip." in prompt
+    # The schema-less auditor never answers "GATE: pass" here, so all three audit
+    # attempts run.
+    assert _recorded_attempts(tmp_path, result) == {
+        "schema_version": 1, "recorded_by": "workflow",
+        "lens_retries": dict.fromkeys(LENSES, 0),
+        "first_pass_invalid": [], "tier_gate_failures": [], "skipped": [],
+        "audit_iterations": 3, "tier_repairs": {}, "lens_reruns": {},
+    }
+
+
+def test_attempts_count_lens_retries_and_first_pass_failures(tmp_path: pathlib.Path) -> None:
+    # integrity and its first retry fail (2 retries); the distributed dispatch rejects,
+    # so parallel() gives null (1 retry); confidentiality answers ok but lists an output
+    # that failed schema validation (first-pass invalid, never retried).
+    invalid = {
+        "agent": "apd-confidentiality", "status": "ok", "counts": {},
+        "outputs": [{"path": "runs/r1/10-trustworthiness/confidentiality.findings.yaml",
+                     "schema_valid": False}],
+    }
+    jsonschema.validate(invalid, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
+    result = _run_runner(tmp_path, _recording_responder(
+        {"integrity": FAILED_INTEGRITY, "integrity-retry-1": FAILED_INTEGRITY,
+         "confidentiality": invalid},
+        reject=("distributed",),
+    ))
+    assert result["outcome"]["returned"], result["outcome"]
+    attempts = _recorded_attempts(tmp_path, result)
+    assert attempts["lens_retries"] == {**dict.fromkeys(LENSES, 0), "integrity": 2,
+                                        "distributed": 1}
+    assert attempts["first_pass_invalid"] == ["confidentiality", "integrity", "distributed"]
+    assert attempts["skipped"] == [] and attempts["tier_gate_failures"] == []
+
+
+def test_resumed_lens_is_recorded_as_skipped(tmp_path: pathlib.Path) -> None:
+    # resume-plan reports the confidentiality lens complete, so llmStep returns the skip
+    # sentinel without dispatching it.
+    resumed = {
+        "agent": "pystep:resume-plan", "status": "ok", "outputs": [], "counts": {},
+        "resume_plan": {"engine_version": "1.7.1", "steps": [
+            {"label": "confidentiality", "complete": True, "reason": "outputs valid"},
+            {"label": "integrity", "complete": False, "reason": "missing"},
+        ]},
+    }
+    jsonschema.validate(resumed, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
+    result = _run_runner(tmp_path, _recording_responder({"resume-plan": resumed}))
+    assert "confidentiality" not in _labels(result)
+    attempts = _recorded_attempts(tmp_path, result)
+    assert attempts["skipped"] == ["confidentiality"]
+    assert attempts["first_pass_invalid"] == []
+    assert attempts["lens_retries"] == dict.fromkeys(LENSES, 0)
+
+
+def test_attempts_count_the_tier_repair_loop(tmp_path: pathlib.Path) -> None:
+    # Tier 1 stays red after the repair, so both lenses that own a red file are re-run.
+    # Tier 3 is green after its one repair. Only the first gate of a tier is a failure.
+    red_1 = _red_gate("10-trustworthiness",
+                      ["confidentiality.findings.yaml", "integrity.capabilities.yaml"])
+    red_3 = _red_gate("30-auditability", ["immutability.findings.yaml"])
+    result = _run_runner(tmp_path, _recording_responder({
+        "validate-10-trustworthiness": red_1,
+        "validate-10-trustworthiness-after-repair": red_1,
+        "validate-30-auditability": red_3,
+    }))
+    labels = _labels(result)
+    assert {"confidentiality-rerun", "integrity-rerun"} <= set(labels), labels
+    assert result["outcome"]["returned"], result["outcome"]
+    attempts = _recorded_attempts(tmp_path, result)
+    assert attempts["tier_gate_failures"] == ["10-trustworthiness", "30-auditability"]
+    assert attempts["tier_repairs"] == {"10-trustworthiness": 2, "30-auditability": 1}
+    assert attempts["lens_reruns"] == {"confidentiality": 1, "integrity": 1}
+    assert attempts["lens_retries"] == dict.fromkeys(LENSES, 0)
+
+
+@pytest.mark.parametrize("passing_attempt", [0, 1])
+def test_audit_iterations_stop_at_the_passing_attempt(
+    tmp_path: pathlib.Path, passing_attempt: int
+) -> None:
+    result = _run_runner(tmp_path, _recording_responder(
+        {f"auditor-attempt-{passing_attempt}": "GATE: pass"}
+    ))
+    labels = _labels(result)
+    assert f"auditor-attempt-{passing_attempt + 1}" not in labels, labels
+    assert _recorded_attempts(tmp_path, result)["audit_iterations"] == passing_attempt + 1
+
+
+def test_halted_run_records_no_attempts(tmp_path: pathlib.Path) -> None:
+    # A tier that is still red after the lens re-run halts the run before closeout, so
+    # summarize is never dispatched and no attempts file is written.
+    red = _red_gate("10-trustworthiness", ["confidentiality.findings.yaml"])
+    result = _run_runner(tmp_path, _recording_responder({
+        "validate-10-trustworthiness": red,
+        "validate-10-trustworthiness-after-repair": red,
+        "validate-10-trustworthiness-after-rerun": red,
+    }))
+    assert result["outcome"]["threw"], result["outcome"]
+    assert "summarize" not in _labels(result)
+    assert not [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]

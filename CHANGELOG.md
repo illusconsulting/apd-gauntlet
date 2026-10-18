@@ -9,6 +9,155 @@ design and implementation plans are in
 `docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md`
 and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 
+### Added
+
+- **`summarize --record-attempts` and `.apd-state/attempts.yaml`.**
+  `apd-gauntlet summarize RUN_DIR --record-attempts '<json>'` validates a
+  run-attempts object against the new `run-attempts.schema.json` and writes it
+  to `<run>/.apd-state/attempts.yaml` before it summarises the run. The file
+  records what 1.7 runs keep only in the workflow's memory: lens retries, lenses
+  that failed schema validation on the first pass, tier gates that failed before
+  repair, skipped lenses, report-audit iterations, and the files and lenses the
+  tier repair loop repaired or re-ran. The command exits 2 when the value is not
+  JSON and 1 when it does not match the schema, and writes nothing in either
+  case.
+- **`usage`: tokens and cost per agent and phase from OpenTelemetry.**
+  `apd-gauntlet usage RUN_DIR --otel FILE [--workflow-run ID] [--json]` reads
+  Claude Code's `claude_code.api_request` events from an OTLP/JSON export (the
+  OpenTelemetry Collector `file` exporter's output) and writes
+  `<run>/.apd-state/usage.yaml`: totals, `by_agent` and `by_phase`, the
+  decision-model spend recorded under `40-synthesis/decisions/`, and the
+  combined cost `cost_usd_all`. It warns when agent names are redacted (set
+  `OTEL_LOG_TOOL_DETAILS=1`, Claude Code 2.1.273 or later), when the file
+  covers more than one workflow run, and when a request carries no cost. It
+  exits 1 and writes nothing when no `api_request` event is left after
+  filtering, and 2 when the export is not OTLP/JSON (the console exporter's
+  output is refused). The new runbook,
+  [docs/measuring-changes.md](docs/measuring-changes.md), covers baseline
+  capture, the telemetry setup with a minimal Collector configuration, and the
+  agent-to-phase map.
+- **`compare-runs`: a deterministic before-and-after delta with gates.**
+  `apd-gauntlet compare-runs BASELINE CANDIDATE [--json] [--gates eval/gates.yaml] [--excuse VALUE]... [--strict]`
+  compares two runs, or two run sets named `<name>-r1`, `<name>-r2`, … (every
+  baseline run against every candidate run). It matches findings and
+  capabilities one to one (same goal, a shared derived asset, title Jaccard of
+  at least 0.5), counts what went missing and what is new by severity, the
+  severity and maturity shifts, the headline overlap, and each lost critical or
+  high finding with its excuse. It reports the blocked rate, the attempts
+  counts and the usage cost per run and as side medians. With `--gates` it
+  applies the five proposal gates in the new `eval/gates.yaml` to the medians.
+  The result is `pass`, `pass_with_gaps` (a gate has no data, as the attempts
+  gates against 1.7 baselines) or `fail`. `--strict` makes `pass_with_gaps`
+  exit 1. `--excuse <finding-id>` accepts a reviewed loss, and
+  `--excuse <gate-id>:<reason>` marks a gate that failed or has no data
+  `excused`. It exits 0 when no gate fails, 1 when one fails, and 2 when a side
+  does not resolve, both sides share a run, a baseline run has no findings, the
+  runs have different inputs, a run fails to load or the gates file cannot be
+  read. The text report prints control characters from run files as escapes.
+  The runbook's "Compare runs" section covers the matching, excuse and median
+  rules.
+- **The workflow records its retries and audit iterations.** The workflow
+  writes `.apd-state/attempts.yaml` at closeout: its `summarize` step now
+  passes the runner's counts to `summarize --record-attempts`, with
+  `recorded_by: workflow`. The file holds the lens retries, the lenses that
+  failed schema validation on the first pass, skipped lenses, the tier gates
+  that failed before repair, the files and lenses the tier repair loop
+  repaired or re-ran, and the report-audit iterations. The step now always
+  runs. `compare-runs` can then apply gates 4 and 5 to 2.0 workflow runs. The
+  counts cover one invocation of the runner: a resumed run lists its skipped
+  lenses, and those gates read `not_available` for it. A foreground `plan-run`
+  drive records nothing. No phase, step or dispatch label changes. The
+  runbook's "Retries and audit iterations" section describes the file.
+- **The `findings` evaluator and `eval label-template`.**
+  `apd-gauntlet eval label-template RUN_DIR --entry ID --out FILE` writes an
+  `eval-labels` file with one `unreviewed` item per finding of the run (its
+  id, goal, severity, title and evidence pointers). A reviewer sets each
+  verdict to `true_positive` or `false_positive`, corrects the goal or
+  severity where the run got them wrong, and adds true positives the run
+  missed. The command never overwrites `FILE` (exit 1), and exits 2 when `ID`
+  is not a corpus entry id, the run cannot be read, or a finding cannot become
+  a valid labels item. The `findings`
+  evaluator, registered in the evaluator registry, matches the true positives
+  to the run's findings with the `compare-runs` matcher, then the false
+  positives to the findings left. It reports precision, strict precision
+  (findings no label judged count against it), recall and F1 per goal and in
+  total, and severity agreement. It refuses labels with `unreviewed` items.
+- **`eval freeze` and ADR-0028: frozen tunables for held-out evaluation.**
+  `apd-gauntlet eval freeze [--root DIR] [--new-heldout-set]` records the
+  SHA-256 of every tunables file (`tools/apd_gauntlet/data/decide/thresholds.yaml`
+  and each `tools/apd_gauntlet/data/*/context-params.yaml`) and of the whole
+  set in `eval/frozen.yaml`. Held-out evaluation checks it first and refuses
+  when a tunables file was added, removed or changed since the freeze. The
+  check compares content, not modification times, which a git checkout
+  resets. The command writes nothing when the tunables are unchanged. Once a
+  held-out result under `eval/results/` records the frozen hash, it refuses to
+  re-freeze changed tunables (exit 1) until `--new-heldout-set` says a new
+  held-out set exists, which raises the file's `generation`. It also exits 1
+  when the frozen file or a held-out result cannot be read, or the file cannot
+  be written.
+  [ADR-0028](docs/adrs/0028-committed-calibration-and-frozen-evaluation.md)
+  amends [ADR-0017](docs/adrs/0017-local-only-accuracy-benchmark.md): the 2.0
+  line commits aggregate calibration statistics (each `thresholds.yaml` entry's
+  threshold, precision, recall, `n` and labels hash), `eval/gates.yaml`,
+  `eval/frozen.yaml`, and corpus manifests and labels over committed fixtures
+  or pinned public repositories. Results, private labels, usage and attempts
+  files, and runs stay local. The ADR also records the freeze protocol: dev
+  and held-out sets disjoint, tuning on dev only, freeze before held-out runs.
+- **`eval run`: score a corpus set with a registered evaluator.**
+  `apd-gauntlet eval run CORPUS --set dev|heldout --evaluator NAME [--root DIR] [--results-dir DIR] [--json]`
+  scores every entry of the set (the `findings` evaluator ships with the
+  engine) and writes `eval/results/<evaluator>/<set>-<UTC time>.yaml`: each
+  entry's counts, metrics and notes, and totals computed from the summed
+  counts. `--set heldout` checks the freeze before it reads the corpus and
+  again after the last entry, and exits 2 when `eval/frozen.yaml` is missing
+  or a tunables file changed since the freeze. Its results record the frozen
+  hash, so `eval freeze` then refuses to re-freeze changed tunables without
+  `--new-heldout-set`. A dev run records the frozen hash when the tunables
+  match the freeze. Nothing is written when any entry fails, and an existing
+  results file is never overwritten. It exits 1 when the results file exists
+  or cannot be written, and 2 when the corpus or a labels file is invalid, the
+  evaluator is unknown or refuses an entry, or the set has no entries.
+  `.gitignore` now lists `eval/results/`, `eval/local/` (private corpora and
+  labels) and `telemetry/`, because telemetry exports hold Bash commands, tool
+  input, `user.email` and account ids. The runbook's "Evaluate against labels"
+  section covers the corpus layout, labelling, the dev and held-out sets and
+  the results.
+- **`calibrate`: decision thresholds from labelled decision records.**
+  `apd-gauntlet calibrate TASK --labels FILE --target-precision P [--min-support N] [--thresholds PATH]`
+  reads dev labels of kind `decisions` (`gold` per item of the decision records
+  under each run's `40-synthesis/decisions/`) and picks the threshold with the
+  highest recall whose precision on the labelled items is at least `P`, with
+  at least `N` predicted positives (default 10). Candidate cuts sit at the
+  midpoints between neighbouring values, so no labelled value lies on one. It
+  writes the entry to the new `tools/apd_gauntlet/data/decide/thresholds.yaml`
+  (shipped empty, with a header): `threshold`, `precision`, `recall`, `n`,
+  `labels_sha256`, the records' `provider`, `model` and `weights_revision`,
+  and `calibrated: true`, keeping every other entry. Two keys ship with a value
+  spec, `finding-qa.unsupported` and `finding-qa.lens_drift`; later tasks
+  register theirs with `register_value`. It exits 1 and leaves the file as it
+  was when no threshold qualifies, and 2 for an unknown key, labels of another
+  kind or key, `set: heldout` labels (thresholds are tuned on dev labels and
+  frozen before held-out runs), labelled records that mix models, an unknown
+  ref, or no gold positive. A calibration changes a tunable, so the command
+  reminds you to re-run `eval freeze`. The runbook's "Calibrate a decision
+  threshold" section covers the labels, the choice and the support floor.
+- **`metamorphic run`: a harness for behaviour-preserving transformations.**
+  `apd-gauntlet metamorphic run --suite NAME [--root DIR] [--json]` applies
+  each transformation of a registered suite to each of its fixtures, in a
+  temporary directory, and checks that the results do not change once renamed
+  names are mapped back. A case `holds`, is `violated` (the report lists the
+  missing and extra result tuples), is `allowlisted` (the suite's
+  `known_non_invariant` lists it with a reason) or is a `stale_allowlist` entry
+  (listed, but the case holds). The command exits 0 when every case holds or is
+  allowlisted, 1 on a violated case or a stale entry, and 2 for an unknown
+  suite (the message lists the registered ones), a missing fixture, or a suite
+  that cannot run. Suites register with `register_suite` in a module listed in
+  `BUILTIN_SUITE_MODULES`. The demonstration suite `stride-table` renames the
+  elements, reverses the rows and reverses the STRIDE columns of a STRIDE
+  table and checks that the parser behind `parse-threat-model` reads the same
+  entries. The runbook's "Behaviour-preserving transformations" section covers
+  suites, the statuses and the allowlist rule.
+
 ### Changed
 
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
@@ -20,6 +169,16 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   `framework_compat: ">=1.0.0,<3.0.0"`. The 2.0 changes leave the pack format
   untouched. Third-party packs that declare `<2.0.0` need the same change
   before they will build against a 2.0 engine.
+
+### Fixed
+
+- **`metrics.yaml` reports real pre-dedup counts.** `findings_pre_dedup` and
+  `capabilities_pre_dedup` used to repeat `findings_total` and
+  `capabilities_total`. The rollup now counts the records in the tier
+  directories' `*.findings.yaml` and `*.capabilities.yaml` files, before
+  apply-clusters merges any. The attack-path and threat-model findings
+  (`apath-*`, `tmeval-*`) are never deduped, so they count in both numbers. The
+  committed examples keep their old values until they are rerun.
 
 ## v1.7.1 — 2026-10-17
 

@@ -4,6 +4,7 @@
 **Date:** 2026-06-10
 **Supersedes:** —
 **Superseded by:** —
+**Amended by:** [ADR-0028](0028-committed-calibration-and-frozen-evaluation.md)
 
 ## Context
 

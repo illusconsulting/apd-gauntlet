@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import hashlib
 import json as _stdjson
+import math
 import pathlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 import click
 import yaml
@@ -371,7 +372,32 @@ def lint_skills_cmd(skill_dir) -> None:  # type: ignore[no-untyped-def]
 @main.command("summarize")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
 @click.option("--json", "as_json", is_flag=True)
-def summarize_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--record-attempts",
+    "attempts_json",
+    metavar="JSON",
+    help=(
+        "Before summarising, validate this run-attempts object (run-attempts.schema.json) and "
+        "write it to RUN_DIR/.apd-state/attempts.yaml. Exits 2 when it is not JSON, and 1 when "
+        "it does not match the schema or cannot be written; a rejected object writes nothing."
+    ),
+)
+def summarize_cmd(run_dir, as_json, attempts_json) -> None:  # type: ignore[no-untyped-def]
+    if attempts_json is not None:
+        from .measure.attempts import AttemptsError, write_attempts
+
+        try:
+            attempts = _stdjson.loads(attempts_json)
+        except (ValueError, RecursionError) as exc:
+            raise click.BadParameter(
+                f"not valid JSON: {exc}", param_hint="'--record-attempts'"
+            ) from exc
+        try:
+            recorded = write_attempts(run_dir, attempts)
+        except AttemptsError as exc:
+            click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1) from exc
+        click.echo(f"Recorded attempts -> {recorded}", err=True)
     stats = summarize_run(run_dir)
     if as_json:
         import json as _json
@@ -1527,6 +1553,687 @@ def audit_report_cmd(run_dir: Path) -> None:
         klass = c.get("klass", "structural")
         click.echo(f"  FAIL [{klass}]: {c['name']} — {c.get('detail', '')}", err=True)
     if result.status == "fail":
+        raise SystemExit(1)
+
+
+@main.command("usage")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--otel",
+    "otel_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help=(
+        "OpenTelemetry logs export in OTLP/JSON (the Collector file exporter's output). "
+        "The console exporter's output is refused; see docs/measuring-changes.md."
+    ),
+)
+@click.option(
+    "--workflow-run",
+    "workflow_run",
+    metavar="ID",
+    default=None,
+    help="Count only api_request events whose workflow.run_id is ID.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Print the written summary as JSON.")
+def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json: bool) -> None:
+    """Summarise tokens and cost per agent and phase into RUN_DIR/.apd-state/usage.yaml.
+
+    Reads Claude Code's claude_code.api_request events from the export, adds the
+    decision-model spend under 40-synthesis/decisions/, and writes the summary.
+    Exits 0 when written, 1 when no api_request event is left after filtering
+    (nothing is written) or usage.yaml cannot be written, and 2 when the export
+    or a decision record cannot be read.
+    """
+    from .measure.runs import is_run_dir
+    from .measure.usage import (
+        USAGE_RELPATH,
+        UsageParseError,
+        iter_api_requests,
+        summarize_decisions,
+        summarize_usage,
+        write_usage,
+    )
+
+    if not is_run_dir(run_dir):
+        raise click.BadParameter(
+            f"{run_dir} is not a run directory (no .apd-run.yaml)", param_hint="'RUN_DIR'"
+        )
+    try:
+        summary = summarize_usage(
+            iter_api_requests(otel_file), source=otel_file, workflow_run=workflow_run
+        )
+        if summary["totals"]["requests"] == 0:
+            message = f"no api_request events in {otel_file}"
+            if workflow_run is not None:
+                runs = ", ".join(summary["source"]["workflow_runs"]) or "none"
+                message += f" for workflow run {workflow_run} (workflow runs in the file: {runs})"
+            click.echo(f"Error: {message}; nothing written", err=True)
+            raise SystemExit(1)
+        decisions = summarize_decisions(run_dir)
+    except UsageParseError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(2) from exc
+    warnings = summary.pop("warnings")
+    summary["decision_models"] = decisions
+    summary["cost_usd_all"] = round(
+        summary["totals"]["cost_usd"] + decisions["totals"]["cost_usd"], 9
+    )
+    summary["warnings"] = warnings
+    try:
+        written = write_usage(run_dir, summary)
+    except OSError as exc:
+        click.echo(
+            f"Error: {run_dir / USAGE_RELPATH}: cannot write: {exc.strerror or exc}",
+            err=True,
+        )
+        raise SystemExit(1) from exc
+    for warning in warnings:
+        click.echo(f"warning: {warning}", err=True)
+    if as_json:
+        click.echo(_stdjson.dumps(summary, indent=2))
+        return
+    totals = summary["totals"]
+    click.echo(
+        f"usage: {totals['requests']} api_request events, cost_usd {totals['cost_usd']:.6f} "
+        f"(with decision models {summary['cost_usd_all']:.6f}) -> {written}"
+    )
+    for phase, row in summary["by_phase"].items():
+        tokens = sum(row[k] for k in (
+            "input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens"
+        ))
+        click.echo(
+            f"  {phase}: {row['requests']} requests, {tokens} tokens, "
+            f"cost_usd {row['cost_usd']:.6f}"
+        )
+
+
+_SINGLE_RUN_WARNING = "gates applied to a single run per side; run each configuration twice"
+
+
+def _refuse(message: str) -> NoReturn:
+    """Print ``Error: <message>`` on stderr and exit 2 (a usage error)."""
+    click.echo(f"Error: {message}", err=True)
+    raise SystemExit(2)
+
+
+@main.command("compare-runs")
+@click.argument("baseline", type=click.Path(path_type=Path))
+@click.argument("candidate", type=click.Path(path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="Print the comparison as JSON.")
+@click.option(
+    "--gates",
+    "gates_file",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Evaluate the gates in this file (the proposals are in eval/gates.yaml).",
+)
+@click.option(
+    "--excuse",
+    "excuses",
+    multiple=True,
+    metavar="VALUE",
+    help=(
+        "Repeatable. '<gate-id>:<reason>' excuses that gate; any other value is a "
+        "finding id whose loss is accepted."
+    ),
+)
+@click.option(
+    "--strict", is_flag=True, help="Exit 1 when a gate is not available (pass_with_gaps)."
+)
+def compare_runs_cmd(
+    baseline: Path,
+    candidate: Path,
+    as_json: bool,
+    gates_file: Path | None,
+    excuses: tuple[str, ...],
+    strict: bool,
+) -> None:
+    """Compare a CANDIDATE run, or run set, with a BASELINE and apply the comparison gates.
+
+    Each side is a run directory, or a name whose runs are NAME-r1, NAME-r2, ...
+    (see docs/measuring-changes.md). Every baseline run is compared with every
+    candidate run, and the gates judge the medians. Exits 0 when no gate fails
+    (or without --gates), 1 when a gate fails or, under --strict, when a gate is
+    not available, and 2 when a side does not resolve, both sides share a run,
+    a baseline run has no findings, the runs have different inputs, a run
+    fails to load, or the gates file cannot be read.
+    """
+    from dataclasses import replace
+
+    from .measure.compare import (
+        MissingRuns,
+        compare_sides,
+        comparison_json,
+        render_text,
+        resolve_side,
+    )
+    from .measure.gates import (
+        GatesError,
+        apply_excuses,
+        evaluate,
+        load_gates,
+        overall,
+        split_excuses,
+    )
+    from .measure.runs import RunLoadError, RunSnapshot, load_run
+
+    gates = None
+    if gates_file is not None:
+        try:
+            gates = load_gates(gates_file)
+        except GatesError as exc:
+            _refuse(str(exc))
+    try:
+        gate_excuses, finding_excuses = split_excuses(
+            excuses, [g.id for g in gates or ()]
+        )
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint="'--excuse'") from exc
+
+    sides: dict[str, list[Path]] = {}
+    for side, path in (("baseline", baseline), ("candidate", candidate)):
+        try:
+            sides[side] = resolve_side(path)
+        except MissingRuns as exc:
+            _refuse(f"{side} not found: {exc}")
+
+    seen: dict[Path, tuple[str, Path]] = {}
+    for side, paths in sides.items():
+        for path in paths:
+            real = path.resolve()  # each path is a run directory, so no link loop
+            if real in seen:
+                other_side, other = seen[real]
+                _refuse(
+                    f"{other_side} run {other} and {side} run {path} are the same run "
+                    f"directory ({real})"
+                )
+            seen[real] = (side, path)
+
+    snapshots: dict[str, list[RunSnapshot]] = {}
+    for side, paths in sides.items():
+        snapshots[side] = []
+        for path in paths:
+            try:
+                snapshots[side].append(load_run(path))
+            except RunLoadError as exc:
+                _refuse(f"cannot load {side} run {path}: {exc}")
+            except OSError as exc:
+                where = exc.filename if exc.filename is not None else path
+                _refuse(f"cannot load {side} run {path}: {where}: cannot read: "
+                        f"{exc.strerror or exc}")
+
+    for run in snapshots["baseline"]:
+        if not run.findings:
+            _refuse(
+                f"baseline run {run.path} has no findings; a scaffold or unfinished run "
+                "is no baseline (docs/measuring-changes.md)"
+            )
+    digests = [
+        (r.path, r.inputs_sha256)
+        for r in (*snapshots["baseline"], *snapshots["candidate"])
+        if r.inputs_sha256 is not None
+    ]
+    for path, digest in digests[1:]:
+        first, first_digest = digests[0]
+        if digest != first_digest:
+            _refuse(
+                f"runs over different inputs: {first} and {path} have different inputs/ "
+                f"(sha256 {first_digest[:12]}… and {digest[:12]}…)"
+            )
+
+    comparison = compare_sides(
+        snapshots["baseline"], snapshots["candidate"], excused=finding_excuses
+    )
+    outcomes = None
+    status: str = "delta_only"
+    extra: list[str] = []
+    if gates is not None:
+        evaluated = evaluate(gates, comparison.values, comparison.reasons)
+        outcomes = apply_excuses(evaluated, gate_excuses)
+        status = overall(outcomes)
+        if min(len(comparison.baseline), len(comparison.candidate)) == 1:
+            extra.append(_SINGLE_RUN_WARNING)
+        # apply_excuses leaves a gate that passed as it is; say that its excuse did nothing.
+        extra.extend(
+            f"excused gate {o.gate.id} passed; it excuses nothing "
+            f"(reason given: {gate_excuses[o.gate.id]})"
+            for o in evaluated
+            if o.status == "pass" and o.gate.id in gate_excuses
+        )
+    elif strict:
+        extra.append("--strict has no effect without --gates")
+    if extra:
+        comparison = replace(comparison, warnings=(*extra, *comparison.warnings))
+
+    if as_json:
+        click.echo(_stdjson.dumps(comparison_json(comparison, outcomes, status), indent=2))
+    else:
+        click.echo(render_text(comparison, outcomes, status))
+    if status == "fail" or (strict and status == "pass_with_gaps"):
+        raise SystemExit(1)
+
+
+@main.group("eval")
+def eval_group() -> None:
+    """Evaluate runs against hand-reviewed labels (docs/measuring-changes.md)."""
+
+
+_LABELS_HEADER = (
+    "# Findings labels for corpus entry {entry}. Set each verdict to true_positive or\n"
+    "# false_positive, correct apd_goal or severity where the run got them wrong, and\n"
+    "# add true positives the run missed. Evaluators refuse unreviewed items.\n"
+)
+
+
+def _cannot_write(out_file: Path, exc: OSError) -> NoReturn:
+    click.echo(f"Error: {out_file}: cannot write: {exc.strerror or exc}", err=True)
+    raise SystemExit(1)
+
+
+@eval_group.command("label-template")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--entry",
+    "entry_id",
+    required=True,
+    metavar="ID",
+    help="The corpus entry id the labels are for.",
+)
+@click.option(
+    "--out",
+    "out_file",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="The labels file to write; an existing file is never overwritten.",
+)
+def eval_label_template_cmd(run_dir: Path, entry_id: str, out_file: Path) -> None:
+    """Write a findings labels file for RUN_DIR: one unreviewed item per finding.
+
+    Each item copies the finding's id, goal, severity, title and evidence
+    pointers. Review every verdict before 'eval run' scores the run. Exits 0
+    when written, 1 when the file exists (it is never overwritten) or cannot be
+    written, and 2 when ID is not a corpus entry id, RUN_DIR is not a run or
+    fails to load, or a finding cannot become a valid labels item.
+    """
+    from .eval.findings_eval import label_template
+
+    try:
+        doc = label_template(run_dir, entry_id)
+    except ValueError as exc:
+        _refuse(str(exc))
+    text = _LABELS_HEADER.format(entry=entry_id) + yaml.safe_dump(
+        doc, sort_keys=False, allow_unicode=True, width=1000
+    )
+    try:
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        _cannot_write(out_file, exc)
+    try:
+        handle = out_file.open("x", encoding="utf-8")  # exclusive: never through a link
+    except FileExistsError:
+        click.echo(f"Error: {out_file} exists; not overwritten", err=True)
+        raise SystemExit(1) from None
+    except OSError as exc:
+        _cannot_write(out_file, exc)
+    try:
+        with handle:
+            handle.write(text)
+    except OSError as exc:
+        out_file.unlink(missing_ok=True)
+        _cannot_write(out_file, exc)
+    click.echo(f"wrote {out_file}: {len(doc['items'])} items to review (verdict unreviewed)")
+
+
+@eval_group.command("freeze")
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The repository whose tunables are frozen.",
+)
+@click.option(
+    "--new-heldout-set",
+    is_flag=True,
+    help=(
+        "Re-freeze after a held-out run used the frozen tunables. Give it only once "
+        "you have a new held-out set; the generation goes up by one."
+    ),
+)
+def eval_freeze_cmd(root: Path, new_heldout_set: bool) -> None:
+    """Freeze the tunables: record their SHA-256 in ROOT/eval/frozen.yaml.
+
+    The tunables are the decision thresholds and every context-params.yaml under
+    tools/apd_gauntlet/data/. Tune them on the dev set, freeze, then run the
+    held-out set: 'eval run --set heldout' refuses when a tunables file changed
+    after the freeze. Exits 0 when the file is written or unchanged, and 1 when
+    the tunables changed after a held-out run used them (pass --new-heldout-set
+    once you have a new held-out set, ADR-0028), a held-out result or the
+    frozen file cannot be read, or the file cannot be written.
+    """
+    from .eval.freeze import FreezeError, freeze, read_frozen
+
+    try:
+        before = read_frozen(root)
+        path = freeze(root, new_heldout_set=new_heldout_set)
+        after = read_frozen(root)
+    except FreezeError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from None
+    if after is None:  # freeze always leaves the file in place
+        raise click.ClickException(f"{path} missing after freeze")
+    state = f"generation {after.generation}, tunables {after.tunables_sha256[:8]}, " + (
+        f"{len(after.files)} files"
+    )
+    if after == before:
+        click.echo(f"{path} unchanged: {state}")
+        return
+    click.echo(f"wrote {path}: {state}")
+    for name in after.files:
+        click.echo(f"  {name}")
+
+
+def _same_directory(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except (OSError, RuntimeError):  # RuntimeError: a link loop before 3.13
+        return a.absolute() == b.absolute()
+
+
+@eval_group.command("run")
+@click.argument("corpus", type=click.Path(path_type=Path))
+@click.option(
+    "--set",
+    "set_name",
+    required=True,
+    type=click.Choice(["dev", "heldout"]),
+    help="The set of CORPUS to score; heldout needs 'eval freeze' first.",
+)
+@click.option(
+    "--evaluator",
+    required=True,
+    metavar="NAME",
+    help="A registered evaluator, for example findings.",
+)
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The repository whose eval/frozen.yaml and tunables are checked.",
+)
+@click.option(
+    "--results-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Where the results go.  [default: ROOT/eval/results]",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print the results, the file's path and any warnings as JSON.",
+)
+def eval_run_cmd(
+    corpus: Path,
+    set_name: Literal["dev", "heldout"],
+    evaluator: str,
+    root: Path,
+    results_dir: Path | None,
+    as_json: bool,
+) -> None:
+    """Score the dev or heldout entries of CORPUS with a registered evaluator.
+
+    Writes RESULTS_DIR/<evaluator>/<set>-<UTC time>.yaml: each entry's counts,
+    metrics and notes, and the totals over the set. --set heldout needs the
+    tunables frozen with 'eval freeze' and unchanged since; its results record
+    the frozen hash, so re-freezing changed tunables then needs
+    --new-heldout-set. A dev run records the frozen hash when the tunables
+    match the freeze, and null otherwise. Exits 0 when written, 1 when the
+    results file exists (it is never overwritten) or cannot be written, and 2
+    when CORPUS or a labels file is invalid, the tunables are not frozen or
+    changed since the freeze (heldout), the evaluator is unknown or refuses an
+    entry, or the set has no entries.
+    """
+    from .eval.corpus import CorpusError
+    from .eval.evaluators import get, load_builtin_evaluators
+    from .eval.freeze import RESULTS_RELPATH, FreezeError
+    from .eval.runner import ResultsWriteError, run_eval
+
+    load_builtin_evaluators()
+    try:
+        get(evaluator)
+    except KeyError as exc:
+        _refuse(str(exc.args[0]))
+    default_results = root / RESULTS_RELPATH
+    target = results_dir if results_dir is not None else default_results
+    warnings: list[str] = []
+    if set_name == "heldout" and not _same_directory(target, default_results):
+        warnings.append(
+            f"held-out results outside {default_results} are not seen by 'eval freeze', so a "
+            "re-freeze of changed tunables will not know this run used them"
+        )
+    try:
+        path = run_eval(corpus, set_name, evaluator, root=root, results_dir=target)
+    except (CorpusError, FreezeError, ValueError) as exc:
+        _refuse(str(exc))
+    except ResultsWriteError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from None
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if as_json:
+        click.echo(_stdjson.dumps(
+            {"path": str(path), "result": doc, "warnings": warnings}, indent=2
+        ))
+        return
+    n = len(doc["entries"])
+    frozen = doc["frozen_sha256"]
+    click.echo(
+        f"wrote {path}: {evaluator} on {n} {set_name} {'entry' if n == 1 else 'entries'} "
+        f"of corpus {doc['corpus']['name']}, "
+        + (f"frozen {frozen[:8]}" if frozen else "not frozen")
+    )
+    if doc["totals"]["metrics"]:
+        click.echo("totals:")
+        for key, value in doc["totals"]["metrics"].items():
+            click.echo(f"  {key}: " + ("n/a" if value is None else f"{value:.4f}"))
+    for entry in doc["entries"]:
+        for note in entry["notes"]:
+            click.echo(f"note ({entry['id']}): {note}")
+    for warning in warnings:
+        click.echo(f"warning: {warning}", err=True)
+
+
+_HELDOUT_LABELS = "calibrate on dev labels only; thresholds freeze before held-out runs"
+_FREEZE_REMINDER = "re-run 'apd-gauntlet eval freeze' before any held-out run"
+
+
+def _not_nan(ctx: click.Context, param: click.Parameter, value: float) -> float:
+    """Refuse NaN, which passes ``click.FloatRange`` because it fails both bound checks."""
+    if math.isnan(value):
+        raise click.BadParameter(f"{value} is not in the range 0<x<=1.")
+    return value
+
+
+@main.command("calibrate")
+@click.argument("task")
+@click.option(
+    "--labels",
+    "labels_file",
+    required=True,
+    type=click.Path(path_type=Path),
+    metavar="FILE",
+    help="Dev labels of kind decisions for TASK (eval-labels.schema.json).",
+)
+@click.option(
+    "--target-precision",
+    required=True,
+    type=click.FloatRange(0, 1, min_open=True),
+    callback=_not_nan,
+    metavar="P",
+    help="The precision the threshold must reach on the labels, for example 0.98.",
+)
+@click.option(
+    "--min-support",
+    type=click.IntRange(min=1),
+    default=10,
+    show_default=True,
+    metavar="N",
+    help="The fewest predicted positives a threshold may rest on.",
+)
+@click.option(
+    "--thresholds",
+    "thresholds_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    metavar="PATH",
+    help="The thresholds file to update.  [default: the packaged data/decide/thresholds.yaml]",
+)
+def calibrate_cmd(
+    task: str,
+    labels_file: Path,
+    target_precision: float,
+    min_support: int,
+    thresholds_file: Path | None,
+) -> None:
+    """Calibrate the decision threshold TASK (<task> or <task>.<flag>) on dev labels.
+
+    Reads the decision records the labels name, takes the threshold with the
+    highest recall whose precision on the labelled items is at least P with at
+    least N predicted positives, and writes it to the thresholds file with the
+    labels' SHA-256 and the records' provider, model and weights revision
+    (calibrated: true). A changed threshold is a changed tunable, so run
+    'apd-gauntlet eval freeze' before any held-out run. Exits 0 when written, 1
+    when no threshold qualifies or the file cannot be written (it is left as it
+    was), and 2 when TASK has no value spec, the labels are invalid, of another
+    kind or task, or held-out, or the records cannot be used (an unknown ref, a
+    record of another task, records that mix models, no gold positive).
+    """
+    from .eval import calibrate as cal
+    from .eval.corpus import CorpusError, load_labels
+
+    spec = cal.VALUE_SPECS.get(task)
+    if spec is None:
+        _refuse(cal.unknown_key_message(task))
+    try:
+        labels = load_labels(labels_file)
+    except CorpusError as exc:
+        _refuse(str(exc))
+    if labels.kind != "decisions":
+        _refuse(f"{labels_file}: labels of kind {labels.kind}; calibrate needs kind decisions")
+    if labels.data["task"] != task:
+        _refuse(f"{labels_file}: labels for {labels.data['task']}, not {task}")
+    if labels.data["set"] == "heldout":
+        _refuse(f"{labels_file}: set: heldout; {_HELDOUT_LABELS}")
+    try:
+        provider, model, weights_revision = cal.record_model(labels)
+        pairs, skipped = cal.labelled_pairs(labels, task)
+        result = cal.choose_threshold(
+            pairs, direction=spec.direction, target_precision=target_precision,
+            min_support=min_support,
+        )
+    except cal.CalibrationError as exc:
+        _refuse(str(exc))
+    if skipped:
+        click.echo(
+            f"skipped {skipped} labelled item{'' if skipped == 1 else 's'}"
+            " (outcome error or no value)"
+        )
+    if not result.feasible:
+        best = "none" if result.best_precision is None else f"{result.best_precision:.4f}"
+        click.echo(
+            f"no threshold reaches precision ≥ {target_precision!r} with at least "
+            f"{min_support} predicted positives (best: {best}); {task} stays uncalibrated"
+        )
+        raise SystemExit(1)
+    path = thresholds_file if thresholds_file is not None else cal.THRESHOLDS_PATH
+    try:
+        cal.write_threshold(
+            path, task, result, labels.sha256,
+            provider=provider, model=model, weights_revision=weights_revision,
+        )
+    except cal.CalibrationError as exc:
+        _refuse(str(exc))
+    except OSError as exc:
+        _cannot_write(path, exc)
+    entry = cal.threshold_entry(
+        result, labels.sha256, provider=provider, model=model, weights_revision=weights_revision
+    )
+    click.echo(f"wrote {path}: {task}, selecting values {spec.direction} the threshold")
+    for line in yaml.safe_dump(entry, sort_keys=True).splitlines():
+        click.echo(f"  {line}")
+    click.echo(_FREEZE_REMINDER)
+
+
+@main.group("metamorphic")
+def metamorphic_group() -> None:
+    """Check that behaviour-preserving changes to inputs leave results unchanged."""
+
+
+@metamorphic_group.command("run")
+@click.option(
+    "--suite",
+    "suite_name",
+    required=True,
+    metavar="NAME",
+    help="A registered suite, for example stride-table.",
+)
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The directory the suite's fixtures are relative to.",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print the suite name and every case as JSON.",
+)
+def metamorphic_run_cmd(suite_name: str, root: Path, as_json: bool) -> None:
+    """Apply each transformation of the suite NAME to each of its fixtures and compare.
+
+    A transformation writes a changed copy of a fixture (renamed elements,
+    reordered rows) that must give the same results, once renamed names are
+    mapped back. Each case holds, is violated, is allowlisted (the suite lists
+    it as a known non-invariance, with a reason) or is a stale allowlist entry
+    (listed, but it holds). The copies go to a temporary directory that is
+    removed afterwards. Exits 0 when every case holds or is allowlisted, 1 when
+    a case is violated or an allowlist entry is stale, and 2 when NAME is not a
+    registered suite or a fixture is missing under ROOT, or the suite cannot
+    run (for example, a tool it needs is missing).
+    """
+    import dataclasses
+    import tempfile
+
+    from .eval.metamorphic import (
+        FAILING,
+        MetamorphicError,
+        get_suite,
+        load_builtin_suites,
+        render_text,
+        run_suite,
+    )
+
+    load_builtin_suites()
+    try:
+        suite = get_suite(suite_name)
+    except KeyError as exc:
+        _refuse(str(exc.args[0]))
+    with tempfile.TemporaryDirectory(prefix="apd-metamorphic-") as workdir:
+        try:
+            cases = run_suite(suite, root, Path(workdir))
+        except MetamorphicError as exc:
+            _refuse(str(exc))
+    if as_json:
+        click.echo(_stdjson.dumps(
+            {"suite": suite.name, "cases": [dataclasses.asdict(c) for c in cases]}, indent=2
+        ))
+    else:
+        click.echo(render_text(suite, cases))
+    if any(c.status in FAILING for c in cases):
         raise SystemExit(1)
 
 

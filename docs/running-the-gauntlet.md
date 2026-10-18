@@ -580,6 +580,8 @@ To record your own baseline:
    private notes **outside this repository**.
 4. Judge later runs' deltas against `B0`.
 
+To measure a change before and after, with paired baseline runs, telemetry, and token and cost usage per agent and phase, follow [Measuring changes](measuring-changes.md).
+
 > **Out-of-band rule.** All outputs of all real runs — the run tree, the report,
 > and even bare metric counts including `B0` itself — stay fully out-of-band.
 > Never commit them. The committed `examples/*/expected/` and `tests/fixtures/`

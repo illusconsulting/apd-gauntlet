@@ -1,0 +1,342 @@
+"""Read a finished run directory into a ``RunSnapshot`` for comparison.
+
+The snapshot holds what a before-and-after comparison needs: findings and
+capabilities by id (the whole corpus, attack-path and threat-model findings
+included), the asset-graph node names each record's edges target, the report
+headlines expanded through ``merged_from``, a digest of ``inputs/`` so runs
+over different inputs are never compared, the run's retry and repair counts
+(``.apd-state/attempts.yaml``) when it recorded them, and its token and cost
+totals (``.apd-state/usage.yaml``) when ``apd-gauntlet usage`` wrote them.
+"""
+from __future__ import annotations
+
+import hashlib
+import math
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, NoReturn
+
+import yaml
+
+from ..synthesis.loader import load_corpus
+from .attempts import Attempts, AttemptsError, read_attempts
+from .usage import USAGE_RELPATH
+
+_CHUNK = 1 << 20
+# The legacy plural root key ``load_corpus`` also accepts for each record kind.
+_PLURAL = {"finding": "findings", "capability": "capabilities"}
+
+
+class RunLoadError(Exception):
+    """A run directory could not be read; the message names the file."""
+
+
+@dataclass(frozen=True)
+class RunSnapshot:
+    path: Path
+    findings: dict[str, dict[str, Any]]
+    capabilities: dict[str, dict[str, Any]]
+    graph_targets: dict[str, list[str]]
+    headlines: tuple[frozenset[str], ...] | None
+    inputs_sha256: str | None
+    attempts: Attempts | None = None
+    usage_totals: dict[str, float] | None = None
+
+
+def is_run_dir(path: Path) -> bool:
+    """A run directory is one that holds ``.apd-run.yaml``."""
+    return (path / ".apd-run.yaml").is_file()
+
+
+def _unreadable(path: object, exc: OSError) -> RunLoadError:
+    return RunLoadError(f"{path}: cannot read: {exc.strerror or exc}")
+
+
+def _walk_error(exc: OSError) -> NoReturn:
+    raise _unreadable(exc.filename, exc) from exc
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(_CHUNK), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise _unreadable(path, exc) from exc
+    return digest.hexdigest()
+
+
+def _link_line(inputs: Path, link: Path) -> str:
+    """``"<path>\\0link:<link text>\\n"`` for a link whose target is not a file."""
+    try:
+        target = os.readlink(link)
+    except OSError as exc:
+        raise _unreadable(link, exc) from exc
+    return f"{link.relative_to(inputs).as_posix()}\0link:{target}\n"
+
+
+def inputs_digest(run_dir: Path) -> str | None:
+    """SHA-256 over every file under ``<run>/inputs/``; ``None`` when it is absent.
+
+    Each file, or link to a file, contributes the line
+    ``"<posix path relative to inputs/>\\0<sha256 of its bytes>\\n"``. A link to a
+    directory (which the walk does not enter) and a dangling link contribute
+    ``"<path>\\0link:<link text>\\n"`` instead, so retargeting a link changes the
+    digest. The lines are sorted before hashing, so the digest depends only on
+    paths, bytes and link targets. Dotfiles count like any other file. A file or
+    directory that cannot be read raises ``RunLoadError`` naming it, so no file is
+    silently left out.
+    """
+    inputs = run_dir / "inputs"
+    if not inputs.is_dir():
+        return None
+    lines: list[str] = []
+    for root, dirs, files in os.walk(inputs, onerror=_walk_error):
+        for name in dirs:
+            p = Path(root, name)
+            if p.is_symlink():  # a link to a directory, which the walk does not enter
+                lines.append(_link_line(inputs, p))
+        for name in files:
+            p = Path(root, name)
+            if p.is_file():
+                lines.append(f"{p.relative_to(inputs).as_posix()}\0{_file_sha256(p)}\n")
+            elif p.is_symlink():  # a dangling link
+                lines.append(_link_line(inputs, p))
+    lines.sort()
+    return hashlib.sha256("".join(lines).encode("utf-8", "surrogateescape")).hexdigest()
+
+
+def _parse(path: Path) -> Any:
+    """Parse one YAML file; any read or parse failure becomes ``RunLoadError``."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise RunLoadError(f"{path}: not UTF-8 text: {exc}") from exc
+    except OSError as exc:
+        raise _unreadable(path, exc) from exc
+    try:
+        return yaml.safe_load(text)
+    except (yaml.YAMLError, ValueError) as exc:  # ValueError: e.g. an impossible date
+        raise RunLoadError(f"{path}: invalid YAML: {exc}") from exc
+    except RecursionError as exc:
+        raise RunLoadError(f"{path}: invalid YAML: nested too deeply to parse") from exc
+
+
+def _not_a_mapping(path: Path, doc: Any) -> RunLoadError:
+    return RunLoadError(f"{path}: top level is a {type(doc).__name__}, not a mapping")
+
+
+def _parse_mapping(path: Path) -> dict[str, Any]:
+    """``_parse`` a file whose top level must be a mapping; an empty file is ``{}``."""
+    doc = _parse(path)
+    if doc is None:
+        return {}
+    if not isinstance(doc, dict):
+        raise _not_a_mapping(path, doc)
+    return doc
+
+
+def _corpus_files(run_dir: Path) -> list[Path]:
+    """The files ``load_corpus`` reads, in the order it reads them."""
+    return sorted(run_dir.glob("**/*.findings.yaml")) + sorted(
+        run_dir.glob("**/*.capabilities.yaml")
+    )
+
+
+def _records(doc: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    raw = doc.get(key)
+    if raw is None:
+        raw = doc.get(_PLURAL[key])
+    items = raw if isinstance(raw, list) else [raw]
+    return [r for r in items if isinstance(r, dict)]
+
+
+def _corpus_problem(run_dir: Path) -> RunLoadError | None:
+    """The error for the first corpus file ``load_corpus`` cannot use, if any.
+
+    A file fails when it cannot be read or parsed, when its top level is not a
+    mapping (``load_corpus`` reads every falsy document as empty), or when a
+    record's ``id`` is not a string.
+    """
+    for f in _corpus_files(run_dir):
+        try:
+            doc = _parse(f) or {}
+        except RunLoadError as exc:
+            return exc
+        if not isinstance(doc, dict):
+            return _not_a_mapping(f, doc)
+        key = "finding" if f.name.endswith(".findings.yaml") else "capability"
+        for rec in _records(doc, key):
+            rid = rec.get("id", "")
+            if not isinstance(rid, str):
+                return RunLoadError(f"{f}: a {key} id is a {type(rid).__name__}, not a string")
+    return None
+
+
+def _load_corpus(
+    run_dir: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """``load_corpus(run_dir, include_attack_path=True)`` with its records' ids checked.
+
+    ``load_corpus`` finds its files with ``Path.glob``, which skips a directory
+    it cannot list without raising, so the corpus would silently lose that
+    directory's records. The run is walked first, not following links, as the
+    glob does not; a directory that cannot be listed raises ``RunLoadError``
+    naming it.
+    """
+    for _ in os.walk(run_dir, onerror=_walk_error):
+        pass
+    try:
+        findings, capabilities = load_corpus(run_dir, include_attack_path=True)
+    except (
+        yaml.YAMLError, ValueError, OSError, AttributeError, TypeError, RecursionError
+    ) as exc:
+        problem = _corpus_problem(run_dir)
+        if problem is None:
+            raise
+        raise problem from exc
+    if not all(isinstance(rid, str) for rid in findings) or not all(
+        isinstance(c["id"], str) for c in capabilities
+    ):
+        raise _corpus_problem(run_dir) or RunLoadError(f"{run_dir}: a record id is not a string")
+    return findings, {c["id"]: c for c in capabilities}
+
+
+def _graph_targets(graph: dict[str, Any]) -> dict[str, list[str]]:
+    """Map each ``finding_id``/``capability_id`` on an edge to its ``to`` node's name."""
+    nodes = graph.get("nodes")
+    edges = graph.get("edges")
+    names: dict[str, str] = {}
+    for node in nodes if isinstance(nodes, list) else []:
+        if isinstance(node, dict):
+            node_id, name = node.get("node_id"), node.get("name")
+            if isinstance(node_id, str) and isinstance(name, str):
+                names[node_id] = name
+    targets: dict[str, list[str]] = {}
+    for edge in edges if isinstance(edges, list) else []:
+        if not isinstance(edge, dict):
+            continue
+        to = edge.get("to")
+        name = names.get(to) if isinstance(to, str) else None
+        if name is None:
+            continue
+        for key in ("finding_id", "capability_id"):
+            rid = edge.get(key)
+            if isinstance(rid, str):
+                listed = targets.setdefault(rid, [])
+                if name not in listed:
+                    listed.append(name)
+    return targets
+
+
+def _rank(entry: dict[str, Any]) -> tuple[int, int]:
+    rank = entry.get("rank")
+    if isinstance(rank, bool) or not isinstance(rank, int):  # a boolean is not a rank
+        return (1, 0)
+    return (0, rank)
+
+
+def _headlines(
+    report_data: dict[str, Any], deduped: dict[str, Any]
+) -> tuple[frozenset[str], ...]:
+    """Headline ids in ``rank`` order, each expanded through ``merged_from``.
+
+    Only string members count; an id with none expands to itself.
+    """
+    merged: dict[str, frozenset[str]] = {}
+    for rec in _records(deduped, "finding"):
+        rid, members = rec.get("id"), rec.get("merged_from")
+        if isinstance(rid, str) and isinstance(members, list):
+            ids = frozenset(m for m in members if isinstance(m, str))
+            if ids:
+                merged[rid] = ids
+    raw = report_data.get("headline_findings")
+    entries = [
+        h for h in (raw if isinstance(raw, list) else [])
+        if isinstance(h, dict) and isinstance(h.get("id"), str)
+    ]
+    entries.sort(key=_rank)
+    return tuple(merged.get(h["id"], frozenset({h["id"]})) for h in entries)
+
+
+def _number(value: Any) -> bool:
+    """A finite int or float; a boolean is not a number."""
+    return (
+        isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    )
+
+
+def _usage_totals(run_dir: Path) -> dict[str, float] | None:
+    """``totals`` of ``.apd-state/usage.yaml`` plus its ``cost_usd_all`` when present.
+
+    ``None`` when the file does not exist. A file that cannot be read or parsed,
+    has no ``totals`` mapping, or holds a value that is not a number raises
+    ``RunLoadError`` naming it.
+    """
+    path = run_dir / USAGE_RELPATH
+    try:
+        doc = _parse_mapping(path)
+    except RunLoadError as exc:
+        if isinstance(exc.__cause__, FileNotFoundError):
+            return None
+        raise
+    totals = doc.get("totals")
+    if not isinstance(totals, dict):
+        raise RunLoadError(f"{path}: totals is not a mapping")
+    out: dict[str, float] = {}
+    for key, value in totals.items():
+        if not _number(value):
+            raise RunLoadError(f"{path}: totals.{key} is not a number: {value!r}")
+        out[str(key)] = value
+    if "cost_usd_all" in doc:
+        if not _number(doc["cost_usd_all"]):
+            raise RunLoadError(f"{path}: cost_usd_all is not a number: {doc['cost_usd_all']!r}")
+        out["cost_usd_all"] = doc["cost_usd_all"]
+    return out
+
+
+def load_run(path: Path) -> RunSnapshot:
+    """Read the run directory at ``path``.
+
+    Any file that cannot be read or parsed (``yaml.YAMLError``, a ``ValueError``
+    from PyYAML, nesting too deep to parse, text that is not UTF-8, an
+    ``OSError``), or whose top level is not a mapping, becomes ``RunLoadError``
+    naming that file; so does a directory under the run that cannot be listed,
+    and a corpus record whose ``id`` is not a string.
+    ``headlines`` is ``None`` when ``report-data.yaml`` or
+    ``deduped-findings.yaml`` is missing, and ``()`` when both exist but no
+    headline has a string ``id``; ``inputs_sha256`` is ``None`` when the run has
+    no ``inputs/``. ``attempts`` is ``None`` when the run has no
+    ``.apd-state/attempts.yaml`` (every 1.7 run); an attempts file that is
+    invalid or unreadable raises ``RunLoadError`` naming it. ``usage_totals``
+    is ``None`` when the run has no ``.apd-state/usage.yaml``; one that cannot
+    be read, has no ``totals`` mapping or holds a value that is not a number
+    raises ``RunLoadError`` naming it.
+    """
+    findings, capabilities = _load_corpus(path)
+    synth = path / "40-synthesis"
+    graph_file = synth / "asset-graph.yaml"
+    graph_targets = _graph_targets(_parse_mapping(graph_file)) if graph_file.is_file() else {}
+    report_file = synth / "report-data.yaml"
+    deduped_file = synth / "deduped-findings.yaml"
+    headlines = (
+        _headlines(_parse_mapping(report_file), _parse_mapping(deduped_file))
+        if report_file.is_file() and deduped_file.is_file()
+        else None
+    )
+    try:
+        attempts = read_attempts(path)
+    except AttemptsError as exc:
+        raise RunLoadError(str(exc)) from exc
+    return RunSnapshot(
+        path=path,
+        findings=findings,
+        capabilities=capabilities,
+        graph_targets=graph_targets,
+        headlines=headlines,
+        inputs_sha256=inputs_digest(path),
+        attempts=attempts,
+        usage_totals=_usage_totals(path),
+    )

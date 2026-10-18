@@ -37,6 +37,13 @@ from .metrics import compute_metrics
 
 _PKG_DATA = Path(__file__).resolve().parent.parent / "data"
 
+# The lens output directories (validate.CANONICAL_RECORD_DIRS without the two
+# tier-4 output dirs): their records are what apply-clusters dedups.
+_TIER_DIRS = ("10-trustworthiness", "20-scalability", "30-auditability")
+# Tier-4 finding ids (attack-path analyzer, threat-model evaluator). These
+# findings never pass through dedup; _load_deduped unions them in.
+_TIER4_PREFIXES = ("apath-", "tmeval-")
+
 # Import-cycle note: report.taxonomy imports only stdlib (no synthesis import),
 # and synthesis.rollup is never imported by report.*, so this synthesis->report
 # edge does NOT close the report->synthesis cycle that coverage_logic broke
@@ -93,7 +100,7 @@ def _load_deduped(run_dir: Path) -> tuple[list[dict[str, Any]], list[dict[str, A
     tier4_by_id, _ = load_corpus(run_dir, include_attack_path=True)
     seen = {f.get("id") for f in findings}
     for fid, rec in tier4_by_id.items():
-        if (fid.startswith("apath-") or fid.startswith("tmeval-")) and fid not in seen:
+        if fid.startswith(_TIER4_PREFIXES) and fid not in seen:
             findings.append(rec)
     return findings, caps
 
@@ -353,6 +360,29 @@ def _count_unresolved_merges(path: Path) -> int:
     )
 
 
+def _tier_record_count(run_dir: Path, kind: str, root_key: str) -> int:
+    """Count the records in the tier directories' ``*.<kind>.yaml`` files.
+
+    These are the lens records before apply-clusters merged any. Each file is
+    read with load_corpus's root-key fallbacks (singular or legacy plural key,
+    one record or a list), and files below a tier directory count too, since
+    load_corpus globs them as well.
+    """
+    return sum(
+        len(_read_records(path, root_key, kind))
+        for tier in _TIER_DIRS
+        for path in sorted((run_dir / tier).glob(f"**/*.{kind}.yaml"))
+    )
+
+
+def _tier4_count(findings: list[dict[str, Any]]) -> int:
+    """Count the tier-4 findings in the metrics corpus (they skip dedup)."""
+    return sum(
+        1 for f in findings
+        if isinstance(f.get("id"), str) and f["id"].startswith(_TIER4_PREFIXES)
+    )
+
+
 def build_rollups(run_dir: Path) -> RollupResult:
     findings, caps = _load_deduped(run_dir)
     inventory = yaml.safe_load(
@@ -420,9 +450,16 @@ def build_rollups(run_dir: Path) -> RollupResult:
     unresolved = _count_unresolved_merges(synth / "rejected-records.yaml")
     # findings already UNION apath-* (via _load_deduped); compute_metrics is the
     # single canonical report summary block.
+    # N20: the pre-dedup counts are the tier directories' lens records. The
+    # tier-4 findings are part of findings_total but skip dedup, so they count
+    # on both sides.
     result.metrics = compute_metrics(
         findings, caps, contradictions, sev_dis,
         unresolved_authored_merges=unresolved,
+        findings_pre_dedup=(
+            _tier_record_count(run_dir, "findings", "finding") + _tier4_count(findings)
+        ),
+        capabilities_pre_dedup=_tier_record_count(run_dir, "capabilities", "capability"),
     )
 
     _write(run_dir, result)

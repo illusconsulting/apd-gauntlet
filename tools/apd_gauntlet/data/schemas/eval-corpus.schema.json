@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/eval-corpus.schema.json",
+  "title": "APD evaluation corpus",
+  "description": "A corpus manifest (eval/<area>/corpus.yaml, or eval/local/ for private runs): the labelled entries an evaluator scores, each in the dev or the held-out set. An entry names a finished run directory, a repository pinned by commit, or both, and its labels file (eval-labels.schema.json). `run` and `labels` are relative to the manifest's directory. The loader also refuses duplicate ids and any run or (repo url, commit) that appears in both sets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "name": { "$ref": "#/$defs/slug" },
+    "description": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "set", "labels"],
+      "anyOf": [
+        { "required": ["run"] },
+        { "required": ["repo"] }
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "set": {
+          "description": "dev: tuning and calibration happen here. heldout: run only after `eval freeze`.",
+          "enum": ["dev", "heldout"]
+        },
+        "run": {
+          "description": "A finished run directory, relative to the manifest's directory or absolute.",
+          "type": "string",
+          "minLength": 1
+        },
+        "repo": { "$ref": "#/$defs/repo" },
+        "labels": {
+          "description": "The entry's eval-labels file, relative to the manifest's directory or absolute.",
+          "type": "string",
+          "minLength": 1
+        },
+        "licence": {
+          "description": "The licence of the pinned repository (for example Apache-2.0).",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "commit"],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "commit": {
+          "description": "The full 40-character commit SHA.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "path": {
+          "description": "A directory inside the repository.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illusconsulting/apd-gauntlet/schemas/eval-labels.schema.json",
+  "title": "APD evaluation labels",
+  "description": "Hand-reviewed labels for one corpus entry, discriminated by `kind`. findings: the expected findings of a run with a verdict each. decisions: gold outcomes for the items of decision records, for `calibrate`. Each kind is an if/then block under allOf (not oneOf), so an invalid item reports its own JSON path. A new kind adds its value to `kind` and one more block.",
+  "type": "object",
+  "required": ["schema_version", "kind"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "kind": { "enum": ["findings", "decisions"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "findings" } }, "required": ["kind"] },
+      "then": { "$ref": "#/$defs/findings_labels" }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "decisions" } }, "required": ["kind"] },
+      "then": { "$ref": "#/$defs/decisions_labels" }
+    }
+  ],
+  "$defs": {
+    "findings_labels": {
+      "$comment": "schema_version and kind are checked at the top level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "kind", "entry", "items"],
+      "properties": {
+        "schema_version": true,
+        "kind": true,
+        "entry": {
+          "description": "The corpus entry id these labels belong to.",
+          "type": "string",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/finding_label" }
+        }
+      }
+    },
+    "finding_label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "apd_goal", "severity", "title", "evidence"],
+      "properties": {
+        "id": {
+          "description": "The finding id the label was copied from, when it was.",
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "description": "true_positive: a real finding the run should report. false_positive: a reported finding that is wrong. unreviewed: not judged yet; evaluators refuse it.",
+          "enum": ["true_positive", "false_positive", "unreviewed"]
+        },
+        "apd_goal": { "$ref": "_defs.schema.json#/$defs/apd_goal" },
+        "severity": { "$ref": "_defs.schema.json#/$defs/severity" },
+        "title": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "note": { "type": "string" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "locator"],
+      "properties": {
+        "artifact": { "type": "string", "minLength": 1 },
+        "locator": { "type": "string", "minLength": 1 },
+        "excerpt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "decisions_labels": {
+      "$comment": "schema_version and kind are checked at the top level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "kind", "set", "task", "records"],
+      "properties": {
+        "schema_version": true,
+        "kind": true,
+        "set": {
+          "description": "calibrate accepts dev labels only.",
+          "enum": ["dev", "heldout"]
+        },
+        "task": {
+          "description": "A decision task, optionally with one flag: <task> or <task>.<flag>.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9_]*)?$"
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/decision_record" }
+        }
+      }
+    },
+    "decision_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "items"],
+      "properties": {
+        "path": {
+          "description": "The decision record file, relative to the labels file's directory or absolute.",
+          "type": "string",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/decision_label" }
+        }
+      }
+    },
+    "decision_label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "gold"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "gold": { "type": "boolean" }
+      }
+    }
+  }
+}

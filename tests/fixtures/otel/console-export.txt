@@ -1,0 +1,3 @@
+{
+  body: 'claude_code.api_request',
+  attributes: { 'event.name': 'api_request', input_tokens: 12 } }
