@@ -24,6 +24,11 @@ ALLOWED_EFFORT = ("low", "medium", "high", "xhigh", "max")
 MODEL_ALIASES = ("sonnet", "opus", "haiku", "fable", "inherit")
 FULL_MODEL_ID = re.compile(r"^claude-[a-z0-9.-]+$")
 
+# Every agent sets `tools`: without it, Claude Code gives the agent every tool of the
+# session. A comma inside parentheses, as in `Agent(worker, researcher)`, does not
+# separate two tool names.
+TOOLS_SEPARATOR = re.compile(r",(?![^()]*\))")
+
 BOUNDING_MARKER = "## Output bounding"
 SPECIALIST_NAMES = {
     "apd-confidentiality", "apd-integrity", "apd-availability",
@@ -44,6 +49,35 @@ def description_errors(path: pathlib.Path, description: object, max_chars: int) 
             "into every session with the plugin enabled — keep one line"
         )
     return errors
+
+
+def parse_tools(value: object) -> frozenset[str] | None:
+    """Return the tool names of an agent's `tools` value.
+
+    The value is a comma-separated string or a YAML list of names. Returns None when it
+    names no tool, holds an empty name, or is neither form.
+    """
+    if isinstance(value, str):
+        names = [part.strip() for part in TOOLS_SEPARATOR.split(value)]
+    elif isinstance(value, list):
+        names = [item.strip() for item in value if isinstance(item, str)]
+        if len(names) != len(value):
+            return None
+    else:
+        return None
+    if not names or not all(names):
+        return None
+    return frozenset(names)
+
+
+def tools_errors(path: pathlib.Path, meta: dict[object, object]) -> list[str]:
+    """Return the errors for an agent's `tools` (required, either form)."""
+    tools = meta.get("tools")
+    if tools is None or tools == "" or tools == []:
+        return [f"{path}: frontmatter missing 'tools'"]
+    if parse_tools(tools) is None:
+        return [f"{path}: tools must be a comma-separated string or a YAML list of tool names"]
+    return []
 
 
 def model_effort_errors(path: pathlib.Path, meta: dict[object, object]) -> list[str]:
@@ -82,6 +116,7 @@ def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
         errors.append(f"{path}: frontmatter missing 'description'")
     else:
         errors.extend(description_errors(path, description, MAX_AGENT_DESCRIPTION_CHARS))
+    errors.extend(tools_errors(path, meta))
     errors.extend(model_effort_errors(path, meta))
 
     name = meta.get("name") or path.stem

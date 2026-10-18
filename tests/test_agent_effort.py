@@ -65,7 +65,8 @@ def test_allowed_values_are_the_claude_code_frontmatter_values():
 
 def _lint(tmp_path: pathlib.Path, extra: str) -> list[str]:
     a = tmp_path / "apd-x.md"
-    a.write_text("---\nname: apd-x\ndescription: x\n" + extra + "---\n\n## Final message\n")
+    a.write_text("---\nname: apd-x\ndescription: x\ntools: Read\n" + extra
+                 + "---\n\n## Final message\n")
     return lint_agent_file(a, tmp_path)
 
 
@@ -134,5 +135,6 @@ def test_missing_effort_is_reported_with_the_other_frontmatter_errors(tmp_path):
     assert lint_agent_file(a, tmp_path) == [
         f"{a}: frontmatter missing 'name'",
         f"{a}: frontmatter missing 'description'",
+        f"{a}: frontmatter missing 'tools'",
         f"{a}: frontmatter missing 'effort'",
     ]

@@ -239,6 +239,14 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   or `max`. It also rejects a `model` that is neither an alias (`sonnet`,
   `opus`, `haiku`, `fable`, `inherit`) nor a full model id that starts with
   `claude-`. `model` stays optional.
+- **`lint-agents` requires `tools`.** An agent with no `tools` in its
+  frontmatter gets every tool of the session, so `lint-agents` now rejects
+  one, and it reports an empty `tools` as missing. It reads `tools` as a
+  comma-separated string or as a YAML list, and it rejects a value that holds
+  an empty name or is neither form. Every agent already set `tools`, and none
+  changes. A test now pins each agent's tool set. The threat-model recon and
+  author agents, the attack-path analyzer and the domain auditor still hold
+  `Bash`.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

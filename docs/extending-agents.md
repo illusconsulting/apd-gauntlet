@@ -10,6 +10,7 @@ The nine specialist agents (`apd-confidentiality.md` through `apd-immutability.m
 ---
 name: apd-<goal>
 description: "APD gauntlet tier-<N> <Goal> lens specialist; dispatched by the apd-gauntlet workflow only."
+tools: Read, Glob, Grep, Write
 effort: medium
 ---
 
@@ -39,6 +40,8 @@ effort: medium
 Keep the `description` to one line: at most 160 characters for an agent and 200 for a skill. Claude Code loads the description of every agent and skill the plugin lists into each session that has the plugin enabled. The workflow names the agent of every step it dispatches, so the description does not choose which agent runs. `apd-gauntlet lint-agents` and `lint-skills` reject a longer or multi-line description, and `tests/test_plugin_footprint.py` caps the total at 4,096 bytes. Write it as a double-quoted YAML string: an unquoted value that contains a colon followed by a space does not parse. An agent's description ends with `; dispatched by the apd-gauntlet workflow only.` and a skill's with `Read through the agent's Required reading.` Two keep their own wording: the `apd-tier-repair` agent and the generated `apd-domain` skill.
 
 Every agent sets `effort`: one of `low`, `medium`, `high`, `xhigh` or `max`. The nine lenses run at `medium`. `model` is optional; when an agent sets it, the value is an alias (`sonnet`, `opus`, `haiku`, `fable` or `inherit`) or a full model id that starts with `claude-`. `apd-gauntlet lint-agents` rejects a missing or unknown `effort` and an unknown `model`.
+
+Every agent also sets `tools`, as a comma-separated string or a YAML list. Without it, Claude Code gives the agent every tool of the session. `apd-gauntlet lint-agents` rejects a missing, empty or malformed `tools`, and `tests/test_lint_agents.py::EXPECTED_TOOLS` pins each agent's tool set, so a change to an agent's tools also changes that pin.
 
 Each lens agent's Required reading list includes a **per-goal domain sidecar** — `.claude/skills/apd-domain/by-goal/<goal>.md` — rather than the full cross-goal `SKILL.md`. The sidecar contains the four calibration files (severity rubric, consequential actions, immutability classes, data taxonomy), the merged domain surfaces, and only that goal's common patterns, plus a `pruned` manifest; this bounds each agent's context to what it actually needs (~44% reduction at three packs). The full cross-goal `SKILL.md` is retained for non-lens agents (intake, attack-path-analyzer, domain-auditor).
 
