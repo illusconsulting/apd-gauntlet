@@ -19,10 +19,14 @@ Plan: `docs/superpowers/plans/2026-10-10-ws2-measurement-and-evaluation.md`; bas
 
 - Task 1 (`b9baeed`): the Step 1 test block is reformatted, not changed. Statements joined by `;` are split onto separate lines (ruff E702), and long lines are wrapped to the 100-character limit. The assertions are the plan's.
 - Task 1: register A9.1 places `load_corpus` in `report/loader.py` (≈ 24). In the codebase it is in `tools/apd_gauntlet/synthesis/loader.py:26`, as the Task 1 Interfaces line says, and `report/loader.py` has no `load_corpus`. `runs.py` imports it from `synthesis.loader`.
+- Task 2 (`2de9b09`): the Step 1 test block is reformatted, not changed. Statements joined by `;` are split (ruff E702), and the over-long first assertion of `test_mutations_are_reported` is split into two `assert` lines. The assertions are the plan's.
+- Task 2: an evidence pair with an empty artifact or an empty locator never excuses a lost finding (`_pointers` in `compare.py`). The plan says only "shares one of its `evidence_pairs`". The finding schema requires both parts, so such a pair comes only from an invalid record, and two invalid records would share `("", "")` and quietly excuse a lost critical or high finding, which Gate 1 must not allow. `test_evidence_pointer_without_artifact_or_locator_does_not_excuse` pins it.
+- Task 2: `tests/test_measure_compare.py` has 14 tests beyond the plan's four. They cover the identical-run delta, new-finding counts, the order of lost findings, operator excuse over reassigned evidence, reassignment to a new capability, the `unknown` level, the `None` cases, and the `make_run` and `edit` fixtures.
 
 ## Pending operator steps
 
 - Task 1: none (the task has no operator step).
+- Task 2: none (the task has no operator step).
 
 ## WS2 summary
 
