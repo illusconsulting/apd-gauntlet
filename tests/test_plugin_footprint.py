@@ -118,7 +118,8 @@ def test_always_on_description_budget():
 
 def test_orchestrator_removed():
     assert not (REPO / ".claude/agents/apd-orchestrator.md").exists()
-    assert not any("apd-orchestrator" in p for p in json.loads(PLUGIN.read_text())["agents"])
+    agents = json.loads(PLUGIN.read_text(encoding="utf-8"))["agents"]
+    assert not any("apd-orchestrator" in p for p in agents)
 
 
 def test_only_the_synthesizer_is_receipt_exempt():

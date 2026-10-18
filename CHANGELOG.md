@@ -217,11 +217,13 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 - **Agent and skill descriptions are one line.** Claude Code loads the
   description of every agent and skill the plugin lists into each session that
   has the plugin enabled. The 20 agent and 7 skill descriptions that ran to
-  several sentences are now one line each, so those descriptions take 3,536
-  bytes instead of 16,683. `lint-agents` rejects an agent description over 160
-  characters, `lint-skills` rejects a skill description over 200, and both
-  reject a description that spans lines. The workflow names the agent of every
-  step it dispatches, so no run output changes.
+  several sentences are now one line each, so all the listed descriptions
+  together take 3,538 bytes instead of 16,683. `lint-agents` rejects an agent
+  description over 160 characters, `lint-skills` rejects a skill description
+  over 200, and both reject a description that contains a newline.
+  `lint-agents` also reports an empty description as missing, as `lint-skills`
+  already did. The workflow names the agent of every step it dispatches, so no
+  run output changes.
 - **The deprecated `apd-orchestrator` agent is removed.** The `apd-gauntlet`
   workflow runner replaced it, and the plugin had kept it only as a reference.
   The plugin now lists 22 agents, and `lint-agents` no longer exempts it from

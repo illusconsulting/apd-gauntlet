@@ -54,10 +54,11 @@ def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
         return [f"{path}: frontmatter is not a mapping"]
     if "name" not in meta:
         errors.append(f"{path}: frontmatter missing 'name'")
-    if "description" not in meta:
+    description = meta.get("description")
+    if not description:
         errors.append(f"{path}: frontmatter missing 'description'")
     else:
-        errors.extend(description_errors(path, meta["description"], MAX_AGENT_DESCRIPTION_CHARS))
+        errors.extend(description_errors(path, description, MAX_AGENT_DESCRIPTION_CHARS))
 
     name = meta.get("name") or path.stem
     if name not in RECEIPT_EXEMPT and RECEIPT_MARKER not in text:

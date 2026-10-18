@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
 from apd_gauntlet.cli import main
 from apd_gauntlet.lint_agents import lint_agent_file, lint_agents_dir
 from click.testing import CliRunner
@@ -80,6 +81,14 @@ def test_lint_agents_accepts_a_description_at_the_cap(tmp_path):
     a = tmp_path / "apd-x.md"
     a.write_text("---\nname: apd-x\ndescription: " + "x" * 160 + "\n---\n\n## Final message\n")
     assert lint_agent_file(a, tmp_path) == []
+
+
+@pytest.mark.parametrize("value", ["", ' ""'], ids=["null", "empty-string"])
+def test_lint_agents_flags_an_empty_description_as_missing(tmp_path, value):
+    # `description:` with no value parses to None; str(None) would pass both checks.
+    a = tmp_path / "apd-x.md"
+    a.write_text(f"---\nname: apd-x\ndescription:{value}\n---\n\n## Final message\n")
+    assert lint_agent_file(a, tmp_path) == [f"{a}: frontmatter missing 'description'"]
 
 
 def test_real_agents_lint_clean_with_22_agents():

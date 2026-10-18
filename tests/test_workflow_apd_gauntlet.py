@@ -1,11 +1,11 @@
 """Structural contract test for the workflow runner .claude/workflows/apd-gauntlet.js.
 
 The runner is plain JS for the Workflow primitive; it cannot run under plain
-node and CI has no Node step. We pin its contract by reading it AS TEXT
-(mirrors tests/test_orchestrator_topology.py): meta block + phase pins +
-agentType resolution against .claude/agents/ + CLI-command resolution against
-the live Click registry + RECEIPT-field fidelity against the schema + the
-audit loop-cap literal + the synthesizer-fallback and typed-signal pins.
+node and CI has no Node step. We pin its contract by reading it AS TEXT:
+meta block + phase pins + agentType resolution against .claude/agents/ +
+CLI-command resolution against the live Click registry + RECEIPT-field
+fidelity against the schema + the audit loop-cap literal + the
+synthesizer-fallback and typed-signal pins.
 """
 from __future__ import annotations
 
