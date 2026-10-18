@@ -22,13 +22,14 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The 21 agents
+## The 22 agents
 
-The gauntlet ships 21 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, the tier-gate repair agent, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
+The gauntlet ships 22 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, the CLI step runner, the tier-gate repair agent, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
 
 | Role | Agent | Purpose |
 |---|---|---|
 | Coordinator | `.claude/workflows/apd-gauntlet.js` (the `apd-gauntlet` runner) | Phases the run, dispatches specialists via receipts, runs the decomposed synthesis + report audit |
+| CLI step runner | `apd-cli-runner` | Runs one `apd-gauntlet` command per CLI step (Bash only, Haiku, low effort) and returns its receipt |
 | Intake | `apd-intake` | Inventories artifacts, builds a PHI/PII data taxonomy, identifies evidence gaps, produces the context brief |
 | Specialist × 9 | `apd-confidentiality`, `apd-integrity`, `apd-availability`, `apd-distributed`, `apd-resilient`, `apd-ephemeral`, `apd-authenticity`, `apd-non-repudiation`, `apd-immutability` | Each analyzes input artifacts through one lens; emits findings and capabilities |
 | Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
@@ -43,7 +44,7 @@ The gauntlet ships 21 agents: intake, the nine specialists, the synthesizer and 
 
 Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). Three of the optional agents are truly **activation-gated** — the runner dispatches them only when a precondition holds, and skips them silently (or blocks, where the discipline rule demands it) otherwise: `apd-code-recon` (gated on `code_recon` enabled/auto and CBM reachable), `apd-threat-model-recon` (gated on a supplied `threat_model:`), and `apd-attack-path-analyzer` (gated on a declared crown jewel + attacker position). These declare their preconditions in `.apd-run.yaml` or the active domain pack. The remaining optional agents run unconditionally: `apd-threat-model-evaluator` is **no longer gated** (the always-on author guarantees a baseline threat model, so the evaluator runs on every run), and `apd-domain-auditor` runs every run as an advisory, non-blocking pass. Separately, `apd-threat-model-author` (v1.6+) is **always-on**: it is not optional and not gated — it authors the canonical baseline threat model on every run.
 
-A twenty-second file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 21.
+A twenty-third file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 22.
 
 ## Execution model: foreground / in-session
 

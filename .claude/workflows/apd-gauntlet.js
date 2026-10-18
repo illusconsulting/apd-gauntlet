@@ -3,9 +3,11 @@
 // Replaces the retired apd-orchestrator LLM agent. The Workflow primitive gives
 // this script NO filesystem, NO shell, NO Node API, and NO time/random APIs.
 // Therefore EVERY command and every file/idempotency check is performed by a
-// DISPATCHED agent: pyStep() dispatches a general-purpose Bash agent that runs
-// `apd-gauntlet <cmd> <runDir>`; llmStep() dispatches a repo agent resolved from
-// .claude/agents/. The script branches only on the values those agents return.
+// DISPATCHED agent: pyStep() dispatches the apd-cli-runner agent (Bash only, Haiku,
+// low effort), which runs `apd-gauntlet <cmd> <runDir>`; llmStep() dispatches a repo
+// agent resolved from .claude/agents/. The script branches only on the values those
+// agents return. run_id, domains and framework_version reach that agent's command
+// line, so setup refuses any value that does not match run-config.schema.json.
 //
 // INTERACTIVE / FOREGROUND. The dispatched specialist agents run as Claude Code
 // subagents of the session that launches the run, so the gauntlet is meant to be
@@ -172,6 +174,25 @@ if (!Array.isArray(args.domains) || args.domains.length === 0) {
   throw new Error('apd-gauntlet: args.domains must be a non-empty array of domain-pack ' +
     'names (e.g. ["pbm"]). Got: ' + JSON.stringify(args.domains) + '.');
 }
+// run_id, domains and framework_version are pasted into the COMMAND: line the Bash-only
+// apd-cli-runner runs, so each must match its run-config.schema.json pattern before the
+// first dispatch: a value such as 'r; touch x' or '$(id)' would otherwise reach a shell.
+const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const DOMAIN_RE = /^[a-z][a-z0-9-]*$/;
+const FRAMEWORK_VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+function refuseIdentifier(key, value) {
+  throw new Error('apd-gauntlet: ' + key + ' ' + JSON.stringify(value) + ' does not match ' +
+    'run-config.schema.json; refusing to build a shell command from it.');
+}
+if (!RUN_ID_RE.test(args.run_id)) { refuseIdentifier('args.run_id', args.run_id); }
+for (let i = 0; i < args.domains.length; i++) {
+  const d = args.domains[i];
+  if (typeof d !== 'string' || !DOMAIN_RE.test(d)) { refuseIdentifier('args.domains[' + i + ']', d); }
+}
+if (args.framework_version !== undefined &&
+    (typeof args.framework_version !== 'string' || !FRAMEWORK_VERSION_RE.test(args.framework_version))) {
+  refuseIdentifier('args.framework_version', args.framework_version);
+}
 
 // String concat only — no FS.
 const runDir = 'runs/' + args.run_id;
@@ -213,10 +234,12 @@ function guard(outputsList, validateScope, validateFlags) {
 }
 
 // ---------------------------------------------------------------------------
-// pyStep — dispatch a general-purpose Bash agent to run a CLI command behind
-// the guard, returning a RECEIPT whose agent field carries command identity
-// ('pystep:<cmd>') and whose errors[0].message on nonzero exit is
-// 'exit=<N>; <stderr-tail>' so the script recovers both the command and code.
+// pyStep — dispatch the apd-cli-runner agent (.claude/agents/apd-cli-runner.md) to
+// run one CLI command behind the guard, returning a RECEIPT whose agent field carries
+// command identity ('pystep:<cmd>') and whose errors[0].message on nonzero exit is
+// 'exit=<N>; <stderr-tail>' so the script recovers both the command and code. The
+// static receipt contract lives in that agent's body, so the prompt is only the guard
+// (or the always-run line), COMMAND:, RECEIPT AGENT: and this step's own receipt lines.
 // ---------------------------------------------------------------------------
 // opts.noRunDir: this command does NOT take the run dir as its positional
 //   (setup commands keyed by domain name, not run path).
@@ -225,10 +248,11 @@ function guard(outputsList, validateScope, validateFlags) {
 // opts.validateScope / opts.validateFlags: the guard's positional path and any
 //   trailing option (e.g. '--tier 10-trustworthiness'); never embed flags in
 //   the scope string (I1).
-// opts.alwaysRun: the step has no idempotency check and no skip. Its prompt says so
-//   and omits the guard, the GUARD CHECK wording and the skip sentinel, so a worker
-//   cannot short-circuit it: a tier gate always validates, resume-plan always reads
-//   the run, canonicalize always runs. Guarded pySteps (alwaysRun unset) keep the guard.
+// opts.alwaysRun: the step has no idempotency check and no skip. Its prompt opens with
+//   the always-run line in place of the guard, so the runner never checks for outputs
+//   and never returns the skip sentinel: a tier gate always validates, resume-plan
+//   always reads the run, canonicalize always runs. Guarded pySteps (alwaysRun unset)
+//   keep the guard.
 // opts.resumePlan: the command prints one line of JSON on stdout; the worker
 //   copies that object into the receipt as resume_plan, VERBATIM (setup reads it
 //   to fill RESUME_DONE). Only the resume-plan step sets it.
@@ -253,20 +277,8 @@ function pyStep(cmd, opts) {
     opts.alwaysRun
       ? 'Always run this command; this step has no idempotency check and no skip.'
       : guard(outputs, scope, flags),
-    '',
-    'You are a python-step worker for the apd-gauntlet workflow.',
-    opts.alwaysRun
-      ? 'WORK COMMAND — via Bash, run:'
-      : 'WORK COMMAND (distinct from the GUARD CHECK above — run this ONLY if the guard determined NOT-DONE) — via Bash, run:',
-    '  ' + invocation,
-    'Capture the exit code and the last lines of stderr.',
-    'Return ONLY a receipt conforming to schemas/agent-receipt.schema.json with:',
-    '  agent: "pystep:' + cmd + '"',
-    '  status: "ok" if exit==0, else "error"',
-    opts.alwaysRun
-      ? '  outputs: one {path, schema_valid:true} per file the command wrote'
-      : '  outputs: one {path, schema_valid:true} per file the command wrote (or the skip sentinel if you short-circuited)',
-    '  counts: {} (or blocked:N if the command reported blocked findings)',
+    'COMMAND: ' + invocation,
+    'RECEIPT AGENT: pystep:' + cmd,
     opts.errorsFromJson
       ? '  errors: on nonzero exit, read the JSON the command printed on stdout ' +
         '({"errors": [{"file", "id", "message", "path"}, ...], ...}) and return one ' +
@@ -274,7 +286,7 @@ function pyStep(cmd, opts) {
         '(when id is null or path is empty, leave that part out of the message; never drop an entry), ' +
         'at most 50 entries, in the order printed; ' +
         'if stdout is not that JSON, return [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}] instead'
-      : '  errors: on nonzero exit, [{path:"' + cmd + '", message:"exit=<N>; <stderr-tail>"}]',
+      : null,
     // F3: the audit-report worker ALSO lifts the per-class completeness counts the
     // CLI prints (`audit-report: <status> (... structural_failed=<S> editorial_failed=<E>)`)
     // into a report_audit block so the gate can block on STRUCTURAL failures only.
@@ -291,9 +303,9 @@ function pyStep(cmd, opts) {
         'copy that JSON object into the receipt as resume_plan VERBATIM — do not edit, ' +
         'reorder, drop or add any key or step'
       : null,
-    'NEVER summarize the file contents in prose — return the receipt only.',
   ].filter(Boolean).join('\n');
   return agent(prompt, {
+    agentType: 'apd-cli-runner',
     schema: RECEIPT,
     phase: opts.phase,
     label: opts.label || ('pystep-' + cmd),

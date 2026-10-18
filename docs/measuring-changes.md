@@ -217,13 +217,16 @@ session and counts as `main`.
 | `apd-report-auditor` | `synthesis-audit` |
 | `apd-domain-auditor` | `domain-improvements` |
 | `apd-tier-repair` | `canonicalize` |
+| `apd-cli-runner` | `cli-steps` |
 | `general-purpose` | `cli-steps` |
 | `main` | `session` |
 
 Any other agent, `custom` and `third-party` included, counts under
-`unattributed`. `cli-steps` is the general-purpose worker that runs each CLI
-step of the workflow, and `session` is the launching session itself; neither is
-a workflow phase.
+`unattributed`. `cli-steps` is the `apd-cli-runner` agent that runs each CLI
+step of the workflow. In 1.7 runs a general-purpose worker ran them, and the
+synthesis fallback's `run-state.yaml` breadcrumb still runs on one, so
+`general-purpose` counts there too. `session` is the launching session itself.
+Neither is a workflow phase.
 
 ### Warnings
 

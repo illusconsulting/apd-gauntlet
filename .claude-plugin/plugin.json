@@ -11,6 +11,7 @@
     "./.claude/agents/apd-attack-path-analyzer.md",
     "./.claude/agents/apd-authenticity.md",
     "./.claude/agents/apd-availability.md",
+    "./.claude/agents/apd-cli-runner.md",
     "./.claude/agents/apd-cluster-adjudicator.md",
     "./.claude/agents/apd-code-recon.md",
     "./.claude/agents/apd-confidentiality.md",

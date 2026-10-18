@@ -1571,15 +1571,25 @@ def test_always_run_pystep_prompt_offers_no_skip(tmp_path: pathlib.Path) -> None
                       "cliArgs": "--tier 10-trustworthiness --json"}),
         ("validate", {"validateScope": "runs/r1", "outputs": "the scaffold"}),
     ])
-    assert "Always run this command; this step has no idempotency check and no skip." in always
-    assert "WORK COMMAND \u2014 via Bash, run:" in always
-    assert "apd-gauntlet validate runs/r1 --tier 10-trustworthiness --json" in always
+    # The COMMAND:/RECEIPT AGENT: contract (WS3 Task 1): the always-run line, then the
+    # command, then the receipt's agent value; the static receipt contract, with the
+    # WORK COMMAND and short-circuited wording, lives in the apd-cli-runner agent body.
+    assert always.splitlines()[:3] == [
+        "Always run this command; this step has no idempotency check and no skip.",
+        "COMMAND: apd-gauntlet validate runs/r1 --tier 10-trustworthiness --json",
+        "RECEIPT AGENT: pystep:validate",
+    ]
     for phrase in ("GUARD CHECK", "short-circuited", "IDEMPOTENCY GUARD", "NOT-DONE",
-                   ".skipped", "skip sentinel", "setup"):
+                   ".skipped", "skip sentinel", "setup", "NO IDEMPOTENT SKIP", "WORK COMMAND"):
         assert phrase not in always, phrase
-    # A guarded step keeps the guard, the NOT-DONE condition and the sentinel clause.
-    for phrase in ("IDEMPOTENCY GUARD", "GUARD CHECK", "NOT-DONE", "short-circuited"):
-        assert phrase in guarded, phrase
+    # A guarded step keeps the guard, its NOT-DONE condition and its sentinel, first.
+    lines = guarded.splitlines()
+    assert lines[0].startswith("IDEMPOTENCY GUARD (run this FIRST):")
+    for phrase in ("NOT-DONE", "<phase>.skipped",
+                   "apd-gauntlet validate --schema-only --errors-only runs/r1"):
+        assert phrase in lines[0], phrase
+    assert lines[1:3] == ["COMMAND: apd-gauntlet validate runs/r1",
+                          "RECEIPT AGENT: pystep:validate"]
     assert "Always run this command" not in guarded
 
 
@@ -1595,11 +1605,14 @@ def test_pystep_always_run_branch_is_pinned_in_the_source() -> None:
     t = _text()
     body = _fn_body(t, "pyStep")
     assert "'Always run this command; this step has no idempotency check and no skip.'" in body
-    assert "'WORK COMMAND \u2014 via Bash, run:'" in body
+    assert "'COMMAND: ' + invocation" in body and "'RECEIPT AGENT: pystep:' + cmd" in body
     assert "NO IDEMPOTENT SKIP" not in t
-    # The skip sentinel clause and the GUARD CHECK wording sit on the guarded side only.
-    assert body.count("short-circuited") == 1 and body.count("GUARD CHECK") == 1
-    assert body.index("opts.alwaysRun") < body.index("short-circuited")
+    # The always-run line replaces the guard, on the other side of the one alwaysRun branch.
+    assert body.count("guard(outputs, scope, flags)") == 1
+    assert body.index("opts.alwaysRun") < body.index("guard(outputs, scope, flags)")
+    # The WORK COMMAND and short-circuited pins moved to the agent body (register A9.8).
+    for phrase in ("WORK COMMAND", "short-circuited", "GUARD CHECK"):
+        assert phrase not in body, phrase
 
 
 def test_skip_convention_comment_describes_the_pystep_sentinel() -> None:
@@ -1642,3 +1655,15 @@ def test_closeout_summarize_records_attempts_and_always_runs():
     step = text[text.index("pyStep('summarize'"):]
     step = step[:step.index("});")]
     assert "--record-attempts" in step and "alwaysRun: true" in step and "attempts.yaml" in step
+
+
+# ---------------------------------------------------------------------------
+# WS3 Task 1 — CLI steps run on the Bash-only Haiku apd-cli-runner agent.
+# ---------------------------------------------------------------------------
+
+
+def test_pystep_dispatches_cli_runner() -> None:
+    body = _fn_body(_text(), "pyStep")
+    assert "agentType: 'apd-cli-runner'" in body and "'COMMAND: ' + invocation" in body
+    # The static contract now lives in the agent body.
+    assert "You are a python-step worker" not in body

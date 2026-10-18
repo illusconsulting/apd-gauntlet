@@ -582,8 +582,9 @@ def _recorded_attempts(tmp_path: pathlib.Path, result: dict[str, Any]) -> dict[s
     exactly the object the command passed."""
     prompts = [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
     assert len(prompts) == 1, result["logs"]
-    commands = [line.strip() for line in prompts[0].splitlines()
-                if line.strip().startswith("apd-gauntlet summarize ")]
+    # The apd-cli-runner runs the prompt's COMMAND: line (WS3 Task 1).
+    commands = [line[len("COMMAND: "):] for line in prompts[0].splitlines()
+                if line.startswith("COMMAND: apd-gauntlet summarize ")]
     assert len(commands) == 1, prompts[0]
     argv = shlex.split(commands[0])
     assert argv[:4] == ["apd-gauntlet", "summarize", "runs/r1", "--record-attempts"], argv

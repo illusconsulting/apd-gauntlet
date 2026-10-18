@@ -160,6 +160,16 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 
 ### Changed
 
+- **CLI steps run on `apd-cli-runner`.** Every CLI step of the workflow now
+  runs on the new `apd-cli-runner` agent (Bash only, Haiku, low effort)
+  instead of a general-purpose agent on the session model. The agent's body
+  holds the static receipt contract, so each step's prompt is a few lines:
+  the idempotency guard or the always-run line, `COMMAND:`, `RECEIPT AGENT:`
+  and the step's own receipt lines. The agent refuses a command that does
+  not begin with `apd-gauntlet`. The workflow refuses, before its first
+  dispatch, a run id, domain or framework version that does not match
+  `run-config.schema.json`, because those values reach the agent's command
+  line. `usage` counts the agent under `cli-steps`.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release
