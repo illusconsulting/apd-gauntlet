@@ -211,8 +211,8 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
 
 _ELLIPSIS = re.compile(r"\.\.\.|\u2026")  # "..." or the single character U+2026
 _STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
-# The inputs/ files are untrusted, and this check only warns, so it must stay cheap and
-# never raise. A cited file larger than this is skipped without being read.
+# The inputs/ files are untrusted, and this check runs at every tier gate, so it must stay
+# cheap and never raise. A cited file larger than this is skipped without being read.
 _MAX_EXCERPT_INPUT_BYTES = 20 * 1024 * 1024
 # A YAML or JSON input larger than this is searched as plain text only (never parsed).
 _MAX_STRUCTURED_PARSE_BYTES = 1024 * 1024
@@ -225,14 +225,23 @@ _MAX_SCALAR_HAYSTACK_CHARS = 4 * 1024 * 1024
 _MAX_YAML_DEPTH = 100
 
 
+# A whitespace run next to a punctuation mark or symbol: any character that is not a
+# letter, digit, underscore or whitespace.
+_SPACE_BESIDE_PUNCTUATION = re.compile(r"\s+(?=[^\w\s])|(?<=[^\w\s])\s+")
+
+
 def normalize_excerpt_text(text: str) -> str:
-    """Drop the Markdown inline markers (backtick, ``*``) and collapse whitespace.
+    """Fold case, drop the Markdown inline markers (backtick, ``*``), remove whitespace
+    next to punctuation and collapse the rest to one space.
 
     Applied to both the excerpt and the artifact text, so an excerpt quoted from
-    rendered Markdown still matches the source that carries the markers, and
-    re-wrapped lines still match.
+    rendered Markdown still matches the source that carries the markers, a quote that
+    starts a sentence in lower case still matches, and re-wrapped lines still match, also
+    where the source breaks a line after punctuation (``{`` then an indented key).
+    Whitespace between two words still counts, as one space.
     """
-    return " ".join(text.replace("`", "").replace("*", "").split())
+    text = text.replace("`", "").replace("*", "").casefold()
+    return " ".join(_SPACE_BESIDE_PUNCTUATION.sub("", text).split())
 
 
 def excerpt_fragments(excerpt: str) -> list[str]:
@@ -312,13 +321,19 @@ class _ExcerptInput:
     for a YAML or JSON input small enough to parse, the parsed string scalars are
     built only on a miss (so a quoted or escaped value matches what it means, not
     how it is spelled). A YAML input with an alias or deep nesting, and any failure
-    to parse or walk, leaves the whole text."""
+    to parse or walk, leaves the whole text.
 
-    def __init__(self, text: str, *, parse_as: str | None) -> None:
+    ``whole_text_only`` is true for a YAML or JSON input whose parsed values were not
+    searched: one over ``_MAX_STRUCTURED_PARSE_BYTES`` from the start, the others once
+    a miss has tried to parse them. A miss there may be a quoted or escaped value the
+    check could not read, so it stays a warning even when excerpts are strict."""
+
+    def __init__(self, text: str, *, parse_as: str | None, structured: bool = False) -> None:
         self._whole = normalize_excerpt_text(text)
         self._raw = text if parse_as else None
         self._parse_as = parse_as
         self._scalars: list[str] | None = None
+        self.whole_text_only = structured and parse_as is None
 
     def contains(self, fragments: list[str]) -> bool:
         if _fragments_in_order(fragments, self._whole):
@@ -337,12 +352,14 @@ class _ExcerptInput:
             elif _yaml_is_plain_tree(raw):
                 docs = list(yaml.safe_load_all(raw))
             else:
+                self.whole_text_only = True
                 return []
             return [
                 normalize_excerpt_text(scalar)
                 for scalar in _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
             ]
         except Exception:  # untrusted input: RecursionError, MemoryError, a parse error, ...
+            self.whole_text_only = True
             return []
 
 
@@ -357,8 +374,9 @@ def _load_excerpt_input(path: pathlib.Path) -> _ExcerptInput | None:
     except (OSError, UnicodeDecodeError):
         return None
     suffix = path.suffix.lower()
-    structured = suffix in _STRUCTURED_INPUT_SUFFIXES and size <= _MAX_STRUCTURED_PARSE_BYTES
-    return _ExcerptInput(text, parse_as=suffix if structured else None)
+    structured = suffix in _STRUCTURED_INPUT_SUFFIXES
+    parse = structured and size <= _MAX_STRUCTURED_PARSE_BYTES
+    return _ExcerptInput(text, parse_as=suffix if parse else None, structured=structured)
 
 
 def _fragments_in_order(fragments: list[str], haystack: str) -> bool:
@@ -408,9 +426,17 @@ def check_excerpts_verbatim(
     or nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, and the check
     never raises on a malformed or hostile YAML or JSON input.
     """
+    return [violation for violation, _whole_text_only in _excerpt_misses(run_dir, records_dir)]
+
+
+def _excerpt_misses(
+    run_dir: pathlib.Path, records_dir: pathlib.Path | None
+) -> list[tuple[Violation, bool]]:
+    """``check_excerpts_verbatim``'s violations, in order, each paired with whether the
+    cited input is a YAML or JSON file searched as whole text only (see ``_ExcerptInput``)."""
     inputs_dir = (run_dir / "inputs").resolve()
     cache: dict[pathlib.Path, _ExcerptInput | None] = {}
-    violations: list[Violation] = []
+    violations: list[tuple[Violation, bool]] = []
     for path, _kind, record in _iter_records(records_dir if records_dir is not None else run_dir):
         if "_parse_error" in record:
             continue
@@ -431,11 +457,12 @@ def check_excerpts_verbatim(
                 cache[source] = _load_excerpt_input(source)
             cited = cache[source]
             if cited is not None and not cited.contains(fragments):
-                violations.append(Violation(
+                violation = Violation(
                     path,
                     record.get("id"),
                     f"evidence[{i}].excerpt not found verbatim in artifact '{artifact}'",
-                ))
+                )
+                violations.append((violation, cited.whole_text_only))
     return violations
 
 
@@ -448,9 +475,13 @@ def add_excerpt_violations(
 ) -> None:
     """Run ``check_excerpts_verbatim`` and append its violations to ``report.warnings``,
     or to ``report.errors`` when ``strict_excerpts``. The one severity rule for the
-    check, shared by the tier gate and the whole-run pass."""
-    found = check_excerpts_verbatim(run_dir, records_dir=records_dir)
-    (report.errors if strict_excerpts else report.warnings).extend(found)
+    check, shared by the tier gate and the whole-run pass.
+
+    A violation whose cited input is a YAML or JSON file searched as whole text only
+    stays a warning when ``strict_excerpts``: its parsed values were never tried."""
+    for violation, whole_text_only in _excerpt_misses(run_dir, records_dir):
+        strict = strict_excerpts and not whole_text_only
+        (report.errors if strict else report.warnings).append(violation)
 
 
 # FW-3: 00-context generated run-context artifacts. Specialists — especially
@@ -1072,7 +1103,7 @@ def run_cross_file_pass(
     """Pass 3: cross-file ID and artifact resolution.
 
     The verbatim-excerpt check (``check_excerpts_verbatim``) lands in ``warnings``,
-    or in ``errors`` when ``strict_excerpts``.
+    or in ``errors`` when ``strict_excerpts`` (``add_excerpt_violations`` has the rule).
     """
     report = ValidationReport()
     _check_record_file_locations(run_dir, report)

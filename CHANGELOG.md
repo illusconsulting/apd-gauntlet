@@ -258,6 +258,22 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   `domain-improvements.yaml`. A value that is not a boolean, such as the
   string `"true"`, fails the schema, and the workflow refuses it before its
   first dispatch. `init-run` writes the key as a commented line.
+- **Verbatim excerpts are strict by default.** An evidence excerpt that cites
+  a file under `inputs/` and is not in it is now an error in `validate`, at
+  tier gates and in the whole-run pass, where 1.7.1 warned. At a tier gate
+  the error goes through the repair loop: `apd-tier-repair` copies the exact
+  words from the cited file, and the run halts only if the re-run lens still
+  fails. `--strict-excerpts/--no-strict-excerpts` replaces the
+  `--strict-excerpts` flag on `validate`, and `tier-gate` and `closeout` take
+  the same pair; `--no-strict-excerpts` validates runs made before 2.0. The
+  matcher now ignores case and whitespace next to punctuation, which removes
+  two false positives in the committed examples (`**The client signs…` and a
+  JSON object broken across lines). A YAML or JSON input searched as plain
+  text only (over 1 MiB, with aliases, nested more than 100 levels or not
+  parseable) still gives a warning. The Home Assistant example's 23
+  remaining non-verbatim excerpts now quote their inputs, or, for three
+  absence notes, are wholly in parentheses, and `apd-evidence-discipline`
+  teaches that marker rule.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

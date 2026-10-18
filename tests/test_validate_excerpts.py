@@ -1,4 +1,7 @@
-"""validate warns when an evidence excerpt is not verbatim in its cited input."""
+"""validate flags an evidence excerpt that is not verbatim in its cited input.
+
+On 2.0 the CLI makes it an error by default; ``--no-strict-excerpts`` makes it a warning.
+"""
 from __future__ import annotations
 
 import json
@@ -9,7 +12,10 @@ from pathlib import Path
 import apd_gauntlet.validate as validate_mod
 import pytest
 from apd_gauntlet.cli import main
+from apd_gauntlet.composite import closeout_steps, tier_gate_steps
 from apd_gauntlet.validate import (
+    ValidationReport,
+    add_excerpt_violations,
     check_excerpts_verbatim,
     excerpt_fragments,
     normalize_excerpt_text,
@@ -18,6 +24,7 @@ from apd_gauntlet.validate import (
 from click.testing import CliRunner
 
 FIX = Path(__file__).parent / "fixtures"
+REPO = Path(__file__).parent.parent
 
 FINDING_EX = "All Kafka topics use AES-256 at-rest encryption via broker-managed keys"
 CAP_EX = "Field-level envelope encryption for PHI columns with DEKs from KMS"
@@ -107,7 +114,7 @@ def test_partially_parenthesized_excerpt_is_still_checked(tmp_path):
 
 
 def test_paraphrase_warns_but_exits_zero(tmp_path):
-    r = _validate(_run(tmp_path, PARAPHRASE))
+    r = _validate(_run(tmp_path, PARAPHRASE), "--no-strict-excerpts")
     assert r.exit_code == 0
     assert "WARNING" in r.output and MESSAGE in r.output
 
@@ -124,12 +131,14 @@ def test_strict_escalates_the_warning_too(tmp_path):
 
 
 def test_errors_only_hides_the_warning(tmp_path):
-    # The workflow's gates run with --errors-only, so on 1.7.1 they never see it.
+    # The workflow's gates run with --errors-only: on 2.0 they see the error, and only
+    # the escape hatch for runs made before 2.0 turns it back into a hidden warning.
     run = _run(tmp_path, PARAPHRASE)
-    r = _validate(run, "--errors-only")
+    r = _validate(run, "--errors-only", "--no-strict-excerpts")
     assert r.exit_code == 0 and r.output == ""
-    r = _validate(run, "--errors-only", "--strict-excerpts")
-    assert r.exit_code == 1 and MESSAGE in r.output
+    for flags in ((), ("--strict-excerpts",)):
+        r = _validate(run, "--errors-only", *flags)
+        assert r.exit_code == 1 and MESSAGE in r.output
 
 
 def test_missing_or_binary_artifact_is_skipped(tmp_path):
@@ -223,20 +232,22 @@ def test_unparseable_yaml_input_falls_back_to_the_whole_text(tmp_path):
 
 def test_tier_gate_reports_excerpt_violations(tmp_path):
     run = _run(tmp_path, PARAPHRASE)
-    r = _validate(run, "--tier", "10-trustworthiness")
+    r = _validate(run, "--tier", "10-trustworthiness", "--no-strict-excerpts")
     assert r.exit_code == 0 and "WARNING" in r.output and "not found verbatim" in r.output
-    r = _validate(run, "--tier", "10-trustworthiness", "--strict-excerpts")
-    assert r.exit_code == 1 and "not found verbatim" in r.output
+    for flags in ((), ("--strict-excerpts",)):
+        r = _validate(run, "--tier", "10-trustworthiness", *flags)
+        assert r.exit_code == 1 and "ERROR" in r.output and "not found verbatim" in r.output
 
 
 def test_tier_gate_json_carries_the_violation_by_severity(tmp_path):
     run = _run(tmp_path, PARAPHRASE)
-    warned = json.loads(_validate(run, "--tier", "10-trustworthiness", "--json").output)
-    assert warned["errors"] == [] and MESSAGE in warned["warnings"][0]["message"]
-    strict = json.loads(
-        _validate(run, "--tier", "10-trustworthiness", "--json", "--strict-excerpts").output
+    warned = json.loads(
+        _validate(run, "--tier", "10-trustworthiness", "--json", "--no-strict-excerpts").output
     )
-    assert strict["warnings"] == [] and MESSAGE in strict["errors"][0]["message"]
+    assert warned["errors"] == [] and MESSAGE in warned["warnings"][0]["message"]
+    for flags in ((), ("--strict-excerpts",)):
+        strict = json.loads(_validate(run, "--tier", "10-trustworthiness", "--json", *flags).output)
+        assert strict["warnings"] == [] and MESSAGE in strict["errors"][0]["message"]
 
 
 def test_tier_gate_checks_only_its_own_records(tmp_path):
@@ -362,11 +373,14 @@ def test_pathological_input_without_a_match_warns_and_never_fails_a_gate(tmp_pat
     started = time.perf_counter()
     assert len(check_excerpts_verbatim(run)) == 2
     assert time.perf_counter() - started < TIME_BOUND_S
-    # The workflow's own gate commands: a warning-only check must never fail them.
+    # The workflow's own gate commands, with the escape hatch: a warning never fails them.
+    # (Strict, the YAML cases still only warn: test_unparsed_pathological_yaml_never_fails_a_
+    # strict_gate. A parsed JSON miss is an error, and whether 3,000 levels parse depends
+    # on the Python version.)
     for flags in (("--errors-only",), ("--tier", "10-trustworthiness", "--errors-only")):
-        r = _validate(run, *flags)
+        r = _validate(run, *flags, "--no-strict-excerpts")
         assert r.exit_code == 0 and r.output == "", (flags, r.exception, r.output)
-    r = _validate(run, "--strict-excerpts")
+    r = _validate(run, "--strict")
     assert r.exit_code == 1 and "not found verbatim" in r.output
 
 
@@ -458,3 +472,271 @@ def test_string_scalars_dedupes_a_shared_string_and_caps_total_characters():
     found = validate_mod._string_scalars(distinct, 10_000, max_chars=50)
     assert 0 < len(found) < 100
     assert sum(map(len, found)) < 50 + max(map(len, distinct))
+
+
+# --- WS3 Task 8: strict by default on 2.0 (register A9.16, DEC-18) ---------
+
+PARAPHRASE_PLAN = "Topics are encrypted with broker keys.\n" + CAP_EX
+EXAMPLES = (
+    "apd-20260601-claim-event-bus",
+    "apd-20260602-acme-mobile-banking",
+    "apd-20260612-home-assistant",
+)
+
+
+def _example_with_inputs(tmp_path, example: str) -> Path:
+    """A copy of the example's ``expected/`` plus its ``inputs/``, so the check has artifacts."""
+    run = tmp_path / example
+    shutil.copytree(REPO / "examples" / example / "expected", run)
+    shutil.copytree(REPO / "examples" / example / "inputs", run / "inputs")
+    return run
+
+
+def test_paraphrase_is_an_error_by_default_on_2_0(tmp_path):
+    r = _validate(_run(tmp_path, PARAPHRASE_PLAN))
+    assert r.exit_code == 1 and "ERROR" in r.output
+    assert "not found verbatim in artifact 'tech_plan.md'" in r.output
+
+
+def test_no_strict_excerpts_downgrades_to_warning(tmp_path):
+    r = _validate(_run(tmp_path, PARAPHRASE_PLAN), "--no-strict-excerpts")
+    assert r.exit_code == 0 and "WARNING" in r.output and "not found verbatim" in r.output
+
+
+def test_tier_validate_reports_paraphrase_as_json_error(tmp_path):
+    r = _validate(_run(tmp_path, PARAPHRASE_PLAN), "--tier", "10-trustworthiness", "--json")
+    errors = json.loads(r.stdout)["errors"]
+    assert r.exit_code == 1
+    assert errors[0]["file"].endswith("10-trustworthiness/confidentiality.findings.yaml")
+
+
+def test_tier_gate_is_strict_by_default_and_honours_the_escape_hatch(tmp_path):
+    run = _run(tmp_path, PARAPHRASE_PLAN)
+
+    def gate(*flags: str) -> int:
+        argv = ["tier-gate", str(run), "--tier", "10-trustworthiness", *flags]
+        return CliRunner().invoke(main, argv).exit_code
+
+    assert (gate(), gate("--no-strict-excerpts")) == (1, 0)
+
+
+def test_composites_forward_the_flag():
+    tier = "10-trustworthiness"
+    off = "--no-strict-excerpts"
+    assert tier_gate_steps(Path("r"), tier, strict_excerpts=False)[-1].argv[-1] == off
+    assert closeout_steps(Path("r"), strict_excerpts=False)[-1].argv[-1] == off
+    assert off not in tier_gate_steps(Path("r"), tier)[-1].argv
+
+
+def test_composites_forward_the_flag_in_json_mode_and_with_attempts():
+    gate = tier_gate_steps(Path("r"), "t", json_output=True, strict_excerpts=False)[-1]
+    assert gate.argv == ("validate", "r", "--tier", "t", "--json", "--no-strict-excerpts")
+    close = closeout_steps(Path("r"), "{}", strict_excerpts=False)
+    assert close[-1].argv == ("validate", "r", "--errors-only", "--no-strict-excerpts")
+    assert close[1].argv == ("summarize", "r", "--record-attempts", "{}")
+    # Only the validate step carries the flag; strict (the default) adds nothing.
+    for steps in (tier_gate_steps(Path("r"), "t"), closeout_steps(Path("r"), "{}")):
+        assert all("strict" not in " ".join(step.argv) for step in steps)
+
+
+def test_closeout_is_strict_by_default_and_honours_the_escape_hatch(tmp_path):
+    run = _run(tmp_path, PARAPHRASE_PLAN)
+    strict = CliRunner().invoke(main, ["closeout", str(run)])
+    assert "closeout: validate exit=1" in strict.output and MESSAGE in strict.output
+    loose = CliRunner().invoke(main, ["closeout", str(run), "--no-strict-excerpts"])
+    assert "closeout: validate exit=0" in loose.output and MESSAGE not in loose.output
+
+
+@pytest.mark.parametrize("example", EXAMPLES)
+def test_committed_examples_validate_strict(example, tmp_path):
+    run = _example_with_inputs(tmp_path, example)  # item (d): the check has artifacts
+    r = _validate(run, "--errors-only")
+    assert r.exit_code == 0, r.output
+    r = _validate(run, "--errors-only", "--strict-excerpts")
+    assert r.exit_code == 0, r.output
+    # Item (d)'s point: the inputs are there, and the check reads them.
+    assert check_excerpts_verbatim(run) == []
+    assert any((run / "inputs").rglob("*.md"))
+
+
+def test_committed_example_excerpts_are_checked_against_their_inputs(tmp_path):
+    # A control for the test above: break one excerpt that cites an inputs/ file.
+    run = _example_with_inputs(tmp_path, "apd-20260601-claim-event-bus")
+    f = next(
+        p for p in sorted(run.glob("10-trustworthiness/*.findings.yaml"))
+        if "artifact: tech_plan.md" in p.read_text()
+    )
+    text = f.read_text()
+    marker = "artifact: tech_plan.md"
+    head, tail = text.split(marker, 1)
+    line_start = tail.index("excerpt:")
+    line_end = tail.index("\n", line_start)
+    f.write_text(head + marker + tail[:line_start] + 'excerpt: "not in the plan"' + tail[line_end:])
+    r = _validate(run, "--errors-only")
+    assert r.exit_code == 1 and "not found verbatim in artifact 'tech_plan.md'" in r.output
+
+
+# Item (a): the matcher folds case and drops whitespace next to punctuation.
+
+
+def test_normalize_folds_case_and_drops_whitespace_beside_punctuation():
+    assert normalize_excerpt_text("**The Client** SIGNS") == "the client signs"
+    assert normalize_excerpt_text("f(true, {\n  token: 1\n});") == "f(true,{token:1});"
+    assert normalize_excerpt_text("a - b ,c") == "a-b,c"
+    # Whitespace between two words still counts, as one space.
+    assert normalize_excerpt_text("rate \n limit") == "rate limit"
+    assert normalize_excerpt_text("rate limit") != normalize_excerpt_text("ratelimit")
+    assert normalize_excerpt_text("access_token") == "access_token"  # _ is a word character
+
+
+def test_case_and_bold_markup_do_not_hide_a_quote(tmp_path):  # acme conf-4149d0db
+    src = "- **The client signs each API request with an HMAC** using a shared secret\n" + CAP_EX
+    run = _run(tmp_path, src)
+    _set_excerpt(run, "the client signs each API request with an HMAC using a shared secret")
+    assert check_excerpts_verbatim(run) == []
+
+
+def test_whitespace_beside_punctuation_does_not_hide_a_quote(tmp_path):  # HA conf-3060c50e
+    src = (
+        'window.externalAuthSetToken(true, {\n  access_token: "qwere",\n  expires_in: 1800\n});\n'
+        + CAP_EX
+    )
+    run = _run(tmp_path, src)
+    # The finding's excerpt is a double-quoted YAML scalar, hence the escaped quotes.
+    _set_excerpt(
+        run, 'window.externalAuthSetToken(true, {access_token: \\"qwere\\", expires_in: 1800})'
+    )
+    assert check_excerpts_verbatim(run) == []
+
+
+def test_a_different_word_is_still_a_miss(tmp_path):
+    near_miss = FINDING_EX.replace("AES-256", "AES-128")
+    run = _run(tmp_path, near_miss + "\n" + CAP_EX)
+    assert [v.message for v in check_excerpts_verbatim(run)] == [MESSAGE]
+
+
+@pytest.mark.parametrize("example, record_id", [
+    ("apd-20260602-acme-mobile-banking", "conf-4149d0db"),
+    ("apd-20260612-home-assistant", "conf-3060c50e"),
+])
+def test_observed_false_positives_now_match(example, record_id, tmp_path):
+    run = _example_with_inputs(tmp_path, example)
+    assert record_id not in {v.record_id for v in check_excerpts_verbatim(run)}
+
+
+# Item (f): a structured input searched only as whole text stays a warning.
+
+
+def _list_in_brief(run: Path, name: str) -> None:
+    """Add ``name`` to the brief's artifacts, so citing it is no semantic error."""
+    brief = run / "00-context/context-brief.md"
+    entry = "  - { filename: tech_plan.md, type: tech_plan }\n"
+    added = entry + f"  - {{ filename: {name}, type: other }}\n"
+    brief.write_text(brief.read_text().replace(entry, added))
+
+
+def _big_yaml(run: Path) -> str:
+    big = run / "inputs/big.yaml"
+    big.write_text("note: 'it''s replicated: factor 3'\n" + "".join(
+        f"k{i}: v{i}\n" for i in range(100_000)
+    ))
+    return "big.yaml"
+
+
+def _aliased_yaml(run: Path) -> str:
+    (run / "inputs/aliased.yaml").write_text("x: &x 'it''s replicated: factor 3'\ny: *x\n")
+    return "aliased.yaml"
+
+
+def _deep_yaml(run: Path) -> str:
+    depth = validate_mod._MAX_YAML_DEPTH + 1
+    note = "'it''s replicated: factor 3'"
+    (run / "inputs/deep.yaml").write_text("[" * depth + note + "]" * depth + "\n")
+    return "deep.yaml"
+
+
+def _broken_yaml(run: Path) -> str:
+    body = "key: [unclosed\n  note: 'it''s replicated: factor 3'\n"
+    (run / "inputs/broken.yaml").write_text(body)
+    return "broken.yaml"
+
+
+def _broken_json(run: Path) -> str:
+    # Deep JSON is no use here: Python 3.12 parses 3,000 levels, 3.10 and 3.11 raise.
+    (run / "inputs/broken.json").write_text('{"note": "it\\u0027s replicated: factor 3",}')
+    return "broken.json"
+
+
+# Each input's parsed values would hold the excerpt; its whole text never does.
+WHOLE_TEXT_ONLY = {
+    "over-the-parse-cap": _big_yaml,
+    "yaml-alias": _aliased_yaml,
+    "yaml-deeper-than-the-cap": _deep_yaml,
+    "unparseable-yaml": _broken_yaml,
+    "unparseable-json": _broken_json,
+}
+
+
+@pytest.mark.parametrize("case", sorted(WHOLE_TEXT_ONLY))
+def test_structured_input_searched_as_whole_text_only_stays_a_warning(tmp_path, case):
+    run = _run(tmp_path, CAP_EX)
+    name = WHOLE_TEXT_ONLY[case](run)
+    _cite(run, name)
+    _list_in_brief(run, name)
+    _set_excerpt(run, "it's replicated: factor 3")  # never in the whole text
+    message = f"evidence[0].excerpt not found verbatim in artifact '{name}'"
+    assert [v.message for v in check_excerpts_verbatim(run)] == [message]
+    for flags in ((), ("--strict-excerpts",)):
+        r = _validate(run, *flags)
+        assert r.exit_code == 0, (flags, r.output)
+        assert "WARNING" in r.output and message in r.output and "ERROR" not in r.output
+        r = _validate(run, "--errors-only", *flags)
+        assert r.exit_code == 0 and r.output == "", (flags, r.output)
+        tier = json.loads(_validate(run, "--tier", "10-trustworthiness", "--json", *flags).stdout)
+        assert tier["errors"] == [] and [w["message"] for w in tier["warnings"]] == [message]
+    # --strict still turns every warning into an error.
+    assert _validate(run, "--strict").exit_code == 1
+
+
+def test_parsed_structured_input_miss_is_an_error_by_default(tmp_path):
+    run = _run(tmp_path, CAP_EX)
+    (run / "inputs/kafka.yaml").write_text("note: 'it''s replicated: factor 5'\n")
+    _cite(run, "kafka.yaml")
+    _list_in_brief(run, "kafka.yaml")
+    _set_excerpt(run, "it's replicated: factor 3")
+    r = _validate(run, "--errors-only")
+    assert r.exit_code == 1
+    assert "not found verbatim in artifact 'kafka.yaml'" in r.output
+
+
+def test_add_excerpt_violations_keeps_whole_text_only_misses_as_warnings(tmp_path):
+    run = _run(tmp_path, PARAPHRASE)  # the finding misses a Markdown input: strictable
+    (run / "inputs/aliased.yaml").write_text("x: &x unrelated\ny: *x\n")
+    f = run / "10-trustworthiness/confidentiality.capabilities.yaml"
+    f.write_text(f.read_text().replace("artifact: tech_plan.md", "artifact: aliased.yaml"))
+    strict = ValidationReport()
+    add_excerpt_violations(strict, run, strict_excerpts=True)
+    assert [v.message for v in strict.errors] == [MESSAGE]
+    assert [v.message for v in strict.warnings] == [
+        "evidence[0].excerpt not found verbatim in artifact 'aliased.yaml'"
+    ]
+    loose = ValidationReport()
+    add_excerpt_violations(loose, run)  # the library default stays a warning
+    assert loose.errors == [] and len(loose.warnings) == 2
+
+
+@pytest.mark.parametrize("case", UNPARSED_YAML_CASES)
+def test_unparsed_pathological_yaml_never_fails_a_strict_gate(tmp_path, case):
+    name, build = PATHOLOGICAL[case]
+    run = _run_structured(tmp_path, name, build("unrelated text"))
+    gates = (
+        ("--errors-only",),
+        ("--errors-only", "--strict-excerpts"),
+        ("--tier", "10-trustworthiness", "--errors-only"),
+    )
+    for flags in gates:
+        r = _validate(run, *flags)
+        assert r.exit_code == 0 and r.output == "", (flags, r.exception, r.output)
+    argv = ["tier-gate", str(run), "--tier", "10-trustworthiness", "--json"]
+    r = CliRunner().invoke(main, argv)
+    assert r.exit_code == 0 and json.loads(r.stdout)["errors"] == [], r.output

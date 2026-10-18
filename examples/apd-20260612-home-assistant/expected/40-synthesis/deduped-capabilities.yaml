@@ -983,7 +983,7 @@ capability:
     excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
   - artifact: api/native-app/sending-data.md
     locator: '#implementing-encryption, lines 93-95'
-    excerpt: mobile_app supports two way encrypted communication via Sodium
+    excerpt: "mobile_app supports two way encrypted communication via [Sodium](https://libsodium.gitbook.io/doc/)."
   control_mappings:
     nist_800_53r5:
     - SC-8(1)

@@ -619,7 +619,7 @@ finding:
     excerpt: window[CALLBACK_EXTERNAL_BUS] = (msg) => this.receiveMessage(msg)
   - artifact: auth/frontend-external-authentication.md
     locator: '#external-authentication, callback-name forgery warning'
-    excerpt: callback names must be verified to avoid forgery
+    excerpt: "Apps should verify the callback name matches the expected value to ensure the callback has not been forged."
   - artifact: code-evidence-index.yaml
     locator: cev-e5000001 remote-frontend bridge no origin/integrity check
     excerpt: compromised_backend_or_response drives native via WebView bridge (no origin check) over mobile_stored_session_and_refresh_tokens

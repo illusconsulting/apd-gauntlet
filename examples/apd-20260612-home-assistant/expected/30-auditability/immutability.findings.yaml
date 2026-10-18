@@ -78,7 +78,7 @@ finding:
     excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state history'
   - artifact: architecture/adr/0018-supported-databases.md
     locator: ADR-0018 supported databases (SQLite / MariaDB / PostgreSQL)
-    excerpt: supported recorder databases — SQLite, MariaDB, PostgreSQL
+    excerpt: "Limit DB support to the following: ... MariaDB ≥ 10.3 ... PostgreSQL ≥ 12 ... SQLite ≥ 3.40.1"
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:
@@ -151,7 +151,7 @@ finding:
     excerpt: 'self._password: str | None = None ... def set_password(self, password): self._password = password or None'
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: §Sensitive-data inventory, backup artifact line
-    excerpt: full snapshots bundle config + recorder DB + secrets; backup password optional; weakest-protected copy
+    excerpt: "Backups — full snapshots (secrets + tokens + DB), frequently the weakest-protected copy."
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:
@@ -274,7 +274,7 @@ finding:
     excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): ... else: _LOGGER.warning("%s no role for %s")'
   - artifact: org/SECURITY.md
     locator: whole file (6-line pointer; no audit/hardening content)
-    excerpt: security-policy pointer to website; no embedded audit or log-protection content
+    excerpt: "(security-policy pointer to website; no embedded audit or log-protection content)"
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:
@@ -341,7 +341,7 @@ finding:
     excerpt: mode, json_data = json_helper.prepare_save_json(data, ...) ... write_method(path, json_data, self._private, mode=mode)
   - artifact: architecture/adr/0021-YAML-integration-configuration-deprecation-policy.md
     locator: ADR-0021 YAML integration configuration deprecation policy
-    excerpt: integration configuration migrates from YAML toward UI/.storage-managed config entries
+    excerpt: "If a migration (for example, using a config flow import) is possible, it becomes required to add a migration."
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:
@@ -458,7 +458,7 @@ finding:
   evidence:
   - artifact: infra/addon-mosquitto-build.yaml
     locator: lines 2-4 build_from base-debian tags
-    excerpt: 'build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie; amd64: ...:trixie'
+    excerpt: "build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie amd64: ghcr.io/home-assistant/amd64-base-debian:trixie"
   - artifact: infra/supervisor-Dockerfile
     locator: line 1 ARG BUILD_FROM
     excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0

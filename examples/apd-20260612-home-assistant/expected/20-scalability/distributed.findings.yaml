@@ -562,7 +562,7 @@ finding:
   evidence:
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#trust-boundaries, lines 88-89'
-    excerpt: Supervisor controls the Docker socket ... the container-to-host-root boundary
+    excerpt: "Supervisor → Docker socket (host root) & → os-agent (D-Bus host ops) — the container-to-host-root boundary."
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.docker.manager.DockerAPI.__init__:L271-L279@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: Supervisor binds the Docker socket (/run/docker.sock)
@@ -678,7 +678,7 @@ finding:
     excerpt: Target is the user-entered self-hosted instance URL (no fixed host)
   - artifact: api/native-app/setup.md
     locator: registration response, lines 74-79
-    excerpt: returns webhook_id, secret, cloudhook_url
+    excerpt: "\"cloudhook_url\": \"https://hooks.nabu.casa/randomlongstring123\", ... \"secret\": \"qwerty\", \"webhook_id\": \"abcdefgh\""
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:

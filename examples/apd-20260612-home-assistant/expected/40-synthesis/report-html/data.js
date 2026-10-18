@@ -1433,7 +1433,7 @@ window.APD_DATA = {
         {
           "artifact": "00-SYSTEM-OVERVIEW.md",
           "locator": "#trust-boundaries, lines 88-89",
-          "excerpt": "Supervisor controls the Docker socket ... the container-to-host-root boundary"
+          "excerpt": "Supervisor → Docker socket (host root) & → os-agent (D-Bus host ops) — the container-to-host-root boundary."
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -1826,7 +1826,7 @@ window.APD_DATA = {
         {
           "artifact": "org/SECURITY.md",
           "locator": "full file (6 lines)",
-          "excerpt": "Security-policy pointer; no embedded hardening or failure-mode content"
+          "excerpt": "(Security-policy pointer; no embedded hardening or failure-mode content)"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -2005,7 +2005,7 @@ window.APD_DATA = {
         {
           "artifact": "mobile/android-CLAUDE.md",
           "locator": "run-config crown_jewels EXCLUDED note (attestation_tokens_and_jwts absent)",
-          "excerpt": "no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere"
+          "excerpt": "(no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere)"
         }
       ],
       "recommendation": {
@@ -2181,7 +2181,7 @@ window.APD_DATA = {
         {
           "artifact": "mobile/supervisor-apps-security.md",
           "locator": "#authenticating-a-user-when-using-ingress, lines 40-48",
-          "excerpt": "the supervisor then adds some headers identifying the user ... X-Remote-User-Id / X-Remote-User-Name"
+          "excerpt": "The supervisor then adds some headers identifying the user to every request: ... X-Remote-User-Id ... X-Remote-User-Name"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -2362,12 +2362,12 @@ window.APD_DATA = {
         {
           "artifact": "infra/supervisor-Dockerfile",
           "locator": "lines 36-56 (build/install, no SBOM/provenance emission)",
-          "excerpt": "uv pip install --no-cache -e ./supervisor && python3 -m compileall ./supervisor/supervisor"
+          "excerpt": "uv pip install --no-cache -e ./supervisor ... && python3 -m compileall ./supervisor/supervisor"
         },
         {
           "artifact": "infra/addon-mosquitto-config.yaml",
           "locator": "config.yaml (manifest declares role/mounts, no provenance)",
-          "excerpt": "auth_api: true; map: [ssl, share]; startup: system"
+          "excerpt": "auth_api: true ... map: - ssl - share ... startup: system"
         }
       ],
       "recommendation": {
@@ -2419,7 +2419,7 @@ window.APD_DATA = {
         {
           "artifact": "mobile/supervisor-apps-security.md",
           "locator": "#making-a-secure-app, line 33",
-          "excerpt": "Sign published images (the supported publishing workflow can sign images with Cosign)"
+          "excerpt": "Sign published images (the supported [publishing workflow](/docs/apps/publishing) can sign images with Cosign)"
         },
         {
           "artifact": "infra/supervisor-Dockerfile",
@@ -2429,7 +2429,7 @@ window.APD_DATA = {
         {
           "artifact": "infra/supervisor-Dockerfile",
           "locator": "lines 36-48 (wheels install, no attestation)",
-          "excerpt": "uv pip install --compile-bytecode --no-cache --no-build -r requirements.txt"
+          "excerpt": "uv pip install --compile-bytecode --no-cache --no-build ... -r requirements.txt"
         }
       ],
       "recommendation": {
@@ -2596,7 +2596,7 @@ window.APD_DATA = {
         {
           "artifact": "infra/addon-mosquitto-build.yaml",
           "locator": "lines 2-4 build_from base-debian tags",
-          "excerpt": "build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie; amd64: ...:trixie"
+          "excerpt": "build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie amd64: ghcr.io/home-assistant/amd64-base-debian:trixie"
         },
         {
           "artifact": "infra/supervisor-Dockerfile",
@@ -2705,12 +2705,12 @@ window.APD_DATA = {
         {
           "artifact": "api/rest.md",
           "locator": "/api/logbook sample, lines 360-383",
-          "excerpt": "\"when\": \"2016-...Z\" # timestamp present; time-source discipline undocumented"
+          "excerpt": "\"when\": \"2020-06-20T16:44:26.127295+00:00\""
         },
         {
           "artifact": "00-SYSTEM-OVERVIEW.md",
           "locator": "#deployment-topologies, lines 108-116",
-          "excerpt": "Home Assistant OS (appliance image) ... Supervised ... Container ... Core"
+          "excerpt": "Home Assistant OS (appliance image; ... Home Assistant Supervised ... Home Assistant Container ... Home Assistant Core"
         }
       ],
       "recommendation": {
@@ -2859,7 +2859,7 @@ window.APD_DATA = {
         {
           "artifact": "auth/auth_index.md",
           "locator": "#owner, lines 27-29",
-          "excerpt": "The onboarding user is the owner (all permissions)"
+          "excerpt": "The user that is created during onboarding will be marked as \"owner\". ... will always have access to all permissions."
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -2879,7 +2879,7 @@ window.APD_DATA = {
         {
           "artifact": "mobile/mobile-apps-fcm-push-README.md",
           "locator": "#deploy-your-own, lines 27-47",
-          "excerpt": "forwards notifications ... without exposing device push tokens to the instance"
+          "excerpt": "Deploy your own ... Then deploy the Cloud Functions: ... firebase deploy"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -2889,7 +2889,7 @@ window.APD_DATA = {
         {
           "artifact": "auth/auth_index.md",
           "locator": "#refresh-token-types, lines 49-51",
-          "excerpt": "Long-Lived Access Token (user-generated, long horizon) ... remain valid until a user deletes it"
+          "excerpt": "Long-lived Access Token: These are refresh tokens that back a long lived access token."
         }
       ],
       "recommendation": {
@@ -2979,7 +2979,7 @@ window.APD_DATA = {
         {
           "artifact": "00-SYSTEM-OVERVIEW.md",
           "locator": "#sensitive-data-inventory (presence/geolocation/lock/alarm)",
-          "excerpt": "Recorder history of entity state: presence, geolocation/zones, camera/voice events, lock/alarm state"
+          "excerpt": "History / state DB (Recorder) — SQLite/MariaDB/PostgreSQL of entity state + history: presence, geolocation, camera/voice events, lock/alarm state"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -2989,7 +2989,7 @@ window.APD_DATA = {
         {
           "artifact": "api/native-app/setup.md",
           "locator": "registration response, lines 74-79",
-          "excerpt": "returns webhook_id, secret, cloudhook_url"
+          "excerpt": "\"cloudhook_url\": \"https://hooks.nabu.casa/randomlongstring123\", ... \"secret\": \"qwerty\", \"webhook_id\": \"abcdefgh\""
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -3164,7 +3164,7 @@ window.APD_DATA = {
         {
           "artifact": "mobile/mobile-apps-fcm-push-README.md",
           "locator": "lines 42-47",
-          "excerpt": "forwards notifications without exposing device push tokens to the instance"
+          "excerpt": "Then deploy the Cloud Functions: ... firebase deploy"
         },
         {
           "artifact": "00-SYSTEM-OVERVIEW.md",
@@ -3232,7 +3232,7 @@ window.APD_DATA = {
         {
           "artifact": "org/SECURITY.md",
           "locator": "whole file (6-line pointer; no audit/hardening content)",
-          "excerpt": "security-policy pointer to website; no embedded audit or log-protection content"
+          "excerpt": "(security-policy pointer to website; no embedded audit or log-protection content)"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -3242,7 +3242,7 @@ window.APD_DATA = {
         {
           "artifact": "architecture/adr/0018-supported-databases.md",
           "locator": "ADR-0018 supported databases (SQLite / MariaDB / PostgreSQL)",
-          "excerpt": "supported recorder databases — SQLite, MariaDB, PostgreSQL"
+          "excerpt": "Limit DB support to the following: ... MariaDB ≥ 10.3 ... PostgreSQL ≥ 12 ... SQLite ≥ 3.40.1"
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -3252,7 +3252,7 @@ window.APD_DATA = {
         {
           "artifact": "architecture/adr/0021-YAML-integration-configuration-deprecation-policy.md",
           "locator": "ADR-0021 YAML integration configuration deprecation policy",
-          "excerpt": "integration configuration migrates from YAML toward UI/.storage-managed config entries"
+          "excerpt": "If a migration (for example, using a config flow import) is possible, it becomes required to add a migration."
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -3262,7 +3262,7 @@ window.APD_DATA = {
         {
           "artifact": "00-SYSTEM-OVERVIEW.md",
           "locator": "§Sensitive-data inventory, backup artifact line",
-          "excerpt": "full snapshots bundle config + recorder DB + secrets; backup password optional; weakest-protected copy"
+          "excerpt": "Backups — full snapshots (secrets + tokens + DB), frequently the weakest-protected copy."
         },
         {
           "artifact": "code-evidence-index.yaml",
@@ -3277,7 +3277,7 @@ window.APD_DATA = {
         {
           "artifact": "auth/frontend-external-authentication.md",
           "locator": "#external-authentication, callback-name forgery warning",
-          "excerpt": "callback names must be verified to avoid forgery"
+          "excerpt": "Apps should verify the callback name matches the expected value to ensure the callback has not been forged."
         },
         {
           "artifact": "code-evidence-index.yaml",

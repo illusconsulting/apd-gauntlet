@@ -280,7 +280,7 @@ finding:
     excerpt: KeyStore.getInstance("AndroidCAStore")... trustManagerFactory.init(androidCaStore)
   - artifact: mobile/android-CLAUDE.md
     locator: run-config crown_jewels EXCLUDED note (attestation_tokens_and_jwts absent)
-    excerpt: no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere
+    excerpt: "(no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere)"
   control_mappings:
     nist_800_53r5:
     - IA-9
@@ -793,13 +793,13 @@ finding:
   evidence:
   - artifact: mobile/supervisor-apps-security.md
     locator: '#making-a-secure-app, line 33'
-    excerpt: Sign published images (the supported publishing workflow can sign images with Cosign)
+    excerpt: "Sign published images (the supported [publishing workflow](/docs/apps/publishing) can sign images with Cosign)"
   - artifact: infra/supervisor-Dockerfile
     locator: line 1 (BUILD_FROM floating tag)
     excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0
   - artifact: infra/supervisor-Dockerfile
     locator: lines 36-48 (wheels install, no attestation)
-    excerpt: uv pip install --compile-bytecode --no-cache --no-build -r requirements.txt
+    excerpt: "uv pip install --compile-bytecode --no-cache --no-build ... -r requirements.txt"
   - artifact: code-evidence-index.yaml
     locator: '#making-a-secure-app line 33 (Cosign not enforced)'
     excerpt: supply_chain_attacker ships unsigned add-on/base image (no admission verify) escalating to supervisor_docker_control_plane
@@ -899,10 +899,10 @@ finding:
   evidence:
   - artifact: infra/supervisor-Dockerfile
     locator: lines 36-56 (build/install, no SBOM/provenance emission)
-    excerpt: uv pip install --no-cache -e ./supervisor && python3 -m compileall ./supervisor/supervisor
+    excerpt: "uv pip install --no-cache -e ./supervisor ... && python3 -m compileall ./supervisor/supervisor"
   - artifact: infra/addon-mosquitto-config.yaml
     locator: config.yaml (manifest declares role/mounts, no provenance)
-    excerpt: 'auth_api: true; map: [ssl, share]; startup: system'
+    excerpt: "auth_api: true ... map: - ssl - share ... startup: system"
   prerequisite_evidence:
   - CI/release pipeline configuration showing whether a CycloneDX/SPDX SBOM is generated and signed per release
   - Whether SLSA build-provenance / in-toto attestations are produced and verified for Core/Supervisor/add-on/mobile artifacts
@@ -1095,7 +1095,7 @@ finding:
   evidence:
   - artifact: mobile/supervisor-apps-security.md
     locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
-    excerpt: the supervisor then adds some headers identifying the user ... X-Remote-User-Id / X-Remote-User-Name
+    excerpt: "The supervisor then adds some headers identifying the user to every request: ... X-Remote-User-Id ... X-Remote-User-Name"
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: ... continue'

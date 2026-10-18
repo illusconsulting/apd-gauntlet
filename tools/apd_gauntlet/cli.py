@@ -72,11 +72,13 @@ def main() -> None:
     ),
 )
 @click.option(
-    "--strict-excerpts",
-    is_flag=True,
+    "--strict-excerpts/--no-strict-excerpts",
+    default=True,
     help=(
-        "Make an evidence excerpt that is not verbatim in its cited inputs/ file an "
-        "ERROR (a WARNING by default). Ignored with --schema-only."
+        "An evidence excerpt that is not verbatim in its cited inputs/ file is an "
+        "ERROR by default (strict). --no-strict-excerpts makes it a WARNING, for runs "
+        "made before 2.0. A YAML or JSON input searched as plain text only stays a "
+        "WARNING. Ignored with --schema-only."
     ),
 )
 def validate(  # type: ignore[no-untyped-def]
@@ -1447,6 +1449,17 @@ def prepare_run_cmd(run_dir: Path, domain_flags: tuple[str, ...]) -> None:
     raise SystemExit(run_composite("prepare-run", prepare_run_steps(run_dir, domains, version)))
 
 
+# The validate flag pair, passed through by the composites that end in a validate.
+_strict_excerpts_option = click.option(
+    "--strict-excerpts/--no-strict-excerpts",
+    default=True,
+    help=(
+        "Passed to the validate step: a non-verbatim inputs/ excerpt is an ERROR by "
+        "default; --no-strict-excerpts makes it a WARNING, for runs made before 2.0."
+    ),
+)
+
+
 @main.command("tier-gate")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option("--tier", required=True, help="Run subdir to gate, e.g. 10-trustworthiness.")
@@ -1456,7 +1469,8 @@ def prepare_run_cmd(run_dir: Path, domain_flags: tuple[str, ...]) -> None:
     is_flag=True,
     help="Print only validate's JSON on stdout (canonicalize's output goes to stderr).",
 )
-def tier_gate_cmd(run_dir: Path, tier: str, as_json: bool) -> None:
+@_strict_excerpts_option
+def tier_gate_cmd(run_dir: Path, tier: str, as_json: bool, strict_excerpts: bool) -> None:
     """Canonicalize the whole run, then validate --tier; exit with the validate result.
 
     Exit 0 clean, 1 on schema errors. A canonicalize failure is reported on its status
@@ -1464,7 +1478,7 @@ def tier_gate_cmd(run_dir: Path, tier: str, as_json: bool) -> None:
     """
     from .composite import run_composite, tier_gate_steps
 
-    steps = tier_gate_steps(run_dir, tier, json_output=as_json)
+    steps = tier_gate_steps(run_dir, tier, json_output=as_json, strict_excerpts=strict_excerpts)
     raise SystemExit(run_composite("tier-gate", steps, gate="validate"))
 
 
@@ -1490,7 +1504,8 @@ def post_tier4_cmd(run_dir: Path) -> None:
     default=None,
     help="Passed to summarize --record-attempts (writes RUN_DIR/.apd-state/attempts.yaml).",
 )
-def closeout_cmd(run_dir: Path, attempts_json: str | None) -> None:
+@_strict_excerpts_option
+def closeout_cmd(run_dir: Path, attempts_json: str | None, strict_excerpts: bool) -> None:
     """Closeout composite: canonicalize, summarize, manual-audit-prompts, final validate.
 
     Runs all four in order (the validate is --errors-only) and exits with the first
@@ -1498,7 +1513,8 @@ def closeout_cmd(run_dir: Path, attempts_json: str | None) -> None:
     """
     from .composite import closeout_steps, run_composite
 
-    raise SystemExit(run_composite("closeout", closeout_steps(run_dir, attempts_json)))
+    steps = closeout_steps(run_dir, attempts_json, strict_excerpts=strict_excerpts)
+    raise SystemExit(run_composite("closeout", steps))
 
 
 @main.command("cluster-candidates")

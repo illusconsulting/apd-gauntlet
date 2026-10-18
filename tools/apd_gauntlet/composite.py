@@ -109,18 +109,27 @@ def prepare_run_steps(
     ]
 
 
-def tier_gate_steps(run_dir: Path, tier: str, *, json_output: bool = False) -> list[SubStep]:
+def _excerpt_flag(strict_excerpts: bool) -> tuple[str, ...]:
+    """``validate``'s excerpt check is strict by default; only the escape hatch is passed."""
+    return () if strict_excerpts else ("--no-strict-excerpts",)
+
+
+def tier_gate_steps(
+    run_dir: Path, tier: str, *, json_output: bool = False, strict_excerpts: bool = True
+) -> list[SubStep]:
     """Canonicalize the whole run, then validate one tier.
 
     With ``json_output`` the canonicalize summary goes to stderr, so stdout carries only
-    ``validate --json``'s document.
+    ``validate --json``'s document. Without ``strict_excerpts`` the validate gets
+    ``--no-strict-excerpts``.
     """
     run = str(run_dir)
+    output = "--json" if json_output else "--errors-only"
     return [
         SubStep("canonicalize", ("canonicalize", run), stdout_to_stderr=json_output),
         SubStep(
             "validate",
-            ("validate", run, "--tier", tier, "--json" if json_output else "--errors-only"),
+            ("validate", run, "--tier", tier, output, *_excerpt_flag(strict_excerpts)),
         ),
     ]
 
@@ -135,11 +144,14 @@ def post_tier4_steps(run_dir: Path) -> list[SubStep]:
     ]
 
 
-def closeout_steps(run_dir: Path, record_attempts: str | None = None) -> list[SubStep]:
+def closeout_steps(
+    run_dir: Path, record_attempts: str | None = None, *, strict_excerpts: bool = True
+) -> list[SubStep]:
     """The dimpr ``canonicalize``, ``summarize``, ``manual-audit-prompts``, the final ``validate``.
 
     ``manual-audit-prompts`` writes ``40-synthesis/manual-audit-prompts.md`` from the
-    blocked deduped findings.
+    blocked deduped findings. Without ``strict_excerpts`` the validate gets
+    ``--no-strict-excerpts``.
     """
     run = str(run_dir)
     attempts = ("--record-attempts", record_attempts) if record_attempts is not None else ()
@@ -147,5 +159,5 @@ def closeout_steps(run_dir: Path, record_attempts: str | None = None) -> list[Su
         SubStep("canonicalize", ("canonicalize", run)),
         SubStep("summarize", ("summarize", run, *attempts)),
         SubStep("manual-audit-prompts", ("manual-audit-prompts", run)),
-        SubStep("validate", ("validate", run, "--errors-only")),
+        SubStep("validate", ("validate", run, "--errors-only", *_excerpt_flag(strict_excerpts))),
     ]
