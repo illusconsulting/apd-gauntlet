@@ -951,8 +951,8 @@ await parallel([
 // stderr carries one `post-tier4: <step> exit=<N>` line per step, and the runner turns
 // each non-zero one into a receipt error whose path is the step. Only a failed rollup
 // is retried and then handed to the synthesizer: an assemble-c4 or canonicalize failure
-// stays advisory, as those steps were before the composite. A failed receipt that names
-// no step is read as a failed rollup.
+// stays advisory, as those steps were before the composite, and is logged by name. A
+// failed receipt that names no step is read as a failed rollup.
 const POST_TIER4_STEPS = ['assemble-c4', 'canonicalize', 'rollup'];
 // True when receipt r failed and its errors name `step` (one of `steps`), or name none
 // of `steps` at all (an interrupted dispatch, or a receipt without the per-step errors).
@@ -983,8 +983,14 @@ if (stepFailed(pt, 'rollup', POST_TIER4_STEPS)) {
       '40-threat-model/threat-model.findings.yaml tmeval-*), then STOP.',
       { agentType: 'apd-synthesizer', phase: 'synthesis-rollup', label: 'synthesizer-fallback-rollup' });
   }
-} else if (isErr(pt)) {
-  log('post-tier4: assemble-c4/canonicalize failed — advisory, as before WS3.');
+}
+// Name each advisory step (assemble-c4, canonicalize) that the LAST post-tier4 receipt
+// reports failed: the first one, or the retry's when the rollup was retried.
+const advisoryFailed = isErr(pt) ? POST_TIER4_STEPS.filter(function (s) {
+  return s !== 'rollup' && ((pt && pt.errors) || []).some(function (e) { return e.path === s; });
+}) : [];
+if (advisoryFailed.length) {
+  log('post-tier4: ' + advisoryFailed.join(', ') + ' failed — advisory; the run continues.');
 }
 
 // ===========================================================================

@@ -198,8 +198,9 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   `validate --tier`, and so does each re-gate in the tier repair loop. One
   `post-tier4` replaces `assemble-c4`, the tmeval `canonicalize` and `rollup`.
   Its retry and the synthesizer's last-resort rollup fire only when `rollup`
-  itself failed; an `assemble-c4` or `canonicalize` failure stays advisory.
-  One `closeout` replaces the domain-improvement `canonicalize`,
+  itself failed; an `assemble-c4` or `canonicalize` failure stays advisory,
+  and the runner logs the failed step by name, also when the retry fixed
+  `rollup`. One `closeout` replaces the domain-improvement `canonicalize`,
   `summarize --record-attempts` and the final `validate`, and now also writes
   `40-synthesis/manual-audit-prompts.md`. The dispatch labels change to match
   (`prepare-run`, `tier-gate-<tier>` with the `-after-repair` and

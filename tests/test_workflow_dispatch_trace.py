@@ -9,6 +9,7 @@ the CI test job provisions Node 22 so they run there.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -54,17 +55,28 @@ GUARDED = {"author-threat-model-floor", "cluster-candidates", "apply-clusters",
 
 
 def trace_raw(
-    cfg: dict[str, Any], fail: dict[str, list[str]] | None = None
+    cfg: dict[str, Any], fail: dict[str, list[str]] | None = None, *, logs: bool = False
 ) -> subprocess.CompletedProcess[str]:
     """Run the harness on the runner with `cfg` as args; `fail` maps a label to the
-    names of its failing steps (an empty list fails the label itself)."""
+    names of its failing steps (an empty list fails the label itself). With `logs`, the
+    harness also prints the workflow's log() lines on stderr."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node not available")
     argv = [node, str(HARNESS), str(RUNNER), json.dumps(cfg)]
     if fail is not None:
         argv.append(json.dumps(fail))
-    return subprocess.run(argv, capture_output=True, text=True, timeout=60, cwd=REPO)
+    env = {k: v for k, v in os.environ.items() if k != "TRACE_LOGS"}
+    if logs:
+        env["TRACE_LOGS"] = "1"
+    return subprocess.run(argv, capture_output=True, text=True, timeout=60, cwd=REPO, env=env)
+
+
+def run_logs(cfg: dict[str, Any], fail: dict[str, list[str]] | None = None) -> list[str]:
+    """The messages the workflow passed to log(), in order."""
+    r = trace_raw(cfg, fail, logs=True)
+    assert r.returncode == 0, r.stderr
+    return [line[len("log: "):] for line in r.stderr.splitlines() if line.startswith("log: ")]
 
 
 def trace(cfg: dict[str, Any], fail: dict[str, list[str]] | None = None) -> list[dict[str, Any]]:
@@ -181,7 +193,49 @@ def test_rollup_failure_retry_carries_the_same_command():
     by_label = {d["label"]: d for d in t}
     assert by_label["post-tier4-retry-1"]["command"] == "apd-gauntlet post-tier4 runs/r"
     assert by_label["post-tier4-retry-1"]["phase"] == "synthesis-rollup"
+    # The retry always runs, like the composite it repeats: a guard could skip it on
+    # coverage files a previous run left behind, and the synthesizer would never fire.
+    assert by_label["post-tier4-retry-1"]["guard"] is False
     assert "synthesizer-fallback-rollup" not in by_label  # the retry succeeded
+
+
+ADVISORY = " failed — advisory; the run continues."
+
+
+def _post_tier4_logs(fail: dict[str, list[str]]) -> list[str]:
+    return [m for m in run_logs(HA_SHAPED, fail) if m.startswith("post-tier4: ")]
+
+
+@pytest.mark.parametrize(("fail", "steps"), [
+    ({"post-tier4": ["assemble-c4"]}, "assemble-c4"),
+    ({"post-tier4": ["canonicalize", "assemble-c4"]}, "assemble-c4, canonicalize"),
+    # The retry fixed rollup, but canonicalize still failed on it.
+    ({"post-tier4": ["rollup"], "post-tier4-retry-1": ["canonicalize"]}, "canonicalize"),
+    # Rollup failed twice, and assemble-c4 with it: the synthesizer runs, and the
+    # advisory failure is still named.
+    ({"post-tier4": ["rollup"], "post-tier4-retry-1": ["rollup", "assemble-c4"]}, "assemble-c4"),
+])
+def test_advisory_post_tier4_failures_are_logged(fail, steps):
+    assert _post_tier4_logs(fail) == ["post-tier4: " + steps + ADVISORY]
+
+
+@pytest.mark.parametrize("fail", [
+    {},
+    {"post-tier4": ["rollup"]},
+    {"post-tier4": ["rollup", "assemble-c4"]},  # the retry passed every step
+    {"post-tier4": [], "post-tier4-retry-1": []},  # failed receipts that name no step
+    {"post-tier4": ["rollup"], "post-tier4-retry-1": ["rollup"]},
+])
+def test_no_advisory_log_without_a_named_advisory_failure(fail):
+    assert _post_tier4_logs(fail) == []
+
+
+def test_runner_logs_name_no_workstream():
+    # Operators read these lines; a plan's workstream name means nothing to them.
+    for fail in ({}, {"post-tier4": ["assemble-c4"]},
+                 {"post-tier4": ["rollup"], "post-tier4-retry-1": ["rollup"]}):
+        lines = run_logs(HA_SHAPED, fail)
+        assert lines and not [m for m in lines if re.search(r"\bWS\d", m)], lines
 
 
 def test_canonicalize_failure_alone_is_advisory():

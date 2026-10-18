@@ -13,6 +13,9 @@
 // status 'error' with one errors[] entry per name (message 'exit=1; stub'); an empty
 // list yields one error whose path is the label. Every other receipt is 'ok'. A
 // dispatch without a schema (the report auditor, a fallback) answers 'GATE: pass'.
+//
+// With TRACE_LOGS set in the environment, every log() message the workflow wrote is
+// also printed on stderr, one `log: <message>` line each, before any failure message.
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
@@ -20,6 +23,7 @@ const [, , wfPath, argsJson, failJson] = process.argv;
 const fail = failJson ? JSON.parse(failJson) : {};
 const src = readFileSync(wfPath, 'utf8').replace(/^export const meta/m, 'const meta');
 const trace = [];
+const logs = [];
 
 function agent(prompt, opts = {}) {
   const m = /^COMMAND: (.+)$/m.exec(prompt);
@@ -41,7 +45,7 @@ function agent(prompt, opts = {}) {
 }
 
 const ctx = {
-  args: JSON.parse(argsJson), agent, phase() {}, log() {},
+  args: JSON.parse(argsJson), agent, phase() {}, log(m) { logs.push(String(m)); },
   parallel: (ts) => Promise.all(ts.map((t) => t())),
 };
 let failed = null;
@@ -51,6 +55,7 @@ try {
   failed = String((e && e.message) || e);
 }
 process.stdout.write(JSON.stringify(trace));
+if (process.env.TRACE_LOGS) process.stderr.write(logs.map((m) => 'log: ' + m + '\n').join(''));
 if (failed !== null) {
   process.stderr.write(failed);
   // exitCode, not exit(): a write to a pipe can still be pending on macOS.

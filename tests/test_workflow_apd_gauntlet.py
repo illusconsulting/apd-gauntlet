@@ -464,6 +464,19 @@ def test_post_tier4_outputs_label_includes_metrics():
     )
 
 
+def _options_without_label(opts: str) -> str:
+    return " ".join(re.sub(r"label:\s*'[^']*',", "", opts).split())
+
+
+def test_post_tier4_retry_repeats_the_first_call_options():
+    # The plan writes the retry as `/* same opts */`: the two literals may differ only in
+    # their label, so the retry cannot drift (for example, lose alwaysRun).
+    calls = re.findall(r"pyStep\('post-tier4',\s*(\{[^}]*?\})\)", _text(), re.DOTALL)
+    assert len(calls) == 2, calls
+    assert "label: 'post-tier4'," in calls[0] and "label: 'post-tier4-retry-1'," in calls[1]
+    assert _options_without_label(calls[0]) == _options_without_label(calls[1])
+
+
 # ---------------------------------------------------------------------------
 # F3 — per-class completeness gate: the audit receipt carries structural_failed
 # / editorial_failed so the workflow blocks on STRUCTURAL completeness only and
