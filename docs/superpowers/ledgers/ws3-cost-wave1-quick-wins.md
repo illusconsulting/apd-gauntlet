@@ -32,6 +32,33 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
 - Task 2a, tests beyond the plan's `test_closeout_runs_manual_audit_prompts`, which also checks that the example had no prompts file before the run and that the written file equals `render_prompts` of the run's deduped findings:
   - Task 2's tests updated: `test_closeout_order_and_attempts` (first four status lines), `test_closeout_bad_attempts_keeps_the_summarize_code` (`manual-audit-prompts` still runs after `summarize` fails) and `test_step_builders_pass_the_run_dir_in_every_argv` (the closeout argv).
   - New: `test_closeout_manual_audit_failure_is_named_and_validate_still_runs`, on the clean-run fixture, whose missing deduped findings are a real failure (no mock); and `test_runbook_closeout_row_names_manual_audit_prompts`.
+- Task 3 (`b370e1c`), files beyond the plan's list, each to keep a doc true after the switch:
+  - `docs/measuring-changes.md`, "Retries and audit iterations": it named the workflow's `summarize` step and showed `apd-gauntlet summarize runs/<id> --record-attempts`. It now names `closeout` and shows `apd-gauntlet closeout runs/<id> --record-attempts`, and the foreground-drive sentence names the `closeout` row. The phrases `test_runbook_attempts_section` pins are kept.
+  - `docs/running-the-gauntlet.md`, "A tier gate failed": its first sentence said the runner runs `canonicalize` and then `validate --tier`. It now names `tier-gate`. Runner step 4 is left alone, because the plan names steps 1, 3 and 5.
+  - `CHANGELOG.md`: Task 2's Added entry ended "The workflow does not run them yet."; that sentence is removed, and the new Changed entry describes the switch.
+- Task 3, `tests/test_workflow_runner_awaits.py` beyond the plan's `EXPECTED_GREEN_LABELS` and three slices. Without these changes the red gates would never fire, because the responder keys would not match a label, and no prompt would be logged:
+  - WS2's attempts helpers key on the `closeout` label (`SUMMARIZE_MARK` is now `CLOSEOUT_MARK`). `_recorded_attempts` runs the `closeout` command the prompt names. On an empty run directory the later closeout steps fail, so it checks the `closeout: summarize exit=0` status line and the attempts file, not exit 0.
+  - `test_attempts_count_the_tier_repair_loop` and `test_halted_run_records_no_attempts` key their red gates on `tier-gate-` labels, and the halted run checks that `closeout`, not `summarize`, was never dispatched.
+  - The red receipts' `agent` is `pystep:tier-gate`.
+- Task 3, Task 1 tests updated in `tests/test_workflow_dispatch_trace.py`:
+  - `test_schema_valid_identifiers_are_accepted` pins the `prepare-run … --domain pbm --domain fhir-r4` command.
+  - `test_absent_framework_version_omits_the_flag` is replaced by `test_prepare_run_reads_framework_version_from_the_run_config`: with or without the key, no CLI command carries `--framework-version`, because `prepare-run` reads it from `.apd-run.yaml`.
+  - `test_trace_records_phase_and_guard` uses the `tier-gate-10-trustworthiness` label.
+- Task 3, the plan's test code is adapted for ruff with the assertions unchanged: `labels = lambda fail: …` (E731) becomes the helper `_labels`, `l` (E741) becomes `label`, long lines are wrapped (E501), and `BAD`'s comment moves to the line above.
+- Task 3, `test_prepare_run_step_always_runs` also asserts that the workflow builds no `'--framework-version '` argument. It replaces the plan's two `build-domain-skill` tests, including the guard test whose bug (`--framework-version undefined`) can no longer occur.
+- Task 3, workflow: the `post-tier4-retry-1` dispatch writes out the plan's `/* same opts */` in full, with the first call's outputs (the old `rollup-retry-1` listed only `nist-coverage.yaml`). The `pyStep` body is unchanged: the `noRunDir` and `positional` options stay, though no caller sets them now, and only their comment changes. The `pyStep` header comment now describes the per-step errors.
+- Task 3, agent body: the per-step error rule is a paragraph in `## Final message (receipt only)`, before the closing schema sentence. A new heading would break `test_body_sections_and_job_rules`, which pins the three headings and the closing sentence.
+- Task 3, tests beyond the plan's:
+  - `tests/test_workflow_dispatch_trace.py`:
+    - the dispatch totals (18, 18, 36);
+    - every composite always runs;
+    - the JS `POST_TIER4_STEPS` equals `post_tier4_steps` names;
+    - a rollup retry that succeeds carries the same command and phase and calls no synthesizer;
+    - a lone `canonicalize` failure stays advisory;
+    - `rollup` named among several failures triggers the retry;
+    - the repair loop's `-after-repair` and `-after-rerun` gates both go through `tier-gate` with the tier's phase.
+  - `tests/test_cli_plan_run.py`: the tier-gate rows' refs, phases and gate text (`<ref>; on failure repair …`); `test_plan_run_composite_rows` (the `assemble-inventory` row right after `apd-intake`, `post-tier4` outputs with `c4-model.yaml` and `metrics.yaml`, `closeout` last, and no `build-domain-skill`, `validate-domain`, `rollup` or `summarize` row).
+  - `tests/test_agent_apd_cli_runner.py::test_composite_status_lines_become_one_error_per_failed_step`.
 
 ## Pending operator steps
 
@@ -47,3 +74,13 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`). In each `usage.yaml`, `by_agent` has `apd-cli-runner` and no `general-purpose`. The `cost_usd` that `compare-runs --json` reports per run is at or below `<prev>`. If a gate fails, do not merge. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the Task 1 harness measures 45 dispatches on a clean HA-shaped run: 27 to `apd-cli-runner` and 18 LLM dispatches, as the plan's "WS1 + WS2 base" column says.
 - Task 2: none. The plan says the task needs no operator step, because nothing dispatches the composites yet.
 - Task 2a: none. Nothing dispatches `closeout` until Task 3, so no run exercises the new step yet; Task 3's SCP covers it.
+- Task 3 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t3` and `<prev>` set to the `-ws3t1` runs. On this branch's head, run the master plan Task 1 set twice. Run the changed runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t3-r1` and `runs/<x>-ws3t3-r2`, with telemetry in `telemetry/<x>-ws3t3-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t3-r<k> --otel telemetry/<x>-ws3t3-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t1 runs/<x>-ws3t3 --gates eval/gates.yaml
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t1` runs. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the harness measures 36 dispatches on a clean HA-shaped run against 45 for `-ws3t1`: 18 CLI dispatches to `apd-cli-runner` (27 before), 6 of them with guard text (9 before), and 18 LLM dispatches. `pyStep(` call sites go from 32 to 24. These are the plan's "After Task 3" numbers, and `CLI_LABELS` is the plan's 18-label list. This SCP also covers Task 2a: each run that reaches closeout writes `40-synthesis/manual-audit-prompts.md` and `.apd-state/attempts.yaml`.
