@@ -140,6 +140,27 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   - `tests/test_workflow_dispatch_trace.py`: an explicit `false` traces the same as absent; with capture on, the two dispatches sit between `auditor-attempt-0` and `closeout` (agent, phase, guard, command), and the rest of the sequence is unchanged; the opted-in CLI labels and guarded set; both skip log lines (absent and `false`) and none with capture on; failed Phase 5h receipts do not halt the run; seven non-boolean values are refused with the exact message before any dispatch; `plan-run` matches the workflow's sequence with capture on.
   - `tests/test_workflow_apd_gauntlet.py`: `skipReceipt` is the planned helper, verbatim; the then-branch keeps both awaited calls and the `domain-auditor` label, and the else-branch dispatches nothing; the gate text appears once; the type check sits after the identifier checks and before `const runDir`; the SKIP CONVENTION paragraph names `skipReceipt()` and the key.
   - `tests/test_workflow_runner_awaits.py`: `_run_runner` takes an optional `args`; a node run with capture on dispatches the two steps in order, one at a time, between the audit loop and `closeout`; the default run logs both skips.
+- Task 8 (`d8acf38`), item (f): the plan names three cases that keep a miss a warning under strict: a YAML or JSON input over 1 MiB, a YAML input with aliases, and one nested more than 100 levels. A YAML or JSON input that fails to parse is a fourth. All four reach the same branch of `_ExcerptInput`, whose parsed values are never tried, and its new `whole_text_only` flag records that. JSON has no depth cap of its own (only YAML has `_MAX_YAML_DEPTH`). So JSON nested 3,000 levels is parsed on Python 3.12, where a miss is an error, and raises `RecursionError` on 3.10 and 3.11, where it stays a warning. `--strict` still turns every warning into an error. Both severities keep the message `evidence[{i}].excerpt not found verbatim in artifact '{artifact}'`.
+- Task 8, item (e), how the five WS1 tests changed:
+  - `test_paraphrase_warns_but_exits_zero` passes `--no-strict-excerpts`.
+  - In `test_errors_only_hides_the_warning`, `test_tier_gate_reports_excerpt_violations` and `test_tier_gate_json_carries_the_violation_by_severity`, the warning half passes `--no-strict-excerpts`, and the error half checks both the default and `--strict-excerpts`.
+  - `test_pathological_input_without_a_match_warns_and_never_fails_a_gate` passes `--no-strict-excerpts` in its gate loop. Its last check uses `--strict` in place of `--strict-excerpts`: under (f) the five YAML cases stay warnings with `--strict-excerpts`, and the result for `deep-json-3000` depends on the Python version. The new `test_unparsed_pathological_yaml_never_fails_a_strict_gate` checks the five YAML cases under the strict default.
+- Task 8, item (b), the Home Assistant example:
+  - Each of the 23 excerpts changed in its lens file and in its copy in `40-synthesis/deduped-findings.yaml` (22) or `deduped-capabilities.yaml` (1). The report reads those copies.
+  - `report-html/data.js` was rebuilt with `build-report --out` into a scratch directory, and only `data.js` was copied back. Its diff is the 22 finding excerpts. `meta.date` stays `2026-06-14`: the run declares no date, so the build used the day it ran.
+  - `build-manifest.txt` gets the new `deduped-findings.yaml` and `deduped-capabilities.yaml` hashes, so the `audit-report` check `source_hash_drift` stays clean. `app.js` and `vendor-licenses.txt` were not rebuilt: the example carries an older bundle, as the 1.7.1 release gate recorded.
+  - Twenty excerpts now quote the cited file, using text inside each locator's range. Three absence or summary notes are now wholly parenthesised: `resil-93866115` and `immut-165d9547` (`org/SECURITY.md`) and `auth-3794d338` (`mobile/android-CLAUDE.md`). No artifact, locator, title, severity or id changed.
+  - Not changed: the copies in `tests/fixtures/runs/c4-home-assistant` (a C4 fixture with no `inputs/`, not a committed example), `report-template/data.js` (generated development data) and the example's `00-context/context-brief.md` prose.
+  - After the change, all three examples, copied with their `inputs/`, give `validate --errors-only --strict-excerpts` exit 0. `audit-report` passes 23 of 23. `canonicalize` reports 0 records recanonicalized. `test_data_js_matches_golden[home-assistant]` passes.
+- Task 8, item (c): the skill has no section named "Evidence". The rule goes into rule 1 ("Evidence-pointer required") as two bullets: the excerpt is the cited file's own words, and an absence or summary note is wholly parenthesised. The self-check item "**Evidence.**" names the marker too.
+- Task 8, the plan's test code is adapted, with its assertions unchanged. The `gate` lambda is a nested `def` (ruff E731), long lines are wrapped (E501), and `REPO` is defined in the file. Tests that cite a new `inputs/` file add it to the fixture brief (`_list_in_brief`); without it the semantic pass reports `not in intake brief`.
+- Task 8, tests beyond the plan's, in `tests/test_validate_excerpts.py`:
+  - both composites carry the flag in `--json` mode and with `--record-attempts`, and only on their validate step; `closeout` is strict by default and takes the escape hatch;
+  - a broken excerpt in a copied example fails strict validation, the control for `test_committed_examples_validate_strict`;
+  - the normalizer folds case and drops whitespace next to punctuation, but not between two words;
+  - the two observed false positives (synthetic and in the real examples) now match, and a different word is still a miss;
+  - five whole-text-only cases stay warnings under the default, `--strict-excerpts` and the tier JSON, while a parsed YAML miss is an error;
+  - `add_excerpt_violations` splits one run's misses by severity, and its library default stays a warning.
 
 ## Pending operator steps
 
@@ -229,3 +250,30 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`.
 
   Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t6` runs. If a gate fails, do not merge; attach the `--json` output to the PR. The `-off` run logs `domain-coverage-delta: skipped (domain_improvement_capture is not true in .apd-run.yaml)` and the same line for `domain-improvements`. It writes no `40-synthesis/domain-improvements.yaml`, and its `usage.yaml` `by_agent` has no `apd-domain-auditor` (with or without a `<plugin>:` prefix). Record the printed saving, the `totals.cost_usd` saving against the `-ws3t7` PBM median, in the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the harness measures 34 dispatches on a clean HA-shaped run without the key (17 CLI, 17 LLM) and 36 with `domain_improvement_capture: true` (18, 18), the plan's two "After Task 7" columns. The public examples without the key drop one CLI and one agent dispatch against `-ws3t6`. No `eval/gates.yaml` gate reads domain-improvement output, so the skip changes only their cost and dispatch counts.
+- Task 8 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t8` and `<prev>` set to the `-ws3t7` runs. On this branch's head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t8-r1` and `runs/<x>-ws3t8-r2`, with telemetry in `telemetry/<x>-ws3t8-r<k>.otlp.jsonl`. The private PBM run sets `domain_improvement_capture: true` in its `.apd-run.yaml`, as from Task 7 on, and one extra PBM run with the key absent is recorded as `runs/<pbm>-ws3t8-off`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t8-r<k> --otel telemetry/<x>-ws3t8-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t7 runs/<x>-ws3t8 --gates eval/gates.yaml
+  ```
+
+  The `-ws3t7` runs predate the flip, so any `apd-gauntlet validate` of them takes `--no-strict-excerpts`. `usage` and `compare-runs` do not validate a run. The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`.
+
+  Then exercise an excerpt repair on a copy of a finished run. The copy is not an `-rN` run, so `compare-runs` leaves it out:
+
+  ```bash
+  cp -R runs/<x>-ws3t8-r1 runs/<x>-ws3t8-repair
+  perl -pi -e 's/^run_id: .*/run_id: <x>-ws3t8-repair/' runs/<x>-ws3t8-repair/.apd-run.yaml
+  ```
+
+  In one lens file, for example `runs/<x>-ws3t8-repair/10-trustworthiness/integrity.findings.yaml`, replace one `evidence[].excerpt` that cites a file under `inputs/` with a paraphrase of 25 tokens or fewer that is not in that file. Before re-invoking, check the break:
+
+  ```bash
+  apd-gauntlet resume-plan runs/<x>-ws3t8-repair --json      # the lens: "complete": true (parse and schema only)
+  apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only   # exit 1: ERROR ... evidence[<i>].excerpt not found verbatim in artifact '<file>'
+  apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only --no-strict-excerpts   # exit 0
+  ```
+
+  Re-invoke the runner by path on the copy, in a session whose telemetry goes to `telemetry/<x>-ws3t8-repair.otlp.jsonl`, then run `apd-gauntlet usage runs/<x>-ws3t8-repair --otel telemetry/<x>-ws3t8-repair.otlp.jsonl`.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t7` runs. If a gate fails, do not merge; attach the `--json` output to the PR. A cost rise that the candidates' `.apd-state/attempts.yaml` puts on excerpt repairs (`tier_repairs`) is the flip's price; record it in the PR. The repair run logs `resume: skipping integrity (outputs present and valid).`, then `tier-gate-10-trustworthiness` failing with `not found verbatim`, one `repair-10-trustworthiness-integrity.findings.yaml` dispatch to `apd-tier-repair`, `tier-gate-10-trustworthiness-after-repair` passing, and no `integrity-rerun` dispatch. Its `.apd-state/attempts.yaml` has `tier_gate_failures: [10-trustworthiness]`, `tier_repairs: {10-trustworthiness: 1}` and `lens_reruns: {}`. Afterwards, `apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only` exits 0, because the repaired excerpt is found verbatim. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, nothing in the dispatch counts changes: Task 8 touches no workflow, label or `agentType`, and the workflow passes neither flag. A clean HA-shaped run is still 34 dispatches without the key and 36 with it.
