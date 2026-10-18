@@ -157,6 +157,23 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   table and checks that the parser behind `parse-threat-model` reads the same
   entries. The runbook's "Behaviour-preserving transformations" section covers
   suites, the statuses and the allowlist rule.
+- **Composite commands `prepare-run`, `tier-gate`, `post-tier4` and
+  `closeout`.** Each runs existing commands in-process, in order, and runs
+  every step even after one fails. It writes one `<command>: <step> exit=<N>`
+  line per step to stderr, then `<command>: ok` or
+  `<command>: failed <steps>`. `prepare-run RUN_DIR [--domain D]...` runs the
+  scaffold `validate --schema-only`, `build-domain-skill` and
+  `validate-domain`. The domains come from `--domain` or else the run's
+  `.apd-run.yaml`, and `framework_version` from that file when it sets one; a
+  value that does not match `run-config.schema.json` is a usage error
+  (exit 2). `tier-gate RUN_DIR --tier DIR [--json]`
+  canonicalizes the whole run, then validates the tier, and exits with the
+  `validate` result (0 clean, 1 on errors). With `--json`, stdout carries only
+  `validate`'s JSON. `post-tier4 RUN_DIR` runs `assemble-c4`, `canonicalize`
+  and `rollup`. `closeout RUN_DIR [--record-attempts JSON]` runs
+  `canonicalize`, `summarize` and the final `validate --errors-only`.
+  `prepare-run`, `post-tier4` and `closeout` exit with the first failing
+  step's code. The workflow does not run them yet.
 
 ### Changed
 

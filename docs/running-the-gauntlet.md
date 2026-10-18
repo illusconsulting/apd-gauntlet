@@ -47,6 +47,10 @@ apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml agai
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
 apd-gauntlet resume-plan <run-dir> [--json]      # which agent steps are already complete (read-only; the runner resumes from it)
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
+apd-gauntlet prepare-run <run-dir> [--domain D]...  # setup: scaffold validate, build-domain-skill, validate-domain (domains from --domain or .apd-run.yaml; framework_version from .apd-run.yaml)
+apd-gauntlet tier-gate <run-dir> --tier DIR [--json]  # canonicalize the whole run, then validate the tier; exits with the validate result
+apd-gauntlet post-tier4 <run-dir>                # assemble-c4, canonicalize, rollup; exits with the first failing step's code
+apd-gauntlet closeout <run-dir> [--record-attempts JSON]  # canonicalize, summarize, final validate; exits with the first failing step's code
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
@@ -72,7 +76,7 @@ apd-gauntlet refresh-capec                       # refresh MITRE CAPEC reference
 apd-gauntlet refresh-crosswalks --csf2-json … --hipaa-json …  # ground the HIPAA + CSF 2.0 crosswalks against NIST CPRT exports
 ```
 
-`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
+`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators. The composites `prepare-run`, `tier-gate`, `post-tier4` and `closeout` run every step even after one fails, and write one `<command>: <step> exit=<N>` line per step to stderr, then `<command>: ok` or `<command>: failed <steps>`.
 
 ## Step 1: Scaffold the run
 
