@@ -1,0 +1,21 @@
+# Comparison gates: proposals from the program master plan's Global Constraints.
+# Change a threshold only by PR, with the rationale in the PR description.
+schema_version: 1
+status: proposal
+gates:
+  - id: no_lost_critical_high
+    text: no critical or high finding lost unless the loss traces to evidence
+    checks: [{metric: unexcused_lost_critical_high, op: le, value: 0}]
+  - id: severity_agreement
+    text: severity agrees on at least 90% of matched findings
+    checks: [{metric: severity_agreement_pct, op: ge, value: 90}]
+  - id: blocked_rate
+    text: blocked rate moves by no more than 5 points
+    checks: [{metric: blocked_rate_abs_delta_pts, op: le, value: 5}]
+  - id: first_pass_and_retries
+    text: first-pass schema validity and retry count no worse than baseline
+    checks: [{metric: first_pass_validator_errors_delta, op: le, value: 0}, {metric: lens_retries_delta, op: le, value: 0},
+             {metric: tier_repairs_delta, op: le, value: 0}, {metric: lens_reruns_delta, op: le, value: 0}]
+  - id: audit_iterations
+    text: report audit passes in no more iterations than baseline
+    checks: [{metric: audit_iterations_delta, op: le, value: 0}]
