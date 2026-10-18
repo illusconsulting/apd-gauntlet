@@ -141,6 +141,22 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   ref, or no gold positive. A calibration changes a tunable, so the command
   reminds you to re-run `eval freeze`. The runbook's "Calibrate a decision
   threshold" section covers the labels, the choice and the support floor.
+- **`metamorphic run`: a harness for behaviour-preserving transformations.**
+  `apd-gauntlet metamorphic run --suite NAME [--root DIR] [--json]` applies
+  each transformation of a registered suite to each of its fixtures, in a
+  temporary directory, and checks that the results do not change once renamed
+  names are mapped back. A case `holds`, is `violated` (the report lists the
+  missing and extra result tuples), is `allowlisted` (the suite's
+  `known_non_invariant` lists it with a reason) or is a `stale_allowlist` entry
+  (listed, but the case holds). The command exits 0 when every case holds or is
+  allowlisted, 1 on a violated case or a stale entry, and 2 for an unknown
+  suite (the message lists the registered ones), a missing fixture, or a suite
+  that cannot run. Suites register with `register_suite` in a module listed in
+  `BUILTIN_SUITE_MODULES`. The demonstration suite `stride-table` renames the
+  elements, reverses the rows and reverses the STRIDE columns of a STRIDE
+  table and checks that the parser behind `parse-threat-model` reads the same
+  entries. The runbook's "Behaviour-preserving transformations" section covers
+  suites, the statuses and the allowlist rule.
 
 ### Changed
 

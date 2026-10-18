@@ -2166,5 +2166,76 @@ def calibrate_cmd(
     click.echo(_FREEZE_REMINDER)
 
 
+@main.group("metamorphic")
+def metamorphic_group() -> None:
+    """Check that behaviour-preserving changes to inputs leave results unchanged."""
+
+
+@metamorphic_group.command("run")
+@click.option(
+    "--suite",
+    "suite_name",
+    required=True,
+    metavar="NAME",
+    help="A registered suite, for example stride-table.",
+)
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The directory the suite's fixtures are relative to.",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print the suite name and every case as JSON.",
+)
+def metamorphic_run_cmd(suite_name: str, root: Path, as_json: bool) -> None:
+    """Apply each transformation of the suite NAME to each of its fixtures and compare.
+
+    A transformation writes a changed copy of a fixture (renamed elements,
+    reordered rows) that must give the same results, once renamed names are
+    mapped back. Each case holds, is violated, is allowlisted (the suite lists
+    it as a known non-invariance, with a reason) or is a stale allowlist entry
+    (listed, but it holds). The copies go to a temporary directory that is
+    removed afterwards. Exits 0 when every case holds or is allowlisted, 1 when
+    a case is violated or an allowlist entry is stale, and 2 when NAME is not a
+    registered suite or a fixture is missing under ROOT, or the suite cannot
+    run (for example, a tool it needs is missing).
+    """
+    import dataclasses
+    import tempfile
+
+    from .eval.metamorphic import (
+        FAILING,
+        MetamorphicError,
+        get_suite,
+        load_builtin_suites,
+        render_text,
+        run_suite,
+    )
+
+    load_builtin_suites()
+    try:
+        suite = get_suite(suite_name)
+    except KeyError as exc:
+        _refuse(str(exc.args[0]))
+    with tempfile.TemporaryDirectory(prefix="apd-metamorphic-") as workdir:
+        try:
+            cases = run_suite(suite, root, Path(workdir))
+        except MetamorphicError as exc:
+            _refuse(str(exc))
+    if as_json:
+        click.echo(_stdjson.dumps(
+            {"suite": suite.name, "cases": [dataclasses.asdict(c) for c in cases]}, indent=2
+        ))
+    else:
+        click.echo(render_text(suite, cases))
+    if any(c.status in FAILING for c in cases):
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     main()

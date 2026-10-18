@@ -157,3 +157,25 @@ def test_runbook_calibrate_section():
     for code in ("- `0`:", "- `1`:", "- `2`:"):
         assert code in section, code
     assert t.index("\n## Evaluate against labels") < t.index("\n## Calibrate a decision threshold")
+
+
+def test_runbook_covers_metamorphic():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    for s in ("metamorphic run --suite", "register_suite", "known_non_invariant", "stride-table"):
+        assert s in t, s
+
+
+def test_runbook_metamorphic_section():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    section = _flat(t.split("\n## Behaviour-preserving transformations", 1)[1].split("\n## ", 1)[0])
+    for s in ("apd-gauntlet metamorphic run --suite stride-table", "`--root`", "`--json`",
+              "`fixtures`", "`transforms`", "`extract`", "`normalise`", "`known_non_invariant`",
+              "`(transform, fixture)`", "rename map", "`register_suite`",
+              "`BUILTIN_SUITE_MODULES`", "`holds`", "`violated`", "`allowlisted`",
+              "`stale_allowlist`", "with a reason", "`rename-elements`", "`reorder-rows`",
+              "`reorder-columns`", "parse-threat-model", "MetamorphicError"):
+        assert s in section, s
+    for code in ("- `0`:", "- `1`:", "- `2`:"):
+        assert code in section, code
+    assert t.index("\n## Calibrate a decision threshold") < t.index(
+        "\n## Behaviour-preserving transformations")

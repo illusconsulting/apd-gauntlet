@@ -5,8 +5,9 @@ change did: that it kept the findings, and what it saved in tokens and cost. It
 covers capturing a baseline, recording Claude Code's telemetry, summarising a
 run's usage with `apd-gauntlet usage`, the retry and audit counts the workflow
 records, comparing runs with `apd-gauntlet compare-runs`, scoring runs against
-reviewed labels with `apd-gauntlet eval`, and calibrating decision thresholds
-with `apd-gauntlet calibrate`.
+reviewed labels with `apd-gauntlet eval`, calibrating decision thresholds with
+`apd-gauntlet calibrate`, and checking with `apd-gauntlet metamorphic` that
+changes which should not matter leave the results alone.
 
 ## Why measure
 
@@ -652,3 +653,84 @@ Exit codes:
   or lists a ref twice; a `ref` is not an item of its record or is labelled
   twice; the records mix models; no labelled item has `gold: true`; or the
   existing thresholds file cannot be read or is not a mapping.
+
+## Behaviour-preserving transformations
+
+Some changes to an input should never change the results: renaming a
+component, reordering the rows of a table, moving a column. A metamorphic suite
+checks that. It applies each such transformation to a fixture and compares the
+results with the untouched fixture's. No model runs, so a suite can run in CI.
+
+```bash
+apd-gauntlet metamorphic run --suite stride-table
+```
+
+`metamorphic run --suite NAME [--root DIR] [--json]` runs every case of the
+suite: each transformation on each fixture. Fixtures are directories relative
+to `--root` (default `.`, so run it from the repository root). The transformed
+copies go to a temporary directory that is removed afterwards. `--json` prints
+the suite name and every case with its `fixture`, `transform`, `status`,
+`missing` and `extra` result tuples, and `reason`.
+
+### Suites
+
+A suite (`apd_gauntlet.eval.metamorphic.Suite`) declares:
+
+- `name`, which `--suite` takes.
+- `fixtures`: directories relative to the root.
+- `transforms`: name to function. A transform copies the fixture into an empty
+  directory, changes the copy, and returns a rename map from each new name to
+  the original one (`{}` when it renames nothing).
+- `extract`: reads a fixture directory and returns the results as a set of
+  tuples of strings.
+- `normalise`: maps the transformed copy's results back through the rename
+  map, so a renamed element compares equal to the original.
+- `known_non_invariant`: the allowlist, keyed by `(transform, fixture)`, each
+  with a reason.
+
+The engine ships one demonstration suite, `stride-table`, over the parser
+behind `parse-threat-model`. Its fixture is
+`tests/fixtures/metamorphic/stride-table/basic/threat-model.md`, a STRIDE
+table, and its results are the parsed entries as (element, STRIDE letter,
+threat, goals). Its transforms are `rename-elements` (each element becomes
+`element-<n>`, in row order), `reorder-rows` (the data rows reversed) and
+`reorder-columns` (the six STRIDE columns reversed, the Element column kept
+first).
+
+Each case ends in one of four statuses:
+
+- `holds`: the normalised results are the same.
+- `violated`: they differ. The report lists the `missing` tuples (only in the
+  untouched fixture's results) and the `extra` ones (only in the copy's).
+- `allowlisted`: they differ, and the allowlist lists the case.
+- `stale_allowlist`: the allowlist lists the case, but it holds.
+
+### Adding a suite
+
+A new suite, such as the IaC pipeline's or the code-flow layer's, lives in its
+own module that calls `register_suite(suite)` at import. Add the module to
+`BUILTIN_SUITE_MODULES` in `tools/apd_gauntlet/eval/metamorphic.py`, so
+`metamorphic run` loads it. `register_suite` refuses a name that is taken, a
+suite with no fixtures or no transforms, two fixtures with the same directory
+name, a transform name that is not a plain directory name, and an allowlist
+entry that names no case of the suite or has no reason.
+When `extract` cannot run (a tool the suite needs is not installed), it raises
+`MetamorphicError`, and the command exits 2 with its message.
+
+### The allowlist
+
+A known non-invariance, such as a scanner that reads one file format
+differently, is listed explicitly in the suite's `known_non_invariant` with a
+reason. A difference that the gauntlet's own code causes is a defect to fix,
+not an entry to add. An entry whose case holds again is reported as
+`stale_allowlist` and fails the run, so remove it; the list then names only
+the differences that still exist.
+
+Exit codes:
+
+- `0`: every case holds or is allowlisted.
+- `1`: a case is violated, or an allowlist entry is stale.
+- `2`: `NAME` is not a registered suite (the message lists the registered
+  ones), a fixture is not a directory under the root, or the suite cannot run:
+  a tool it needs is missing, a file cannot be read or written, or a transform
+  or `extract` returns the wrong type.
