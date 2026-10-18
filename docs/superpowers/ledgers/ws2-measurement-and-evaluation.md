@@ -263,7 +263,7 @@ See "Pending operator steps" above: Task 7 Step 6, Task 14 Steps 1 to 5, consoli
 
 - Task 14's artefacts: `eval/findings/corpus.yaml`, `eval/findings/labels/{claim-event-bus,acme-mobile-banking,home-assistant}.yaml` and `eval/frozen.yaml`. The operator writes them in Task 14 Steps 3 to 5.
 - A13.27's per-family freeze scope for `eval freeze` (`iac`, `catalog`, `decide`, `codeflow`). The plan defers it to consolidated plan Phase 9 Step 2, before code-flow CF3.
-- The comment citing ADR-0028 above the `eval/results/` and `eval/local/` lines of `.gitignore` (plan Task 11 Files). `b07d2b0` appended the three lines (`eval/results/`, `eval/local/`, `telemetry/`) without it, as the Task 11 deviation records. Adding it needs a run allowed to edit `.gitignore`, as Task 11's run was.
+- ~~The comment citing ADR-0028 above the `eval/results/` and `eval/local/` lines~~: delivered by `65d99ae`, which adds it above `eval/results/` and `eval/local/` and gives `telemetry/` its own comment (register A9.6).
 
 ### Final quality gate
 
