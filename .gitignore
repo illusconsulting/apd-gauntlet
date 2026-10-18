@@ -47,6 +47,10 @@ docs/audits/
 docs/cprt_*.json
 docs/cprt_*.xlsx
 docs/csf-pf-*.xlsx
+
+# Evaluation results and local labels stay out of git (ADR-0028)
 eval/results/
 eval/local/
+
+# Telemetry exports carry user e-mail, Bash commands and tool input (register A9.6)
 telemetry/
