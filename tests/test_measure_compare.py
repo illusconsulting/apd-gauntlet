@@ -172,6 +172,28 @@ def test_evidence_reassigned_to_a_new_capability(make_run, edit):
     assert d.lost_critical_high[0].excuse == "evidence_reassigned:intg-cap-0000beef"
 
 
+def test_the_first_new_finding_citing_the_pointer_names_the_excuse(make_run, edit):
+    # New findings come first, each kind in id order, so the capability (whose id sorts
+    # first) and the later finding both lose to conf-0000beef.
+    b, c = make_run("b"), make_run("c")
+    edit.drop(c, "intg-42a3ebbd")                                  # cites Tampering paragraph 2
+    for rid, title in (("conf-0000cafe", "Claim producers hold no payload signing keys"),
+                       ("conf-0000beef", "Unsigned Kafka payloads allow claim tampering")):
+        edit.add_finding(c, CONF_FINDINGS, new_finding(
+            rid, title, evidence=[("threat-model.md", "Tampering paragraph 2")]))
+    capability = {"id": "auth-cap-0000beef", "apd_goal": "authenticity", "maturity": "designed",
+                  "title": "Producers sign every claim event payload",
+                  "evidence": [{"artifact": "threat-model.md",
+                                "locator": "Tampering paragraph 2", "excerpt": "x"}]}
+    (c / "10-trustworthiness/extra.capabilities.yaml").write_text(
+        yaml.safe_dump({"capability": [capability]}, sort_keys=False), encoding="utf-8")
+    d = compare_pair(load_run(b), load_run(c))
+    assert d.findings.new == ("conf-0000beef", "conf-0000cafe")
+    assert d.capabilities.new == ("auth-cap-0000beef",)
+    assert [(x.id, x.excuse) for x in d.lost_critical_high] == [
+        ("intg-42a3ebbd", "evidence_reassigned:conf-0000beef")]
+
+
 @pytest.mark.parametrize(
     "pointer",
     [
@@ -228,6 +250,33 @@ def test_a_missing_severity_counts_as_unknown_after_the_known_levels():
     assert d.lost_critical_high == ()
 
 
+def test_shifts_list_the_higher_from_level_first_then_the_higher_to_level():
+    def leveled(prefix, key, levels):
+        """One record per title, each with its own level; ``None`` leaves ``key`` out."""
+        return {f"{prefix}-{title}": {
+            "id": f"{prefix}-{title}", "apd_goal": "confidentiality", "title": title,
+            "evidence": [{"artifact": "a.md", "locator": "§1"}],
+            **({} if level is None else {key: level})} for title, level in levels}
+
+    severities = [("alpha", "low", "high"), ("bravo", "medium", "low"),
+                  ("charlie", "critical", "low"), ("delta", "critical", "medium"),
+                  ("echo", None, "high"), ("foxtrot", "high", None)]
+    maturities = [("golf", "designed", "implemented"), ("hotel", "operationalized", "tested"),
+                  ("india", "tested", "designed")]
+    baseline = snapshot(leveled("conf", "severity", [(t, a) for t, a, _ in severities]),
+                        leveled("conf-cap", "maturity", [(t, a) for t, a, _ in maturities]))
+    candidate = snapshot(leveled("conf", "severity", [(t, z) for t, _, z in severities]),
+                         leveled("conf-cap", "maturity", [(t, z) for t, _, z in maturities]))
+    d = compare_pair(baseline, candidate)
+    assert len(d.findings.matched) == 6 and len(d.capabilities.matched) == 3
+    assert list(d.severity_shifts.items()) == [
+        ("critical->medium", 1), ("critical->low", 1), ("high->unknown", 1),
+        ("medium->low", 1), ("low->high", 1), ("unknown->high", 1)]
+    assert list(d.maturity_shifts.items()) == [
+        ("operationalized->tested", 1), ("tested->designed", 1), ("designed->implemented", 1)]
+    assert d.severity_agreement_pct == 0.0
+
+
 def test_no_matches_leave_agreement_undefined():
     d = compare_pair(snapshot(), snapshot())
     assert d.severity_agreement_pct is None and d.findings.matched == ()
@@ -246,10 +295,41 @@ def test_headline_overlap_counts_only_headlines_the_candidate_keeps(make_run):
     assert d.headline_overlap_pct == pytest.approx(300 / 7)
 
 
+def test_headline_overlap_follows_the_match_to_a_reworded_id():
+    # Ids are sha8(title + first locator), so a reworded headline finding gets a new id
+    # but still matches: the overlap compares the candidate id it matched, not its own id.
+    def record(rid, title):
+        return {"id": rid, "apd_goal": "confidentiality", "severity": "high", "title": title,
+                "evidence": [{"artifact": "tech_plan.md", "locator": "§4.2 paragraph 3"}]}
+
+    baseline = snapshot(
+        {"conf-aaaa1111": record(
+            "conf-aaaa1111", "PHI fields in Kafka claim-events topic lack envelope encryption")},
+        headlines=(frozenset({"conf-aaaa1111"}),),
+    )
+    candidate = snapshot(
+        {"conf-bbbb2222": record(
+            "conf-bbbb2222",
+            "PHI fields in the Kafka claim-events topic lack envelope encryption at rest")},
+        headlines=(frozenset({"conf-bbbb2222"}),),
+    )
+    d = compare_pair(baseline, candidate)
+    assert [(m.baseline_id, m.candidate_id) for m in d.findings.matched] == [
+        ("conf-aaaa1111", "conf-bbbb2222")]
+    assert d.headline_overlap_pct == 100.0
+
+
 def test_headline_overlap_undefined_without_headlines(make_run):
     b, c = make_run("b"), make_run("c")
     (c / "40-synthesis/report-data.yaml").unlink()
     assert compare_pair(load_run(b), load_run(c)).headline_overlap_pct is None
+    assert compare_pair(load_run(c), load_run(b)).headline_overlap_pct is None   # baseline side
+    some = (frozenset({"conf-1"}),)
+    for empty in ((), None):
+        assert compare_pair(
+            snapshot(headlines=empty), snapshot(headlines=some)).headline_overlap_pct is None
+        assert compare_pair(
+            snapshot(headlines=some), snapshot(headlines=empty)).headline_overlap_pct is None
     assert compare_pair(snapshot(headlines=()), snapshot(headlines=())).headline_overlap_pct is None
 
 
