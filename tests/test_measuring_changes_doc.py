@@ -66,6 +66,23 @@ def test_runbook_baseline_set_and_usage_details():
     assert "cannot be written" in usage
 
 
+def test_runbook_covers_compare_runs():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    for s in ("compare-runs", "--gates eval/gates.yaml", "pass_with_gaps", "--strict",
+              "--excuse", "not_available"):
+        assert s in t
+
+
+def test_runbook_compare_runs_section():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    section = _flat(t.split("\n## Compare runs", 1)[1].split("\n## ", 1)[0])
+    for s in ("-r1", "-r2", "`apd_goal`", "Jaccard", "0.5", "median", "`EXCUSED (<reason>)`",
+              "`delta_only`", "`RESULT:", "1.7"):
+        assert s in section, s
+    for code in ("- `0`:", "- `1`:", "- `2`:"):
+        assert code in section, code
+
+
 def test_running_guide_links_the_runbook():
     t = (REPO / "docs/running-the-gauntlet.md").read_text()
     section = t.split("## Local accuracy benchmark (out-of-band)", 1)[1].split("\n## ", 1)[0]

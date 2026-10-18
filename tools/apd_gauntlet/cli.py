@@ -5,7 +5,7 @@ import hashlib
 import json as _stdjson
 import pathlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import click
 import yaml
@@ -1645,6 +1645,167 @@ def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json:
             f"  {phase}: {row['requests']} requests, {tokens} tokens, "
             f"cost_usd {row['cost_usd']:.6f}"
         )
+
+
+_SINGLE_RUN_WARNING = "gates applied to a single run per side; run each configuration twice"
+
+
+def _refuse(message: str) -> NoReturn:
+    """Print ``Error: <message>`` on stderr and exit 2 (a usage error)."""
+    click.echo(f"Error: {message}", err=True)
+    raise SystemExit(2)
+
+
+@main.command("compare-runs")
+@click.argument("baseline", type=click.Path(path_type=Path))
+@click.argument("candidate", type=click.Path(path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="Print the comparison as JSON.")
+@click.option(
+    "--gates",
+    "gates_file",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Evaluate the gates in this file (the proposals are in eval/gates.yaml).",
+)
+@click.option(
+    "--excuse",
+    "excuses",
+    multiple=True,
+    metavar="VALUE",
+    help=(
+        "Repeatable. '<gate-id>:<reason>' excuses that gate; any other value is a "
+        "finding id whose loss is accepted."
+    ),
+)
+@click.option(
+    "--strict", is_flag=True, help="Exit 1 when a gate is not available (pass_with_gaps)."
+)
+def compare_runs_cmd(
+    baseline: Path,
+    candidate: Path,
+    as_json: bool,
+    gates_file: Path | None,
+    excuses: tuple[str, ...],
+    strict: bool,
+) -> None:
+    """Compare a CANDIDATE run, or run set, with a BASELINE and apply the comparison gates.
+
+    Each side is a run directory, or a name whose runs are NAME-r1, NAME-r2, ...
+    (see docs/measuring-changes.md). Every baseline run is compared with every
+    candidate run, and the gates judge the medians. Exits 0 when no gate fails
+    (or without --gates), 1 when a gate fails or, under --strict, when a gate is
+    not available, and 2 when a side does not resolve, both sides share a run,
+    a baseline run has no findings, the runs have different inputs, a run
+    fails to load, or the gates file cannot be read.
+    """
+    from dataclasses import replace
+
+    from .measure.compare import (
+        MissingRuns,
+        compare_sides,
+        comparison_json,
+        render_text,
+        resolve_side,
+    )
+    from .measure.gates import (
+        GatesError,
+        apply_excuses,
+        evaluate,
+        load_gates,
+        overall,
+        split_excuses,
+    )
+    from .measure.runs import RunLoadError, RunSnapshot, load_run
+
+    gates = None
+    if gates_file is not None:
+        try:
+            gates = load_gates(gates_file)
+        except GatesError as exc:
+            _refuse(str(exc))
+    try:
+        gate_excuses, finding_excuses = split_excuses(
+            excuses, [g.id for g in gates or ()]
+        )
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint="'--excuse'") from exc
+
+    sides: dict[str, list[Path]] = {}
+    for side, path in (("baseline", baseline), ("candidate", candidate)):
+        try:
+            sides[side] = resolve_side(path)
+        except MissingRuns as exc:
+            _refuse(f"{side} not found: {exc}")
+
+    seen: dict[Path, tuple[str, Path]] = {}
+    for side, paths in sides.items():
+        for path in paths:
+            real = path.resolve()  # each path is a run directory, so no link loop
+            if real in seen:
+                other_side, other = seen[real]
+                _refuse(
+                    f"{other_side} run {other} and {side} run {path} are the same run "
+                    f"directory ({real})"
+                )
+            seen[real] = (side, path)
+
+    snapshots: dict[str, list[RunSnapshot]] = {}
+    for side, paths in sides.items():
+        snapshots[side] = []
+        for path in paths:
+            try:
+                snapshots[side].append(load_run(path))
+            except RunLoadError as exc:
+                _refuse(f"cannot load {side} run {path}: {exc}")
+            except OSError as exc:
+                where = exc.filename if exc.filename is not None else path
+                _refuse(f"cannot load {side} run {path}: {where}: cannot read: "
+                        f"{exc.strerror or exc}")
+
+    for run in snapshots["baseline"]:
+        if not run.findings:
+            _refuse(
+                f"baseline run {run.path} has no findings; a scaffold or unfinished run "
+                "is no baseline (docs/measuring-changes.md)"
+            )
+    digests = [
+        (r.path, r.inputs_sha256)
+        for r in (*snapshots["baseline"], *snapshots["candidate"])
+        if r.inputs_sha256 is not None
+    ]
+    for path, digest in digests[1:]:
+        first, first_digest = digests[0]
+        if digest != first_digest:
+            _refuse(
+                f"runs over different inputs: {first} and {path} have different inputs/ "
+                f"(sha256 {first_digest[:12]}… and {digest[:12]}…)"
+            )
+
+    comparison = compare_sides(
+        snapshots["baseline"], snapshots["candidate"], excused=finding_excuses
+    )
+    extra: list[str] = []
+    if gates is not None and min(len(comparison.baseline), len(comparison.candidate)) == 1:
+        extra.append(_SINGLE_RUN_WARNING)
+    if strict and gates is None:
+        extra.append("--strict has no effect without --gates")
+    if extra:
+        comparison = replace(comparison, warnings=(*extra, *comparison.warnings))
+
+    outcomes = None
+    status: str = "delta_only"
+    if gates is not None:
+        outcomes = apply_excuses(
+            evaluate(gates, comparison.values, comparison.reasons), gate_excuses
+        )
+        status = overall(outcomes)
+
+    if as_json:
+        click.echo(_stdjson.dumps(comparison_json(comparison, outcomes, status), indent=2))
+    else:
+        click.echo(render_text(comparison, outcomes, status))
+    if status == "fail" or (strict and status == "pass_with_gaps"):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

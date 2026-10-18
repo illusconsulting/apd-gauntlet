@@ -36,6 +36,24 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   [docs/measuring-changes.md](docs/measuring-changes.md), covers baseline
   capture, the telemetry setup with a minimal Collector configuration, and the
   agent-to-phase map.
+- **`compare-runs`: a deterministic before-and-after delta with gates.**
+  `apd-gauntlet compare-runs BASELINE CANDIDATE [--json] [--gates eval/gates.yaml] [--excuse VALUE]... [--strict]`
+  compares two runs, or two run sets named `<name>-r1`, `<name>-r2`, … (every
+  baseline run against every candidate run). It matches findings and
+  capabilities one to one (same goal, a shared derived asset, title Jaccard of
+  at least 0.5), counts what went missing and what is new by severity, the
+  severity and maturity shifts, the headline overlap, and each lost critical or
+  high finding with its excuse. It reports the blocked rate, the attempts
+  counts and the usage cost per run and as side medians. With `--gates` it
+  applies the five proposal gates in the new `eval/gates.yaml` to the medians.
+  The result is `pass`, `pass_with_gaps` (a gate has no data, as the attempts
+  gates against 1.7 baselines) or `fail`. `--strict` makes `pass_with_gaps`
+  exit 1. `--excuse <finding-id>` accepts a reviewed loss, and
+  `--excuse <gate-id>:<reason>` marks a gate `excused`. It exits 0 when no gate
+  fails, 1 when one fails, and 2 when a side does not resolve, both sides share
+  a run, a baseline run has no findings, the runs have different inputs, a run
+  fails to load or the gates file cannot be read. The runbook's "Compare runs"
+  section covers the matching, excuse and median rules.
 
 ### Changed
 

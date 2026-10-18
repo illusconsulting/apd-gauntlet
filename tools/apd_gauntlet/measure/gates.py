@@ -9,14 +9,18 @@ when every value is known and every check holds does the gate pass. A
 ``not_available`` gate never counts as passed: ``overall`` then reads
 ``pass_with_gaps``.
 
+An operator can excuse a gate (register A9.5): ``compare-runs --excuse
+<gate-id>:<reason>`` marks it ``excused``, which ``overall`` counts as a pass,
+and the outcome keeps the reason next to what the gate measured.
+
 ``load_gates`` reads only the ``gates`` list and ignores other top-level keys,
 so a file can carry other sections next to it.
 """
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
@@ -63,9 +67,10 @@ class Gate:
 @dataclass(frozen=True)
 class GateOutcome:
     gate: Gate
-    status: Literal["pass", "fail", "not_available"]
+    status: Literal["pass", "fail", "not_available", "excused"]
     values: dict[str, float | None]
     reason: str | None
+    excuse: str | None = None  # the operator's reason when ``status`` is ``excused``
 
 
 def _read(path: Path) -> Any:
@@ -218,8 +223,52 @@ def evaluate(
     return outcomes
 
 
+def split_excuses(
+    values: Iterable[str], gate_ids: Iterable[str]
+) -> tuple[dict[str, str], frozenset[str]]:
+    """Sort ``--excuse`` values into gate excuses and finding ids (register A9.5).
+
+    A value ``<gate-id>:<reason>`` whose prefix is one of ``gate_ids`` excuses
+    that gate; the reason is stripped, and several reasons for one gate are
+    joined with ``"; "`` in order, each once. Any other value is a finding id
+    (finding ids never contain ``:``). A gate excuse with an empty reason
+    raises ``ValueError``.
+    """
+    ids = set(gate_ids)
+    gates: dict[str, list[str]] = {}
+    findings: set[str] = set()
+    for value in values:
+        prefix, sep, reason = value.partition(":")
+        if not sep or prefix not in ids:
+            findings.add(value)
+            continue
+        reason = reason.strip()
+        if not reason:
+            raise ValueError(f"{value!r}: an excuse of gate {prefix!r} needs a reason after ':'")
+        gates.setdefault(prefix, []).append(reason)
+    return {g: "; ".join(dict.fromkeys(rs)) for g, rs in gates.items()}, frozenset(findings)
+
+
+def apply_excuses(
+    outcomes: Sequence[GateOutcome], excuses: Mapping[str, str]
+) -> list[GateOutcome]:
+    """``outcomes`` with each gate whose id is in ``excuses`` marked ``excused``.
+
+    An excused outcome carries its reason in ``excuse`` and keeps ``values`` and
+    ``reason``, so the record still shows what the gate measured. Gates not
+    named are unchanged.
+    """
+    return [
+        replace(o, status="excused", excuse=excuses[o.gate.id]) if o.gate.id in excuses else o
+        for o in outcomes
+    ]
+
+
 def overall(outcomes: Sequence[GateOutcome]) -> Literal["pass", "pass_with_gaps", "fail"]:
-    """``fail`` when any gate fails; else ``pass_with_gaps`` when any is ``not_available``."""
+    """``fail`` when any gate fails; else ``pass_with_gaps`` when any is ``not_available``.
+
+    An ``excused`` gate counts as a pass.
+    """
     statuses = {o.status for o in outcomes}
     if "fail" in statuses:
         return "fail"
