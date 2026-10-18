@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
 
+import pytest
 import yaml
 from apd_gauntlet.cli import main
 from apd_gauntlet.measure.runs import load_run
@@ -160,4 +162,18 @@ def test_unwritable_state_exits_1(make_run):
     run = make_run("r")
     (run / ".apd-state").write_text("not a directory", encoding="utf-8")
     r = CliRunner().invoke(main, ["usage", str(run), "--otel", str(OTEL)])
-    assert r.exit_code == 1 and "cannot write" in r.stderr
+    assert r.exit_code == 1
+    assert f"Error: {run / '.apd-state/usage.yaml'}: cannot write" in r.stderr
+
+
+def test_integer_too_long_to_convert_exits_2(make_run, tmp_path):
+    limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+    if not limit:
+        pytest.skip("this Python has no limit on integer string conversion")
+    export = tmp_path / "t.jsonl"
+    export.write_text('{"resourceLogs": [], "n": ' + "9" * (limit + 1) + "}\n", encoding="utf-8")
+    run = make_run("r")
+    r = CliRunner().invoke(main, ["usage", str(run), "--otel", str(export)])
+    assert r.exit_code == 2 and "line 1: cannot parse a JSON value" in r.stderr
+    assert r.exception is None or isinstance(r.exception, SystemExit)
+    assert not (run / ".apd-state").exists()

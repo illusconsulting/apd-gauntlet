@@ -69,8 +69,17 @@ _COUNTERS = ("requests", *_TOKENS)
 _DECISION_COUNTERS = ("calls", "input_tokens")
 
 
+_SHOWN = 60  # characters of a bad value an error message quotes
+
+
 class UsageParseError(Exception):
     """Telemetry or a decision record cannot be read as usage; the message names the file."""
+
+
+def _shown(value: Any) -> str:
+    """``repr(value)`` for an error message, cut to ``_SHOWN`` characters and ``...``."""
+    text = repr(value)
+    return text if len(text) <= _SHOWN else text[:_SHOWN] + "..."
 
 
 @dataclass(frozen=True)
@@ -141,7 +150,7 @@ def _otlp_int(attrs: dict[str, Any], name: str, where: str) -> int:
             raise TypeError(name)
         return int(value)
     except (TypeError, ValueError, OverflowError) as exc:
-        raise UsageParseError(f"{where}: {name} is not an integer: {value!r}") from exc
+        raise UsageParseError(f"{where}: {name} is not an integer: {_shown(value)}") from exc
 
 
 def _otlp_micros(attrs: dict[str, Any], where: str) -> int | None:
@@ -158,7 +167,9 @@ def _otlp_micros(attrs: dict[str, Any], where: str) -> int | None:
         if not math.isfinite(micros):
             raise ValueError(value)
     except (TypeError, ValueError) as exc:
-        raise UsageParseError(f"{where}: cost_usd is not a finite number: {value!r}") from exc
+        raise UsageParseError(
+            f"{where}: cost_usd is not a finite number: {_shown(value)}"
+        ) from exc
     return round(micros)
 
 
@@ -186,6 +197,8 @@ def _otlp_documents(text: str, path: Path) -> Iterator[tuple[int, Any]]:
                 "one ExportLogsServiceRequest per line as the OpenTelemetry Collector file "
                 f"exporter writes it; the console exporter's output is not parsed. See {RUNBOOK}."
             ) from exc
+        except ValueError as exc:  # e.g. an integer longer than int() converts
+            raise UsageParseError(f"{path}: line {line}: cannot parse a JSON value: {exc}") from exc
         except RecursionError as exc:
             raise UsageParseError(f"{path}: line {line}: nested too deeply to parse") from exc
         yield line, doc
@@ -198,9 +211,11 @@ def iter_api_requests(path: Path) -> Iterator[ApiRequest]:
     body's ``stringValue`` is ``claude_code.api_request``. Record attributes
     override resource attributes; a missing (or empty) ``agent.name`` is
     ``main``. Documents without ``resourceLogs`` (metrics or traces in the same
-    file) are skipped. Text that is not JSON, a malformed document, a token
-    count that is not an integer and a cost that is not a finite number raise
-    ``UsageParseError`` naming the file and line.
+    file) are skipped. Text that is not JSON, a JSON value that cannot be
+    converted (an integer longer than ``int()`` accepts), a malformed document,
+    a token count that is not an integer and a cost that is not a finite number
+    raise ``UsageParseError`` naming the file and line; a bad value is quoted
+    cut to 60 characters.
     """
     try:
         text = path.read_bytes().decode("utf-8-sig")
@@ -383,13 +398,15 @@ def _decision_usage(path: Path) -> tuple[str, str, dict[str, int], float]:
     for name in _DECISION_COUNTERS:
         value = usage.get(name)
         if value is not None and (isinstance(value, bool) or not isinstance(value, int)):
-            raise UsageParseError(f"{path}: usage.{name} is not a whole number: {value!r}")
+            raise UsageParseError(
+                f"{path}: usage.{name} is not a whole number: {_shown(value)}"
+            )
         counts[name] = value or 0
     cost = usage.get("cost_usd")
     if cost is not None and (
         isinstance(cost, bool) or not isinstance(cost, (int, float)) or not math.isfinite(cost)
     ):
-        raise UsageParseError(f"{path}: usage.cost_usd is not a number: {cost!r}")
+        raise UsageParseError(f"{path}: usage.cost_usd is not a number: {_shown(cost)}")
     task, basis = doc.get("task"), usage.get("cost_basis")
     return (
         task if isinstance(task, str) else "unknown",

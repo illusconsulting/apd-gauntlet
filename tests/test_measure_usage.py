@@ -5,6 +5,7 @@ import hashlib
 import json
 import pathlib
 import re
+import sys
 
 import pytest
 import yaml
@@ -168,9 +169,9 @@ def test_summary_source_filter_and_phase_counters():
         "workflow_runs": ["wf_1", "wf_2"],
     }
     assert s["filter"] == {"workflow_run": None}
-    tier1 = dict(s["by_agent"]["apd-confidentiality"])
-    del tier1["phase"]
-    assert s["by_phase"]["tier-1"] == tier1
+    assert s["by_phase"]["tier-1"] == {
+        "requests": 2, "input_tokens": 1500, "output_tokens": 300, "cache_read_tokens": 5000,
+        "cache_creation_tokens": 300, "cost_usd": 0.75}
     assert set(s["by_phase"]) == {"tier-1", "cli-steps", "session", "unattributed"}
     assert s["by_phase"]["unattributed"]["requests"] == 1
     assert sum(p["requests"] for p in s["by_phase"].values()) == s["totals"]["requests"]
@@ -184,6 +185,63 @@ def test_warning_texts():
         "OTEL_LOG_TOOL_DETAILS=1 and use Claude Code 2.1.273 or later",
         "multiple workflow runs in this file (wf_1, wf_2): pass --workflow-run",
     ]
+
+
+REDACTION_WARNING = (
+    "agent names redacted on {} requests ('custom'/'third-party'): set "
+    "OTEL_LOG_TOOL_DETAILS=1 and use Claude Code 2.1.273 or later"
+)
+
+
+def _costed(agent, *attrs):
+    """An ``api_request`` from ``agent`` that carries a cost, so no missing-cost warning."""
+    return _request(_attr("agent.name", agent), _attr("cost_usd_micros", "1", "intValue"), *attrs)
+
+
+def test_redaction_warning_counts_only_redacted_names(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(
+        _costed("Explore"), _costed("apd-orchestrator"), _costed("custom"),
+    ))
+    s = summarize_usage(iter_api_requests(f), source=f)
+    assert {agent: row["phase"] for agent, row in s["by_agent"].items()} == {
+        "Explore": "unattributed", "apd-orchestrator": "unattributed", "custom": "unattributed"}
+    assert s["warnings"] == [REDACTION_WARNING.format(1)]
+
+
+def test_unknown_agent_names_alone_give_no_redaction_warning(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(_costed("Explore"), _costed("apd-orchestrator")))
+    s = summarize_usage(iter_api_requests(f), source=f)
+    assert s["by_phase"]["unattributed"]["requests"] == 2
+    assert s["warnings"] == []
+
+
+def test_redaction_warning_ignores_a_plugin_prefix(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(
+        _costed("other-plugin:custom"), _costed("p:third-party"), _costed("p:Explore"),
+    ))
+    s = summarize_usage(iter_api_requests(f), source=f)
+    assert s["warnings"] == [REDACTION_WARNING.format(2)]
+
+
+def test_missing_cost_warning_counts_only_the_filtered_requests(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(
+        _costed("apd-intake", _attr("workflow.run_id", "wf_a")),
+        _request(_attr("agent.name", "apd-intake"), _attr("workflow.run_id", "wf_b")),
+    ))
+    assert summarize_usage(iter_api_requests(f), source=f, workflow_run="wf_a")["warnings"] == []
+    s = summarize_usage(iter_api_requests(f), source=f, workflow_run="wf_b")
+    assert s["warnings"] == ["1 requests carried no cost attribute"]
+
+
+def test_source_sessions_describe_the_whole_file(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(
+        _costed("apd-intake", _attr("workflow.run_id", "wf_a"), _attr("session.id", "s2")),
+        _costed("apd-intake", _attr("workflow.run_id", "wf_b"), _attr("session.id", "s1")),
+    ))
+    s = summarize_usage(iter_api_requests(f), source=f, workflow_run="wf_a")
+    assert s["source"]["sessions"] == ["s1", "s2"]
+    assert s["source"]["workflow_runs"] == ["wf_a", "wf_b"]
+    assert s["totals"]["requests"] == 1
 
 
 def test_filter_to_one_run_drops_its_warnings():
@@ -209,6 +267,14 @@ def test_missing_cost_is_zero_and_counted(tmp_path):
     s = summarize_usage(reqs, source=f)
     assert "1 requests carried no cost attribute" in s["warnings"]
     assert s["totals"]["cost_usd"] == 0.25
+
+
+def test_cost_usd_is_rounded_to_whole_micros(tmp_path):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(
+        _request(_attr("cost_usd", 0.0123456789, "doubleValue")),
+        _request(_attr("cost_usd", "0.9999996")),
+    ))
+    assert [r.cost_usd_micros for r in iter_api_requests(f)] == [12_346, 1_000_000]
 
 
 def test_cost_usd_micros_wins_over_cost_usd(tmp_path):
@@ -304,6 +370,29 @@ def test_boolean_token_value_raises(tmp_path):
     f = _write_jsonl(tmp_path / "t.jsonl", _doc(_request(_attr("input_tokens", True, "boolValue"))))
     with pytest.raises(UsageParseError, match="input_tokens is not an integer: True"):
         list(iter_api_requests(f))
+
+
+def test_integer_too_long_to_convert_raises(tmp_path):
+    limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+    if not limit:
+        pytest.skip("this Python has no limit on integer string conversion")
+    f = tmp_path / "t.jsonl"
+    f.write_text(
+        json.dumps(_doc(_request())) + '\n{"resourceLogs": [], "n": ' + "9" * (limit + 1) + "}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(UsageParseError, match=r"t\.jsonl: line 2: cannot parse a JSON value"):
+        list(iter_api_requests(f))
+
+
+@pytest.mark.parametrize("name", ["output_tokens", "cost_usd_micros", "cost_usd"])
+def test_a_long_bad_value_is_shortened_in_the_error(tmp_path, name):
+    f = _write_jsonl(tmp_path / "t.jsonl", _doc(_request(_attr(name, "x" * 5000))))
+    with pytest.raises(UsageParseError) as err:
+        list(iter_api_requests(f))
+    msg = str(err.value)
+    assert f"line 1: {name} is not " in msg and ": 'xxxxxxxx" in msg
+    assert msg.endswith("...") and len(msg) < len(str(f)) + 150
 
 
 def test_json_nested_too_deeply_raises(tmp_path):
@@ -410,6 +499,16 @@ def test_unusable_decision_record_raises_naming_it(tmp_path, text, problem):
         summarize_decisions(tmp_path)
     assert str(err.value).startswith(str(tmp_path / "40-synthesis/decisions/finding-qa.all.yaml"))
     assert problem in str(err.value)
+
+
+def test_a_long_bad_decision_value_is_shortened_in_the_error(tmp_path):
+    _decision(tmp_path, "finding-qa.all.yaml",
+              f"task: finding-qa\nusage: {{calls: {'z' * 5000}}}\n")
+    with pytest.raises(UsageParseError) as err:
+        summarize_decisions(tmp_path)
+    msg = str(err.value)
+    assert "usage.calls is not a whole number: 'zzzzzzzz" in msg
+    assert msg.endswith("...") and len(msg) < len(str(tmp_path)) + 200
 
 
 def test_decision_record_without_usage_counts_its_task_at_zero(tmp_path):

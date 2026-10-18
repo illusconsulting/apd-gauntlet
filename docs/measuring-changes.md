@@ -32,7 +32,7 @@ A baseline is a set of runs made on the code you are about to change. For the
 1. Start the Collector and export the telemetry variables (see
    [Telemetry](#telemetry)).
 2. Run the baseline set twice: the three committed examples under `examples/`,
-   plus one private run of your own. Scaffold each example run from its
+   plus one private PBM run. Scaffold each example run from its
    `inputs/`, with the domains listed in its `expected/.apd-run.yaml`:
 
    ```bash
@@ -84,9 +84,12 @@ export OTEL_LOG_TOOL_DETAILS=1
 - The console exporter (`OTEL_LOGS_EXPORTER=console`) is not parsed. Its output
   is not JSON, and `usage` refuses it with exit 2.
 
-With `OTEL_LOG_TOOL_DETAILS=1` an export also holds Bash commands, tool input,
-the account e-mail address and account ids. Treat it like the run itself: keep
-it local and never commit it.
+Every export holds the account e-mail address (`user.email`) and the
+organization id whenever Claude Code is signed in, and by default the account
+ids (`user.account_uuid`, `user.account_id`). `OTEL_LOG_TOOL_DETAILS=1` adds
+Bash commands, tool input, and the names of MCP servers, tools, skills and
+workflows. Treat every export like the run itself: keep it local and never
+commit it.
 
 ### Collector
 
@@ -120,6 +123,13 @@ mkdir -p telemetry
 otelcol-contrib --config /path/to/collector.yaml
 ```
 
+Before the first capture, check that Git ignores `telemetry/`:
+`git check-ignore telemetry/x.otlp.jsonl` prints the path when it does. If it
+prints nothing, add the line `telemetry/` to `.git/info/exclude`, which Git
+reads but never commits, so that `git add -A` cannot stage an export. You can
+also give `path` an absolute directory outside the repository and pass that
+file to `--otel`.
+
 Restart the Collector with a new `path` before each run, so that every run has
 its own file. The receiver listens on 127.0.0.1 only. If the file also receives
 metrics or traces, `usage` skips them.
@@ -130,13 +140,18 @@ metrics or traces, `usage` skips them.
 apd-gauntlet usage runs/<name>-baseline-r1 --otel telemetry/<name>-baseline-r1.otlp.jsonl
 ```
 
+Stop the Collector before you run `usage`, so that the export is complete and
+`source.sha256` describes the same bytes that were counted.
+
 - `--workflow-run ID` counts only events whose `workflow.run_id` is `ID`.
 - `--json` prints the written summary as JSON on stdout.
 
 Exit codes:
 
 - `0`: `<run>/.apd-state/usage.yaml` was written.
-- `1`: no `api_request` event is left after filtering. Nothing is written.
+- `1`: no `api_request` event is left after filtering, or
+  `<run>/.apd-state/usage.yaml` cannot be written (for example, `.apd-state`
+  is a file). Nothing is written, and an earlier `usage.yaml` is kept.
 - `2`: the export is not OTLP/JSON, a decision record under
   `40-synthesis/decisions/` cannot be read, or the directory is not a run
   directory (it has no `.apd-run.yaml`).

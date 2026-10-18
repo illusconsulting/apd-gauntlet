@@ -1581,9 +1581,12 @@ def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json:
     Reads Claude Code's claude_code.api_request events from the export, adds the
     decision-model spend under 40-synthesis/decisions/, and writes the summary.
     Exits 0 when written, 1 when no api_request event is left after filtering
-    (nothing is written), and 2 when the export or a decision record cannot be read.
+    (nothing is written) or usage.yaml cannot be written, and 2 when the export
+    or a decision record cannot be read.
     """
+    from .measure.runs import is_run_dir
     from .measure.usage import (
+        USAGE_RELPATH,
         UsageParseError,
         iter_api_requests,
         summarize_decisions,
@@ -1591,7 +1594,7 @@ def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json:
         write_usage,
     )
 
-    if not (run_dir / ".apd-run.yaml").is_file():
+    if not is_run_dir(run_dir):
         raise click.BadParameter(
             f"{run_dir} is not a run directory (no .apd-run.yaml)", param_hint="'RUN_DIR'"
         )
@@ -1620,7 +1623,7 @@ def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json:
         written = write_usage(run_dir, summary)
     except OSError as exc:
         click.echo(
-            f"Error: {run_dir / '.apd-state/usage.yaml'}: cannot write: {exc.strerror or exc}",
+            f"Error: {run_dir / USAGE_RELPATH}: cannot write: {exc.strerror or exc}",
             err=True,
         )
         raise SystemExit(1) from exc
