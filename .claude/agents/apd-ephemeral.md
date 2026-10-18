@@ -2,6 +2,7 @@
 name: apd-ephemeral
 description: "APD gauntlet tier-2 Ephemeral lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Ephemeral Specialist (Tier 2, Scalability)

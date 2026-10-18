@@ -2,6 +2,7 @@
 name: apd-code-recon
 description: "APD gauntlet optional code reconnaissance via codebase-memory-mcp (code evidence index, C4 recon); dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_repository
+effort: medium
 ---
 
 # APD Code Reconnaissance Agent (Optional, Intake Tier)

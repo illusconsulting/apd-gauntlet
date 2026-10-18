@@ -2,6 +2,7 @@
 name: apd-immutability
 description: "APD gauntlet tier-3 Immutability lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Immutability Specialist (Tier 3, Auditability)

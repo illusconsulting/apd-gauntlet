@@ -6,6 +6,7 @@ tools:
   - Glob
   - Grep
   - Write
+effort: high
 ---
 
 # Threat Model Evaluator Agent (apd-threat-model-evaluator)

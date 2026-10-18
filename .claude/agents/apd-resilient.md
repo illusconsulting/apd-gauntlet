@@ -2,6 +2,7 @@
 name: apd-resilient
 description: "APD gauntlet tier-2 Resilient lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Resilient Specialist (Tier 2, Scalability)

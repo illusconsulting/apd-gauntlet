@@ -2,6 +2,7 @@
 name: apd-intake
 description: "APD gauntlet intake: context brief and asset inventory from the run inputs; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # APD Intake Agent

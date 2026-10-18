@@ -2,6 +2,7 @@
 name: apd-non-repudiation
 description: "APD gauntlet tier-3 Non-Repudiation lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Non-Repudiation Specialist (Tier 3, Auditability)

@@ -8,6 +8,7 @@ tools:
   - Write
   - Bash    # required to invoke `apd-gauntlet author-threat-model`
 model: opus
+effort: medium
 ---
 
 # Threat Model Authoring Agent (apd-threat-model-author)

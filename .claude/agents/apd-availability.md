@@ -2,6 +2,7 @@
 name: apd-availability
 description: "APD gauntlet tier-1 Availability lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Availability Specialist (Tier 1, Trustworthiness)

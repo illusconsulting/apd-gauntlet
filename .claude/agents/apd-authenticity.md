@@ -2,6 +2,7 @@
 name: apd-authenticity
 description: "APD gauntlet tier-3 Authenticity lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Authenticity Specialist (Tier 3, Auditability)

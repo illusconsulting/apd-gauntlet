@@ -228,6 +228,17 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   workflow runner replaced it, and the plugin had kept it only as a reference.
   The plugin now lists 22 agents, and `lint-agents` no longer exempts it from
   the receipt contract.
+- **Every agent sets `effort`.** The 20 agents that had no `effort` in their
+  frontmatter now set one. The nine lenses, intake, code recon, the
+  threat-model author, the attack-path analyzer, the report writer and the
+  domain auditor run at `medium`. The threat-model recon agent runs at `low`.
+  The threat-model evaluator, the cluster adjudicator, the report auditor and
+  the synthesizer run at `high`. No agent's `model` changes, and the agents
+  that set no `model` still set none. `lint-agents` now rejects an agent
+  without `effort` or with a value other than `low`, `medium`, `high`, `xhigh`
+  or `max`. It also rejects a `model` that is neither an alias (`sonnet`,
+  `opus`, `haiku`, `fable`, `inherit`) nor a full model id that starts with
+  `claude-`. `model` stays optional.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

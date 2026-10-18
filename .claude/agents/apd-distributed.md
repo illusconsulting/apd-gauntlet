@@ -2,6 +2,7 @@
 name: apd-distributed
 description: "APD gauntlet tier-2 Distributed lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Distributed Specialist (Tier 2, Scalability)

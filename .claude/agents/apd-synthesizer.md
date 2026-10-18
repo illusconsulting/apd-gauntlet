@@ -2,6 +2,7 @@
 name: apd-synthesizer
 description: "APD gauntlet synthesis fallback, used when the decomposed pipeline fails; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: high
 ---
 
 # APD Synthesizer

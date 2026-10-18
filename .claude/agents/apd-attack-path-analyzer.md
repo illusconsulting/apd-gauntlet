@@ -8,6 +8,7 @@ tools:
   - Write
   - Bash
 model: opus
+effort: medium
 ---
 
 # apd-attack-path-analyzer

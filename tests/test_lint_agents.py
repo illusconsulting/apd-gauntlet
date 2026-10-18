@@ -63,7 +63,9 @@ def test_lint_agents_description_cap_error_text(tmp_path):
     from apd_gauntlet.lint_agents import MAX_AGENT_DESCRIPTION_CHARS
 
     a = tmp_path / "apd-x.md"
-    a.write_text("---\nname: apd-x\ndescription: " + "x" * 161 + "\n---\n\n## Final message\n")
+    a.write_text(
+        "---\nname: apd-x\ndescription: " + "x" * 161 + "\neffort: low\n---\n\n## Final message\n"
+    )
     assert MAX_AGENT_DESCRIPTION_CHARS == 160
     assert lint_agent_file(a, tmp_path) == [
         f"{a}: description is 161 characters (max 160); it loads into every session "
@@ -73,13 +75,17 @@ def test_lint_agents_description_cap_error_text(tmp_path):
 
 def test_lint_agents_one_line_error_text(tmp_path):
     a = tmp_path / "apd-x.md"
-    a.write_text("---\nname: apd-x\ndescription: |\n  a\n  b\n---\n\n## Final message\n")
+    a.write_text(
+        "---\nname: apd-x\ndescription: |\n  a\n  b\neffort: low\n---\n\n## Final message\n"
+    )
     assert lint_agent_file(a, tmp_path) == [f"{a}: description must be one line"]
 
 
 def test_lint_agents_accepts_a_description_at_the_cap(tmp_path):
     a = tmp_path / "apd-x.md"
-    a.write_text("---\nname: apd-x\ndescription: " + "x" * 160 + "\n---\n\n## Final message\n")
+    a.write_text(
+        "---\nname: apd-x\ndescription: " + "x" * 160 + "\neffort: low\n---\n\n## Final message\n"
+    )
     assert lint_agent_file(a, tmp_path) == []
 
 
@@ -87,7 +93,7 @@ def test_lint_agents_accepts_a_description_at_the_cap(tmp_path):
 def test_lint_agents_flags_an_empty_description_as_missing(tmp_path, value):
     # `description:` with no value parses to None; str(None) would pass both checks.
     a = tmp_path / "apd-x.md"
-    a.write_text(f"---\nname: apd-x\ndescription:{value}\n---\n\n## Final message\n")
+    a.write_text(f"---\nname: apd-x\ndescription:{value}\neffort: low\n---\n\n## Final message\n")
     assert lint_agent_file(a, tmp_path) == [f"{a}: frontmatter missing 'description'"]
 
 

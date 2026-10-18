@@ -5,6 +5,7 @@ tools:
   - Read
   - Write
 model: opus
+effort: high
 ---
 
 # apd-cluster-adjudicator

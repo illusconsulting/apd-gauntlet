@@ -7,6 +7,7 @@ tools:
   - Grep
   - Write
   - Bash    # required to invoke `apd-gauntlet parse-threat-model`
+effort: low
 ---
 
 # Threat Model Reconnaissance Agent (apd-threat-model-recon)

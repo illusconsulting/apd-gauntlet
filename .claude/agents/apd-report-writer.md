@@ -5,6 +5,7 @@ tools:
   - Read
   - Write
 model: opus
+effort: medium
 ---
 
 # apd-report-writer

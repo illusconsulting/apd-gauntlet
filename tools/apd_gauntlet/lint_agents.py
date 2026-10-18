@@ -17,6 +17,13 @@ RECEIPT_EXEMPT = {"apd-synthesizer"}
 # plugin enabled, so the description stays one short line.
 MAX_AGENT_DESCRIPTION_CHARS = 160
 
+# Claude Code subagent frontmatter values. Every agent sets `effort`; `model` stays
+# optional until WS5 Task 23, and an omitted `model` differs from `inherit` when
+# CLAUDE_CODE_SUBAGENT_MODEL is set.
+ALLOWED_EFFORT = ("low", "medium", "high", "xhigh", "max")
+MODEL_ALIASES = ("sonnet", "opus", "haiku", "fable", "inherit")
+FULL_MODEL_ID = re.compile(r"^claude-[a-z0-9.-]+$")
+
 BOUNDING_MARKER = "## Output bounding"
 SPECIALIST_NAMES = {
     "apd-confidentiality", "apd-integrity", "apd-availability",
@@ -36,6 +43,22 @@ def description_errors(path: pathlib.Path, description: object, max_chars: int) 
             f"{path}: description is {len(text)} characters (max {max_chars}); it loads "
             "into every session with the plugin enabled — keep one line"
         )
+    return errors
+
+
+def model_effort_errors(path: pathlib.Path, meta: dict[object, object]) -> list[str]:
+    """Return the errors for an agent's `effort` (required) and `model` (optional)."""
+    errors: list[str] = []
+    effort = meta.get("effort")
+    if effort is None or effort == "":
+        errors.append(f"{path}: frontmatter missing 'effort'")
+    elif not (isinstance(effort, str) and effort in ALLOWED_EFFORT):
+        errors.append(f"{path}: effort '{effort}' is not one of {', '.join(ALLOWED_EFFORT)}")
+    if "model" in meta:
+        model = meta["model"]
+        if not (isinstance(model, str)
+                and (model in MODEL_ALIASES or FULL_MODEL_ID.fullmatch(model))):
+            errors.append(f"{path}: model '{model}' is not an alias or full model id")
     return errors
 
 
@@ -59,6 +82,7 @@ def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
         errors.append(f"{path}: frontmatter missing 'description'")
     else:
         errors.extend(description_errors(path, description, MAX_AGENT_DESCRIPTION_CHARS))
+    errors.extend(model_effort_errors(path, meta))
 
     name = meta.get("name") or path.stem
     if name not in RECEIPT_EXEMPT and RECEIPT_MARKER not in text:

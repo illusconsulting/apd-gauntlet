@@ -2,6 +2,7 @@
 name: apd-confidentiality
 description: "APD gauntlet tier-1 Confidentiality lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Confidentiality Specialist (Tier 1, Trustworthiness)

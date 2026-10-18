@@ -2,6 +2,7 @@
 name: apd-integrity
 description: "APD gauntlet tier-1 Integrity lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Integrity Specialist (Tier 1, Trustworthiness)

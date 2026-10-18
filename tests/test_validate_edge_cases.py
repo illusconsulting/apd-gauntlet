@@ -419,20 +419,21 @@ def test_lint_agent_frontmatter_not_mapping(tmp_path: pathlib.Path) -> None:
 
 
 def test_lint_agent_missing_name_and_description(tmp_path: pathlib.Path) -> None:
-    """An agent file missing both name and description produces three errors.
+    """An agent file missing name and description produces four errors.
 
     Plan 1 (Task 2) added receipt-contract enforcement: non-exempt agents must
-    include a '## Final message' section, so a bare agent file now raises
-    name + description + receipt errors.
+    include a '## Final message' section, and WS3 Task 6 made `effort` required,
+    so a bare agent file now raises name + description + effort + receipt errors.
     """
     from apd_gauntlet.lint_agents import lint_agent_file
 
     agent = tmp_path / "agent.md"
     agent.write_text("---\nother_key: value\n---\n\n# Body\n")
     errors = lint_agent_file(agent, tmp_path)
-    assert len(errors) == 3
+    assert len(errors) == 4
     assert any("name" in e for e in errors)
     assert any("description" in e for e in errors)
+    assert any("effort" in e for e in errors)
     assert any("receipt" in e for e in errors)
 
 
