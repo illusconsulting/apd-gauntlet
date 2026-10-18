@@ -328,6 +328,16 @@ def test_only_labelled_items_count(tmp_path):
     assert labelled_pairs(labels, "finding-qa.unsupported") == ([(0.1, True), (0.6, False)], 0)
 
 
+def test_an_error_item_is_skipped_even_with_a_value(tmp_path):
+    # An LA1 error item can keep partial answers; outcome: error alone skips it.
+    doc = _record_doc()
+    doc["items"][8]["answers"] = {"excerpt_supports_claim": {"type": "noul", "p": 0.5}}
+    record = _write_record(tmp_path, doc)
+    labels = _labels(tmp_path / "l.yaml", [(record, [("conf-00000001", True),
+                                                     ("conf-00000009", True)])])
+    assert labelled_pairs(labels, "finding-qa.unsupported") == ([(0.05, True)], 1)
+
+
 def test_pairs_follow_label_order_across_records(tmp_path):
     a = _run(tmp_path, "a")
     b = _run(tmp_path, "b")
@@ -524,7 +534,8 @@ def test_findings_labels_refused(tmp_path):
 def test_record_model_of_the_fixture(tmp_path):
     record = _run(tmp_path)
     labels = _labels(tmp_path / "l.yaml", [(record, _all_items())])
-    assert record_model(labels) == ("cloudflare", "clef", None)
+    doc = _record_doc()
+    assert record_model(labels) == (doc["provider"], doc["model"], None)
 
 
 def test_record_model_carries_the_weights_revision(tmp_path):
@@ -532,7 +543,7 @@ def test_record_model_carries_the_weights_revision(tmp_path):
     doc["weights_revision"] = "rev-7"
     record = _write_record(tmp_path, doc)
     labels = _labels(tmp_path / "l.yaml", [(record, _all_items())])
-    assert record_model(labels) == ("cloudflare", "clef", "rev-7")
+    assert record_model(labels) == (doc["provider"], doc["model"], "rev-7")
 
 
 @pytest.mark.parametrize("field, value", [
@@ -686,8 +697,8 @@ def test_shipped_thresholds_file_is_the_header_and_an_empty_mapping():
 
 def test_fixture_follows_the_plan():
     doc = yaml.safe_load(FIXTURE.read_text())
-    assert (doc["task"], doc["scope"], doc["provider"], doc["model"]) == (
-        "finding-qa", "10-trustworthiness", "cloudflare", "clef")
+    # provider and model are pinned by test_cli_calibrate.py::test_calibrate_writes_entry.
+    assert (doc["task"], doc["scope"]) == ("finding-qa", "10-trustworthiness")
     assert [i["ref"] for i in doc["items"]] == [f"conf-0000000{k}" for k in range(1, 10)]
     assert [i["outcome"] for i in doc["items"]] == ["pass"] * 8 + ["error"]
     ps = [i["answers"]["excerpt_supports_claim"]["p"] for i in doc["items"][:8]]

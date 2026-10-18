@@ -151,7 +151,8 @@ def test_runbook_calibrate_section():
               "`set: heldout`", "mix models", "`provider`", "`model`", "`weights_revision`",
               "`labels_sha256`", "calibrated: true", "calibrated: false", "uncalibrated",
               "`--thresholds`", "apd-gauntlet eval freeze", "ADR-0028",
-              "tools/apd_gauntlet/data/decide/thresholds.yaml"):
+              "tools/apd_gauntlet/data/decide/thresholds.yaml", "ships as an empty mapping",
+              "has no entry there", "(`nan` included)"):
         assert s in section, s
     for code in ("- `0`:", "- `1`:", "- `2`:"):
         assert code in section, code

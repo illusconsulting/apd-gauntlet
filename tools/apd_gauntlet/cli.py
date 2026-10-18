@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json as _stdjson
+import math
 import pathlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NoReturn
@@ -2048,6 +2049,13 @@ _HELDOUT_LABELS = "calibrate on dev labels only; thresholds freeze before held-o
 _FREEZE_REMINDER = "re-run 'apd-gauntlet eval freeze' before any held-out run"
 
 
+def _not_nan(ctx: click.Context, param: click.Parameter, value: float) -> float:
+    """Refuse NaN, which passes ``click.FloatRange`` because it fails both bound checks."""
+    if math.isnan(value):
+        raise click.BadParameter(f"{value} is not in the range 0<x<=1.")
+    return value
+
+
 @main.command("calibrate")
 @click.argument("task")
 @click.option(
@@ -2062,6 +2070,7 @@ _FREEZE_REMINDER = "re-run 'apd-gauntlet eval freeze' before any held-out run"
     "--target-precision",
     required=True,
     type=click.FloatRange(0, 1, min_open=True),
+    callback=_not_nan,
     metavar="P",
     help="The precision the threshold must reach on the labels, for example 0.98.",
 )
@@ -2134,7 +2143,7 @@ def calibrate_cmd(
     if not result.feasible:
         best = "none" if result.best_precision is None else f"{result.best_precision:.4f}"
         click.echo(
-            f"no threshold reaches precision ≥ {target_precision:g} with at least "
+            f"no threshold reaches precision ≥ {target_precision!r} with at least "
             f"{min_support} predicted positives (best: {best}); {task} stays uncalibrated"
         )
         raise SystemExit(1)

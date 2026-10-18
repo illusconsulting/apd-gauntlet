@@ -539,9 +539,10 @@ A decision task compares one value per item with a threshold. Finding QA flags
 an item whose value is below its threshold, and an auto-decision task decides
 an item whose score is above it. `apd-gauntlet calibrate` picks the threshold
 from labelled decision records, so it rests on a measured precision instead of
-a guess. Until a key is calibrated, its entry in
-`tools/apd_gauntlet/data/decide/thresholds.yaml` reads `calibrated: false`, and
-it never decides on its own.
+a guess. Until a key is calibrated, it never decides on its own:
+`tools/apd_gauntlet/data/decide/thresholds.yaml` ships as an empty mapping, so
+the key has no entry there, or has a proposal entry that reads
+`calibrated: false` (the finding-QA proposals that the decision layer appends).
 
 ### Decision labels
 
@@ -643,7 +644,8 @@ Exit codes:
 - `0`: the entry is written; the command prints it.
 - `1`: no threshold qualifies, or the thresholds file cannot be written. The
   file is left as it was.
-- `2`: `TASK` has no value spec (the message lists the known keys); the labels
+- `2`: `TASK` has no value spec (the message lists the known keys); `P` is not
+  a number in (0, 1] (`nan` included); the labels
   file cannot be read, is invalid, is not of kind `decisions`, is for another
   key or has `set: heldout`; a record cannot be read, is not in a run's
   `40-synthesis/decisions/`, is for another task, lacks a provider or model,

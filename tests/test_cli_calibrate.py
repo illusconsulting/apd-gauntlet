@@ -153,7 +153,9 @@ def test_success_prints_the_entry_and_the_freeze_reminder(decision_labels, tmp_p
     assert r.exit_code == 0, r.output
     assert f"wrote {th}: finding-qa.unsupported" in r.output
     assert "threshold: 0.35" in r.output and "calibrated: true" in r.output
-    assert "provider: cloudflare" in r.output and "model: clef" in r.output
+    record = yaml.safe_load(FIXTURE.read_text())
+    assert f"provider: {record['provider']}" in r.output
+    assert f"model: {record['model']}" in r.output
     assert "skipped 1 labelled item (outcome error or no value)" in r.output
     assert r.output.rstrip().endswith(FREEZE_REMINDER)
 
@@ -198,6 +200,30 @@ def test_infeasible_message(decision_labels, tmp_path):
     r = _calibrate(decision_labels, th, "--min-support", "6")
     assert r.exit_code == 1
     assert "at least 6 predicted positives (best: 0.6667)" in r.output
+    assert th.read_text() == "{}\n"
+
+
+def test_infeasible_message_prints_the_target_as_given(decision_labels, tmp_path):
+    th = tmp_path / "thresholds.yaml"
+    th.write_text("{}\n")
+    r = CliRunner().invoke(main, ["calibrate", "finding-qa.unsupported", "--labels",
+                                  str(decision_labels), "--target-precision", "0.9999999",
+                                  "--thresholds", str(th)])
+    assert r.exit_code == 1
+    assert "no threshold reaches precision ≥ 0.9999999 with at least 10" in r.output
+
+
+@pytest.mark.parametrize("value", ["nan", "NaN", "-nan"])
+def test_nan_target_precision_is_a_usage_error(decision_labels, tmp_path, value):
+    th = tmp_path / "thresholds.yaml"
+    th.write_text("{}\n")
+    r = CliRunner().invoke(main, ["calibrate", "finding-qa.unsupported", "--labels",
+                                  str(decision_labels), "--target-precision", value,
+                                  "--min-support", "1", "--thresholds", str(th)])
+    assert r.exit_code == 2, r.output
+    assert "Invalid value for '--target-precision'" in r.output
+    assert "is not in the range 0<x<=1" in r.output
+    assert r.exception is None or isinstance(r.exception, SystemExit)
     assert th.read_text() == "{}\n"
 
 
