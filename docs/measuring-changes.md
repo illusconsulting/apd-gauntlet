@@ -280,10 +280,12 @@ A lost finding is excused in two cases:
 `--excuse` is repeatable. A value `<gate-id>:<reason>` whose prefix is a gate id
 in the gates file excuses that whole gate instead. The gate then reads
 `excused` and counts as a pass. The JSON entry carries `excuse: <reason>`, and
-the text report prints `EXCUSED (<reason>)`. The reason must not be empty. Any
-other value is a finding id; finding ids never contain `:`. An excused finding
-id that is not lost in any pair excuses nothing, and `compare-runs` warns. Give
-the reason for every excuse in the PR description.
+the text report prints `EXCUSED (<reason>)`. The reason must not be empty. When
+one gate id is the start of another (a gate id may contain `:`), the longer id
+wins. Any other value is a finding id; finding ids never contain `:`. An
+excused finding id that is not lost in any pair excuses nothing, and an excused
+gate that passed stays `pass`; `compare-runs` warns about both. Give the reason
+for every excuse in the PR description.
 
 ### Medians
 
@@ -346,7 +348,10 @@ overlap), each lost critical or high finding with its excuse, the values, each
 distinct reason a value is missing, the gate table (`PASS`, `FAIL`,
 `NOT AVAILABLE` with the reason, or `EXCUSED (<reason>)`) and the warnings. Its
 last line is `RESULT: <status>`, followed by the ids of the failed, unavailable
-and excused gates.
+and excused gates. Control characters and line separators in a title, an id or
+a path are printed as escapes (`\n`, `\x1b`), so text from a run cannot add a
+line to the report or send an escape sequence to your terminal. Read the status
+from the last line, or from `status` in the JSON.
 
 `--json` prints the same comparison as JSON, with the keys `status`,
 `baseline`, `candidate`, `pairs`, `runs` (keyed by each run's path as you gave
@@ -357,8 +362,10 @@ it), `values`, `gates` and `warnings`.
 - the gates are applied to a single run on a side (run each configuration
   twice);
 - an excused finding id is not lost in any pair;
+- an excused gate passed, so its excuse is not used;
 - a run has a finding whose severity is not one of `informational`, `low`,
-  `medium`, `high` and `critical` (such a finding is never counted as a lost
-  critical or high finding);
+  `medium`, `high` and `critical` (in a baseline run such a finding is never
+  counted as a lost critical or high finding; in a candidate run it never
+  agrees with a baseline severity on that scale);
 - a run has no `inputs/`, so its inputs cannot be checked against the others;
 - `--strict` is given without `--gates`.

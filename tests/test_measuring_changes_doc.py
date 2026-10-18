@@ -77,7 +77,8 @@ def test_runbook_compare_runs_section():
     t = (REPO / "docs/measuring-changes.md").read_text()
     section = _flat(t.split("\n## Compare runs", 1)[1].split("\n## ", 1)[0])
     for s in ("-r1", "-r2", "`apd_goal`", "Jaccard", "0.5", "median", "`EXCUSED (<reason>)`",
-              "`delta_only`", "`RESULT:", "1.7"):
+              "`delta_only`", "`RESULT:", "1.7", "gate that passed stays `pass`",
+              "printed as escapes"):
         assert s in section, s
     for code in ("- `0`:", "- `1`:", "- `2`:"):
         assert code in section, code

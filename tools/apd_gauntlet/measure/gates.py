@@ -11,7 +11,8 @@ when every value is known and every check holds does the gate pass. A
 
 An operator can excuse a gate (register A9.5): ``compare-runs --excuse
 <gate-id>:<reason>`` marks it ``excused``, which ``overall`` counts as a pass,
-and the outcome keeps the reason next to what the gate measured.
+and the outcome keeps the reason next to what the gate measured. A gate that
+passed has nothing to excuse and stays ``pass``.
 
 ``load_gates`` reads only the ``gates`` list and ignores other top-level keys,
 so a file can carry other sections next to it.
@@ -229,20 +230,22 @@ def split_excuses(
     """Sort ``--excuse`` values into gate excuses and finding ids (register A9.5).
 
     A value ``<gate-id>:<reason>`` whose prefix is one of ``gate_ids`` excuses
-    that gate; the reason is stripped, and several reasons for one gate are
-    joined with ``"; "`` in order, each once. Any other value is a finding id
-    (finding ids never contain ``:``). A gate excuse with an empty reason
-    raises ``ValueError``.
+    that gate. A gate id may itself hold ``:``, so the longest id that, with a
+    ``:`` after it, starts the value wins. The reason is stripped, and several
+    reasons for one gate are joined with ``"; "`` in order, each once. Any other
+    value is a finding id (finding ids never contain ``:``). A gate excuse with
+    an empty reason raises ``ValueError``.
     """
-    ids = set(gate_ids)
+    # Longest first, so the first id that prefixes a value is the longest one.
+    ids = sorted(set(gate_ids), key=len, reverse=True)
     gates: dict[str, list[str]] = {}
     findings: set[str] = set()
     for value in values:
-        prefix, sep, reason = value.partition(":")
-        if not sep or prefix not in ids:
+        prefix = next((g for g in ids if value.startswith(f"{g}:")), None)
+        if prefix is None:
             findings.add(value)
             continue
-        reason = reason.strip()
+        reason = value[len(prefix) + 1:].strip()
         if not reason:
             raise ValueError(f"{value!r}: an excuse of gate {prefix!r} needs a reason after ':'")
         gates.setdefault(prefix, []).append(reason)
@@ -255,11 +258,14 @@ def apply_excuses(
     """``outcomes`` with each gate whose id is in ``excuses`` marked ``excused``.
 
     An excused outcome carries its reason in ``excuse`` and keeps ``values`` and
-    ``reason``, so the record still shows what the gate measured. Gates not
-    named are unchanged.
+    ``reason``, so the record still shows what the gate measured. A gate that
+    passed is left ``pass``: it has nothing to excuse, and ``excused`` would
+    hide that it passed. Gates not named are unchanged.
     """
     return [
-        replace(o, status="excused", excuse=excuses[o.gate.id]) if o.gate.id in excuses else o
+        replace(o, status="excused", excuse=excuses[o.gate.id])
+        if o.gate.id in excuses and o.status != "pass"
+        else o
         for o in outcomes
     ]
 

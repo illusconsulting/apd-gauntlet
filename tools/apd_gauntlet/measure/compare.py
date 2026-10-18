@@ -350,8 +350,18 @@ def _listed(ids: Sequence[str]) -> str:
     return f"{shown} and {more} more" if more > 0 else shown
 
 
+# What a severity outside ``SEVERITY_ORDER`` does, by side: only a baseline finding
+# can be lost, and a candidate finding only matches or is new.
+_ODD_SEVERITY_EFFECT = {
+    "baseline": "a lost one never counts as a lost critical or high finding",
+    "candidate": "a matched one never agrees with a baseline severity on that scale",
+}
+
+
 def _warnings(
-    runs: Sequence[RunSnapshot], pairs: Sequence[PairDelta], excused: frozenset[str]
+    sides: Mapping[str, Sequence[RunSnapshot]],
+    pairs: Sequence[PairDelta],
+    excused: frozenset[str],
 ) -> list[str]:
     warnings: list[str] = []
     lost = {x.id for p in pairs for x in p.lost_critical_high}
@@ -360,17 +370,19 @@ def _warnings(
             f"excused finding {rid} is not a lost critical or high finding in any pair; "
             "it excuses nothing"
         )
-    for run in runs:
-        odd = sorted(
-            rid for rid, rec in run.findings.items()
-            if _level(rec, "severity") not in SEVERITY_ORDER
-        )
-        if odd:
-            warnings.append(
-                f"{run.path}: {len(odd)} findings have a severity outside "
-                f"{', '.join(SEVERITY_ORDER)} ({_listed(odd)}); a lost one never counts "
-                "as a lost critical or high finding"
+    for side in _SIDES:
+        for run in sides[side]:
+            odd = sorted(
+                rid for rid, rec in run.findings.items()
+                if _level(rec, "severity") not in SEVERITY_ORDER
             )
+            if odd:
+                warnings.append(
+                    f"{run.path}: {len(odd)} findings have a severity outside "
+                    f"{', '.join(SEVERITY_ORDER)} ({_listed(odd)}); "
+                    f"{_ODD_SEVERITY_EFFECT[side]}"
+                )
+    runs = [run for side in _SIDES for run in sides[side]]
     for run in runs:
         if run.inputs_sha256 is None:
             warnings.append(
@@ -455,7 +467,7 @@ def compare_sides(
         per_run=per_run,
         values=values,
         reasons={k: reasons[k] for k in values if k in reasons},
-        warnings=tuple(_warnings(runs, pairs, excused)),
+        warnings=tuple(_warnings(sides, pairs, excused)),
     )
 
 
@@ -531,9 +543,27 @@ def comparison_json(
 
 _STATUS_TEXT = {"pass": "PASS", "fail": "FAIL", "not_available": "NOT AVAILABLE"}
 
+# C0 and C1 controls (DEL included) and the Unicode line and paragraph separators,
+# each to its Python escape (``\n``, ``\x1b``, ``\u2028``). Titles and ids come from
+# run files and paths from the command line, so a line break in one could forge a
+# report line (a second ``RESULT:``) and a terminal escape could reach the terminal.
+_ESCAPES = {
+    code: chr(code).encode("unicode_escape").decode("ascii")
+    for code in (*range(0x20), *range(0x7F, 0xA0), 0x2028, 0x2029)
+}
+
+
+def _printable(line: str) -> str:
+    """``line`` with each control character and line separator escaped."""
+    return line.translate(_ESCAPES)
+
 
 def _fmt(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.6g}"
+
+
+def _pct(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.6g}%"
 
 
 def _counted(counts: Mapping[str, int]) -> str:
@@ -593,7 +623,9 @@ def render_text(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: s
     Each distinct reason for a missing value is listed once under ``missing
     data``, and each unavailable gate repeats its own. The last line is
     ``RESULT: <status>``, followed by the failed, unavailable and excused gate
-    ids when there are any.
+    ids when there are any. Control characters and line separators in any
+    line (a title, an id, a path) are printed as escapes, so every line of the
+    report is one line of output.
     """
     lines = [
         f"compare-runs: {_runs(len(c.baseline), 'baseline')}, "
@@ -605,7 +637,7 @@ def render_text(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: s
             v = c.per_run[str(run.path)]
             lines.append(
                 f"  {run.path}: {len(run.findings)} findings, {len(run.capabilities)} "
-                f"capabilities, blocked {_fmt(v['blocked_rate_pct'])}%, "
+                f"capabilities, blocked {_pct(v['blocked_rate_pct'])}, "
                 f"cost_usd {_fmt(v['cost_usd'])}"
             )
     lines.append("pairs:")
@@ -625,4 +657,4 @@ def render_text(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: s
         lines.extend(_gate_line(o) for o in outcomes)
     lines.extend(f"warning: {w}" for w in c.warnings)
     lines.append(_result_line(outcomes, status))
-    return "\n".join(lines)
+    return "\n".join(_printable(line) for line in lines)

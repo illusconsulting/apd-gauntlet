@@ -49,11 +49,13 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   The result is `pass`, `pass_with_gaps` (a gate has no data, as the attempts
   gates against 1.7 baselines) or `fail`. `--strict` makes `pass_with_gaps`
   exit 1. `--excuse <finding-id>` accepts a reviewed loss, and
-  `--excuse <gate-id>:<reason>` marks a gate `excused`. It exits 0 when no gate
-  fails, 1 when one fails, and 2 when a side does not resolve, both sides share
-  a run, a baseline run has no findings, the runs have different inputs, a run
-  fails to load or the gates file cannot be read. The runbook's "Compare runs"
-  section covers the matching, excuse and median rules.
+  `--excuse <gate-id>:<reason>` marks a gate that failed or has no data
+  `excused`. It exits 0 when no gate fails, 1 when one fails, and 2 when a side
+  does not resolve, both sides share a run, a baseline run has no findings, the
+  runs have different inputs, a run fails to load or the gates file cannot be
+  read. The text report prints control characters from run files as escapes.
+  The runbook's "Compare runs" section covers the matching, excuse and median
+  rules.
 
 ### Changed
 

@@ -1784,21 +1784,26 @@ def compare_runs_cmd(
     comparison = compare_sides(
         snapshots["baseline"], snapshots["candidate"], excused=finding_excuses
     )
+    outcomes = None
+    status: str = "delta_only"
     extra: list[str] = []
-    if gates is not None and min(len(comparison.baseline), len(comparison.candidate)) == 1:
-        extra.append(_SINGLE_RUN_WARNING)
-    if strict and gates is None:
+    if gates is not None:
+        evaluated = evaluate(gates, comparison.values, comparison.reasons)
+        outcomes = apply_excuses(evaluated, gate_excuses)
+        status = overall(outcomes)
+        if min(len(comparison.baseline), len(comparison.candidate)) == 1:
+            extra.append(_SINGLE_RUN_WARNING)
+        # apply_excuses leaves a gate that passed as it is; say that its excuse did nothing.
+        extra.extend(
+            f"excused gate {o.gate.id} passed; it excuses nothing "
+            f"(reason given: {gate_excuses[o.gate.id]})"
+            for o in evaluated
+            if o.status == "pass" and o.gate.id in gate_excuses
+        )
+    elif strict:
         extra.append("--strict has no effect without --gates")
     if extra:
         comparison = replace(comparison, warnings=(*extra, *comparison.warnings))
-
-    outcomes = None
-    status: str = "delta_only"
-    if gates is not None:
-        outcomes = apply_excuses(
-            evaluate(gates, comparison.values, comparison.reasons), gate_excuses
-        )
-        status = overall(outcomes)
 
     if as_json:
         click.echo(_stdjson.dumps(comparison_json(comparison, outcomes, status), indent=2))

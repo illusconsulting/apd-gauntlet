@@ -9,6 +9,7 @@ import pytest
 from apd_gauntlet.cli import main
 from apd_gauntlet.measure.attempts import write_attempts
 from apd_gauntlet.measure.compare import (
+    ATTEMPT_DELTAS,
     Comparison,
     MissingRuns,
     compare_sides,
@@ -27,7 +28,7 @@ from apd_gauntlet.measure.gates import (
     split_excuses,
 )
 from apd_gauntlet.measure.runs import load_run
-from apd_gauntlet.measure.usage import write_usage
+from apd_gauntlet.measure.usage import USAGE_RELPATH, write_usage
 from click.testing import CliRunner
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -48,6 +49,13 @@ GATES = str(REPO / "eval/gates.yaml")
 
 def cr(*args):
     return CliRunner().invoke(main, ["compare-runs", *map(str, args)])
+
+
+def scaffold(path):
+    """A run directory with only ``.apd-run.yaml``: no findings, no inputs."""
+    path.mkdir()
+    (path / ".apd-run.yaml").write_text("run_id: scaffold\n")
+    return path
 
 
 def test_missing_baseline_exits_2(make_run, tmp_path):
@@ -241,6 +249,19 @@ def test_scaffold_candidate_is_compared(make_run, tmp_path):
     assert out["status"] == "fail" and out["gates"][0]["status"] == "fail"
     assert out["gates"][2]["status"] == "not_available"
     assert out["gates"][2]["reason"] == f"{s} has no findings, so it has no blocked rate"
+    # No pair has a matched finding, so no severity agreement: None, never 0.
+    assert out["pairs"][0]["severity_agreement_pct"] is None
+    assert out["values"]["severity_agreement_pct"] is None
+    assert out["gates"][1]["status"] == "not_available"
+    assert out["gates"][1]["reason"] == "no pair has a matched finding"
+
+
+def test_a_later_baseline_run_without_findings_exits_2(make_run, tmp_path):
+    make_run("z-base-r1")
+    s = scaffold(tmp_path / "z-base-r2")
+    r = cr(tmp_path / "z-base", make_run("c"))
+    assert r.exit_code == 2 and r.stdout == ""
+    assert f"baseline run {s} has no findings" in r.stderr
 
 
 def test_run_that_fails_to_load_exits_2(make_run):
@@ -324,6 +345,56 @@ def test_blocked_rate_move_fails_gate_3(make_run, edit):
     assert out["gates"][2]["status"] == "fail"
 
 
+def test_blocked_rate_fall_fails_gate_3(make_run, edit):
+    b, c = make_run("b"), make_run("c")
+    for rid in ("conf-98a543cd", "resil-0173b90b", "immut-067a7391"):
+        edit.finding(c, rid, disposition="gap")
+    out = json.loads(cr(b, c, "--gates", GATES, "--json").stdout)
+    assert out["values"]["baseline_blocked_rate_pct"] == 15.0
+    assert out["values"]["candidate_blocked_rate_pct"] == 0.0
+    assert out["values"]["blocked_rate_abs_delta_pts"] == 15.0  # |0 - 15|, not -15
+    assert out["gates"][2]["status"] == "fail"
+
+
+def test_pairwise_median_is_not_the_mean(make_run, edit, tmp_path):
+    for n in ("m-base-r1", "m-base-r2", "m-cand-r1", "m-cand-r2"):
+        make_run(n)
+    for n in ("m-base-r2", "m-cand-r1"):
+        for rid in ("conf-7aa376c5", "avail-ce35b2ed"):
+            edit.drop(tmp_path / n, rid)
+    out = json.loads(
+        cr(tmp_path / "m-base", tmp_path / "m-cand", "--gates", GATES, "--json").stdout
+    )
+    assert [p["unexcused_lost_critical_high"] for p in out["pairs"]] == [2, 0, 0, 0]
+    assert out["values"]["unexcused_lost_critical_high"] == 0.0  # the mean would be 0.5
+    assert out["gates"][0]["status"] == "pass"
+
+
+def test_side_median_is_not_the_mean(make_run, tmp_path):
+    for n, cost, retries in (("k-base-r1", 1.0, 0), ("k-base-r2", 1.0, 0),
+                             ("k-base-r3", 10.0, 3), ("k-cand-r1", 2.0, 0)):
+        run = make_run(n)
+        write_usage(run, {
+            "schema_version": 1, "totals": {"requests": 1, "cost_usd": cost}, "cost_usd_all": cost
+        })
+        write_attempts(run, {**GOOD_ATTEMPTS, "lens_retries": {"integrity": retries}})
+    out = json.loads(cr(tmp_path / "k-base", tmp_path / "k-cand", "--json").stdout)
+    assert len(out["baseline"]) == 3
+    assert out["values"]["baseline_cost_usd"] == 1.0  # the mean would be 4.0
+    assert out["values"]["baseline_lens_retries_total"] == 0.0  # the mean would be 1.0
+    assert out["values"]["lens_retries_delta"] == 0.0
+
+
+def test_severity_agreement_drops_pairs_without_a_match(make_run, tmp_path):
+    b = make_run("g-base")
+    make_run("g-cand-r1")
+    scaffold(tmp_path / "g-cand-r2")
+    out = json.loads(cr(b, tmp_path / "g-cand", "--gates", GATES, "--json").stdout)
+    assert [p["severity_agreement_pct"] for p in out["pairs"]] == [100.0, None]
+    assert out["values"]["severity_agreement_pct"] == 100.0  # 50 if None counted as 0
+    assert out["gates"][1]["status"] == "pass"
+
+
 def test_attempts_on_one_side_only_name_the_run_without(make_run):
     b, c = make_run("b"), make_run("c")
     write_attempts(c, GOOD_ATTEMPTS)
@@ -344,6 +415,39 @@ def test_resumed_reason_text(make_run):
     assert out["gates"][4]["reason"] == f"{c} resumed: 2 steps skipped, retries under-counted"
     assert out["values"]["audit_iterations_delta"] is None
     assert out["runs"][str(c)]["audit_iterations"] == 2
+
+
+def _one_run_lacks_attempts(make_run, tmp_path, side, problem):
+    """Two runs a side, all with attempts; the side's second run has ``problem``."""
+    runs = {n: make_run(n) for n in ("a-base-r1", "a-base-r2", "a-cand-r1", "a-cand-r2")}
+    odd = runs[f"a-{side}-r2"]
+    for run in runs.values():
+        if run != odd:
+            write_attempts(run, GOOD_ATTEMPTS)
+    if problem == "resumed":
+        write_attempts(odd, {**GOOD_ATTEMPTS, "skipped": ["integrity"]})
+        reason = f"{odd} resumed: 1 steps skipped, retries under-counted"
+    else:
+        reason = (
+            f"no .apd-state/attempts.yaml in {odd} (1.7 runs and foreground drives record none)"
+        )
+    out = json.loads(
+        cr(tmp_path / "a-base", tmp_path / "a-cand", "--gates", GATES, "--json").stdout
+    )
+    return out, odd, reason
+
+
+@pytest.mark.parametrize("problem", ["no attempts", "resumed"])
+@pytest.mark.parametrize("side", ["base", "cand"])
+def test_one_run_of_a_set_without_usable_attempts(make_run, tmp_path, side, problem):
+    out, odd, reason = _one_run_lacks_attempts(make_run, tmp_path, side, problem)
+    assert len(out["baseline"]) == len(out["candidate"]) == 2
+    for name in ATTEMPT_DELTAS:
+        assert out["values"][name] is None, name
+    prefix = "baseline" if side == "base" else "candidate"
+    assert out["values"][f"{prefix}_lens_retries_total"] is None
+    assert [g["status"] for g in out["gates"][3:]] == ["not_available", "not_available"]
+    assert out["gates"][3]["reason"] == reason and out["gates"][4]["reason"] == reason
 
 
 def test_attempt_deltas_are_candidate_minus_baseline(make_run):
@@ -373,6 +477,10 @@ def test_single_run_warning_only_with_gates(make_run, tmp_path):
         make_run(n)
     r = cr(tmp_path / "p-base", tmp_path / "p-cand", "--gates", GATES, "--json")
     assert warning not in json.loads(r.stdout)["warnings"]
+    # One run on either side is enough for the warning.
+    for base, cand in ((b, tmp_path / "p-cand"), (tmp_path / "p-base", c)):
+        out = json.loads(cr(base, cand, "--gates", GATES, "--json").stdout)
+        assert len(out["pairs"]) == 2 and warning in out["warnings"]
 
 
 def test_strict_without_gates_warns(make_run):
@@ -403,12 +511,32 @@ def test_missing_inputs_warn(make_run):
 
 def test_severity_outside_the_scale_warns(make_run, edit):
     b, c = make_run("b"), make_run("c")
+    edit.finding(b, "intg-42a3ebbd", severity="severe")
     edit.finding(c, "conf-7aa376c5", severity="High")
     out = json.loads(cr(b, c, "--json").stdout)
-    assert (
-        f"{c}: 1 findings have a severity outside informational, low, medium, high, critical "
-        "(conf-7aa376c5); a lost one never counts as a lost critical or high finding"
-    ) in out["warnings"]
+    scale = "informational, low, medium, high, critical"
+    # Only a baseline finding can be lost; a candidate one only matches or is new.
+    assert out["warnings"] == [
+        f"{b}: 1 findings have a severity outside {scale} (intg-42a3ebbd); a lost one never "
+        "counts as a lost critical or high finding",
+        f"{c}: 1 findings have a severity outside {scale} (conf-7aa376c5); a matched one "
+        "never agrees with a baseline severity on that scale",
+    ]
+
+
+def test_excusing_a_passed_gate_keeps_it_passed_and_warns(make_run):
+    b, c = make_run("b"), make_run("c")
+    ex = ("--excuse", "severity_agreement:reviewed")
+    out = json.loads(cr(b, c, "--gates", GATES, "--json", *ex).stdout)
+    assert out["gates"][1]["status"] == "pass" and out["gates"][1]["excuse"] is None
+    warning = "excused gate severity_agreement passed; it excuses nothing (reason given: reviewed)"
+    assert warning in out["warnings"]
+    lines = cr(b, c, "--gates", GATES, *ex).stdout.splitlines()
+    assert any(line.startswith("  PASS  severity_agreement: ") for line in lines)
+    assert f"warning: {warning}" in lines
+    assert lines[-1] == (
+        "RESULT: pass_with_gaps (not available: first_pass_and_retries, audit_iterations)"
+    )
 
 
 # --- beyond the plan's tests: output -------------------------------------------------------
@@ -492,6 +620,22 @@ def test_usage_cost_medians_and_combined_cost(make_run, tmp_path):
     assert out["runs"][str(runs[3])]["cost_usd_all"] == 1.75
 
 
+def test_cost_usd_all_never_falls_back_to_cost_usd(make_run):
+    b, c = make_run("b"), make_run("c")
+    write_usage(b, {"schema_version": 1, "totals": {"requests": 1, "cost_usd": 2.0}})
+    write_usage(c, {
+        "schema_version": 1, "totals": {"requests": 1, "cost_usd": 1.5}, "cost_usd_all": 1.75
+    })
+    out = json.loads(cr(b, c, "--json").stdout)
+    assert out["runs"][str(b)]["cost_usd"] == 2.0
+    assert out["runs"][str(b)]["cost_usd_all"] is None
+    assert out["values"]["baseline_cost_usd"] == 2.0
+    assert out["values"]["baseline_cost_usd_all"] is None
+    assert out["values"]["candidate_cost_usd_all"] == 1.75
+    lines = cr(b, c).stdout.splitlines()
+    assert f"  {b / USAGE_RELPATH} has no cost_usd_all" in lines
+
+
 def test_text_report(make_run, edit):
     b, c = make_run("b"), make_run("c")
     edit.drop(c, "conf-7aa376c5")
@@ -552,6 +696,34 @@ def test_text_report_result_lines(make_run, edit):
     )
 
 
+def test_text_report_escapes_control_characters(make_run, edit):
+    # A title or a run path that holds a line break must not forge a report line,
+    # and a terminal escape must not reach the terminal.
+    b, c = make_run("b"), make_run("c\nRESULT: pass")
+    edit.finding(b, "conf-7aa376c5", title="evil\nRESULT: pass\x1b[2J\x07 end")
+    edit.drop(c, "conf-7aa376c5")
+    r = cr(b, c, "--gates", GATES)
+    assert r.exit_code == 1
+    lines = r.stdout.splitlines()
+    assert [line for line in lines if line.startswith("RESULT:")] == [lines[-1]]
+    assert lines[-1].startswith("RESULT: fail (failed: no_lost_critical_high")
+    assert (
+        "    lost high conf-7aa376c5 (not excused): evil\\nRESULT: pass\\x1b[2J\\x07\\u2028end"
+    ) in lines
+    escaped = str(c).replace("\n", "\\n")
+    assert any(line.startswith(f"  {escaped}: 19 findings, ") for line in lines)
+    assert not any(ch in r.stdout for ch in "\x1b\x07 ")
+    # JSON escapes them already.
+    out = json.loads(cr(b, c, "--json").stdout)
+    assert out["candidate"] == [str(c)]
+
+
+def test_text_report_blocked_rate_without_findings(make_run, tmp_path):
+    s = scaffold(tmp_path / "scaffold")
+    lines = cr(make_run("b"), s).stdout.splitlines()
+    assert f"  {s}: 0 findings, 0 capabilities, blocked n/a, cost_usd n/a" in lines
+
+
 # --- beyond the plan's tests: the library functions ----------------------------------------
 
 
@@ -569,6 +741,15 @@ def test_split_excuses():
         split_excuses(["a:"], ["a"])
 
 
+def test_split_excuses_takes_the_longest_gate_id():
+    # load_gates allows ':' in a gate id; the longest id that prefixes the value wins.
+    gates, findings = split_excuses(["x:y:why", "x:other", "x:y"], ["x", "x:y"])
+    assert gates == {"x:y": "why", "x": "other; y"}
+    assert findings == frozenset()
+    with pytest.raises(ValueError, match="gate 'x:y' needs a reason"):
+        split_excuses(["x:y: "], ["x", "x:y"])
+
+
 def test_apply_excuses_keeps_values_and_reason():
     out = evaluate([_gate("a"), _gate("b")], {"lens_retries_delta": None}, {
         "lens_retries_delta": "why"
@@ -581,6 +762,15 @@ def test_apply_excuses_keeps_values_and_reason():
     assert excused[1] == out[1] and out[1].excuse is None
     assert overall(excused) == "pass_with_gaps"
     assert overall(apply_excuses(out, {"a": "r", "b": "r"})) == "pass"
+
+
+def test_apply_excuses_leaves_a_passed_gate_alone():
+    out = evaluate([_gate("a"), _gate("b")], {"lens_retries_delta": 1.0}, {})
+    passed = evaluate([_gate("c")], {"lens_retries_delta": 0.0}, {})
+    assert [o.status for o in (*out, *passed)] == ["fail", "fail", "pass"]
+    excused = apply_excuses([*out, *passed], {"a": "reviewed", "c": "reviewed"})
+    assert [o.status for o in excused] == ["excused", "fail", "pass"]
+    assert excused[2] == passed[0] and excused[2].excuse is None
 
 
 def test_compare_sides_needs_a_run_on_each_side(make_run):
