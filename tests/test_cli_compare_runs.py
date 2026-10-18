@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import shutil
 
@@ -270,6 +271,22 @@ def test_run_that_fails_to_load_exits_2(make_run):
     bad.write_text("finding: [\n")
     r = cr(b, c, "--gates", GATES)
     assert r.exit_code == 2 and str(bad) in r.stderr and r.stdout == ""
+
+
+@pytest.mark.skipif(
+    not hasattr(os, "geteuid") or os.geteuid() == 0, reason="root ignores directory modes"
+)
+def test_baseline_with_an_unlistable_directory_exits_2(make_run):
+    """Unread baseline findings could never count as lost, so the gates would pass."""
+    b, c = make_run("b"), make_run("c")
+    tier = b / "10-trustworthiness"
+    tier.chmod(0)
+    try:
+        r = cr(b, c, "--gates", GATES)
+    finally:
+        tier.chmod(0o755)                                            # let tmp_path clean up
+    assert r.exit_code == 2 and r.stdout == ""
+    assert f"cannot load baseline run {b}: {tier}: cannot read: " in r.stderr
 
 
 def test_os_error_while_loading_exits_2(make_run, monkeypatch):

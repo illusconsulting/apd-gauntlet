@@ -146,6 +146,19 @@ def test_unreadable_input_directory_names_it(ceb):
         (ceb / "inputs/sub").chmod(0o755)                            # let tmp_path clean up
 
 
+@pytest.mark.skipif(
+    not hasattr(os, "geteuid") or os.geteuid() == 0, reason="root ignores directory modes"
+)
+def test_unlistable_corpus_directory_names_it(ceb):
+    """``Path.glob`` skips a directory it cannot list, so the corpus would lose its records."""
+    tier = ceb / "10-trustworthiness"
+    tier.chmod(0)
+    try:
+        assert _load_error(ceb).startswith(f"{tier}: cannot read: ")
+    finally:
+        tier.chmod(0o755)                                            # let tmp_path clean up
+
+
 @pytest.mark.parametrize(
     ("rel", "old", "new"),
     [

@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import errno
 import importlib
+import os
 import pathlib
 import sys
 
@@ -619,6 +620,24 @@ def test_cli_not_a_run_exits_2(tmp_path):
     args = ["eval", "label-template", str(tmp_path), "--entry", "ceb", "--out", str(out)]
     r = CliRunner().invoke(main, args)
     assert r.exit_code == 2 and "is not a run directory" in r.output
+    assert not out.exists()
+
+
+@pytest.mark.skipif(
+    not hasattr(os, "geteuid") or os.geteuid() == 0, reason="root ignores directory modes"
+)
+def test_cli_run_with_an_unlistable_directory_exits_2(make_run, tmp_path):
+    """The template must not leave out the findings of a directory it cannot list."""
+    run = make_run("r")
+    tier = run / "10-trustworthiness"
+    out = tmp_path / "l.yaml"
+    args = ["eval", "label-template", str(run), "--entry", "ceb", "--out", str(out)]
+    tier.chmod(0)
+    try:
+        r = CliRunner().invoke(main, args)
+    finally:
+        tier.chmod(0o755)                                            # let tmp_path clean up
+    assert r.exit_code == 2 and f"cannot load run {run}: {tier}: cannot read: " in r.output
     assert not out.exists()
 
 

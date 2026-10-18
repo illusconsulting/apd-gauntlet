@@ -178,6 +178,16 @@ def _corpus_problem(run_dir: Path) -> RunLoadError | None:
 def _load_corpus(
     run_dir: Path,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """``load_corpus(run_dir, include_attack_path=True)`` with its records' ids checked.
+
+    ``load_corpus`` finds its files with ``Path.glob``, which skips a directory
+    it cannot list without raising, so the corpus would silently lose that
+    directory's records. The run is walked first, not following links, as the
+    glob does not; a directory that cannot be listed raises ``RunLoadError``
+    naming it.
+    """
+    for _ in os.walk(run_dir, onerror=_walk_error):
+        pass
     try:
         findings, capabilities = load_corpus(run_dir, include_attack_path=True)
     except (
@@ -293,7 +303,8 @@ def load_run(path: Path) -> RunSnapshot:
     Any file that cannot be read or parsed (``yaml.YAMLError``, a ``ValueError``
     from PyYAML, nesting too deep to parse, text that is not UTF-8, an
     ``OSError``), or whose top level is not a mapping, becomes ``RunLoadError``
-    naming that file; so does a corpus record whose ``id`` is not a string.
+    naming that file; so does a directory under the run that cannot be listed,
+    and a corpus record whose ``id`` is not a string.
     ``headlines`` is ``None`` when ``report-data.yaml`` or
     ``deduped-findings.yaml`` is missing, and ``()`` when both exist but no
     headline has a string ``id``; ``inputs_sha256`` is ``None`` when the run has
