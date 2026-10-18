@@ -114,5 +114,5 @@ def test_architecture_doc_counts_and_lists_the_cli_runner():
     assert ("| CLI step runner | `apd-cli-runner` | Runs one `apd-gauntlet` command per CLI step "
             "(Bash only, Haiku, low effort) and returns its receipt |") in text
     assert "## The 22 agents" in text and "The gauntlet ships 22 agents" in text
-    assert "A twenty-third file, `apd-orchestrator.md`" in text and "among the 22." in text
+    assert "apd-orchestrator" not in text and "twenty-third" not in text
     assert "21 agents" not in text and "among the 21" not in text and "twenty-second" not in text

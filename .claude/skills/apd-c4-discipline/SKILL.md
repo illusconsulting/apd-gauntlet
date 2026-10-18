@@ -1,6 +1,6 @@
 ---
 name: apd-c4-discipline
-description: Required discipline for the code_recon agent when authoring 00-context/c4-recon.yaml (the grounded C4 architecture view). Covers never-invent rules for containers/components and containment (parent) + uses edges, the machine_extracted-vs-hand_read flag, the L3-block-by-default rule, the confidence floor on render, the diagram-size cap, and the not_analyzed-vs-zero-findings honesty rule. Required reading before emitting any container, component, or uses edge.
+description: "Discipline rules for apd-code-recon when it writes 00-context/c4-recon.yaml. Read through the agent's Required reading."
 ---
 
 # APD C4 Discipline

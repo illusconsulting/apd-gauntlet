@@ -1,6 +1,6 @@
 ---
 name: apd-code-recon
-description: Optional intake-tier specialist that produces a code-grounded view of the system under review using the DeusData codebase-memory-mcp (CBM) graph. Runs after apd-intake and before tier-1 specialists when `code_recon` is enabled in `.apd-run.yaml` and the CBM tools are reachable. Emits `00-context/code-architecture-brief.md` (narrative) and `00-context/code-evidence-index.yaml` (machine-readable index of code-anchored evidence pointers that specialists cite). Skipped gracefully when CBM is unavailable. Does not emit findings or capabilities.
+description: "APD gauntlet optional code reconnaissance via codebase-memory-mcp (code evidence index, C4 recon); dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_repository
 ---
 

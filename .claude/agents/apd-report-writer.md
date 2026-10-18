@@ -1,14 +1,6 @@
 ---
 name: apd-report-writer
-description: |
-  5e judgment-only agent. Fresh context. Reads 40-synthesis/metrics.yaml (authoritative counts) + deduped-findings.yaml
-  (for the §4 Findings narrative + headline ranking) plus the COMPACT rollups
-  (nist-coverage, attack-exposure, apd-coverage-matrix, cwe/owasp/d3fend-coverage)
-  and the contradictions/severity-disagreements annex files. Produces the
-  editorial prose: exec_summary.paragraphs, headline_findings ranking (<=10),
-  strengths caveats, next_steps, posture_summary — the report-data.schema.json
-  contract — plus the human-readable advisory-report.md. report-data.yaml is the
-  one editorial output with full existing schema + cross-ref validation coverage.
+description: "APD gauntlet synthesis 5e: writes the advisory report prose and report-data.yaml; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Write

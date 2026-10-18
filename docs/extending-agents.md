@@ -9,7 +9,7 @@ The nine specialist agents (`apd-confidentiality.md` through `apd-immutability.m
 ```
 ---
 name: apd-<goal>
-description: ...
+description: "APD gauntlet tier-<N> <Goal> lens specialist; dispatched by the apd-gauntlet workflow only."
 ---
 
 # <Goal> Specialist (Tier N, <Tier Name>)
@@ -34,6 +34,8 @@ description: ...
 ## Self-check before emitting
 1. ...
 ```
+
+Keep the `description` to one line: at most 160 characters for an agent and 200 for a skill. Claude Code loads the description of every agent and skill the plugin lists into each session that has the plugin enabled. The workflow names the agent of every step it dispatches, so the description does not choose which agent runs. `apd-gauntlet lint-agents` and `lint-skills` reject a longer or multi-line description, and `tests/test_plugin_footprint.py` caps the total at 4,096 bytes. Write it as a double-quoted YAML string: an unquoted value that contains a colon followed by a space does not parse. An agent's description ends with `; dispatched by the apd-gauntlet workflow only.` and a skill's with `Read through the agent's Required reading.`; the generated `apd-domain` skill keeps its own.
 
 Each lens agent's Required reading list includes a **per-goal domain sidecar** — `.claude/skills/apd-domain/by-goal/<goal>.md` — rather than the full cross-goal `SKILL.md`. The sidecar contains the four calibration files (severity rubric, consequential actions, immutability classes, data taxonomy), the merged domain surfaces, and only that goal's common patterns, plus a `pruned` manifest; this bounds each agent's context to what it actually needs (~44% reduction at three packs). The full cross-goal `SKILL.md` is retained for non-lens agents (intake, attack-path-analyzer, domain-auditor).
 

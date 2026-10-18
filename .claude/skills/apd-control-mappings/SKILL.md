@@ -1,6 +1,6 @@
 ---
 name: apd-control-mappings
-description: Reference for emitting NIST SP 800-53r5 control mappings and MITRE ATT&CK technique mappings on APD gauntlet findings and capabilities. Use this whenever you need to populate the `control_mappings` block — to determine which 800-53r5 control families and enhancements apply to a finding in your lens, when ATT&CK technique mapping meets the high-confidence bar, and how to write defensible mapping rationales. Covers the per-APD-goal control family guidance and the ATT&CK mapping discipline that prevents shotgun mapping.
+description: "NIST 800-53r5 and MITRE ATT&CK mapping rules for APD gauntlet findings and capabilities. Read through the agent's Required reading."
 ---
 
 # Control Mappings

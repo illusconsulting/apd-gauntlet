@@ -1,4 +1,4 @@
-"""Every dispatched agent must declare the receipt contract; orchestrator/synthesizer exempt."""
+"""Every dispatched agent must declare the receipt contract; the synthesizer is exempt."""
 from __future__ import annotations
 
 import pathlib
@@ -19,9 +19,9 @@ def test_specialist_missing_receipt_is_flagged(tmp_path):
     assert any("receipt" in e.lower() or "final message" in e.lower() for e in errors)
 
 
-def test_orchestrator_is_exempt(tmp_path):
-    agent = tmp_path / "apd-orchestrator.md"
-    agent.write_text("---\nname: apd-orchestrator\ndescription: x\n---\n\n# Orchestrator\n")
+def test_synthesizer_is_exempt(tmp_path):
+    agent = tmp_path / "apd-synthesizer.md"
+    agent.write_text("---\nname: apd-synthesizer\ndescription: x\n---\n\n# Synthesizer\n")
     errors = lint_agent_file(agent, tmp_path)
     assert not any("receipt" in e.lower() or "final message" in e.lower() for e in errors)
 

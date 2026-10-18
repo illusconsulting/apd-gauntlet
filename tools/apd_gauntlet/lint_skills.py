@@ -6,7 +6,10 @@ import re
 
 import yaml
 
-from .lint_agents import FRONTMATTER_PATTERN
+from .lint_agents import FRONTMATTER_PATTERN, description_errors
+
+# Every skill's description loads into each session with the plugin enabled.
+MAX_SKILL_DESCRIPTION_CHARS = 200
 
 
 def lint_skill_dir(skill_dir: pathlib.Path) -> list[str]:
@@ -41,12 +44,14 @@ def lint_skill_dir(skill_dir: pathlib.Path) -> list[str]:
     desc = meta.get("description")
     if not desc:
         errors.append(f"{skill_md}: frontmatter missing 'description'")
-    elif len(str(desc)) > 1536:
-        errors.append(
-            f"{skill_md}: description exceeds 1536 characters — Claude Code truncates "
-            "the skill listing there (code.claude.com/docs/en/skills), silently "
-            "degrading automatic invocation"
-        )
+    else:
+        errors.extend(description_errors(skill_md, desc, MAX_SKILL_DESCRIPTION_CHARS))
+        if len(str(desc)) > 1536:
+            errors.append(
+                f"{skill_md}: description exceeds 1536 characters — Claude Code truncates "
+                "the skill listing there (code.claude.com/docs/en/skills), silently "
+                "degrading automatic invocation"
+            )
     return errors
 
 

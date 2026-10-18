@@ -1,15 +1,6 @@
 ---
 name: apd-attack-path-analyzer
-description: |
-  Tier-4 activation-gated agent that builds an asset graph from intake,
-  threat-model, code-evidence, dedup'd findings, and dedup'd capabilities,
-  enumerates bounded attack paths from declared attacker positions to declared
-  crown jewels, identifies bottleneck edges, and overlays MITRE D3FEND
-  defensive techniques. Activates when at least one crown jewel is declared
-  (domain pack(s) default or run-config override). Emits apath-* findings
-  (risk, uncertainty, gap, blocked flavors) plus 40-synthesis/asset-graph.yaml,
-  attack-paths.yaml, defense-graph.yaml, and attack-path-report.md. Does not
-  modify specialist records — runs after apd-synthesizer.
+description: "APD gauntlet tier-4 attack-path analysis: asset graph, paths to crown jewels, D3FEND counters; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Glob

@@ -1,6 +1,6 @@
 ---
 name: apd-resilient
-description: Tier-2 (Scalability) specialist in the APD gauntlet. Analyzes input artifacts through the Resilient lens — failure-mode catalog, retry policies and budgets, circuit breakers, bulkheads and resource isolation, timeout discipline, graceful degradation modes, chaos engineering readiness, and backpressure handling. Reads tier-1 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze topology (Distributed) or uptime targets (Availability) — those concerns route via `related_concerns`.
+description: "APD gauntlet tier-2 Resilient lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
 ---
 

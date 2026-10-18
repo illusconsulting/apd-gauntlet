@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib
 
 from apd_gauntlet.cli import main
+from apd_gauntlet.lint_agents import lint_agent_file, lint_agents_dir
 from click.testing import CliRunner
 
 REPO = pathlib.Path(__file__).parent.parent
@@ -43,3 +44,45 @@ def test_code_recon_required_reading_resolves_c4_discipline() -> None:
     errors = lint_agent_file(agent, repo_root)
     assert errors == [], errors
     assert "apd-c4-discipline" in agent.read_text()
+
+
+def test_lint_agents_flags_long_description(tmp_path):
+    a = tmp_path / "apd-x.md"
+    a.write_text("---\nname: apd-x\ndescription: " + "x" * 161 + "\n---\n\n## Final message\n")
+    assert any("max 160" in e for e in lint_agent_file(a, tmp_path))
+
+
+def test_lint_agents_flags_multiline_description(tmp_path):
+    a = tmp_path / "apd-x.md"
+    a.write_text('---\nname: apd-x\ndescription: "a\\nb"\n---\n\n## Final message\n')
+    assert any("one line" in e for e in lint_agent_file(a, tmp_path))
+
+
+def test_lint_agents_description_cap_error_text(tmp_path):
+    from apd_gauntlet.lint_agents import MAX_AGENT_DESCRIPTION_CHARS
+
+    a = tmp_path / "apd-x.md"
+    a.write_text("---\nname: apd-x\ndescription: " + "x" * 161 + "\n---\n\n## Final message\n")
+    assert MAX_AGENT_DESCRIPTION_CHARS == 160
+    assert lint_agent_file(a, tmp_path) == [
+        f"{a}: description is 161 characters (max 160); it loads into every session "
+        "with the plugin enabled — keep one line"
+    ]
+
+
+def test_lint_agents_one_line_error_text(tmp_path):
+    a = tmp_path / "apd-x.md"
+    a.write_text("---\nname: apd-x\ndescription: |\n  a\n  b\n---\n\n## Final message\n")
+    assert lint_agent_file(a, tmp_path) == [f"{a}: description must be one line"]
+
+
+def test_lint_agents_accepts_a_description_at_the_cap(tmp_path):
+    a = tmp_path / "apd-x.md"
+    a.write_text("---\nname: apd-x\ndescription: " + "x" * 160 + "\n---\n\n## Final message\n")
+    assert lint_agent_file(a, tmp_path) == []
+
+
+def test_real_agents_lint_clean_with_22_agents():
+    errors = lint_agents_dir(REPO / ".claude" / "agents", REPO)
+    assert errors == [], errors
+    assert len(list((REPO / ".claude" / "agents").glob("*.md"))) == 22

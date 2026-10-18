@@ -11,7 +11,11 @@ REQUIRED_READING_PATTERN = re.compile(r"`([^`]+\.md)`")
 
 RECEIPT_MARKER = "## Final message"
 # Agents NOT dispatched as receipt-returning children of the run driver.
-RECEIPT_EXEMPT = {"apd-orchestrator", "apd-synthesizer"}
+RECEIPT_EXEMPT = {"apd-synthesizer"}
+
+# Claude Code loads every agent's description into each session that has the
+# plugin enabled, so the description stays one short line.
+MAX_AGENT_DESCRIPTION_CHARS = 160
 
 BOUNDING_MARKER = "## Output bounding"
 SPECIALIST_NAMES = {
@@ -19,6 +23,20 @@ SPECIALIST_NAMES = {
     "apd-distributed", "apd-resilient", "apd-ephemeral",
     "apd-authenticity", "apd-non-repudiation", "apd-immutability",
 }
+
+
+def description_errors(path: pathlib.Path, description: object, max_chars: int) -> list[str]:
+    """Return the always-on footprint errors for one agent or skill description."""
+    text = str(description)
+    errors: list[str] = []
+    if "\n" in text:
+        errors.append(f"{path}: description must be one line")
+    if len(text) > max_chars:
+        errors.append(
+            f"{path}: description is {len(text)} characters (max {max_chars}); it loads "
+            "into every session with the plugin enabled — keep one line"
+        )
+    return errors
 
 
 def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
@@ -38,6 +56,8 @@ def lint_agent_file(path: pathlib.Path, repo_root: pathlib.Path) -> list[str]:
         errors.append(f"{path}: frontmatter missing 'name'")
     if "description" not in meta:
         errors.append(f"{path}: frontmatter missing 'description'")
+    else:
+        errors.extend(description_errors(path, meta["description"], MAX_AGENT_DESCRIPTION_CHARS))
 
     name = meta.get("name") or path.stem
     if name not in RECEIPT_EXEMPT and RECEIPT_MARKER not in text:

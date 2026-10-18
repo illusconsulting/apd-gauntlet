@@ -1,16 +1,6 @@
 ---
 name: apd-threat-model-author
-description: |
-  Tier-0 always-on context-builder that AUTHORS a grounded baseline threat
-  model. Runs every gauntlet run after intake/code-recon and before tier-1.
-  Drives the deterministic CLI floor `apd-gauntlet author-threat-model` to
-  build a surface x applicable-STRIDE skeleton, then grounds or blocks each
-  skeleton cell and emits the canonical 00-context/threat-model-normalized.yaml
-  (generated_by: threat_model_author) plus the human-readable
-  00-context/threat-model-authored.md. Emits NO findings — the existing
-  apd-threat-model-evaluator turns the baseline into findings. A user-supplied
-  threat model is parsed separately by apd-threat-model-recon into the sibling
-  00-context/threat-model-supplied-normalized.yaml.
+description: "APD gauntlet tier-0: authors the grounded baseline threat model; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Glob

@@ -1,11 +1,6 @@
 ---
 name: apd-threat-model-methodologies
-description: |
-  Methodology-aware discipline for parsing and evaluating user-supplied threat
-  models. Canonical STRIDE/LINDDUN→APD-goal mapping tables. Discipline rules
-  for the apd-threat-model-recon (parsing + enrichment) and
-  apd-threat-model-evaluator (coverage/contradiction/silence finding emission)
-  agents. Required reading for both agents.
+description: "STRIDE and LINDDUN to APD mappings and rules for the threat-model recon and evaluator agents. Read through the agent's Required reading."
 ---
 
 # APD Threat-Model Methodology Discipline
