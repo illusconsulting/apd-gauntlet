@@ -210,6 +210,10 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   failed `<command>: <step> exit=<N>` status line into one receipt error named
   by the step. `plan-run` lists the same CLI commands as the workflow, in the
   same order, and gains the `assemble-inventory` row the workflow already ran.
+- **`apd-tier-repair` runs at low effort.** The agent that fixes a record file
+  a tier gate rejected now sets `effort: low` in its frontmatter, next to
+  `model: sonnet`. Its tools stay `Read` and `Edit`, and its repair prompt is
+  unchanged.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

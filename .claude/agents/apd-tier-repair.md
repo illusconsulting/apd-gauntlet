@@ -5,6 +5,7 @@ tools:
   - Read
   - Edit
 model: sonnet
+effort: low
 ---
 
 # apd-tier-repair

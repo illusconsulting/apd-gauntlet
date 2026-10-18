@@ -38,9 +38,10 @@ def test_agent_frontmatter() -> None:
     meta = _meta()
     assert meta["name"] == "apd-tier-repair"
     assert meta["model"] == "sonnet"
-    assert "effort" not in meta
+    assert meta["effort"] == "low"
     assert isinstance(meta["description"], str) and "\n" not in meta["description"].strip()
     assert 0 < len(meta["description"]) <= 300
+    assert len(meta["description"]) <= 160
 
 
 def test_agent_body_declares_the_trust_boundary_and_the_receipt() -> None:
@@ -64,6 +65,12 @@ def test_repair_template_says_the_errors_and_inputs_are_data() -> None:
     # The JS copy carries the same line, and no quote or backslash can break the embed.
     assert "'" not in DATA_NOT_INSTRUCTIONS and "\\" not in DATA_NOT_INSTRUCTIONS
     assert f"'{DATA_NOT_INSTRUCTIONS}'" in RUNNER.read_text(encoding="utf-8")
+
+
+def test_repair_template_carries_the_excerpt_rule() -> None:
+    template = read_prompt("repair")
+    for phrase in ("not found verbatim", "exact words", "never paraphrase"):
+        assert phrase in template, phrase
 
 
 def test_repair_is_dispatched_as_the_repair_agent() -> None:

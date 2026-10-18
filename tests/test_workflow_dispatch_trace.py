@@ -334,3 +334,12 @@ def test_ci_test_job_provisions_node_22():
     assert str(step["with"]["node-version"]) == "22"
     pytest_at = next(i for i, s in enumerate(steps) if str(s.get("run", "")).startswith("pytest"))
     assert nodes[0] < pytest_at
+
+
+# --- WS3 Task 4: the repair dispatch goes to apd-tier-repair ----------------------------
+
+
+def test_repair_dispatches_tier_repair_agent():
+    t = trace(HA_SHAPED, {"tier-gate-10-trustworthiness": [BAD]})
+    repair = [d for d in t if d["label"].startswith("repair-10-trustworthiness-")]
+    assert [d["agentType"] for d in repair] == ["apd-tier-repair"]
