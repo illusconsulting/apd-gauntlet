@@ -211,6 +211,12 @@ ANALYZER_DERIVED_ARTIFACTS: frozenset[str] = frozenset({
 
 _ELLIPSIS = re.compile(r"\.\.\.|\u2026")  # "..." or the single character U+2026
 _STRUCTURED_INPUT_SUFFIXES = frozenset({".yaml", ".yml", ".json"})
+# JSON-family inputs that are never parsed (JSON lines, notebooks, GeoJSON, Terraform
+# state, HAR, JSON with comments, JSON5): their strings may be escaped, so a miss is
+# searched as whole text only and stays a warning even when excerpts are strict.
+_WHOLE_TEXT_ONLY_SUFFIXES = frozenset({
+    ".jsonl", ".ndjson", ".ipynb", ".geojson", ".tfstate", ".har", ".jsonc", ".json5",
+})
 # The inputs/ files are untrusted, and this check runs at every tier gate, so it must stay
 # cheap and never raise. A cited file larger than this is skipped without being read.
 _MAX_EXCERPT_INPUT_BYTES = 20 * 1024 * 1024
@@ -329,6 +335,7 @@ class _ExcerptInput:
     ``whole_text_only`` is true for a YAML or JSON input whose parsed values were not
     all searched: one over ``_MAX_STRUCTURED_PARSE_BYTES`` from the start, the others
     once a miss has tried to parse them, including one whose walk stopped at a scalar cap.
+    It is also true for a ``_WHOLE_TEXT_ONLY_SUFFIXES`` input, which is never parsed.
     A miss there may be a quoted or escaped value the check could not read, so it stays a
     warning even when excerpts are strict."""
 
@@ -377,8 +384,8 @@ def _load_excerpt_input(path: pathlib.Path) -> _ExcerptInput | None:
     except (OSError, UnicodeDecodeError):
         return None
     suffix = path.suffix.lower()
-    structured = suffix in _STRUCTURED_INPUT_SUFFIXES
-    parse = structured and size <= _MAX_STRUCTURED_PARSE_BYTES
+    parse = suffix in _STRUCTURED_INPUT_SUFFIXES and size <= _MAX_STRUCTURED_PARSE_BYTES
+    structured = suffix in _STRUCTURED_INPUT_SUFFIXES | _WHOLE_TEXT_ONLY_SUFFIXES
     return _ExcerptInput(text, parse_as=suffix if parse else None, structured=structured)
 
 
@@ -428,7 +435,8 @@ def check_excerpts_verbatim(
     in one of its string scalars. Inputs are untrusted: a file over
     ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread, one over
     ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, a YAML input with an alias or
-    nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, at most
+    nesting beyond ``_MAX_YAML_DEPTH`` and a ``_WHOLE_TEXT_ONLY_SUFFIXES`` input
+    (``.jsonl``, ``.ipynb`` and the like) are searched as plain text only, at most
     ``_MAX_SCALAR_HAYSTACKS`` parsed values are tried, and the check never raises on
     a malformed or hostile YAML or JSON input.
     """
@@ -439,7 +447,7 @@ def _excerpt_misses(
     run_dir: pathlib.Path, records_dir: pathlib.Path | None
 ) -> list[tuple[Violation, bool]]:
     """``check_excerpts_verbatim``'s violations, in order, each paired with whether the
-    cited input is a YAML or JSON file searched as whole text only (see ``_ExcerptInput``)."""
+    cited input is a structured file searched as whole text only (see ``_ExcerptInput``)."""
     inputs_dir = (run_dir / "inputs").resolve()
     cache: dict[pathlib.Path, _ExcerptInput | None] = {}
     violations: list[tuple[Violation, bool]] = []
@@ -483,8 +491,9 @@ def add_excerpt_violations(
     or to ``report.errors`` when ``strict_excerpts``. The one severity rule for the
     check, shared by the tier gate and the whole-run pass.
 
-    A violation whose cited input is a YAML or JSON file searched as whole text only
-    stays a warning when ``strict_excerpts``: its parsed values were never tried."""
+    A violation whose cited input is a YAML, JSON or other JSON-family file searched as
+    whole text only stays a warning when ``strict_excerpts``: its parsed values were never
+    tried."""
     for violation, whole_text_only in _excerpt_misses(run_dir, records_dir):
         strict = strict_excerpts and not whole_text_only
         (report.errors if strict else report.warnings).append(violation)

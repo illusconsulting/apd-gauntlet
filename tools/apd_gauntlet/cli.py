@@ -78,7 +78,8 @@ def main() -> None:
         "An evidence excerpt that is not verbatim in its cited inputs/ file is an "
         "ERROR by default (strict). --no-strict-excerpts makes it a WARNING, for runs "
         "made before 2.0. A YAML or JSON input searched as plain text only stays a "
-        "WARNING. Ignored with --schema-only."
+        "WARNING, and so does a .jsonl, .ndjson, .ipynb, .geojson, .tfstate, .har, "
+        ".jsonc or .json5 input, which is never parsed. Ignored with --schema-only."
     ),
 )
 def validate(  # type: ignore[no-untyped-def]

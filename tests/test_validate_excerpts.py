@@ -767,6 +767,42 @@ def test_parsed_structured_input_miss_is_an_error_by_default(tmp_path):
     assert "not found verbatim in artifact 'kafka.yaml'" in r.output
 
 
+# JSON-family inputs the check does not parse: JSON lines, notebooks, GeoJSON, Terraform
+# state, HAR, JSON with comments and JSON5. Each holds the escaped string
+# "user \"admin\" logged in"; a lens quotes what it means, so the whole text never matches.
+_ESCAPED_MSG = '"msg": "user \\"admin\\" logged in"'
+JSON_FAMILY_INPUTS = {
+    ".jsonl": "{" + _ESCAPED_MSG + '}\n{"msg": "other"}\n',
+    ".ndjson": "{" + _ESCAPED_MSG + '}\n{"msg": "other"}\n',
+    ".ipynb": json.dumps({"cells": [{"cell_type": "markdown",
+                                     "source": ['user "admin" logged in']}]}),
+    ".geojson": '{"type": "Feature", "properties": {' + _ESCAPED_MSG + "}}",
+    ".tfstate": '{"version": 4, "outputs": {' + _ESCAPED_MSG + "}}",
+    ".har": '{"log": {"entries": [{' + _ESCAPED_MSG + "}]}}",
+    ".jsonc": "// a comment\n{" + _ESCAPED_MSG + "}\n",
+    ".json5": "{" + _ESCAPED_MSG + ",}\n",
+}
+
+
+@pytest.mark.parametrize("suffix", sorted(JSON_FAMILY_INPUTS))
+def test_json_family_input_miss_stays_a_warning_by_default(tmp_path, suffix):
+    run = _run(tmp_path, CAP_EX)
+    name = f"sample{suffix}"
+    (run / "inputs" / name).write_text(JSON_FAMILY_INPUTS[suffix])
+    assert 'user \\"admin\\" logged in' in (run / "inputs" / name).read_text()
+    _cite(run, name)
+    _list_in_brief(run, name)
+    _set_excerpt(run, 'user \\"admin\\" logged in')  # YAML for: user "admin" logged in
+    message = f"evidence[0].excerpt not found verbatim in artifact '{name}'"
+    assert [v.message for v in check_excerpts_verbatim(run)] == [message]
+    tier = _validate(run, "--tier", "10-trustworthiness", "--json")  # strict by default
+    assert tier.exit_code == 0, tier.output
+    report = json.loads(tier.stdout)
+    assert report["errors"] == [] and [w["message"] for w in report["warnings"]] == [message]
+    r = _validate(run, "--errors-only")
+    assert r.exit_code == 0 and r.output == "", r.output
+
+
 def test_add_excerpt_violations_keeps_whole_text_only_misses_as_warnings(tmp_path):
     run = _run(tmp_path, PARAPHRASE)  # the finding misses a Markdown input: strictable
     (run / "inputs/aliased.yaml").write_text("x: &x unrelated\ny: *x\n")
