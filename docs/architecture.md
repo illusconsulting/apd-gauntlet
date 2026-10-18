@@ -109,9 +109,9 @@ Phase 0  Setup       → runner creates runs/<id>/{inputs,00-context,10-trustwor
                        and runs `apd-gauntlet prepare-run` (scaffold check, build-domain-skill, validate-domain)
 Phase 1  Intake      → apd-intake produces context-brief.md (frontmatter + typed artifact index + PHI inventory)
 Phase 2  Tier 1 (∥)  → confidentiality / integrity / availability emit findings.yaml + capabilities.yaml
-                       then `apd-gauntlet validate <run>` over tier-1 outputs
-Phase 3  Tier 2 (∥)  → distributed / resilient / ephemeral (read tier 1 outputs); validate
-Phase 4  Tier 3 (∥)  → authenticity / non-repudiation / immutability (read tier 1+2); validate
+                       then `apd-gauntlet tier-gate <run> --tier 10-trustworthiness` (canonicalize, validate tier 1)
+Phase 3  Tier 2 (∥)  → distributed / resilient / ephemeral (read tier 1 outputs); tier-gate
+Phase 4  Tier 3 (∥)  → authenticity / non-repudiation / immutability (read tier 1+2); tier-gate
 Phase 5  Synthesis   → synthesizer clusters (merge/link/separate), reconciles severities,
                        rolls up NIST/ATT&CK/APD coverage, produces advisory-report.md
 Phase 6  Closeout    → runner returns summary; advisory report has frontmatter (framework_version,

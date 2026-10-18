@@ -452,9 +452,10 @@ It:
    cross-references) and then validates the tier, so the gate always sees
    canonical records. A failing gate goes through the repair loop described
    under [A tier gate failed](#a-tier-gate-failed).
-4. Runs the decomposed synthesis (cluster → adjudicate → apply → rollup),
-   dispatches the optional attack-path analyzer when activated, builds the
-   advisory report and HTML bundle, then runs the report completeness gate
+4. Runs the decomposed synthesis (cluster → adjudicate → apply), dispatches
+   the optional attack-path analyzer when activated, runs `post-tier4`
+   (`assemble-c4`, `canonicalize`, `rollup`), builds the advisory report and
+   HTML bundle, then runs the report completeness gate
    (`audit-report`). The gate enforces 8 completeness checks (structural and
    editorial). A structural failure that is unresolved after two remediation
    attempts **blocks the run** — a degraded HTML report cannot ship silently.
