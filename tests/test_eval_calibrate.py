@@ -393,10 +393,10 @@ def test_record_outside_a_runs_decisions_directory_refused(tmp_path, rel):
     (b"\xff\xfe", "not UTF-8"),
     (b"items: [", "invalid YAML"),
     (b"- a\n", "not a mapping"),
-    (b"task: finding-qa\nprovider: cloudflare\nmodel: clef\n", "items"),
-    (b"task: finding-qa\nprovider: cloudflare\nmodel: clef\nitems: [3]\n", r"items\[0\]"),
-    (b"task: finding-qa\nprovider: cloudflare\nmodel: clef\nitems: [{ref: 3}]\n", "ref"),
-    (b"provider: cloudflare\nmodel: clef\nitems: []\n", "task"),
+    (b"task: finding-qa\nprovider: p\nmodel: m\n", "items"),
+    (b"task: finding-qa\nprovider: p\nmodel: m\nitems: [3]\n", r"items\[0\]"),
+    (b"task: finding-qa\nprovider: p\nmodel: m\nitems: [{ref: 3}]\n", "ref"),
+    (b"provider: p\nmodel: m\nitems: []\n", "task"),
     (b"generated_at: 2026-02-30\n", "invalid YAML"),
     (b"[" * 5000, "invalid YAML"),
 ])
@@ -536,7 +536,7 @@ def test_record_model_carries_the_weights_revision(tmp_path):
 
 
 @pytest.mark.parametrize("field, value", [
-    ("model", "clef-flash"), ("provider", "typesafe"), ("weights_revision", "rev-8"),
+    ("model", "clef-flash"), ("provider", "other-provider"), ("weights_revision", "rev-8"),
 ])
 def test_mixed_models_refused_naming_both_records(tmp_path, field, value):
     a = _run(tmp_path, "a")
@@ -577,13 +577,14 @@ SHA = "a" * 64
 def test_write_threshold_entry_and_header(tmp_path):
     th = tmp_path / "thresholds.yaml"
     th.write_text(calibrate.HEADER + "{}\n")
-    write_threshold(th, "finding-qa.unsupported", CAL, SHA, provider="cloudflare", model="clef",
-                    weights_revision=None)
+    write_threshold(th, "finding-qa.unsupported", CAL, SHA, provider="provider-a",
+                    model="model-a", weights_revision=None)
     text = th.read_text()
     assert text.startswith(calibrate.HEADER)
     assert yaml.safe_load(text) == {"finding-qa.unsupported": {
         "threshold": 0.35, "precision": 0.8123, "recall": 0.9877, "n": 8, "labels_sha256": SHA,
-        "provider": "cloudflare", "model": "clef", "weights_revision": None, "calibrated": True,
+        "provider": "provider-a", "model": "model-a", "weights_revision": None,
+        "calibrated": True,
     }}
     body = text[len(calibrate.HEADER):]
     assert body == yaml.safe_dump(yaml.safe_load(text), sort_keys=True)
@@ -593,8 +594,8 @@ def test_write_threshold_keeps_other_entries_and_replaces_its_own(tmp_path):
     th = tmp_path / "thresholds.yaml"
     th.write_text("# old header\nzeta: {threshold: 0.9, calibrated: false}\n"
                   "finding-qa.unsupported: {threshold: 0.3, calibrated: false, extra: 1}\n")
-    write_threshold(th, "finding-qa.unsupported", CAL, SHA, provider="cloudflare", model="clef",
-                    weights_revision="rev-7")
+    write_threshold(th, "finding-qa.unsupported", CAL, SHA, provider="provider-a",
+                    model="model-a", weights_revision="rev-7")
     doc = yaml.safe_load(th.read_text())
     assert list(doc) == ["finding-qa.unsupported", "zeta"]
     assert doc["zeta"] == {"threshold": 0.9, "calibrated": False}

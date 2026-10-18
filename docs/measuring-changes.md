@@ -602,10 +602,10 @@ The entry goes to `--thresholds`, by default the packaged
 finding-qa.unsupported:
   calibrated: true
   labels_sha256: <SHA-256 of the labels file>
-  model: clef
+  model: <model id>
   n: 212
   precision: 0.9811
-  provider: cloudflare
+  provider: <provider>
   recall: 0.6512
   threshold: 0.18
   weights_revision: null
