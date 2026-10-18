@@ -474,12 +474,12 @@ def test_template_copies_every_evidence_pointer_without_excerpts(make_run, edit)
     run = make_run("r")
     edit.finding(run, "conf-98a543cd", evidence=[
         {"artifact": "tech_plan.md", "locator": "§3 paragraph 4", "excerpt": "DEKs rotate"},
-        {"artifact": "iac/kms.tf", "locator": "resource aws_kms_key"},
+        {"artifact": "iac/kms.tf", "locator": "resource kms_key"},
     ])
     (item,) = (i for i in label_template(run, "ceb")["items"] if i["id"] == "conf-98a543cd")
     assert item["evidence"] == [
         {"artifact": "tech_plan.md", "locator": "§3 paragraph 4"},
-        {"artifact": "iac/kms.tf", "locator": "resource aws_kms_key"},
+        {"artifact": "iac/kms.tf", "locator": "resource kms_key"},
     ]
 
 
