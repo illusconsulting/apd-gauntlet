@@ -68,6 +68,7 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
     - the repair loop's `-after-repair` and `-after-rerun` gates both go through `tier-gate` with the tier's phase.
   - `tests/test_cli_plan_run.py`: the tier-gate rows' refs, phases and gate text (`<ref>; on failure repair …`); `test_plan_run_composite_rows` (the `assemble-inventory` row right after `apd-intake`, `post-tier4` outputs with `c4-model.yaml` and `metrics.yaml`, `closeout` last, and no `build-domain-skill`, `validate-domain`, `rollup` or `summarize` row).
   - `tests/test_agent_apd_cli_runner.py::test_composite_status_lines_become_one_error_per_failed_step`.
+- Task 4 (`6728d34`): the shipped change follows the plan. The one deviation is in the Step 6 operator procedure, which breaks a lens file in a copy of a finished run with an unquoted colon in a title and expects one `repair-…` dispatch when the runner is re-invoked. On a resumed run, that break re-runs the lens instead. `resume-plan` counts a lens step complete only when its files parse and pass their schema (WS1, `tools/apd_gauntlet/resume_plan.py`), so it reports the lens incomplete (`unparseable …: YAML parse error: mapping values are not allowed here`), and the runner dispatches the lens's first attempt before the tier gate. The pending step below breaks the file with an excerpt over 25 tokens instead. That file still parses and passes its schema, so `resume-plan` reports the lens complete. The tier gate's semantic pass rejects it (`evidence[0].excerpt has 29 tokens (max 25)`), and the repair template covers that error ("shorten it to a contiguous run of the same words; never paraphrase"). Both behaviours were checked with `resume-plan`, `validate --tier` and `tier-gate` on a scratch copy of the claim-event-bus example (`10-trustworthiness/integrity.findings.yaml`); no agent ran.
 
 ## Pending operator steps
 
@@ -93,3 +94,34 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`.
 
   Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t1` runs. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the harness measures 36 dispatches on a clean HA-shaped run against 45 for `-ws3t1`: 18 CLI dispatches to `apd-cli-runner` (27 before), 6 of them with guard text (9 before), and 18 LLM dispatches. `pyStep(` call sites go from 32 to 24. These are the plan's "After Task 3" numbers, and `CLI_LABELS` is the plan's 18-label list. This SCP also covers Task 2a: each run that reaches closeout writes `40-synthesis/manual-audit-prompts.md` and `.apd-state/attempts.yaml`.
+- Task 4 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t4` and `<prev>` set to the `-ws3t3` runs. On this branch's head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t4-r1` and `runs/<x>-ws3t4-r2`, with telemetry in `telemetry/<x>-ws3t4-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t4-r<k> --otel telemetry/<x>-ws3t4-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t3 runs/<x>-ws3t4 --gates eval/gates.yaml
+  ```
+
+  Clean runs rarely repair, so also exercise one repair on a copy of a finished run. The break is an over-long excerpt, not the plan's unquoted colon (see Deviations, Task 4). The copy is not an `-rN` run, so `compare-runs` leaves it out:
+
+  ```bash
+  cp -R runs/<x>-ws3t4-r1 runs/<x>-ws3t4-repair
+  perl -pi -e 's/^run_id: .*/run_id: <x>-ws3t4-repair/' runs/<x>-ws3t4-repair/.apd-run.yaml
+  ```
+
+  In one lens file, for example `runs/<x>-ws3t4-repair/10-trustworthiness/integrity.findings.yaml`, lengthen one `evidence[].excerpt` past 25 tokens: join more exact words from the same cited file under `inputs/` with ` ... `, in the order they appear there. Before re-invoking, check the break:
+
+  ```bash
+  apd-gauntlet resume-plan runs/<x>-ws3t4-repair --json      # the lens: "complete": true
+  apd-gauntlet validate runs/<x>-ws3t4-repair --tier 10-trustworthiness   # exit 1: evidence[<i>].excerpt has <n> tokens (max 25)
+  ```
+
+  Re-invoke the runner by path on the copy, in a session whose telemetry goes to `telemetry/<x>-ws3t4-repair.otlp.jsonl`. Then:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t4-repair --otel telemetry/<x>-ws3t4-repair.otlp.jsonl
+  python -I -c "import sys; from pathlib import Path; from apd_gauntlet.measure.usage import iter_api_requests as it; print(sorted({r.effort or '-' for r in it(Path(sys.argv[1])) if r.agent.rpartition(':')[2] == 'apd-tier-repair'}))" telemetry/<x>-ws3t4-repair.otlp.jsonl
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t3` runs. If a gate fails, do not merge; attach the `--json` output to the PR. The repair run logs `resume: skipping integrity (outputs present and valid).`, then `tier-gate-10-trustworthiness` failing, one `repair-10-trustworthiness-integrity.findings.yaml` dispatch, `tier-gate-10-trustworthiness-after-repair` passing, and no `integrity-rerun` dispatch. Its `.apd-state/attempts.yaml` has `tier_gate_failures: [10-trustworthiness]`, `tier_repairs: {10-trustworthiness: 1}` and `lens_reruns: {}`. Its `usage.yaml` `by_agent` has `apd-tier-repair` (with any `<plugin>:` prefix) with `phase: canonicalize`, and the one-liner prints `['low']`: every `api_request` event of the repair carries `effort: "low"`. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, nothing in the dispatch counts changes: a clean HA-shaped run is still 36 dispatches (18 CLI, 18 LLM), and with the first tier gate red the harness lists `tier-gate-10-trustworthiness`, `repair-10-trustworthiness-integrity.findings.yaml` (agent `apd-tier-repair`), `tier-gate-10-trustworthiness-after-repair`, and no `-rerun` label.
