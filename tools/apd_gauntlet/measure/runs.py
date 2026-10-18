@@ -12,13 +12,15 @@ import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import yaml
 
 from ..synthesis.loader import load_corpus
 
 _CHUNK = 1 << 20
+# The legacy plural root key ``load_corpus`` also accepts for each record kind.
+_PLURAL = {"finding": "findings", "capability": "capabilities"}
 
 
 class RunLoadError(Exception):
@@ -44,7 +46,7 @@ def _unreadable(path: object, exc: OSError) -> RunLoadError:
     return RunLoadError(f"{path}: cannot read: {exc.strerror or exc}")
 
 
-def _walk_error(exc: OSError) -> None:
+def _walk_error(exc: OSError) -> NoReturn:
     raise _unreadable(exc.filename, exc) from exc
 
 
@@ -59,23 +61,42 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _link_line(inputs: Path, link: Path) -> str:
+    """``"<path>\\0link:<link text>\\n"`` for a link whose target is not a file."""
+    try:
+        target = os.readlink(link)
+    except OSError as exc:
+        raise _unreadable(link, exc) from exc
+    return f"{link.relative_to(inputs).as_posix()}\0link:{target}\n"
+
+
 def inputs_digest(run_dir: Path) -> str | None:
     """SHA-256 over every file under ``<run>/inputs/``; ``None`` when it is absent.
 
-    Each file contributes the line ``"<posix path relative to inputs/>\\0<sha256>\\n"``;
-    the lines are sorted before hashing, so the digest depends only on paths and bytes.
-    Dotfiles count like any other file. A file or directory that cannot be read
-    raises ``RunLoadError`` naming it, so no file is silently left out.
+    Each file, or link to a file, contributes the line
+    ``"<posix path relative to inputs/>\\0<sha256 of its bytes>\\n"``. A link to a
+    directory (which the walk does not enter) and a dangling link contribute
+    ``"<path>\\0link:<link text>\\n"`` instead, so retargeting a link changes the
+    digest. The lines are sorted before hashing, so the digest depends only on
+    paths, bytes and link targets. Dotfiles count like any other file. A file or
+    directory that cannot be read raises ``RunLoadError`` naming it, so no file is
+    silently left out.
     """
     inputs = run_dir / "inputs"
     if not inputs.is_dir():
         return None
     lines: list[str] = []
-    for root, _dirs, files in os.walk(inputs, onerror=_walk_error):
+    for root, dirs, files in os.walk(inputs, onerror=_walk_error):
+        for name in dirs:
+            p = Path(root, name)
+            if p.is_symlink():  # a link to a directory, which the walk does not enter
+                lines.append(_link_line(inputs, p))
         for name in files:
             p = Path(root, name)
             if p.is_file():
                 lines.append(f"{p.relative_to(inputs).as_posix()}\0{_file_sha256(p)}\n")
+            elif p.is_symlink():  # a dangling link
+                lines.append(_link_line(inputs, p))
     lines.sort()
     return hashlib.sha256("".join(lines).encode("utf-8", "surrogateescape")).hexdigest()
 
@@ -92,6 +113,8 @@ def _parse(path: Path) -> Any:
         return yaml.safe_load(text)
     except (yaml.YAMLError, ValueError) as exc:  # ValueError: e.g. an impossible date
         raise RunLoadError(f"{path}: invalid YAML: {exc}") from exc
+    except RecursionError as exc:
+        raise RunLoadError(f"{path}: invalid YAML: nested too deeply to parse") from exc
 
 
 def _not_a_mapping(path: Path, doc: Any) -> RunLoadError:
@@ -118,7 +141,7 @@ def _corpus_files(run_dir: Path) -> list[Path]:
 def _records(doc: dict[str, Any], key: str) -> list[dict[str, Any]]:
     raw = doc.get(key)
     if raw is None:
-        raw = doc.get(key + "s")
+        raw = doc.get(_PLURAL[key])
     items = raw if isinstance(raw, list) else [raw]
     return [r for r in items if isinstance(r, dict)]
 
@@ -150,7 +173,9 @@ def _load_corpus(
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     try:
         findings, capabilities = load_corpus(run_dir, include_attack_path=True)
-    except (yaml.YAMLError, ValueError, OSError, AttributeError, TypeError) as exc:
+    except (
+        yaml.YAMLError, ValueError, OSError, AttributeError, TypeError, RecursionError
+    ) as exc:
         problem = _corpus_problem(run_dir)
         if problem is None:
             raise
@@ -191,7 +216,9 @@ def _graph_targets(graph: dict[str, Any]) -> dict[str, list[str]]:
 
 def _rank(entry: dict[str, Any]) -> tuple[int, int]:
     rank = entry.get("rank")
-    return (0, rank) if isinstance(rank, int) else (1, 0)
+    if isinstance(rank, bool) or not isinstance(rank, int):  # a boolean is not a rank
+        return (1, 0)
+    return (0, rank)
 
 
 def _headlines(
@@ -221,11 +248,13 @@ def load_run(path: Path) -> RunSnapshot:
     """Read the run directory at ``path``.
 
     Any file that cannot be read or parsed (``yaml.YAMLError``, a ``ValueError``
-    from PyYAML, text that is not UTF-8, an ``OSError``), or whose top level is
-    not a mapping, becomes ``RunLoadError`` naming that file; so does a corpus
-    record whose ``id`` is not a string. ``headlines`` is ``None`` when
-    ``report-data.yaml`` or ``deduped-findings.yaml`` is missing;
-    ``inputs_sha256`` is ``None`` when the run has no ``inputs/``.
+    from PyYAML, nesting too deep to parse, text that is not UTF-8, an
+    ``OSError``), or whose top level is not a mapping, becomes ``RunLoadError``
+    naming that file; so does a corpus record whose ``id`` is not a string.
+    ``headlines`` is ``None`` when ``report-data.yaml`` or
+    ``deduped-findings.yaml`` is missing, and ``()`` when both exist but no
+    headline has a string ``id``; ``inputs_sha256`` is ``None`` when the run has
+    no ``inputs/``.
     """
     findings, capabilities = _load_corpus(path)
     synth = path / "40-synthesis"

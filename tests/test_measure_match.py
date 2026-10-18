@@ -8,6 +8,8 @@ from apd_gauntlet.measure.match import (
     Match,
     MatchResult,
     asset_keys,
+    evidence_pairs,
+    jaccard,
     match_records,
     title_tokens,
 )
@@ -125,3 +127,47 @@ def test_title_jaccard_exactly_at_threshold_matches():
     c = {"c": rec("c", "ephemeral", "Refresh tokens rotate", ("a.md", "#x"))}
     (m,) = match_records(b, c).matched
     assert m.title_similarity == 0.5
+
+
+# --- review fixes (Task 1, second round) ------------------------------------
+
+
+def test_evidence_pairs_normalise_the_artifact_and_strip_the_locator():
+    r = rec("x", "g", "t", (".\\./Inputs\\A.md", "  #sec  "), ("b.md", "code:pkg.Fn"))
+    assert evidence_pairs(r) == frozenset({("inputs/a.md", "#sec"), ("b.md", "code:pkg.Fn")})
+
+
+def test_jaccard_of_two_empty_sets_is_zero():
+    assert jaccard(frozenset(), frozenset()) == 0.0
+
+
+def test_stopword_only_titles_never_match():
+    b = {"b": rec("b", "ephemeral", "The of a", ("a.md", "#x"))}
+    c = {"c": rec("c", "ephemeral", "the OF A", ("a.md", "#x"))}
+    assert match_records(b, c) == MatchResult((), ("b",), ("c",))
+
+
+def test_record_without_assets_never_matches():
+    r = {"id": "r", "apd_goal": "ephemeral", "title": TITLE}
+    assert match_records({"r": r}, {"r": r}) == MatchResult((), ("r",), ("r",))
+
+
+def test_missing_and_new_ids_are_sorted():
+    b = {"z": rec("z", "ephemeral", TITLE, ("z.md", "#x")),
+         "a": rec("a", "ephemeral", TITLE, ("a.md", "#x"))}
+    c = {"y": rec("y", "ephemeral", TITLE, ("y.md", "#x")),
+         "b": rec("b", "ephemeral", TITLE, ("b.md", "#x"))}
+    assert match_records(b, c) == MatchResult((), ("a", "z"), ("b", "y"))
+
+
+def test_matched_is_sorted_by_id_not_by_pick_order():
+    # The greedy pass takes (b2, c2) first (title 1.0), then (b1, c1) (title 0.6).
+    other = "Session cookie lacks secure flag"
+    b = {"b2": rec("b2", "ephemeral", other, ("b.md", "#x")),
+         "b1": rec("b1", "ephemeral", TITLE, ("a.md", "#x"))}
+    c = {"c2": rec("c2", "ephemeral", other, ("b.md", "#x")),
+         "c1": rec("c1", "ephemeral", "Refresh tokens are never rotated", ("a.md", "#x"))}
+    r = match_records(b, c)
+    assert [(m.baseline_id, m.candidate_id) for m in r.matched] == [("b1", "c1"), ("b2", "c2")]
+    assert r.matched[0].title_similarity == pytest.approx(0.6)
+    assert r.matched[1].title_similarity == 1.0
