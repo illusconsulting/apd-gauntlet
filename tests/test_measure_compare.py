@@ -33,12 +33,12 @@ def new_finding(rid, title, *, evidence):
     return record
 
 
-def snapshot(findings=None, capabilities=None, headlines=None):
+def snapshot(findings=None, capabilities=None, headlines=None, graph_targets=None):
     return RunSnapshot(
         path=pathlib.Path("run"),
         findings=findings or {},
         capabilities=capabilities or {},
-        graph_targets={},
+        graph_targets=graph_targets or {},
         headlines=headlines,
         inputs_sha256=None,
     )
@@ -142,6 +142,22 @@ def test_operator_excuse_wins_over_reassigned_evidence(make_run, edit):
     assert d.lost_critical_high[0].excuse == "operator"
 
 
+def test_shared_evidence_with_existing_finding_does_not_excuse(make_run, edit):
+    b, c = make_run("b"), make_run("c")
+    shared = new_finding(
+        "conf-0000beef", "Unsigned Kafka payloads allow claim tampering in transit",
+        evidence=[("threat-model.md", "Tampering paragraph 2")])     # intg-42a3ebbd's only pair
+    edit.add_finding(b, CONF_FINDINGS, copy.deepcopy(shared))
+    edit.add_finding(c, CONF_FINDINGS, shared)
+    edit.drop(c, "intg-42a3ebbd")
+    d = compare_pair(load_run(b), load_run(c))
+    assert d.findings.missing == ("intg-42a3ebbd",) and d.findings.new == ()
+    assert ("conf-0000beef", "conf-0000beef") in {
+        (m.baseline_id, m.candidate_id) for m in d.findings.matched}
+    assert [(x.id, x.excuse) for x in d.lost_critical_high] == [("intg-42a3ebbd", None)]
+    assert unexcused_lost(d) == 1
+
+
 def test_evidence_reassigned_to_a_new_capability(make_run, edit):
     b, c = make_run("b"), make_run("c")
     edit.drop(c, "intg-42a3ebbd")
@@ -156,13 +172,51 @@ def test_evidence_reassigned_to_a_new_capability(make_run, edit):
     assert d.lost_critical_high[0].excuse == "evidence_reassigned:intg-cap-0000beef"
 
 
-def test_evidence_pointer_without_artifact_or_locator_does_not_excuse():
+@pytest.mark.parametrize(
+    "pointer",
+    [
+        {},                                         # neither part
+        {"artifact": "a.md"},                       # no locator
+        {"artifact": "a.md", "locator": "   "},     # a locator that strips to nothing
+        {"locator": "§1"},                          # no artifact
+        {"artifact": " ./ ", "locator": "§1"},      # an artifact that normalises to nothing
+    ],
+)
+def test_evidence_pointer_without_artifact_or_locator_does_not_excuse(pointer):
     lost = {"id": "conf-1", "apd_goal": "confidentiality", "severity": "high", "title": "Lost",
-            "evidence": [{"excerpt": "x"}]}
+            "evidence": [{**pointer, "excerpt": "x"}]}
     new = {"id": "intg-2", "apd_goal": "integrity", "severity": "low", "title": "New",
-           "evidence": [{"excerpt": "y"}]}
+           "evidence": [{**pointer, "excerpt": "y"}]}
     d = compare_pair(snapshot({"conf-1": lost}), snapshot({"intg-2": new}))
+    assert d.findings.new == ("intg-2",)
     assert [(x.id, x.excuse) for x in d.lost_critical_high] == [("conf-1", None)]
+
+
+def test_each_runs_graph_targets_join_findings_and_capabilities():
+    # Same goal and title, disjoint evidence artifacts: only the asset-graph node is shared.
+    finding_title = "PHI in the claim topic lacks envelope encryption"
+    capability_title = "KMS encrypts the claim topic at rest"
+
+    def record(rid, title, artifact, **level):
+        return {"id": rid, "apd_goal": "confidentiality", "title": title,
+                "evidence": [{"artifact": artifact, "locator": "§1", "excerpt": "x"}], **level}
+
+    baseline = snapshot(
+        {"conf-1": record("conf-1", finding_title, "a.md", severity="high")},
+        {"conf-cap-1": record("conf-cap-1", capability_title, "a.md", maturity="implemented")},
+        graph_targets={"conf-1": ["Claim events topic"], "conf-cap-1": ["Claim events topic"]},
+    )
+    candidate = snapshot(
+        {"conf-2": record("conf-2", finding_title, "b.md", severity="high")},
+        {"conf-cap-2": record("conf-cap-2", capability_title, "b.md", maturity="implemented")},
+        graph_targets={"conf-2": ["claim  events TOPIC"], "conf-cap-2": ["Claim events topic"]},
+    )
+    d = compare_pair(baseline, candidate)
+    assert [(m.baseline_id, m.candidate_id) for m in d.findings.matched] == [("conf-1", "conf-2")]
+    assert d.findings.missing == () and d.findings.new == ()
+    assert [(m.baseline_id, m.candidate_id) for m in d.capabilities.matched] == [
+        ("conf-cap-1", "conf-cap-2")]
+    assert d.capabilities.missing == () and d.capabilities.new == ()
 
 
 def test_a_missing_severity_counts_as_unknown_after_the_known_levels():
@@ -177,6 +231,19 @@ def test_a_missing_severity_counts_as_unknown_after_the_known_levels():
 def test_no_matches_leave_agreement_undefined():
     d = compare_pair(snapshot(), snapshot())
     assert d.severity_agreement_pct is None and d.findings.matched == ()
+
+
+def test_headline_overlap_counts_only_headlines_the_candidate_keeps(make_run):
+    b, c = make_run("b"), make_run("c")
+    report = c / "40-synthesis/report-data.yaml"
+    doc = yaml.safe_load(report.read_text(encoding="utf-8"))
+    doc["headline_findings"] = doc["headline_findings"][:3]
+    assert [h["id"] for h in doc["headline_findings"]] == [
+        "merged-4dd83f6a", "auth-dbba3dea", "avail-4e08f6d8"]
+    report.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    d = compare_pair(load_run(b), load_run(c))      # the corpus is unchanged: all 20 match
+    assert len(d.findings.matched) == 20
+    assert d.headline_overlap_pct == pytest.approx(300 / 7)
 
 
 def test_headline_overlap_undefined_without_headlines(make_run):
