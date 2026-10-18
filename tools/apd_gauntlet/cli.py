@@ -371,7 +371,32 @@ def lint_skills_cmd(skill_dir) -> None:  # type: ignore[no-untyped-def]
 @main.command("summarize")
 @click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=pathlib.Path))
 @click.option("--json", "as_json", is_flag=True)
-def summarize_cmd(run_dir, as_json) -> None:  # type: ignore[no-untyped-def]
+@click.option(
+    "--record-attempts",
+    "attempts_json",
+    metavar="JSON",
+    help=(
+        "Before summarising, validate this run-attempts object (run-attempts.schema.json) and "
+        "write it to RUN_DIR/.apd-state/attempts.yaml. Exits 2 when it is not JSON, and 1 when "
+        "it does not match the schema or cannot be written; a rejected object writes nothing."
+    ),
+)
+def summarize_cmd(run_dir, as_json, attempts_json) -> None:  # type: ignore[no-untyped-def]
+    if attempts_json is not None:
+        from .measure.attempts import AttemptsError, write_attempts
+
+        try:
+            attempts = _stdjson.loads(attempts_json)
+        except (ValueError, RecursionError) as exc:
+            raise click.BadParameter(
+                f"not valid JSON: {exc}", param_hint="'--record-attempts'"
+            ) from exc
+        try:
+            recorded = write_attempts(run_dir, attempts)
+        except AttemptsError as exc:
+            click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1) from exc
+        click.echo(f"Recorded attempts -> {recorded}", err=True)
     stats = summarize_run(run_dir)
     if as_json:
         import json as _json

@@ -74,6 +74,36 @@ When a field or behavior is deprecated:
 2. Keep the deprecated surface working through at least one minor release.
 3. Remove in a major bump.
 
+## v2.0.0 — Measurement and evaluation (additive)
+
+Additive on the 2.0 line (`next`): these entries add new schemas only. No
+existing schema changes, no record `schema_version` is bumped, and no
+`framework_compat` range changes.
+
+### 2026-10-17 — run-attempts (new)
+
+`run-attempts.schema.json` describes `<run>/.apd-state/attempts.yaml`, the
+per-run record of retries and repairs that 1.7 runs never persist:
+
+- `lens_retries`: retries per lens.
+- `first_pass_invalid`: lenses whose first receipt was an error or listed an
+  output that failed schema validation.
+- `tier_gate_failures`: tier directories whose first tier gate failed, before
+  any repair.
+- `skipped`: lenses whose receipt listed a `.skipped` output.
+- `audit_iterations`: report-audit attempts (at least 1).
+- `tier_repairs` and `lens_reruns`: what the tier repair loop did, as files
+  repaired per tier directory and re-runs per lens.
+
+Every key is required, `additionalProperties` is false, `schema_version` is the
+constant 1 and `recorded_by` is `workflow`, `runner` or `operator`. Counts are
+integers of 0 or more, keyed by non-empty names; the name lists hold unique,
+non-empty strings. `apd-gauntlet summarize --record-attempts <json>` validates
+the object and writes the file, and `measure.attempts.write_attempts` does the
+same for a local runner. `measure.runs.load_run` reads it into
+`RunSnapshot.attempts`, which is `None` for a run without the file (every 1.7
+run), so a missing file never reads as zero retries.
+
 ## v1.7.1 — Context ids minted by canonicalize
 
 Non-breaking (permissive) schema changes; see [ADR-0020](adrs/0020-tooling-authored-derived-fields.md) (Amendment v1.7.1) and [deterministic-field-register.md](deterministic-field-register.md).

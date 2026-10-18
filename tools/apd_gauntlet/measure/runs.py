@@ -3,8 +3,9 @@
 The snapshot holds what a before-and-after comparison needs: findings and
 capabilities by id (the whole corpus, attack-path and threat-model findings
 included), the asset-graph node names each record's edges target, the report
-headlines expanded through ``merged_from``, and a digest of ``inputs/`` so runs
-over different inputs are never compared.
+headlines expanded through ``merged_from``, a digest of ``inputs/`` so runs
+over different inputs are never compared, and the run's retry and repair counts
+(``.apd-state/attempts.yaml``) when it recorded them.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from typing import Any, NoReturn
 import yaml
 
 from ..synthesis.loader import load_corpus
+from .attempts import Attempts, AttemptsError, read_attempts
 
 _CHUNK = 1 << 20
 # The legacy plural root key ``load_corpus`` also accepts for each record kind.
@@ -35,6 +37,7 @@ class RunSnapshot:
     graph_targets: dict[str, list[str]]
     headlines: tuple[frozenset[str], ...] | None
     inputs_sha256: str | None
+    attempts: Attempts | None = None
 
 
 def is_run_dir(path: Path) -> bool:
@@ -254,7 +257,9 @@ def load_run(path: Path) -> RunSnapshot:
     ``headlines`` is ``None`` when ``report-data.yaml`` or
     ``deduped-findings.yaml`` is missing, and ``()`` when both exist but no
     headline has a string ``id``; ``inputs_sha256`` is ``None`` when the run has
-    no ``inputs/``.
+    no ``inputs/``. ``attempts`` is ``None`` when the run has no
+    ``.apd-state/attempts.yaml`` (every 1.7 run); an attempts file that is
+    invalid or unreadable raises ``RunLoadError`` naming it.
     """
     findings, capabilities = _load_corpus(path)
     synth = path / "40-synthesis"
@@ -267,6 +272,10 @@ def load_run(path: Path) -> RunSnapshot:
         if report_file.is_file() and deduped_file.is_file()
         else None
     )
+    try:
+        attempts = read_attempts(path)
+    except AttemptsError as exc:
+        raise RunLoadError(str(exc)) from exc
     return RunSnapshot(
         path=path,
         findings=findings,
@@ -274,4 +283,5 @@ def load_run(path: Path) -> RunSnapshot:
         graph_targets=graph_targets,
         headlines=headlines,
         inputs_sha256=inputs_digest(path),
+        attempts=attempts,
     )

@@ -9,6 +9,19 @@ design and implementation plans are in
 `docs/superpowers/specs/2026-10-10-local-apps-and-decision-models-design.md`
 and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
 
+### Added
+
+- **`summarize --record-attempts` and `.apd-state/attempts.yaml`.**
+  `apd-gauntlet summarize RUN_DIR --record-attempts '<json>'` validates a
+  run-attempts object against the new `run-attempts.schema.json` and writes it
+  to `<run>/.apd-state/attempts.yaml` before it summarises the run. The file
+  records what 1.7 runs keep only in the workflow's memory: lens retries, lenses
+  that failed schema validation on the first pass, tier gates that failed before
+  repair, skipped lenses, report-audit iterations, and the files and lenses the
+  tier repair loop repaired or re-ran. The command exits 2 when the value is not
+  JSON and 1 when it does not match the schema, and writes nothing in either
+  case.
+
 ### Changed
 
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
