@@ -276,3 +276,21 @@ At `8c86bb3`, with the scratchpad venv rebuilt (Python 3.12; the repo installed 
 - `apd-gauntlet lint-skills --skill-dir .claude/skills/`: `Lint clean: 8 skills checked.`
 - markdownlint-cli2 0.23.2 on the linted globs, this ledger included: `Summary: 0 issues in 0 files`
 - Nothing has been pushed, and nothing under `runs/`, `telemetry/`, `eval/local/` or `eval/results/` is tracked.
+
+## Final check
+
+Run on 2026-10-18 at `f93d5de` (`fix(ws2): record the whole-branch review and refresh the WS2 summary`), the commit that recorded the whole-branch review above and rewrote the WS2 summary. This section is appended; no code changed.
+
+- Quality gate, from the repo root with the scratchpad venv on PATH (Python 3.12.13) and node v26:
+  - `ruff check tools/ tests/`: `All checks passed!`
+  - `mypy tools/`: `Success: no issues found in 81 source files`
+  - `python -m pytest -q -p no:cacheprovider`: `3153 passed, 1 skipped in 75.69s (0:01:15)`. The skip is the empty parameter set of `tests/test_eval_committed_corpora.py`, which Task 14 fills. `tests/test_workflow_runner_awaits.py` passes (18 tests).
+  - `apd-gauntlet lint-agents --agent-dir .claude/agents/`: `Lint clean: 22 agents checked.`
+  - `apd-gauntlet lint-skills --skill-dir .claude/skills/`: `Lint clean: 8 skills checked.`
+  - markdownlint-cli2 0.23.2 on the linted globs (189 files): `Summary: 0 issues in 0 files`
+- Repository state: `git status --porcelain` was empty before this entry. `git ls-remote origin refs/heads/feat/ws2-measurement-and-evaluation` prints nothing, so the branch has not been pushed. `git worktree list` shows only the main checkout. Nothing under `runs/`, `telemetry/`, `eval/local/` or `eval/results/` is tracked.
+- Whole-branch review: every required change is on the branch. That covers the walk in `measure.runs._load_corpus` and its three tests (`3988d24`); the threshold pin, the two headline-overlap tests and the second-pointer test (`231039f`); the neutral locator (`8c86bb3`); and the ledger rewrite (`f93d5de`).
+- Ledger coverage: every one of the 44 commits in `c2be739..f93d5de` is named in this ledger (`f93d5de` here). Each task from 1 to 13a has its commits and review rounds in the status table and its deviations under "Deviations". Tasks 1, 2, 4, 6, 9, 12 and 13 also have their rulings under "Rulings", followed by the whole-branch review's. Pending operator steps are listed under "Pending operator steps": Task 7 Step 6, Task 14 Steps 1 to 5 (both need live, telemetry-instrumented runs, and Task 14 also needs the consolidated Task 0.4 baselines, which are 1.7.1 runs), consolidated Task 3.2 Steps 1 and 2, and the owner's push and PR to `next`.
+- Pending for the owner, added here: the comment citing ADR-0028 above the `eval/results/` and `eval/local/` lines of `.gitignore` (plan Task 11 Files). "Not delivered" records it, but it had no pending step. It needs a run that may edit `.gitignore`.
+- Completeness against the plan's File Structure: every listed path exists and differs from `c2be739`. The plan items not delivered are the three under "Not delivered": Task 14's artefacts (operator, pending), A13.27's per-family freeze scope (deferred to consolidated Phase 9 Step 2), and the `.gitignore` comment (pending for the owner, above). Nothing else the plan requires is missing.
+- Still open: Task 1 item 2 (a stat `OSError` escaping `load_run` and `inputs_digest`; the CLI callers exit 2), and the four questions awaiting the plan owner under "Open review items".
