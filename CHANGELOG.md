@@ -122,6 +122,25 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   input, `user.email` and account ids. The runbook's "Evaluate against labels"
   section covers the corpus layout, labelling, the dev and held-out sets and
   the results.
+- **`calibrate`: decision thresholds from labelled decision records.**
+  `apd-gauntlet calibrate TASK --labels FILE --target-precision P [--min-support N] [--thresholds PATH]`
+  reads dev labels of kind `decisions` (`gold` per item of the decision records
+  under each run's `40-synthesis/decisions/`) and picks the threshold with the
+  highest recall whose precision on the labelled items is at least `P`, with
+  at least `N` predicted positives (default 10). Candidate cuts sit at the
+  midpoints between neighbouring values, so no labelled value lies on one. It
+  writes the entry to the new `tools/apd_gauntlet/data/decide/thresholds.yaml`
+  (shipped empty, with a header): `threshold`, `precision`, `recall`, `n`,
+  `labels_sha256`, the records' `provider`, `model` and `weights_revision`,
+  and `calibrated: true`, keeping every other entry. Two keys ship with a value
+  spec, `finding-qa.unsupported` and `finding-qa.lens_drift`; later tasks
+  register theirs with `register_value`. It exits 1 and leaves the file as it
+  was when no threshold qualifies, and 2 for an unknown key, labels of another
+  kind or key, `set: heldout` labels (thresholds are tuned on dev labels and
+  frozen before held-out runs), labelled records that mix models, an unknown
+  ref, or no gold positive. A calibration changes a tunable, so the command
+  reminds you to re-run `eval freeze`. The runbook's "Calibrate a decision
+  threshold" section covers the labels, the choice and the support floor.
 
 ### Changed
 

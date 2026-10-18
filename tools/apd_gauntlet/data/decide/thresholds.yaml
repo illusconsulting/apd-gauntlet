@@ -1,0 +1,7 @@
+# Decision thresholds (registry R8), read by the decision tasks. Keys are <task> or
+# <task>.<flag>. 'apd-gauntlet calibrate' writes each entry from dev labels: threshold,
+# precision, recall, n, labels_sha256, provider, model, weights_revision and
+# calibrated: true. Proposal entries ship as calibrated: false (amendment A1) and never
+# decide on their own. A changed entry is a changed tunable, so run
+# 'apd-gauntlet eval freeze' before any held-out run (ADR-0028).
+{}

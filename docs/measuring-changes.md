@@ -4,8 +4,9 @@ This runbook is for anyone who changes the gauntlet and has to show what the
 change did: that it kept the findings, and what it saved in tokens and cost. It
 covers capturing a baseline, recording Claude Code's telemetry, summarising a
 run's usage with `apd-gauntlet usage`, the retry and audit counts the workflow
-records, comparing runs with `apd-gauntlet compare-runs`, and scoring runs
-against reviewed labels with `apd-gauntlet eval`.
+records, comparing runs with `apd-gauntlet compare-runs`, scoring runs against
+reviewed labels with `apd-gauntlet eval`, and calibrating decision thresholds
+with `apd-gauntlet calibrate`.
 
 ## Why measure
 
@@ -531,3 +532,121 @@ Exit codes:
   evaluator is unknown or refuses an entry (an `unreviewed` item, labels for
   another entry), the set has no entries, or, for `--set heldout`, the
   tunables are not frozen or changed since the freeze.
+
+## Calibrate a decision threshold
+
+A decision task compares one value per item with a threshold. Finding QA flags
+an item whose value is below its threshold, and an auto-decision task decides
+an item whose score is above it. `apd-gauntlet calibrate` picks the threshold
+from labelled decision records, so it rests on a measured precision instead of
+a guess. Until a key is calibrated, its entry in
+`tools/apd_gauntlet/data/decide/thresholds.yaml` reads `calibrated: false`, and
+it never decides on its own.
+
+### Decision labels
+
+Decision records live in the runs
+(`<run>/40-synthesis/decisions/<task>.<scope>.yaml`), and runs stay local, so
+their labels go in `eval/local/decide/<key>.labels.yaml`, which Git ignores.
+`<key>` is the threshold key, `<task>` or `<task>.<flag>`, for example
+`finding-qa.unsupported`. The labels file is an `eval-labels` file of kind
+`decisions`:
+
+```yaml
+schema_version: 1
+kind: decisions
+set: dev
+task: finding-qa.unsupported
+records:
+  - path: ../../../runs/<name>/40-synthesis/decisions/finding-qa.10-trustworthiness.yaml
+    items:
+      - {ref: conf-1a2b3c4d, gold: true}
+      - {ref: conf-5e6f7a8b, gold: false}
+```
+
+`path` is relative to the labels file, or absolute, and must name a record in
+a run's `40-synthesis/decisions/` directory; the record's `task` must be the
+key's task. Set `gold` to `true` when the item belongs to the class the
+threshold selects. For a finding-QA flag, that means the flag should fire: for
+`finding-qa.unsupported`, the cited excerpts do not support the finding. For an
+auto-decision task, it means the item can be decided without review. Every
+`ref` must be an item of its record, and each item is labelled once. Items with
+`outcome: error`, and items with no value (for `finding-qa.lens_drift`, an item
+whose finding is no longer in the run), are skipped, and the command says how
+many.
+
+Two keys ship with a value: `finding-qa.unsupported` (the probability that the
+excerpts support the claim) and `finding-qa.lens_drift` (the probability of the
+finding's own goal). Both flag values below the threshold. The decision tasks
+register their own keys when they ship.
+
+### Choosing the threshold
+
+```bash
+apd-gauntlet calibrate <task> --labels <file> --target-precision 0.98
+```
+
+`calibrate TASK --labels FILE --target-precision P [--min-support N] [--thresholds PATH]`
+takes the labelled items' values and tries a cut at the midpoint between each
+pair of neighbouring distinct values, so no labelled value sits on a cut. A cut
+qualifies when at least `--min-support` items (default 10) fall on the selected
+side and its precision on them is at least P. Of the cuts that qualify, it
+takes the one with the highest recall, then the highest precision. The target
+of 0.98 is a proposal. The threshold written is the cut rounded to six decimal
+places, unless rounding would carry it onto a labelled value.
+
+The entry goes to `--thresholds`, by default the packaged
+`tools/apd_gauntlet/data/decide/thresholds.yaml`. Every other entry is kept:
+
+```yaml
+finding-qa.unsupported:
+  calibrated: true
+  labels_sha256: <SHA-256 of the labels file>
+  model: clef
+  n: 212
+  precision: 0.9811
+  provider: cloudflare
+  recall: 0.6512
+  threshold: 0.18
+  weights_revision: null
+```
+
+`n` is the number of labelled items used, and `labels_sha256` the SHA-256 of
+the labels file's bytes. `provider`, `model` (the id the provider returned) and
+`weights_revision` come from the records. A threshold holds only for the model
+it was calibrated on, so `calibrate` refuses labelled records that mix models.
+An entry holds one model: calibrating the same key on another model's records
+replaces it. The entry's numbers are aggregate statistics that may be
+committed ([ADR-0028](adrs/0028-committed-calibration-and-frozen-evaluation.md));
+the labels and the records stay local.
+
+### When no threshold qualifies
+
+When no cut qualifies, `calibrate` prints
+`no threshold reaches precision ≥ P with at least N predicted positives (best: Q); <task> stays uncalibrated`,
+exits 1 and leaves the file as it was. `Q` is the best precision reached by a
+cut with enough support, or `none` when no cut had N predicted positives. Label
+more items, above all in the region the threshold would select, or leave the
+key uncalibrated. Lowering `--min-support` to get a threshold defeats the
+floor: a threshold that rests on a few items proves nothing.
+
+### Freeze after calibrating
+
+Calibrate on dev labels only. `calibrate` refuses labels marked `set: heldout`
+(exit 2), because thresholds are tuned on dev data and frozen before held-out
+runs. A calibration changes a tunable, so run `apd-gauntlet eval freeze` before
+any held-out run ("Dev and held-out sets" above); `calibrate` prints that
+reminder after it writes.
+
+Exit codes:
+
+- `0`: the entry is written; the command prints it.
+- `1`: no threshold qualifies, or the thresholds file cannot be written. The
+  file is left as it was.
+- `2`: `TASK` has no value spec (the message lists the known keys); the labels
+  file cannot be read, is invalid, is not of kind `decisions`, is for another
+  key or has `set: heldout`; a record cannot be read, is not in a run's
+  `40-synthesis/decisions/`, is for another task, lacks a provider or model,
+  or lists a ref twice; a `ref` is not an item of its record or is labelled
+  twice; the records mix models; no labelled item has `gold: true`; or the
+  existing thresholds file cannot be read or is not a mapping.

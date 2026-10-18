@@ -133,3 +133,26 @@ def test_runbook_says_telemetry_is_git_ignored_and_why():
     para = _flat(next((p for p in t.split("\n\n") if "lists `telemetry/`" in p), ""))
     for s in ("`.gitignore`", "Bash commands", "tool input", "`user.email`", "account ids"):
         assert s in para, s
+
+
+def test_runbook_covers_calibrate():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    for s in ("calibrate", "--target-precision 0.98", "--min-support", "calibrated: true",
+              "eval freeze"):
+        assert s in t, s
+
+
+def test_runbook_calibrate_section():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    section = _flat(t.split("\n## Calibrate a decision threshold", 1)[1].split("\n## ", 1)[0])
+    for s in ("eval/local/decide/<key>.labels.yaml", "kind: decisions", "set: dev", "`gold`",
+              "40-synthesis/decisions/", "apd-gauntlet calibrate <task> --labels <file> "
+              "--target-precision 0.98", "`--min-support`", "10", "midpoint", "recall",
+              "`set: heldout`", "mix models", "`provider`", "`model`", "`weights_revision`",
+              "`labels_sha256`", "calibrated: true", "calibrated: false", "uncalibrated",
+              "`--thresholds`", "apd-gauntlet eval freeze", "ADR-0028",
+              "tools/apd_gauntlet/data/decide/thresholds.yaml"):
+        assert s in section, s
+    for code in ("- `0`:", "- `1`:", "- `2`:"):
+        assert code in section, code
+    assert t.index("\n## Evaluate against labels") < t.index("\n## Calibrate a decision threshold")

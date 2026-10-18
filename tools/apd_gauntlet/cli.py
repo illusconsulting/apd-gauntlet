@@ -2044,5 +2044,118 @@ def eval_run_cmd(
         click.echo(f"warning: {warning}", err=True)
 
 
+_HELDOUT_LABELS = "calibrate on dev labels only; thresholds freeze before held-out runs"
+_FREEZE_REMINDER = "re-run 'apd-gauntlet eval freeze' before any held-out run"
+
+
+@main.command("calibrate")
+@click.argument("task")
+@click.option(
+    "--labels",
+    "labels_file",
+    required=True,
+    type=click.Path(path_type=Path),
+    metavar="FILE",
+    help="Dev labels of kind decisions for TASK (eval-labels.schema.json).",
+)
+@click.option(
+    "--target-precision",
+    required=True,
+    type=click.FloatRange(0, 1, min_open=True),
+    metavar="P",
+    help="The precision the threshold must reach on the labels, for example 0.98.",
+)
+@click.option(
+    "--min-support",
+    type=click.IntRange(min=1),
+    default=10,
+    show_default=True,
+    metavar="N",
+    help="The fewest predicted positives a threshold may rest on.",
+)
+@click.option(
+    "--thresholds",
+    "thresholds_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    metavar="PATH",
+    help="The thresholds file to update.  [default: the packaged data/decide/thresholds.yaml]",
+)
+def calibrate_cmd(
+    task: str,
+    labels_file: Path,
+    target_precision: float,
+    min_support: int,
+    thresholds_file: Path | None,
+) -> None:
+    """Calibrate the decision threshold TASK (<task> or <task>.<flag>) on dev labels.
+
+    Reads the decision records the labels name, takes the threshold with the
+    highest recall whose precision on the labelled items is at least P with at
+    least N predicted positives, and writes it to the thresholds file with the
+    labels' SHA-256 and the records' provider, model and weights revision
+    (calibrated: true). A changed threshold is a changed tunable, so run
+    'apd-gauntlet eval freeze' before any held-out run. Exits 0 when written, 1
+    when no threshold qualifies or the file cannot be written (it is left as it
+    was), and 2 when TASK has no value spec, the labels are invalid, of another
+    kind or task, or held-out, or the records cannot be used (an unknown ref, a
+    record of another task, records that mix models, no gold positive).
+    """
+    from .eval import calibrate as cal
+    from .eval.corpus import CorpusError, load_labels
+
+    spec = cal.VALUE_SPECS.get(task)
+    if spec is None:
+        _refuse(cal.unknown_key_message(task))
+    try:
+        labels = load_labels(labels_file)
+    except CorpusError as exc:
+        _refuse(str(exc))
+    if labels.kind != "decisions":
+        _refuse(f"{labels_file}: labels of kind {labels.kind}; calibrate needs kind decisions")
+    if labels.data["task"] != task:
+        _refuse(f"{labels_file}: labels for {labels.data['task']}, not {task}")
+    if labels.data["set"] == "heldout":
+        _refuse(f"{labels_file}: set: heldout; {_HELDOUT_LABELS}")
+    try:
+        provider, model, weights_revision = cal.record_model(labels)
+        pairs, skipped = cal.labelled_pairs(labels, task)
+        result = cal.choose_threshold(
+            pairs, direction=spec.direction, target_precision=target_precision,
+            min_support=min_support,
+        )
+    except cal.CalibrationError as exc:
+        _refuse(str(exc))
+    if skipped:
+        click.echo(
+            f"skipped {skipped} labelled item{'' if skipped == 1 else 's'}"
+            " (outcome error or no value)"
+        )
+    if not result.feasible:
+        best = "none" if result.best_precision is None else f"{result.best_precision:.4f}"
+        click.echo(
+            f"no threshold reaches precision ≥ {target_precision:g} with at least "
+            f"{min_support} predicted positives (best: {best}); {task} stays uncalibrated"
+        )
+        raise SystemExit(1)
+    path = thresholds_file if thresholds_file is not None else cal.THRESHOLDS_PATH
+    try:
+        cal.write_threshold(
+            path, task, result, labels.sha256,
+            provider=provider, model=model, weights_revision=weights_revision,
+        )
+    except cal.CalibrationError as exc:
+        _refuse(str(exc))
+    except OSError as exc:
+        _cannot_write(path, exc)
+    entry = cal.threshold_entry(
+        result, labels.sha256, provider=provider, model=model, weights_revision=weights_revision
+    )
+    click.echo(f"wrote {path}: {task}, selecting values {spec.direction} the threshold")
+    for line in yaml.safe_dump(entry, sort_keys=True).splitlines():
+        click.echo(f"  {line}")
+    click.echo(_FREEZE_REMINDER)
+
+
 if __name__ == "__main__":
     main()

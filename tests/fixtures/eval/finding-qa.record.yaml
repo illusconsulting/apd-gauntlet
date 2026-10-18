@@ -1,0 +1,82 @@
+# A finding-qa decision record in the LA1 shape, for the calibrate tests. Items 1-8
+# answer excerpt_supports_claim (p) and goal (confidentiality = p / 2); item 9 is an error.
+schema_version: 1
+task: finding-qa
+scope: 10-trustworthiness
+provider: cloudflare
+model: clef
+schema_sha256: 5f1c0d8e9a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5
+generated_at: 2026-10-10T00:00:00Z
+thresholds: {lens_drift: 0.5, unsupported: 0.3, severity_delta: 1.0}
+calibrated: false
+usage: {calls: 9, input_tokens: 12600, cost_usd: 0.00302, cost_basis: estimated}
+items:
+  - ref: conf-00000001
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.05}
+      goal: {type: choice, choice: integrity, confidence: 0.975,
+             probabilities: {confidentiality: 0.025, integrity: 0.975}}
+    error: null
+  - ref: conf-00000002
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.1}
+      goal: {type: choice, choice: integrity, confidence: 0.95,
+             probabilities: {confidentiality: 0.05, integrity: 0.95}}
+    error: null
+  - ref: conf-00000003
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.15}
+      goal: {type: choice, choice: integrity, confidence: 0.925,
+             probabilities: {confidentiality: 0.075, integrity: 0.925}}
+    error: null
+  - ref: conf-00000004
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.2}
+      goal: {type: choice, choice: integrity, confidence: 0.9,
+             probabilities: {confidentiality: 0.1, integrity: 0.9}}
+    error: null
+  - ref: conf-00000005
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.3}
+      goal: {type: choice, choice: integrity, confidence: 0.85,
+             probabilities: {confidentiality: 0.15, integrity: 0.85}}
+    error: null
+  - ref: conf-00000006
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.4}
+      goal: {type: choice, choice: integrity, confidence: 0.8,
+             probabilities: {confidentiality: 0.2, integrity: 0.8}}
+    error: null
+  - ref: conf-00000007
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.6}
+      goal: {type: choice, choice: integrity, confidence: 0.7,
+             probabilities: {confidentiality: 0.3, integrity: 0.7}}
+    error: null
+  - ref: conf-00000008
+    outcome: pass
+    flags: []
+    answers:
+      excerpt_supports_claim: {type: noul, p: 0.8}
+      goal: {type: choice, choice: integrity, confidence: 0.6,
+             probabilities: {confidentiality: 0.4, integrity: 0.6}}
+    error: null
+  - ref: conf-00000009
+    outcome: error
+    flags: []
+    answers: {}
+    error: provider returned HTTP 503 after 3 attempts
