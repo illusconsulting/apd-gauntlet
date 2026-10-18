@@ -21,6 +21,21 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   tier repair loop repaired or re-ran. The command exits 2 when the value is not
   JSON and 1 when it does not match the schema, and writes nothing in either
   case.
+- **`usage`: tokens and cost per agent and phase from OpenTelemetry.**
+  `apd-gauntlet usage RUN_DIR --otel FILE [--workflow-run ID] [--json]` reads
+  Claude Code's `claude_code.api_request` events from an OTLP/JSON export (the
+  OpenTelemetry Collector `file` exporter's output) and writes
+  `<run>/.apd-state/usage.yaml`: totals, `by_agent` and `by_phase`, the
+  decision-model spend recorded under `40-synthesis/decisions/`, and the
+  combined cost `cost_usd_all`. It warns when agent names are redacted (set
+  `OTEL_LOG_TOOL_DETAILS=1`, Claude Code 2.1.273 or later), when the file
+  covers more than one workflow run, and when a request carries no cost. It
+  exits 1 and writes nothing when no `api_request` event is left after
+  filtering, and 2 when the export is not OTLP/JSON (the console exporter's
+  output is refused). The new runbook,
+  [docs/measuring-changes.md](docs/measuring-changes.md), covers baseline
+  capture, the telemetry setup with a minimal Collector configuration, and the
+  agent-to-phase map.
 
 ### Changed
 

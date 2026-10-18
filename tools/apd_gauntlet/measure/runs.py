@@ -4,12 +4,14 @@ The snapshot holds what a before-and-after comparison needs: findings and
 capabilities by id (the whole corpus, attack-path and threat-model findings
 included), the asset-graph node names each record's edges target, the report
 headlines expanded through ``merged_from``, a digest of ``inputs/`` so runs
-over different inputs are never compared, and the run's retry and repair counts
-(``.apd-state/attempts.yaml``) when it recorded them.
+over different inputs are never compared, the run's retry and repair counts
+(``.apd-state/attempts.yaml``) when it recorded them, and its token and cost
+totals (``.apd-state/usage.yaml``) when ``apd-gauntlet usage`` wrote them.
 """
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +21,7 @@ import yaml
 
 from ..synthesis.loader import load_corpus
 from .attempts import Attempts, AttemptsError, read_attempts
+from .usage import USAGE_RELPATH
 
 _CHUNK = 1 << 20
 # The legacy plural root key ``load_corpus`` also accepts for each record kind.
@@ -38,6 +41,7 @@ class RunSnapshot:
     headlines: tuple[frozenset[str], ...] | None
     inputs_sha256: str | None
     attempts: Attempts | None = None
+    usage_totals: dict[str, float] | None = None
 
 
 def is_run_dir(path: Path) -> bool:
@@ -247,6 +251,42 @@ def _headlines(
     return tuple(merged.get(h["id"], frozenset({h["id"]})) for h in entries)
 
 
+def _number(value: Any) -> bool:
+    """A finite int or float; a boolean is not a number."""
+    return (
+        isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    )
+
+
+def _usage_totals(run_dir: Path) -> dict[str, float] | None:
+    """``totals`` of ``.apd-state/usage.yaml`` plus its ``cost_usd_all`` when present.
+
+    ``None`` when the file does not exist. A file that cannot be read or parsed,
+    has no ``totals`` mapping, or holds a value that is not a number raises
+    ``RunLoadError`` naming it.
+    """
+    path = run_dir / USAGE_RELPATH
+    try:
+        doc = _parse_mapping(path)
+    except RunLoadError as exc:
+        if isinstance(exc.__cause__, FileNotFoundError):
+            return None
+        raise
+    totals = doc.get("totals")
+    if not isinstance(totals, dict):
+        raise RunLoadError(f"{path}: totals is not a mapping")
+    out: dict[str, float] = {}
+    for key, value in totals.items():
+        if not _number(value):
+            raise RunLoadError(f"{path}: totals.{key} is not a number: {value!r}")
+        out[str(key)] = value
+    if "cost_usd_all" in doc:
+        if not _number(doc["cost_usd_all"]):
+            raise RunLoadError(f"{path}: cost_usd_all is not a number: {doc['cost_usd_all']!r}")
+        out["cost_usd_all"] = doc["cost_usd_all"]
+    return out
+
+
 def load_run(path: Path) -> RunSnapshot:
     """Read the run directory at ``path``.
 
@@ -259,7 +299,10 @@ def load_run(path: Path) -> RunSnapshot:
     headline has a string ``id``; ``inputs_sha256`` is ``None`` when the run has
     no ``inputs/``. ``attempts`` is ``None`` when the run has no
     ``.apd-state/attempts.yaml`` (every 1.7 run); an attempts file that is
-    invalid or unreadable raises ``RunLoadError`` naming it.
+    invalid or unreadable raises ``RunLoadError`` naming it. ``usage_totals``
+    is ``None`` when the run has no ``.apd-state/usage.yaml``; one that cannot
+    be read, has no ``totals`` mapping or holds a value that is not a number
+    raises ``RunLoadError`` naming it.
     """
     findings, capabilities = _load_corpus(path)
     synth = path / "40-synthesis"
@@ -284,4 +327,5 @@ def load_run(path: Path) -> RunSnapshot:
         headlines=headlines,
         inputs_sha256=inputs_digest(path),
         attempts=attempts,
+        usage_totals=_usage_totals(path),
     )

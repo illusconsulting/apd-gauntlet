@@ -1555,5 +1555,94 @@ def audit_report_cmd(run_dir: Path) -> None:
         raise SystemExit(1)
 
 
+@main.command("usage")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--otel",
+    "otel_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help=(
+        "OpenTelemetry logs export in OTLP/JSON (the Collector file exporter's output). "
+        "The console exporter's output is refused; see docs/measuring-changes.md."
+    ),
+)
+@click.option(
+    "--workflow-run",
+    "workflow_run",
+    metavar="ID",
+    default=None,
+    help="Count only api_request events whose workflow.run_id is ID.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Print the written summary as JSON.")
+def usage_cmd(run_dir: Path, otel_file: Path, workflow_run: str | None, as_json: bool) -> None:
+    """Summarise tokens and cost per agent and phase into RUN_DIR/.apd-state/usage.yaml.
+
+    Reads Claude Code's claude_code.api_request events from the export, adds the
+    decision-model spend under 40-synthesis/decisions/, and writes the summary.
+    Exits 0 when written, 1 when no api_request event is left after filtering
+    (nothing is written), and 2 when the export or a decision record cannot be read.
+    """
+    from .measure.usage import (
+        UsageParseError,
+        iter_api_requests,
+        summarize_decisions,
+        summarize_usage,
+        write_usage,
+    )
+
+    if not (run_dir / ".apd-run.yaml").is_file():
+        raise click.BadParameter(
+            f"{run_dir} is not a run directory (no .apd-run.yaml)", param_hint="'RUN_DIR'"
+        )
+    try:
+        summary = summarize_usage(
+            iter_api_requests(otel_file), source=otel_file, workflow_run=workflow_run
+        )
+        if summary["totals"]["requests"] == 0:
+            message = f"no api_request events in {otel_file}"
+            if workflow_run is not None:
+                runs = ", ".join(summary["source"]["workflow_runs"]) or "none"
+                message += f" for workflow run {workflow_run} (workflow runs in the file: {runs})"
+            click.echo(f"Error: {message}; nothing written", err=True)
+            raise SystemExit(1)
+        decisions = summarize_decisions(run_dir)
+    except UsageParseError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(2) from exc
+    warnings = summary.pop("warnings")
+    summary["decision_models"] = decisions
+    summary["cost_usd_all"] = round(
+        summary["totals"]["cost_usd"] + decisions["totals"]["cost_usd"], 9
+    )
+    summary["warnings"] = warnings
+    try:
+        written = write_usage(run_dir, summary)
+    except OSError as exc:
+        click.echo(
+            f"Error: {run_dir / '.apd-state/usage.yaml'}: cannot write: {exc.strerror or exc}",
+            err=True,
+        )
+        raise SystemExit(1) from exc
+    for warning in warnings:
+        click.echo(f"warning: {warning}", err=True)
+    if as_json:
+        click.echo(_stdjson.dumps(summary, indent=2))
+        return
+    totals = summary["totals"]
+    click.echo(
+        f"usage: {totals['requests']} api_request events, cost_usd {totals['cost_usd']:.6f} "
+        f"(with decision models {summary['cost_usd_all']:.6f}) -> {written}"
+    )
+    for phase, row in summary["by_phase"].items():
+        tokens = sum(row[k] for k in (
+            "input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens"
+        ))
+        click.echo(
+            f"  {phase}: {row['requests']} requests, {tokens} tokens, "
+            f"cost_usd {row['cost_usd']:.6f}"
+        )
+
+
 if __name__ == "__main__":
     main()
