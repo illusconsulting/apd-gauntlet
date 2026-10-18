@@ -103,6 +103,25 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   or pinned public repositories. Results, private labels, usage and attempts
   files, and runs stay local. The ADR also records the freeze protocol: dev
   and held-out sets disjoint, tuning on dev only, freeze before held-out runs.
+- **`eval run`: score a corpus set with a registered evaluator.**
+  `apd-gauntlet eval run CORPUS --set dev|heldout --evaluator NAME [--root DIR] [--results-dir DIR] [--json]`
+  scores every entry of the set (the `findings` evaluator ships with the
+  engine) and writes `eval/results/<evaluator>/<set>-<UTC time>.yaml`: each
+  entry's counts, metrics and notes, and totals computed from the summed
+  counts. `--set heldout` checks the freeze before it reads the corpus and
+  again after the last entry, and exits 2 when `eval/frozen.yaml` is missing
+  or a tunables file changed since the freeze. Its results record the frozen
+  hash, so `eval freeze` then refuses to re-freeze changed tunables without
+  `--new-heldout-set`. A dev run records the frozen hash when the tunables
+  match the freeze. Nothing is written when any entry fails, and an existing
+  results file is never overwritten. It exits 1 when the results file exists
+  or cannot be written, and 2 when the corpus or a labels file is invalid, the
+  evaluator is unknown or refuses an entry, or the set has no entries.
+  `.gitignore` now lists `eval/results/`, `eval/local/` (private corpora and
+  labels) and `telemetry/`, because telemetry exports hold Bash commands, tool
+  input, `user.email` and account ids. The runbook's "Evaluate against labels"
+  section covers the corpus layout, labelling, the dev and held-out sets and
+  the results.
 
 ### Changed
 

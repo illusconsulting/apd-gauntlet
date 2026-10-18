@@ -5,7 +5,7 @@ import hashlib
 import json as _stdjson
 import pathlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 import click
 import yaml
@@ -1931,6 +1931,117 @@ def eval_freeze_cmd(root: Path, new_heldout_set: bool) -> None:
     click.echo(f"wrote {path}: {state}")
     for name in after.files:
         click.echo(f"  {name}")
+
+
+def _same_directory(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except (OSError, RuntimeError):  # RuntimeError: a link loop before 3.13
+        return a.absolute() == b.absolute()
+
+
+@eval_group.command("run")
+@click.argument("corpus", type=click.Path(path_type=Path))
+@click.option(
+    "--set",
+    "set_name",
+    required=True,
+    type=click.Choice(["dev", "heldout"]),
+    help="The set of CORPUS to score; heldout needs 'eval freeze' first.",
+)
+@click.option(
+    "--evaluator",
+    required=True,
+    metavar="NAME",
+    help="A registered evaluator, for example findings.",
+)
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The repository whose eval/frozen.yaml and tunables are checked.",
+)
+@click.option(
+    "--results-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Where the results go.  [default: ROOT/eval/results]",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print the results, the file's path and any warnings as JSON.",
+)
+def eval_run_cmd(
+    corpus: Path,
+    set_name: Literal["dev", "heldout"],
+    evaluator: str,
+    root: Path,
+    results_dir: Path | None,
+    as_json: bool,
+) -> None:
+    """Score the dev or heldout entries of CORPUS with a registered evaluator.
+
+    Writes RESULTS_DIR/<evaluator>/<set>-<UTC time>.yaml: each entry's counts,
+    metrics and notes, and the totals over the set. --set heldout needs the
+    tunables frozen with 'eval freeze' and unchanged since; its results record
+    the frozen hash, so re-freezing changed tunables then needs
+    --new-heldout-set. A dev run records the frozen hash when the tunables
+    match the freeze, and null otherwise. Exits 0 when written, 1 when the
+    results file exists (it is never overwritten) or cannot be written, and 2
+    when CORPUS or a labels file is invalid, the tunables are not frozen or
+    changed since the freeze (heldout), the evaluator is unknown or refuses an
+    entry, or the set has no entries.
+    """
+    from .eval.corpus import CorpusError
+    from .eval.evaluators import get, load_builtin_evaluators
+    from .eval.freeze import RESULTS_RELPATH, FreezeError
+    from .eval.runner import ResultsWriteError, run_eval
+
+    load_builtin_evaluators()
+    try:
+        get(evaluator)
+    except KeyError as exc:
+        _refuse(str(exc.args[0]))
+    default_results = root / RESULTS_RELPATH
+    target = results_dir if results_dir is not None else default_results
+    warnings: list[str] = []
+    if set_name == "heldout" and not _same_directory(target, default_results):
+        warnings.append(
+            f"held-out results outside {default_results} are not seen by 'eval freeze', so a "
+            "re-freeze of changed tunables will not know this run used them"
+        )
+    try:
+        path = run_eval(corpus, set_name, evaluator, root=root, results_dir=target)
+    except (CorpusError, FreezeError, ValueError) as exc:
+        _refuse(str(exc))
+    except ResultsWriteError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from None
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if as_json:
+        click.echo(_stdjson.dumps(
+            {"path": str(path), "result": doc, "warnings": warnings}, indent=2
+        ))
+        return
+    n = len(doc["entries"])
+    frozen = doc["frozen_sha256"]
+    click.echo(
+        f"wrote {path}: {evaluator} on {n} {set_name} {'entry' if n == 1 else 'entries'} "
+        f"of corpus {doc['corpus']['name']}, "
+        + (f"frozen {frozen[:8]}" if frozen else "not frozen")
+    )
+    if doc["totals"]["metrics"]:
+        click.echo("totals:")
+        for key, value in doc["totals"]["metrics"].items():
+            click.echo(f"  {key}: " + ("n/a" if value is None else f"{value:.4f}"))
+    for entry in doc["entries"]:
+        for note in entry["notes"]:
+            click.echo(f"note ({entry['id']}): {note}")
+    for warning in warnings:
+        click.echo(f"warning: {warning}", err=True)
 
 
 if __name__ == "__main__":

@@ -107,3 +107,29 @@ def test_runbook_attempts_section():
               "`plan-run`", "records no attempts", "Recorded attempts ->"):
         assert s in section, s
     assert t.index("\n## Retries and audit iterations") < t.index("\n## Compare runs")
+
+
+def test_runbook_covers_eval():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    for s in ("eval run", "--set heldout", "eval freeze", "--new-heldout-set", "label-template",
+              "eval/local/"):
+        assert s in t, s
+
+
+def test_runbook_eval_section():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    section = _flat(t.split("\n## Evaluate against labels", 1)[1].split("\n## ", 1)[0])
+    for s in ("eval/<area>/corpus.yaml", "eval/<area>/labels/", "eval/local/", "eval-corpus",
+              "eval-labels", "`unreviewed`", "`true_positive`", "`false_positive`",
+              "eval/frozen.yaml", "eval/results/<evaluator>/<set>-<timestamp>.yaml",
+              "`frozen_sha256`", "`totals`", "ADR-0028", "--results-dir", "--json"):
+        assert s in section, s
+    for code in ("- `0`:", "- `1`:", "- `2`:"):
+        assert code in section, code
+
+
+def test_runbook_says_telemetry_is_git_ignored_and_why():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    para = _flat(next((p for p in t.split("\n\n") if "lists `telemetry/`" in p), ""))
+    for s in ("`.gitignore`", "Bash commands", "tool input", "`user.email`", "account ids"):
+        assert s in para, s

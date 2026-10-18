@@ -4,7 +4,8 @@ This runbook is for anyone who changes the gauntlet and has to show what the
 change did: that it kept the findings, and what it saved in tokens and cost. It
 covers capturing a baseline, recording Claude Code's telemetry, summarising a
 run's usage with `apd-gauntlet usage`, the retry and audit counts the workflow
-records, and comparing runs with `apd-gauntlet compare-runs`.
+records, comparing runs with `apd-gauntlet compare-runs`, and scoring runs
+against reviewed labels with `apd-gauntlet eval`.
 
 ## Why measure
 
@@ -128,12 +129,15 @@ mkdir -p telemetry
 otelcol-contrib --config /path/to/collector.yaml
 ```
 
-Before the first capture, check that Git ignores `telemetry/`:
-`git check-ignore telemetry/x.otlp.jsonl` prints the path when it does. If it
-prints nothing, add the line `telemetry/` to `.git/info/exclude`, which Git
-reads but never commits, so that `git add -A` cannot stage an export. You can
-also give `path` an absolute directory outside the repository and pass that
-file to `--otel`.
+The repository's `.gitignore` lists `telemetry/`, as it lists `runs/`,
+`eval/results/` and `eval/local/`, because every export holds Bash commands,
+tool input, `user.email` and account ids. Before the first capture, check that
+Git ignores it: `git check-ignore telemetry/x.otlp.jsonl` prints the path when
+it does. A checkout of an older branch (`main` and the 1.7.x releases) does
+not list it. If the command prints nothing, add the line `telemetry/` to
+`.git/info/exclude`, which Git reads but never commits, so that `git add -A`
+cannot stage an export. You can also give `path` an absolute directory outside
+the repository and pass that file to `--otel`.
 
 Restart the Collector with a new `path` before each run, so that every run has
 its own file. The receiver listens on 127.0.0.1 only. If the file also receives
@@ -417,3 +421,113 @@ it), `values`, `gates` and `warnings`.
   agrees with a baseline severity on that scale);
 - a run has no `inputs/`, so its inputs cannot be checked against the others;
 - `--strict` is given without `--gates`.
+
+## Evaluate against labels
+
+`compare-runs` says what changed between two runs. `apd-gauntlet eval` says how
+good one run is: it scores runs against labels that a person reviewed, entry by
+entry, and writes the counts and metrics to a local results file.
+
+### Corpus layout
+
+A corpus is a manifest, `eval/<area>/corpus.yaml` (schema `eval-corpus`), and
+one labels file per entry under `eval/<area>/labels/` (schema `eval-labels`).
+Each entry has an `id`, a `set` (`dev` or `heldout`), a finished run directory
+(`run`), a repository pinned by its full commit SHA (`repo`), or both, and its
+`labels` file. `run` and `labels` are relative to the manifest's directory, or
+absolute.
+
+```yaml
+schema_version: 1
+name: findings
+entries:
+  - id: claim-event-bus
+    set: dev
+    run: ../../examples/apd-20260601-claim-event-bus/expected
+    labels: labels/claim-event-bus.yaml
+```
+
+A committed corpus references only committed fixtures (the synthetic examples
+under `examples/`) or public repositories pinned by commit
+([ADR-0028](adrs/0028-committed-calibration-and-frozen-evaluation.md)). A
+corpus over private runs, with its labels, goes under `eval/local/<area>/`,
+which Git ignores.
+
+### Labelling
+
+`eval label-template` writes a findings labels file for a run, with one
+`unreviewed` item per finding:
+
+```bash
+apd-gauntlet eval label-template runs/<name> --entry <id> --out eval/local/findings/labels/<id>.yaml
+```
+
+Review every item. Set its verdict to `true_positive` for a real finding,
+correcting `apd_goal` or `severity` where the run got them wrong, or to
+`false_positive` for a wrong one, and add the true positives the run missed.
+Evaluators refuse a labels file that still has an `unreviewed` item. The
+command never overwrites an existing file.
+
+### Dev and held-out sets
+
+Tune on the `dev` set and measure once on the `heldout` set. The two sets must
+be disjoint: the manifest loader refuses a run directory, or a repository at
+one commit, that appears in both.
+
+The tunables are the decision thresholds
+(`tools/apd_gauntlet/data/decide/thresholds.yaml`) and every
+`tools/apd_gauntlet/data/*/context-params.yaml`. The freeze protocol
+(ADR-0028):
+
+1. Tune on dev only, with `eval run --set dev` after each change.
+2. Freeze: `apd-gauntlet eval freeze` records the SHA-256 of every tunables
+   file in `eval/frozen.yaml`. It compares content, not modification times.
+3. Measure: `eval run --set heldout` checks the freeze before it reads the
+   corpus, and again after the last entry. It exits 2 when `eval/frozen.yaml`
+   is missing or a tunables file was added, removed or changed since the
+   freeze, and writes nothing.
+4. Each held-out results file records the frozen hash (`frozen_sha256`). Once
+   one does, `eval freeze` exits 1 instead of re-freezing changed tunables. A
+   tunable changed after a held-out run means a new held-out set: build one,
+   then run `eval freeze --new-heldout-set`, which raises the file's
+   `generation` by one.
+
+### Running
+
+```bash
+apd-gauntlet eval run eval/findings/corpus.yaml --set dev --evaluator findings
+```
+
+`eval run CORPUS --set dev|heldout --evaluator NAME [--root DIR] [--results-dir DIR] [--json]`
+scores every entry of the set with the evaluator, in manifest order. The
+`findings` evaluator ships with the engine. `--root` (default `.`) is the
+repository whose `eval/frozen.yaml` and tunables are checked. The manifest and
+every labels file are read before the first entry is scored, and an error in
+any entry writes nothing.
+
+The results file is `eval/results/<evaluator>/<set>-<timestamp>.yaml`, with the
+time in UTC (`20261017T123045Z`); `--results-dir` replaces `eval/results`. It
+records the evaluator, the set, the corpus (name, path and the SHA-256 of the
+manifest), `frozen_sha256`, the engine version and the time, then one row per
+entry (`counts`, `metrics` and `notes`) and the `totals`: the entries' counts
+summed, and the metrics the evaluator computes from those sums (pooled, not
+averaged; empty for an evaluator that reports no totals). A dev run records
+the frozen hash when the tunables match the freeze, and `null` otherwise. An
+existing results file is never overwritten.
+
+Results stay local: Git ignores `eval/results/`, and the numbers are never
+committed (ADR-0028). `eval freeze` looks for held-out results only under
+`<root>/eval/results`, so `eval run --set heldout` warns when `--results-dir`
+points elsewhere.
+
+`--json` prints `path` (the results file), `result` (its content) and
+`warnings`.
+
+Exit codes:
+
+- `0`: the results file is written.
+- `1`: the results file exists or cannot be written.
+- `2`: the manifest or a labels file cannot be read or is invalid, the
+  evaluator is unknown or refuses an entry (an `unreviewed` item, labels for
+  another entry), the set has no entries, or, for `--set heldout`, the
+  tunables are not frozen or changed since the freeze.

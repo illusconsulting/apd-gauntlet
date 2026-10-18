@@ -47,3 +47,6 @@ docs/audits/
 docs/cprt_*.json
 docs/cprt_*.xlsx
 docs/csf-pf-*.xlsx
+eval/results/
+eval/local/
+telemetry/
