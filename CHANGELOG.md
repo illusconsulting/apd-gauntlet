@@ -270,10 +270,11 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   two false positives in the committed examples (`**The client signs…` and a
   JSON object broken across lines). A YAML or JSON input searched as plain
   text only (over 1 MiB, with aliases, nested more than 100 levels or not
-  parseable) still gives a warning. The Home Assistant example's 23
-  remaining non-verbatim excerpts now quote their inputs, or, for three
-  absence notes, are wholly in parentheses, and `apd-evidence-discipline`
-  teaches that marker rule.
+  parseable) still gives a warning, and so does one with more than 100,000
+  parsed strings, of which only 100,000 are tried. The Home Assistant
+  example's 23 remaining non-verbatim excerpts now quote their inputs, or,
+  for three absence notes, are wholly in parentheses, and
+  `apd-evidence-discipline` teaches that marker rule.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

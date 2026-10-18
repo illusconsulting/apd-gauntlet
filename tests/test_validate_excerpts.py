@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -388,11 +390,14 @@ def test_string_scalars_visits_each_container_once_and_respects_the_limit():
     loop: list = []
     loop.append(loop)
     loop.append("x")
-    assert validate_mod._string_scalars(loop, 10) == ["x"]
+    assert validate_mod._string_scalars(loop, 10) == (["x"], False)
     shared = ["s"]
-    found = validate_mod._string_scalars([shared, shared, {"k": shared}], 100)
-    assert sorted(found) == ["k", "s"]
-    assert len(validate_mod._string_scalars([str(i) for i in range(50)], 7)) == 7
+    found, truncated = validate_mod._string_scalars([shared, shared, {"k": shared}], 100)
+    assert sorted(found) == ["k", "s"] and not truncated
+    found, truncated = validate_mod._string_scalars([str(i) for i in range(50)], 7)
+    assert len(found) == 7 and truncated  # the cap stopped the walk: values left untried
+    found, truncated = validate_mod._string_scalars(["a1", "b2"], 2)
+    assert sorted(found) == ["a1", "b2"] and not truncated  # at the cap, nothing left
 
 
 def test_structured_input_above_the_parse_cap_uses_only_the_whole_text(tmp_path, parse_calls):
@@ -467,10 +472,10 @@ def test_anchor_free_yaml_is_still_parsed_for_scalars(parse_calls):
 
 def test_string_scalars_dedupes_a_shared_string_and_caps_total_characters():
     big = "x" * 1_000
-    assert validate_mod._string_scalars([big] * 500, 10_000) == [big]
+    assert validate_mod._string_scalars([big] * 500, 10_000) == ([big], False)
     distinct = [str(i) * 10 for i in range(100)]
-    found = validate_mod._string_scalars(distinct, 10_000, max_chars=50)
-    assert 0 < len(found) < 100
+    found, truncated = validate_mod._string_scalars(distinct, 10_000, max_chars=50)
+    assert 0 < len(found) < 100 and truncated
     assert sum(map(len, found)) < 50 + max(map(len, distinct))
 
 
@@ -583,6 +588,7 @@ def test_normalize_folds_case_and_drops_whitespace_beside_punctuation():
     assert normalize_excerpt_text("**The Client** SIGNS") == "the client signs"
     assert normalize_excerpt_text("f(true, {\n  token: 1\n});") == "f(true,{token:1});"
     assert normalize_excerpt_text("a - b ,c") == "a-b,c"
+    assert normalize_excerpt_text("a \t  ,\n  b") == "a,b"  # a mixed run, all of it
     # Whitespace between two words still counts, as one space.
     assert normalize_excerpt_text("rate \n limit") == "rate limit"
     assert normalize_excerpt_text("rate limit") != normalize_excerpt_text("ratelimit")
@@ -622,6 +628,46 @@ def test_a_different_word_is_still_a_miss(tmp_path):
 def test_observed_false_positives_now_match(example, record_id, tmp_path):
     run = _example_with_inputs(tmp_path, example)
     assert record_id not in {v.record_id for v in check_excerpts_verbatim(run)}
+
+
+# A whitespace run in an untrusted input must cost time linear in its length: every gate
+# normalizes each cited input. The first item (a) pattern backtracked through a run at each
+# of its positions, so one million spaces took about an hour per gate.
+LONG_SPACE_RUN = " " * 1_000_000
+
+
+def _long_run_in_markdown(run: Path) -> None:
+    # Between two words, the costly case: no punctuation ends the backtracking early.
+    (run / "inputs/tech_plan.md").write_text(FINDING_EX + LONG_SPACE_RUN + CAP_EX + "\n")
+
+
+def _long_run_in_a_parsed_scalar(run: Path) -> None:
+    body = f"note: 'it''s replicated: factor 3'\npad: \"a{LONG_SPACE_RUN}b\"\n"
+    (run / "inputs/padded.yaml").write_text(body)
+    assert len(body) <= validate_mod._MAX_STRUCTURED_PARSE_BYTES  # parsed, not whole text only
+    _cite(run, "padded.yaml")
+    _list_in_brief(run, "padded.yaml")
+    _set_excerpt(run, "it's replicated: factor 3")  # only a parsed scalar holds it
+
+
+LONG_SPACE_RUN_INPUTS = {
+    "whole-text": _long_run_in_markdown,
+    "parsed-scalar": _long_run_in_a_parsed_scalar,
+}
+
+
+@pytest.mark.parametrize("case", sorted(LONG_SPACE_RUN_INPUTS))
+def test_a_long_whitespace_run_is_normalized_in_linear_time(tmp_path, case):
+    run = _run(tmp_path, CAP_EX)
+    LONG_SPACE_RUN_INPUTS[case](run)
+    # In a child process killed at the bound, so a regression fails here instead of
+    # pinning the suite (subprocess.run raises TimeoutExpired).
+    argv = [sys.executable, "-m", "apd_gauntlet.cli", "validate", "--errors-only", str(run)]
+    p = subprocess.run(argv, capture_output=True, text=True, timeout=TIME_BOUND_S)
+    assert p.returncode == 0 and p.stdout == "", p.stdout + p.stderr
+    started = time.perf_counter()
+    assert check_excerpts_verbatim(run) == []
+    assert time.perf_counter() - started < TIME_BOUND_S
 
 
 # Item (f): a structured input searched only as whole text stays a warning.
@@ -667,9 +713,21 @@ def _broken_json(run: Path) -> str:
     return "broken.json"
 
 
+def _over_the_scalar_cap_json(run: Path) -> str:
+    # Parsed, but the walk stops at _MAX_SCALAR_HAYSTACKS strings before it reaches the
+    # note (it takes the last values first). Distinct strings: the walk counts each object once.
+    pad = [f"{i:x}" for i in range(validate_mod._MAX_SCALAR_HAYSTACKS + 20_000)]
+    body = '{"note": "it\\u0027s replicated: factor 3", "pad": '
+    body += json.dumps(pad, separators=(",", ":")) + "}"
+    assert len(body) <= validate_mod._MAX_STRUCTURED_PARSE_BYTES
+    (run / "inputs/many.json").write_text(body)
+    return "many.json"
+
+
 # Each input's parsed values would hold the excerpt; its whole text never does.
 WHOLE_TEXT_ONLY = {
     "over-the-parse-cap": _big_yaml,
+    "over-the-scalar-cap": _over_the_scalar_cap_json,
     "yaml-alias": _aliased_yaml,
     "yaml-deeper-than-the-cap": _deep_yaml,
     "unparseable-yaml": _broken_yaml,

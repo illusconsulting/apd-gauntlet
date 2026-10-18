@@ -225,23 +225,25 @@ _MAX_SCALAR_HAYSTACK_CHARS = 4 * 1024 * 1024
 _MAX_YAML_DEPTH = 100
 
 
-# A whitespace run next to a punctuation mark or symbol: any character that is not a
-# letter, digit, underscore or whitespace.
-_SPACE_BESIDE_PUNCTUATION = re.compile(r"\s+(?=[^\w\s])|(?<=[^\w\s])\s+")
+# A space next to a punctuation mark or symbol: any character that is not a letter, digit,
+# underscore or whitespace. It runs on text whose whitespace is already collapsed to single
+# spaces; a ``\s+`` here would backtrack through a whitespace run at each of its positions,
+# quadratic in the run's length, and the inputs are untrusted.
+_SPACE_BESIDE_PUNCTUATION = re.compile(r" (?=[^\w\s])|(?<=[^\w\s]) ")
 
 
 def normalize_excerpt_text(text: str) -> str:
-    """Fold case, drop the Markdown inline markers (backtick, ``*``), remove whitespace
-    next to punctuation and collapse the rest to one space.
+    """Fold case, drop the Markdown inline markers (backtick, ``*``), collapse whitespace
+    to one space and remove that space next to punctuation.
 
     Applied to both the excerpt and the artifact text, so an excerpt quoted from
     rendered Markdown still matches the source that carries the markers, a quote that
     starts a sentence in lower case still matches, and re-wrapped lines still match, also
     where the source breaks a line after punctuation (``{`` then an indented key).
-    Whitespace between two words still counts, as one space.
+    Whitespace between two words still counts, as one space. Linear in the text's length.
     """
-    text = text.replace("`", "").replace("*", "").casefold()
-    return " ".join(_SPACE_BESIDE_PUNCTUATION.sub("", text).split())
+    text = " ".join(text.replace("`", "").replace("*", "").casefold().split())
+    return _SPACE_BESIDE_PUNCTUATION.sub("", text)
 
 
 def excerpt_fragments(excerpt: str) -> list[str]:
@@ -267,9 +269,10 @@ def _is_parenthesized(text: str) -> bool:
 
 def _string_scalars(
     root: Any, limit: int, max_chars: int = _MAX_SCALAR_HAYSTACK_CHARS
-) -> list[str]:
+) -> tuple[list[str], bool]:
     """String scalars (mapping keys included) of a parsed document, at most ``limit`` of
-    them and, once ``max_chars`` characters are collected, no more.
+    them and, once ``max_chars`` characters are collected, no more; and whether a cap
+    stopped the walk with nodes left unvisited.
 
     Iterative, so nesting depth cannot overflow the stack. Each container and each string
     object is visited once, so a YAML alias cycle, or one large anchored string aliased
@@ -292,7 +295,7 @@ def _string_scalars(
             pending.extend(node.values())
         else:
             pending.extend(node)
-    return found
+    return found, bool(pending)
 
 
 def _yaml_is_plain_tree(text: str) -> bool:
@@ -324,9 +327,10 @@ class _ExcerptInput:
     to parse or walk, leaves the whole text.
 
     ``whole_text_only`` is true for a YAML or JSON input whose parsed values were not
-    searched: one over ``_MAX_STRUCTURED_PARSE_BYTES`` from the start, the others once
-    a miss has tried to parse them. A miss there may be a quoted or escaped value the
-    check could not read, so it stays a warning even when excerpts are strict."""
+    all searched: one over ``_MAX_STRUCTURED_PARSE_BYTES`` from the start, the others
+    once a miss has tried to parse them, including one whose walk stopped at a scalar cap.
+    A miss there may be a quoted or escaped value the check could not read, so it stays a
+    warning even when excerpts are strict."""
 
     def __init__(self, text: str, *, parse_as: str | None, structured: bool = False) -> None:
         self._whole = normalize_excerpt_text(text)
@@ -354,10 +358,9 @@ class _ExcerptInput:
             else:
                 self.whole_text_only = True
                 return []
-            return [
-                normalize_excerpt_text(scalar)
-                for scalar in _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
-            ]
+            scalars, truncated = _string_scalars(docs, _MAX_SCALAR_HAYSTACKS)
+            self.whole_text_only = truncated  # some parsed values were never tried
+            return [normalize_excerpt_text(scalar) for scalar in scalars]
         except Exception:  # untrusted input: RecursionError, MemoryError, a parse error, ...
             self.whole_text_only = True
             return []
@@ -418,13 +421,16 @@ def check_excerpts_verbatim(
     artifacts against ``run_dir``. Only citations of files under
     ``run_dir/inputs/`` are checked; run-internal artifacts, unresolvable or
     escaping paths, non-UTF-8 files and excerpts wholly in parentheses (absence
-    markers) are skipped silently. Whitespace, backticks and ``*`` are ignored,
-    and an ellipsis joins fragments that must each appear, in order, in the
-    artifact's text or, for a YAML or JSON input, in one of its string scalars.
-    Inputs are untrusted: a file over ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread,
-    one over ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, a YAML input with an alias
-    or nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, and the check
-    never raises on a malformed or hostile YAML or JSON input.
+    markers) are skipped silently. Case, backticks and ``*`` are ignored,
+    whitespace next to punctuation is dropped and any other whitespace run counts
+    as one space (``normalize_excerpt_text``), and an ellipsis joins fragments that
+    must each appear, in order, in the artifact's text or, for a YAML or JSON input,
+    in one of its string scalars. Inputs are untrusted: a file over
+    ``_MAX_EXCERPT_INPUT_BYTES`` is skipped unread, one over
+    ``_MAX_STRUCTURED_PARSE_BYTES`` is not parsed, a YAML input with an alias or
+    nesting beyond ``_MAX_YAML_DEPTH`` is searched as plain text only, at most
+    ``_MAX_SCALAR_HAYSTACKS`` parsed values are tried, and the check never raises on
+    a malformed or hostile YAML or JSON input.
     """
     return [violation for violation, _whole_text_only in _excerpt_misses(run_dir, records_dir)]
 

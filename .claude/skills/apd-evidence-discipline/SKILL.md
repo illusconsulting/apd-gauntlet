@@ -43,7 +43,7 @@ Use this format for an `evidence[]` entry that cites a code path:
 Every finding and every capability cites at least one artifact, with a specific locator and a verbatim excerpt under 25 words.
 
 - "The tech plan describes the encryption design" is not evidence. "§5.3 'Data at Rest', paragraph 2: 'AES-256 at rest with broker-managed keys'" is evidence.
-- The excerpt is the cited file's own words, copied, never paraphrased or summarised. The validator checks every excerpt that cites a file under `inputs/`, and a miss is an error at the tier gate. It ignores case, spacing, `*` and backticks; `...` or `…` may join exact fragments that appear in that order.
+- The excerpt is the cited file's own words, copied, never paraphrased or summarised. The validator checks every excerpt that cites a file under `inputs/`, and a miss is an error at the tier gate. It ignores case, `*` and backticks, collapses spacing to one space and drops it next to punctuation; `...` or `…` may join exact fragments that appear in that order.
 - An absence or summary note is not a quote: write it wholly in parentheses, such as `(absent in supplied TM)` or `(security-policy pointer; no hardening content)`. The validator skips such a marker. Never leave a note unparenthesised, and never put quoted words in parentheses to skip the check.
 - Locator specificity required: section heading + paragraph, line range, sheet/cell, slide number. Page-only locators are accepted for PDFs without internal structure but discouraged.
 - If no specific locator can be produced, the finding is either `blocked` with `prerequisite_evidence` naming what is needed, or it is not a finding at all.
