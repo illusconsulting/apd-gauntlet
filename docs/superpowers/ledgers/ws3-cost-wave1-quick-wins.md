@@ -103,6 +103,22 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   - an empty `effort` is missing;
   - three bad `effort` values and nine bad `model` values each give one error;
   - a bare frontmatter gives the `name`, `description` and `effort` errors, in that order.
+- Task 6a (`628b371`), files beyond the plan's list, each because a test pins the exact `lint_agent_file` output for a fixture with no `tools`:
+  - `tests/test_agent_effort.py`: the `_lint` helper's fixture gains `tools: Read`, and `test_missing_effort_is_reported_with_the_other_frontmatter_errors` now lists the `tools` error between `description` and `effort`.
+  - `tests/test_validate_edge_cases.py::test_lint_agent_missing_name_and_description`: 4 errors become 5, and it asserts a `'tools'` error.
+  - In `tests/test_lint_agents.py`, the four Task 5 fixture tests that pin exact output gain `tools: Read`. Their assertions are unchanged.
+- Task 6a, docs: `docs/extending-agents.md` gets `tools: Read, Glob, Grep, Write` in the lens template and one paragraph on the rule and the `EXPECTED_TOOLS` pin. Without it, `lint-agents` would reject a file built from the old template (Task 6's reason). `CHANGELOG.md` gets one Unreleased "Changed" entry, as Tasks 5 and 6 did for their `lint-agents` rules.
+- Task 6a, the rules where the plan is silent:
+  - `lint_agents.parse_tools(value) -> frozenset[str] | None` reads both forms. `tools_errors(path, meta)` gives the errors, placed after the description errors and before the `effort` error, in frontmatter order.
+  - `test_every_agent_tool_set_is_pinned` parses through `lint_agents.parse_tools`. Every agent already sets `tools`, so a test-local parser would pass before the implementation. With the linter's parser, the test fails first (`AttributeError`), as the plan's red step expects, and the pin and the linter read both forms the same way.
+  - Absent, null, `""` and `[]` all count as missing (`frontmatter missing 'tools'`), as Tasks 5 and 6 rule for `description` and `effort`. An empty name (`Read,, Write`, a trailing comma, a blank list item), a non-string item, or any other type gives `tools must be a comma-separated string or a YAML list of tool names`.
+  - A comma inside parentheses does not split names, so `Agent(worker, researcher), Read` is two names. Names are not checked against a list of known tools: the codebase keeps none, and MCP tool names vary. The pin covers the real agents.
+- Task 6a, tests beyond the plan's two, in `tests/test_lint_agents.py`:
+  - the Bash holders are exactly `apd-cli-runner` and the four recorded agents;
+  - six well-formed values lint clean and parse to the expected set;
+  - nine malformed values give the exact error;
+  - `parse_tools` returns None for nine bad or empty values;
+  - error order: description, then `tools`, then `effort`.
 
 ## Pending operator steps
 
@@ -174,3 +190,4 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   ```
 
   Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t4` runs. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. In the optional check, each dispatched agent shows one value, the one in `tests/test_agent_effort.py::EXPECTED`. That is `['medium']` for the lenses, intake, code recon, the threat-model author, the attack-path analyzer, the report writer and the domain auditor. It is `['high']` for the threat-model evaluator, the cluster adjudicator and the report auditor, and `['low']` for `apd-cli-runner`. The synthesizer (`['high']`), the threat-model recon agent (`['low']`) and `apd-tier-repair` (`['low']`) appear only when they are dispatched. Statically, nothing in the dispatch counts changes, because Task 6 touches no workflow, label or `agentType`: a clean HA-shaped run is still 36 dispatches (18 CLI, 18 LLM).
+- Task 6a: none. The plan gives this task no operator step. It changes only the linter, tests and docs: no agent's `tools`, workflow, label or `agentType` changes, so no run output changes.
