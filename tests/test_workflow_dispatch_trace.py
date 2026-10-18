@@ -5,6 +5,11 @@ against stub Workflow globals and prints every dispatch as
 {agentType, label, phase, guard, command}. The tests here count and order those
 dispatches. They are skipped where node is absent, like test_c4_solve_routes_node_oracle;
 the CI test job provisions Node 22 so they run there.
+
+The tests depend on the stub runtime behaving like the Workflow runtime: agent() returns
+a Promise resolved on a later macrotask, and a parallel() thunk that throws or rejects
+resolves to null. With a synchronous stub, a runner that drops an `await` would still
+read real receipts here. The harness-fidelity tests at the end pin both behaviours.
 """
 from __future__ import annotations
 
@@ -57,15 +62,16 @@ GUARDED = {"author-threat-model-floor", "cluster-candidates", "apply-clusters",
 
 
 def trace_raw(
-    cfg: dict[str, Any], fail: dict[str, list[str]] | None = None, *, logs: bool = False
+    cfg: dict[str, Any], fail: dict[str, list[str]] | None = None, *, logs: bool = False,
+    runner: Path = RUNNER,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the harness on the runner with `cfg` as args; `fail` maps a label to the
-    names of its failing steps (an empty list fails the label itself). With `logs`, the
-    harness also prints the workflow's log() lines on stderr."""
+    """Run the harness on `runner` (the workflow by default) with `cfg` as args; `fail`
+    maps a label to the names of its failing steps (an empty list fails the label
+    itself). With `logs`, the harness also prints the workflow's log() lines on stderr."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node not available")
-    argv = [node, str(HARNESS), str(RUNNER), json.dumps(cfg)]
+    argv = [node, str(HARNESS), str(runner), json.dumps(cfg)]
     if fail is not None:
         argv.append(json.dumps(fail))
     env = {k: v for k, v in os.environ.items() if k != "TRACE_LOGS"}
@@ -430,3 +436,46 @@ def test_plan_run_matches_workflow_dispatch_sequence_with_capture():
           else ("AGENT", d["agentType"]) for d in trace(cfg)]
     assert [(s["kind"], s["ref"].split()[0]) for s in build_plan(cfg)] == wf
     assert ("AGENT", "apd-domain-auditor") in wf
+
+
+# --- harness fidelity: the stub runtime behaves like the Workflow runtime --------------
+
+
+def _scratch_logs(tmp_path: Path, body: str) -> list[str]:
+    """The log() lines of `body` run as a workflow under the harness."""
+    wf = tmp_path / "scratch-workflow.js"
+    wf.write_text(body, encoding="utf-8")
+    r = trace_raw({}, logs=True, runner=wf)
+    assert r.returncode == 0, r.stderr
+    return [line[len("log: "):] for line in r.stderr.splitlines() if line.startswith("log: ")]
+
+
+def test_harness_agent_resolves_asynchronously_like_the_runtime(tmp_path):
+    # An un-awaited dispatch is a pending Promise, so its receipt reads as nothing, the
+    # way it does at runtime; a dropped await then changes the trace. The receipt comes on
+    # a later macrotask: a microtask queued after the dispatch runs before it.
+    logs = _scratch_logs(tmp_path, (
+        "const r = agent('COMMAND: apd-gauntlet a', { label: 'a', schema: {} });\n"
+        "log('unawaited ' + (typeof r.then) + ' ' + r.status);\n"
+        "const s = await agent('COMMAND: apd-gauntlet b', { label: 'b', schema: {} });\n"
+        "log('awaited ' + s.status);\n"
+        "let first = 'agent';\n"
+        "const p = agent('COMMAND: apd-gauntlet c', { label: 'c', schema: {} })"
+        ".then(() => { first = first || 'then'; });\n"
+        "Promise.resolve().then(() => { first = ''; });\n"
+        "await p;\n"
+        "log('microtask before receipt ' + (first === 'then'));\n"
+    ))
+    assert logs == ["unawaited function undefined", "awaited ok", "microtask before receipt true"]
+
+
+def test_harness_parallel_maps_a_failed_thunk_to_null(tmp_path):
+    logs = _scratch_logs(tmp_path, (
+        "const out = await parallel([\n"
+        "  () => { throw new Error('sync'); },\n"
+        "  async () => { throw new Error('async'); },\n"
+        "  () => agent('COMMAND: apd-gauntlet ok', { label: 'ok', schema: {} }),\n"
+        "]);\n"
+        "log(JSON.stringify(out.map((o) => o && o.status)));\n"
+    ))
+    assert logs == ['[null,null,"ok"]']

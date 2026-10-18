@@ -14,6 +14,12 @@
 // list yields one error whose path is the label. Every other receipt is 'ok'. A
 // dispatch without a schema (the report auditor, a fallback) answers 'GATE: pass'.
 //
+// The stubs behave like the Workflow runtime: agent() records its trace entry at call
+// time and returns a Promise of the receipt, resolved on a later macrotask, so a dispatch
+// the workflow does not await reads as a pending Promise, as it would at runtime.
+// parallel(thunks) is a barrier that never rejects: a thunk that throws or rejects
+// resolves to null at its index.
+//
 // With TRACE_LOGS set in the environment, every log() message the workflow wrote is
 // also printed on stderr, one `log: <message>` line each, before any failure message.
 import { readFileSync } from 'node:fs';
@@ -25,7 +31,7 @@ const src = readFileSync(wfPath, 'utf8').replace(/^export const meta/m, 'const m
 const trace = [];
 const logs = [];
 
-function agent(prompt, opts = {}) {
+function receipt(prompt, opts) {
   const m = /^COMMAND: (.+)$/m.exec(prompt);
   trace.push({
     agentType: opts.agentType || null, label: opts.label, phase: opts.phase || null,
@@ -44,9 +50,16 @@ function agent(prompt, opts = {}) {
   };
 }
 
+function agent(prompt, opts = {}) {
+  const value = receipt(prompt, opts);
+  return new Promise((r) => setTimeout(() => r(value), 0));
+}
+
 const ctx = {
   args: JSON.parse(argsJson), agent, phase() {}, log(m) { logs.push(String(m)); },
-  parallel: (ts) => Promise.all(ts.map((t) => t())),
+  parallel: (ts) => Promise.all(ts.map((t) => (async () => {
+    try { return await t(); } catch (e) { return null; }
+  })())),
 };
 let failed = null;
 try {
