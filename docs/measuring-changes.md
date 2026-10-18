@@ -713,7 +713,10 @@ own module that calls `register_suite(suite)` at import. Add the module to
 `metamorphic run` loads it. `register_suite` refuses a name that is taken, a
 suite with no fixtures or no transforms, two fixtures with the same directory
 name, a transform name that is not a plain directory name, and an allowlist
-entry that names no case of the suite or has no reason.
+entry that names no case of the suite or has no reason. Directory names and
+transform names are compared ignoring case, so two that differ only in case
+are refused too: on a case-insensitive file system, such as the macOS default,
+they would share a directory.
 When `extract` cannot run (a tool the suite needs is not installed), it raises
 `MetamorphicError`, and the command exits 2 with its message.
 
@@ -732,5 +735,5 @@ Exit codes:
 - `1`: a case is violated, or an allowlist entry is stale.
 - `2`: `NAME` is not a registered suite (the message lists the registered
   ones), a fixture is not a directory under the root, or the suite cannot run:
-  a tool it needs is missing, a file cannot be read or written, or a transform
-  or `extract` returns the wrong type.
+  a tool it needs is missing, a file cannot be read or written or is not UTF-8,
+  or a transform, `extract` or `normalise` returns the wrong type.

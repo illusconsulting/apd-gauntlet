@@ -553,7 +553,7 @@ _ESCAPES = {
 }
 
 
-def _printable(line: str) -> str:
+def printable(line: str) -> str:
     """``line`` with each control character and line separator escaped."""
     return line.translate(_ESCAPES)
 
@@ -657,4 +657,4 @@ def render_text(c: Comparison, outcomes: Sequence[GateOutcome] | None, status: s
         lines.extend(_gate_line(o) for o in outcomes)
     lines.extend(f"warning: {w}" for w in c.warnings)
     lines.append(_result_line(outcomes, status))
-    return "\n".join(_printable(line) for line in lines)
+    return "\n".join(printable(line) for line in lines)

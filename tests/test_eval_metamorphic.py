@@ -36,7 +36,8 @@ def test_stride_suite_holds_end_to_end():
 def drop_last_row(src, dst):
     shutil.copytree(src, dst, dirs_exist_ok=True)
     p = dst / "threat-model.md"
-    p.write_text("\n".join(p.read_text().splitlines()[:-1]) + "\n")
+    p.write_text("\n".join(p.read_text(encoding="utf-8").splitlines()[:-1]) + "\n",
+                 encoding="utf-8")
     return {}
 
 
@@ -113,7 +114,9 @@ def test_fixture_is_a_byte_copy_of_the_sample_stride_table():
 def test_builtin_suite_registration():
     from apd_gauntlet.eval.suites import stride_table
 
-    assert BUILTIN_SUITE_MODULES == ("apd_gauntlet.eval.suites.stride_table",)
+    # IAC4 and CAT2 append their modules, so pin membership rather than the whole tuple.
+    assert "apd_gauntlet.eval.suites.stride_table" in BUILTIN_SUITE_MODULES
+    assert len(set(BUILTIN_SUITE_MODULES)) == len(BUILTIN_SUITE_MODULES)
     load_builtin_suites()
     load_builtin_suites()  # a second call changes nothing
     assert SUITES["stride-table"] is stride_table.SUITE
@@ -180,6 +183,39 @@ def test_reorder_columns_reverses_the_stride_columns(tmp_path):
     assert _data_rows(copy) == [[row[0], *row[:0:-1]] for row in _data_rows(src)]
     separator = copy.read_text(encoding="utf-8").splitlines()[3]
     assert separator == "|---------|---|---|---|---|---|---|"
+
+
+def _one_table(tmp_path, text):
+    """A source directory holding ``text`` as its threat model, and an empty destination."""
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    src.mkdir()
+    dst.mkdir()
+    (src / "threat-model.md").write_text(text, encoding="utf-8")
+    return src, dst
+
+
+def test_rename_elements_keeps_the_element_cell_padding(tmp_path):
+    from apd_gauntlet.eval.suites.stride_table import rename_elements
+
+    src, dst = _one_table(tmp_path, "| Element | S | T | R | I | D | E |\n"
+                                    "|---|---|---|---|---|---|---|\n"
+                                    "|   api  | a | — | — | — | — | — |\n")
+    assert rename_elements(src, dst) == {"element-1": "api"}
+    lines = (dst / "threat-model.md").read_text(encoding="utf-8").splitlines()
+    assert lines[2] == "|   element-1  | a | — | — | — | — | — |"
+
+
+def test_reorder_columns_reverses_the_separator_cells(tmp_path):
+    from apd_gauntlet.eval.suites.stride_table import extract, reorder_columns
+
+    src, dst = _one_table(tmp_path, "| Element | S | T | R | I | D | E |\n"
+                                    "|:--|:-|-:|---|:-:|----|--|\n"
+                                    "| api | a | b | — | — | — | — |\n")
+    assert reorder_columns(src, dst) == {}
+    lines = (dst / "threat-model.md").read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "| Element | E | D | I | R | T | S |"
+    assert lines[1] == "|:--|--|----|:-:|---|-:|:-|"
+    assert extract(dst) == extract(src)
 
 
 def test_transforms_copy_every_file_and_leave_the_source_alone(tmp_path):
@@ -255,17 +291,33 @@ def test_untouched_fixture_is_extracted_once_from_root(tmp_path):
                         for n in ("rename-elements", "reorder-columns", "reorder-rows")]
 
 
+def copy_fixture(src, dst):
+    shutil.copytree(src, dst, dirs_exist_ok=True)
+    return {}
+
+
+def test_transforms_run_by_name_whatever_order_the_suite_lists_them(tmp_path):
+    suite = _suite(transforms={"z-copy": copy_fixture, "a-copy": copy_fixture,
+                               "m-copy": copy_fixture})
+    assert list(suite.transforms) == ["z-copy", "a-copy", "m-copy"]
+    cases = run_suite(suite, REPO, tmp_path)
+    assert [c.transform for c in cases] == ["a-copy", "m-copy", "z-copy"]
+    assert {c.status for c in cases} == {"holds"}
+
+
 def add_row(src, dst):
     shutil.copytree(src, dst, dirs_exist_ok=True)
     p = dst / "threat-model.md"
-    p.write_text(p.read_text() + "| new-asset | spoofed | — | — | — | — | — |\n")
+    p.write_text(p.read_text(encoding="utf-8") + "| new-asset | spoofed | — | — | — | — | — |\n",
+                 encoding="utf-8")
     return {}
 
 
 def rename_without_map(src, dst):
     shutil.copytree(src, dst, dirs_exist_ok=True)
     p = dst / "threat-model.md"
-    p.write_text(p.read_text().replace("audit-log-writer", "audit-writer"))
+    p.write_text(p.read_text(encoding="utf-8").replace("audit-log-writer", "audit-writer"),
+                 encoding="utf-8")
     return {}
 
 
@@ -293,7 +345,8 @@ def test_missing_and_extra_are_sorted(tmp_path):
     def drop_two_rows(src, dst):
         shutil.copytree(src, dst, dirs_exist_ok=True)
         p = dst / "threat-model.md"
-        p.write_text("\n".join(p.read_text().splitlines()[:-2]) + "\n")
+        p.write_text("\n".join(p.read_text(encoding="utf-8").splitlines()[:-2]) + "\n",
+                     encoding="utf-8")
         return {}
 
     (case,) = run_suite(_suite(transforms={"drop": drop_two_rows}), REPO, tmp_path)
@@ -363,6 +416,28 @@ def test_an_os_error_names_the_case(tmp_path):
         run_suite(_suite(transforms={"broken": transform}), REPO, tmp_path)
 
 
+def test_an_os_error_in_normalise_names_the_case(tmp_path):
+    def normalise(results, rename):
+        raise PermissionError(13, "Permission denied", "lookup-table")
+
+    with pytest.raises(MetamorphicError,
+                       match=r"t-suite.*basic.*rename-elements.*Permission denied"):
+        run_suite(_suite(normalise=normalise), REPO, tmp_path)
+
+
+def test_a_fixture_that_is_not_utf8_exits_2(tmp_path):
+    root = tmp_path / "root"
+    (root / FIXTURE).mkdir(parents=True)
+    (root / FIXTURE / "threat-model.md").write_bytes(
+        b"| Element | S | T | R | I | D | E |\n|---|---|---|---|---|---|---|\n"
+        b"| api \xff | a | - | - | - | - | - |\n")
+    with pytest.raises(MetamorphicError, match=r"stride-table.*basic.*utf-8"):
+        run_suite(_stride(), root, tmp_path / "work")
+    r = _invoke("--suite", "stride-table", "--root", str(root))
+    assert r.exit_code == 2
+    assert "utf-8" in r.output and "Traceback" not in r.output
+
+
 def test_register_suite_refuses_duplicates_and_bad_definitions():
     base = _suite(name="t-reg")
     register_suite(base)
@@ -387,6 +462,22 @@ def test_register_suite_refuses_duplicates_and_bad_definitions():
         with pytest.raises(ValueError, match=match):
             register_suite(suite)
         assert "t-reg" not in SUITES
+
+
+def test_names_that_differ_only_in_case_are_refused(tmp_path):
+    # On a case-insensitive file system (the macOS default) they would share a workdir directory.
+    base = _suite(name="t-case")
+    bad = [
+        (replace(base, fixtures=(FIXTURE, "other/Basic")), "share the directory name 'Basic'"),
+        (replace(base, transforms={"T1": copy_fixture, "t1": copy_fixture}),
+         "'T1' and 't1' differ only in case"),
+    ]
+    for suite, match in bad:
+        with pytest.raises(ValueError, match=match):
+            register_suite(suite)
+        assert "t-case" not in SUITES
+        with pytest.raises(ValueError, match=match):
+            run_suite(suite, REPO, tmp_path)
 
 
 def test_get_suite_lists_registered_names(monkeypatch):
@@ -491,6 +582,23 @@ def test_cli_text_escapes_control_characters(monkeypatch):
     assert [ln for ln in r.output.splitlines() if ln.startswith("RESULT:")] == [
         "RESULT: fail (1 violated)"]
     assert '  missing: ["a\\u001b[31m", "x\\nRESULT: pass"]' in r.output
+
+
+def test_cli_text_escapes_what_json_leaves_alone(monkeypatch):
+    # json.dumps(ensure_ascii=False) keeps C1 controls and U+2028, and a reason is not JSON.
+    def extract(d):
+        return frozenset() if d.name == "inject" else frozenset({("a\x9b31m", "x RESULT: pass")})
+
+    monkeypatch.setitem(SUITES, "t-esc", _suite(
+        name="t-esc", extract=extract, transforms={"inject": drop_last_row},
+        known_non_invariant={("inject", FIXTURE): "demo\nRESULT: pass"}))
+    r = _invoke("--suite", "t-esc", "--root", str(REPO))
+    assert r.exit_code == 0, r.output
+    assert "\x9b" not in r.output and " " not in r.output
+    assert [ln for ln in r.output.splitlines() if ln.startswith("RESULT:")] == [
+        "RESULT: pass (1 allowlisted)"]
+    assert f"allowlisted: inject on {FIXTURE} (demo\\nRESULT: pass)" in r.output
+    assert '  missing: ["a\\x9b31m", "x\\u2028RESULT: pass"]' in r.output
 
 
 def test_a_fixture_that_cannot_be_checked_counts_as_missing(tmp_path, monkeypatch):

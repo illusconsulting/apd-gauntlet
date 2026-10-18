@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 from typing import Literal
 
-from ..measure.compare import _printable
+from ..measure.compare import printable
 
 RenameMap = dict[str, str]  # transformed name -> original name
 ResultSet = frozenset[tuple[str, ...]]
@@ -71,25 +71,39 @@ SUITES: dict[str, Suite] = {}
 
 
 def _fixture_dirs(suite: Suite) -> dict[str, str]:
-    """Each fixture's directory name under the workdir; ``ValueError`` when they clash."""
-    by_name: dict[str, str] = {}
+    """Each fixture's directory name under the workdir; ``ValueError`` when they clash.
+
+    Names are compared ignoring case: on a case-insensitive file system (the
+    macOS default) ``Basic`` and ``basic``, or transforms ``T1`` and ``t1``,
+    would share a workdir directory.
+    """
+    dirs: dict[str, str] = {}
+    by_key: dict[str, str] = {}  # casefolded directory name -> fixture
     for fixture in suite.fixtures:
         name = PurePath(fixture).name
         if name in ("", ".", ".."):
             raise ValueError(f"suite {suite.name!r}: fixture {fixture!r} has no directory name")
-        if name in by_name:
+        if (key := name.casefold()) in by_key:
             raise ValueError(
-                f"suite {suite.name!r}: fixtures {by_name[name]!r} and {fixture!r} share "
-                f"the directory name {name!r}"
+                f"suite {suite.name!r}: fixtures {by_key[key]!r} and {fixture!r} share "
+                f"the directory name {name!r} (compared ignoring case)"
             )
-        by_name[name] = fixture
+        by_key[key] = fixture
+        dirs[fixture] = name
+    transforms: dict[str, str] = {}  # casefolded transform name -> transform name
     for transform in suite.transforms:
         if not TRANSFORM_PATTERN.fullmatch(transform):
             raise ValueError(
                 f"suite {suite.name!r}: transform name {transform!r} does not match "
                 f"{TRANSFORM_PATTERN.pattern}"
             )
-    return {fixture: name for name, fixture in by_name.items()}
+        if (key := transform.casefold()) in transforms:
+            raise ValueError(
+                f"suite {suite.name!r}: transform names {transforms[key]!r} and {transform!r} "
+                "differ only in case, so they would share a workdir directory"
+            )
+        transforms[key] = transform
+    return dirs
 
 
 def register_suite(suite: Suite) -> None:
@@ -194,7 +208,7 @@ def run_suite(suite: Suite, root: Path, workdir: Path) -> list[CaseResult]:
                 copy = _empty_dir(workdir / dirs[fixture] / name)
                 rename = _rename_map(suite.transforms[name](source, copy), what)
                 got = _result_set(suite.extract(copy), f"suite {suite.name!r}: extract")
-            got = _result_set(suite.normalise(got, rename), f"suite {suite.name!r}: normalise")
+                got = _result_set(suite.normalise(got, rename), f"suite {suite.name!r}: normalise")
             lost = tuple(sorted(expected - got))
             gained = tuple(sorted(got - expected))
             reason = suite.known_non_invariant.get((name, fixture))
@@ -233,7 +247,7 @@ def render_text(suite: Suite, cases: Sequence[CaseResult]) -> str:
     ]
     result = "fail" if any(c.status in FAILING for c in cases) else "pass"
     lines.append(f"RESULT: {result} ({', '.join(counts) or 'no cases'})")
-    return "\n".join(_printable(line) for line in lines)
+    return "\n".join(printable(line) for line in lines)
 
 
 def _count(n: int, noun: str) -> str:

@@ -173,7 +173,8 @@ def test_runbook_metamorphic_section():
               "`(transform, fixture)`", "rename map", "`register_suite`",
               "`BUILTIN_SUITE_MODULES`", "`holds`", "`violated`", "`allowlisted`",
               "`stale_allowlist`", "with a reason", "`rename-elements`", "`reorder-rows`",
-              "`reorder-columns`", "parse-threat-model", "MetamorphicError"):
+              "`reorder-columns`", "parse-threat-model", "MetamorphicError",
+              "differ only in case", "`normalise` returns the wrong type"):
         assert s in section, s
     for code in ("- `0`:", "- `1`:", "- `2`:"):
         assert code in section, code
