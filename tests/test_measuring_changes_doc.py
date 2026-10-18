@@ -88,3 +88,22 @@ def test_running_guide_links_the_runbook():
     t = (REPO / "docs/running-the-gauntlet.md").read_text()
     section = t.split("## Local accuracy benchmark (out-of-band)", 1)[1].split("\n## ", 1)[0]
     assert "(measuring-changes.md)" in section
+
+
+def test_runbook_covers_attempts():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    for s in (".apd-state/attempts.yaml", "--record-attempts", "plan-run"):
+        assert s in t, s
+
+
+def test_runbook_attempts_section():
+    t = (REPO / "docs/measuring-changes.md").read_text()
+    section = _flat(t.split("\n## Retries and audit iterations", 1)[1].split("\n## ", 1)[0])
+    for key in ("recorded_by", "lens_retries", "first_pass_invalid", "skipped",
+                "tier_gate_failures", "tier_repairs", "lens_reruns", "audit_iterations"):
+        assert f"| `{key}` |" in section, key
+    for s in ("`summarize`", "--record-attempts", "run-attempts.schema.json",
+              "one workflow invocation", "`resume-plan`", "`not_available`", "gates 4 and 5",
+              "`plan-run`", "records no attempts", "Recorded attempts ->"):
+        assert s in section, s
+    assert t.index("\n## Retries and audit iterations") < t.index("\n## Compare runs")

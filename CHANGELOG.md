@@ -56,6 +56,18 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   read. The text report prints control characters from run files as escapes.
   The runbook's "Compare runs" section covers the matching, excuse and median
   rules.
+- **The workflow records its retries and audit iterations.** The workflow
+  writes `.apd-state/attempts.yaml` at closeout: its `summarize` step now
+  passes the runner's counts to `summarize --record-attempts`, with
+  `recorded_by: workflow`. The file holds the lens retries, the lenses that
+  failed schema validation on the first pass, skipped lenses, the tier gates
+  that failed before repair, the files and lenses the tier repair loop
+  repaired or re-ran, and the report-audit iterations. The step now always
+  runs. `compare-runs` can then apply gates 4 and 5 to 2.0 workflow runs. The
+  counts cover one invocation of the runner: a resumed run lists its skipped
+  lenses, and those gates read `not_available` for it. A foreground `plan-run`
+  drive records nothing. No phase, step or dispatch label changes. The
+  runbook's "Retries and audit iterations" section describes the file.
 
 ### Changed
 

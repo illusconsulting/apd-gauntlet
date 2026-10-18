@@ -1610,3 +1610,35 @@ def test_skip_convention_comment_describes_the_pystep_sentinel() -> None:
     assert "{path:'<phase>.skipped', schema_valid:true}" in comment
     assert "An alwaysRun pyStep has\n// no skip at all" in comment
     assert "returns the same\n// sentinel form" not in comment
+
+
+# ---------------------------------------------------------------------------
+# WS2 Task 7 — the workflow counts lens retries, first-pass failures, tier repairs and
+# audit iterations, and the closeout summarize step writes them to attempts.yaml.
+# ---------------------------------------------------------------------------
+
+
+def test_attempts_object_matches_schema_keys():
+    text = RUNNER.read_text()
+    body = re.search(r"const attempts = \{(.*?)\};", text, re.DOTALL).group(1)
+    schema = json.loads((REPO / "schemas/run-attempts.schema.json").read_text())
+    assert set(re.findall(r"(\w+):", body)) == set(schema["properties"])
+
+
+def test_attempts_counted_in_tiers_and_audit():
+    text = RUNNER.read_text()
+    tier = text[text.index("function runTier"):text.index("runTier('tier-1'")]
+    for s in ("attempts.skipped.push(lens)", "attempts.first_pass_invalid.push(lens)",
+              "attempts.lens_retries[lens] = retries", "attempts.tier_gate_failures.push(tierDir)"):
+        assert s in tier
+    repair = text[text.index("async function repairTierGate"):text.index("async function runTier")]
+    for s in ("attempts.tier_repairs[tierDir]", "attempts.lens_reruns[lens] = 1"):
+        assert s in repair
+    assert "attempts.audit_iterations = i + 1;" in text
+
+
+def test_closeout_summarize_records_attempts_and_always_runs():
+    text = RUNNER.read_text()
+    step = text[text.index("pyStep('summarize'"):]
+    step = step[:step.index("});")]
+    assert "--record-attempts" in step and "alwaysRun: true" in step and "attempts.yaml" in step

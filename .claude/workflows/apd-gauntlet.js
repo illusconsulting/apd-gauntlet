@@ -339,6 +339,18 @@ function llmStep(agentType, instruction, opts) {
 // Decide whether a fallback to the legacy synthesizer is warranted.
 function isErr(r) { return !r || r.status === 'error'; }
 
+// Attempt counters for compare-runs gates 4-5 (run-attempts.schema.json),
+// written by the closeout summarize step. Counts reflect this invocation only.
+const attempts = {
+  schema_version: 1, recorded_by: 'workflow',
+  lens_retries: {}, first_pass_invalid: [], tier_gate_failures: [], skipped: [],
+  tier_repairs: {}, lens_reruns: {},
+  audit_iterations: 0,
+};
+function isSkip(r) {
+  return !!r && (r.outputs || []).some(function (o) { return /\.skipped$/.test(o.path); });
+}
+
 // A null/undefined receipt means the DISPATCH did not complete — e.g. a subagent
 // was interrupted/cancelled. This is the failure mode when the runner is driven
 // headlessly via the background Workflow primitive (foreground dispatches are not
@@ -678,6 +690,7 @@ async function repairTierGate(phaseName, tierDir, lenses, gate) {
     throw new Error('tier gate ' + tierDir + ' FAILED with no attributable file: ' + errorText(gate));
   }
   log('tier ' + tierDir + ': gate failed; repairing ' + files.length + ' file(s).');
+  attempts.tier_repairs[tierDir] = (attempts.tier_repairs[tierDir] || 0) + files.length;
   await parallel(files.map(function (f) {
     return function () {
       return agent(repairPrompt(f, byFile[f]), {
@@ -690,6 +703,7 @@ async function repairTierGate(phaseName, tierDir, lenses, gate) {
   if (!isErr(gate)) { return; }
   const rerun = lensesOf(Object.keys(failingFiles(gate, tierDir)), lenses);
   log('tier ' + tierDir + ': still failing after repair; re-running lens(es) ' + rerun.join(', ') + '.');
+  for (const lens of rerun) attempts.lens_reruns[lens] = 1;
   await parallel(rerun.map(function (lens) {
     return function () {
       return llmStep('apd-' + lens,
@@ -726,16 +740,23 @@ async function runTier(phaseName, tierDir, lenses) {
   }));
   // Inspect each receipt after the barrier; null or error -> up to 2 retries.
   // A plain loop, not forEach: forEach does not wait for an async callback.
+  // The first receipt is counted for the attempts file: a skip, a first pass that
+  // failed (an error, or an output that failed schema validation), and the retries.
   for (let i = 0; i < lenses.length; i++) {
     const lens = lenses[i];
     let r = receipts[i];
+    if (isSkip(r)) attempts.skipped.push(lens);
+    if (isErr(r) || r.outputs.some(function (o) { return !o.schema_valid; })) attempts.first_pass_invalid.push(lens);
+    let retries = 0;
     for (let k = 1; k <= 2 && isErr(r); k++) {
+      retries = k;
       log('tier ' + tierDir + ': lens ' + lens + ' failed; retry ' + k + '/2.');
       r = await llmStep('apd-' + lens,
         'Retry the ' + lens + ' lens; emit ' + tierDir + '/' + lens + '.findings.yaml and ' +
         tierDir + '/' + lens + '.capabilities.yaml.',
         { phase: phaseName, label: lens + '-retry-' + k });
     }
+    attempts.lens_retries[lens] = retries;
   }
   // Canonicalize the whole run (idempotent, structural-only) so the tier gate
   // below sees canonical envelopes + deterministic ids. alwaysRun bypasses the
@@ -751,6 +772,7 @@ async function runTier(phaseName, tierDir, lenses) {
   // Tier-end gate: blocking. A red gate is repaired file by file, then the owning
   // lenses are re-run once, then the run halts naming the files (see above).
   const gate = await tierGate(phaseName, tierDir, '');
+  if (isErr(gate)) attempts.tier_gate_failures.push(tierDir);
   await repairTierGate(phaseName, tierDir, lenses, gate);
 }
 
@@ -1013,6 +1035,7 @@ bailIfInterrupted(build, 'synthesis-build');
 phase('synthesis-audit');
 let critique = null;
 for (let i = 0; i <= 2; i++) {
+  attempts.audit_iterations = i + 1;
   const audit = await pyStep('audit-report', { phase: 'synthesis-audit', label: 'audit-report-attempt-' + i,
     reportAudit: true,
     outputs: runDir + '/40-synthesis/report-audit.yaml' });
@@ -1118,8 +1141,12 @@ await pyStep('canonicalize', {
 // PHASE 6 — closeout.
 // ===========================================================================
 phase('closeout');
-await pyStep('summarize', { phase: 'closeout', label: 'summarize',
-  outputs: runDir + ' run summary (read-only)' });
+// Write the attempt counters to .apd-state/attempts.yaml before the summary.
+// alwaysRun: the idempotency guard would otherwise skip summarize, whose old output
+// was not a file, and the attempts would never be written.
+await pyStep('summarize', { phase: 'closeout', label: 'summarize', alwaysRun: true,
+  cliArgs: "--record-attempts '" + JSON.stringify(attempts) + "'",
+  outputs: runDir + '/.apd-state/attempts.yaml' });
 await pyStep('validate', { phase: 'closeout', label: 'validate-final',
   cliArgs: '--errors-only', outputs: 'whole-run final clean (read-only assertion)',
   alwaysRun: true });

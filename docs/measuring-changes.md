@@ -3,8 +3,8 @@
 This runbook is for anyone who changes the gauntlet and has to show what the
 change did: that it kept the findings, and what it saved in tokens and cost. It
 covers capturing a baseline, recording Claude Code's telemetry, summarising a
-run's usage with `apd-gauntlet usage`, and comparing runs with
-`apd-gauntlet compare-runs`.
+run's usage with `apd-gauntlet usage`, the retry and audit counts the workflow
+records, and comparing runs with `apd-gauntlet compare-runs`.
 
 ## Why measure
 
@@ -57,7 +57,10 @@ Run the changed code the same way, twice, under its own suffix (for example
 `apd-gauntlet` workflow registered when the session started. To run a changed
 runner, run it by path
 (`Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})`,
-as `/apd-gauntlet:run` does) or start a new session.
+as `/apd-gauntlet:run` does) or start a new session. A workflow run on the 2.0
+line ends with `.apd-state/attempts.yaml` in its run directory (see
+[Retries and audit iterations](#retries-and-audit-iterations)); the 1.7.1
+baseline runs have none.
 
 ## Telemetry
 
@@ -233,6 +236,50 @@ a workflow phase.
 A clean baseline export gives no redaction warning, and its `unattributed`
 cost is close to zero.
 
+## Retries and audit iterations
+
+The workflow runner counts its lens retries, tier repairs and report-audit
+attempts while it runs. At closeout its `summarize` step writes them to
+`<run>/.apd-state/attempts.yaml`:
+
+```bash
+apd-gauntlet summarize runs/<id> --record-attempts '<json>'
+```
+
+`summarize` checks the object against `run-attempts.schema.json`, writes the
+file, prints `Recorded attempts -> <path>` on stderr, and then prints the usual
+summary. A rejected object writes nothing. The step always runs, so each
+invocation that reaches closeout replaces an earlier file. `compare-runs` reads
+the file for gates 4 and 5 (`first_pass_and_retries` and `audit_iterations`).
+
+| Key | What it records |
+|---|---|
+| `recorded_by` | Who wrote the file: `workflow` for a workflow run |
+| `lens_retries` | For each lens, how many times it was dispatched again (0 to 2) because its receipt was an error or never came back |
+| `first_pass_invalid` | The lenses whose first receipt was an error or listed an output that failed schema validation |
+| `skipped` | The lenses whose first receipt listed a `.skipped` output: `resume-plan` found their outputs complete, so they were not dispatched |
+| `tier_gate_failures` | The tier directories whose first tier gate failed, before any repair |
+| `tier_repairs` | For each tier directory, how many files went to the tier repair agent |
+| `lens_reruns` | The lenses the tier repair loop re-ran from scratch, 1 each |
+| `audit_iterations` | How many report-audit attempts the run made, the last one included (1 to 3) |
+
+The counts cover one workflow invocation, from setup to closeout. The runner
+keeps them in memory and writes them only at closeout, so an invocation that
+halts or is interrupted writes no file. When you invoke the runner again on
+such a run, `resume-plan` reports the lens steps that are already complete. The
+runner skips them and lists them under `skipped`, and the retries of the
+earlier invocation are not counted. `compare-runs` therefore reads gates 4 and
+5 as `not_available` for any run whose `skipped` list is not empty. To measure
+a configuration, run it from setup to closeout in one invocation.
+
+A foreground drive, where you work through the `plan-run` checklist yourself,
+records no attempts: its `summarize` step has no `--record-attempts`, so no
+file is written, and gates 4 and 5 read `not_available` for that run, as for a
+1.7 run.
+
+To check a run, look for the file:
+`cat runs/<name>-wf-r1/.apd-state/attempts.yaml`.
+
 ## Compare runs
 
 ```bash
@@ -322,7 +369,8 @@ never printed as passed. Gates 4 and 5 (`first_pass_and_retries` and
 `audit_iterations`) read `not_available` against every 1.7 baseline, 1.7.1
 included, because 1.7 runs record no `.apd-state/attempts.yaml`. They also read
 `not_available` when a run was resumed, because a resumed run under-counts its
-retries.
+retries, and for a `plan-run` drive, which records no attempts (see
+[Retries and audit iterations](#retries-and-audit-iterations)).
 
 The overall status is `fail` when any gate fails, else `pass_with_gaps` when
 any gate is `not_available`, else `pass`. Without `--gates` the status is
