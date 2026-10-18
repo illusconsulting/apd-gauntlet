@@ -1813,5 +1813,76 @@ def compare_runs_cmd(
         raise SystemExit(1)
 
 
+@main.group("eval")
+def eval_group() -> None:
+    """Evaluate runs against hand-reviewed labels (docs/measuring-changes.md)."""
+
+
+_LABELS_HEADER = (
+    "# Findings labels for corpus entry {entry}. Set each verdict to true_positive or\n"
+    "# false_positive, correct apd_goal or severity where the run got them wrong, and\n"
+    "# add true positives the run missed. Evaluators refuse unreviewed items.\n"
+)
+
+
+def _cannot_write(out_file: Path, exc: OSError) -> NoReturn:
+    click.echo(f"Error: {out_file}: cannot write: {exc.strerror or exc}", err=True)
+    raise SystemExit(1)
+
+
+@eval_group.command("label-template")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--entry",
+    "entry_id",
+    required=True,
+    metavar="ID",
+    help="The corpus entry id the labels are for.",
+)
+@click.option(
+    "--out",
+    "out_file",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="The labels file to write; an existing file is never overwritten.",
+)
+def eval_label_template_cmd(run_dir: Path, entry_id: str, out_file: Path) -> None:
+    """Write a findings labels file for RUN_DIR: one unreviewed item per finding.
+
+    Each item copies the finding's id, goal, severity, title and evidence
+    pointers. Review every verdict before 'eval run' scores the run. Exits 0
+    when written, 1 when the file exists (it is never overwritten) or cannot be
+    written, and 2 when ID is not a corpus entry id, RUN_DIR is not a run or
+    fails to load, or a finding cannot become a valid labels item.
+    """
+    from .eval.findings_eval import label_template
+
+    try:
+        doc = label_template(run_dir, entry_id)
+    except ValueError as exc:
+        _refuse(str(exc))
+    text = _LABELS_HEADER.format(entry=entry_id) + yaml.safe_dump(
+        doc, sort_keys=False, allow_unicode=True, width=1000
+    )
+    try:
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        _cannot_write(out_file, exc)
+    try:
+        handle = out_file.open("x", encoding="utf-8")  # exclusive: never through a link
+    except FileExistsError:
+        click.echo(f"Error: {out_file} exists; not overwritten", err=True)
+        raise SystemExit(1) from None
+    except OSError as exc:
+        _cannot_write(out_file, exc)
+    try:
+        with handle:
+            handle.write(text)
+    except OSError as exc:
+        out_file.unlink(missing_ok=True)
+        _cannot_write(out_file, exc)
+    click.echo(f"wrote {out_file}: {len(doc['items'])} items to review (verdict unreviewed)")
+
+
 if __name__ == "__main__":
     main()

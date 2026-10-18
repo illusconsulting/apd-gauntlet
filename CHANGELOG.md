@@ -68,6 +68,19 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   lenses, and those gates read `not_available` for it. A foreground `plan-run`
   drive records nothing. No phase, step or dispatch label changes. The
   runbook's "Retries and audit iterations" section describes the file.
+- **The `findings` evaluator and `eval label-template`.**
+  `apd-gauntlet eval label-template RUN_DIR --entry ID --out FILE` writes an
+  `eval-labels` file with one `unreviewed` item per finding of the run (its
+  id, goal, severity, title and evidence pointers). A reviewer sets each
+  verdict to `true_positive` or `false_positive`, corrects the goal or
+  severity where the run got them wrong, and adds true positives the run
+  missed. The command never overwrites `FILE` (exit 1), and exits 2 when `ID`
+  is not a corpus entry id or the run cannot be read. The `findings`
+  evaluator, registered in the evaluator registry, matches the true positives
+  to the run's findings with the `compare-runs` matcher, then the false
+  positives to the findings left. It reports precision, strict precision
+  (findings no label judged count against it), recall and F1 per goal and in
+  total, and severity agreement. It refuses labels with `unreviewed` items.
 
 ### Changed
 

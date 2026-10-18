@@ -21,7 +21,7 @@ from .corpus import CorpusEntry, Labels
 NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 # Modules that register built-in evaluators when imported.
-_BUILTIN_MODULES: tuple[str, ...] = ()
+_BUILTIN_MODULES: tuple[str, ...] = ("apd_gauntlet.eval.findings_eval",)
 
 
 @dataclass(frozen=True)
