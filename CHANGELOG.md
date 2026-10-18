@@ -170,6 +170,16 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   untouched. Third-party packs that declare `<2.0.0` need the same change
   before they will build against a 2.0 engine.
 
+### Fixed
+
+- **`metrics.yaml` reports real pre-dedup counts.** `findings_pre_dedup` and
+  `capabilities_pre_dedup` used to repeat `findings_total` and
+  `capabilities_total`. The rollup now counts the records in the tier
+  directories' `*.findings.yaml` and `*.capabilities.yaml` files, before
+  apply-clusters merges any. The attack-path and threat-model findings
+  (`apath-*`, `tmeval-*`) are never deduped, so they count in both numbers. The
+  committed examples keep their old values until they are rerun.
+
 ## v1.7.1 — 2026-10-17
 
 ### Added
