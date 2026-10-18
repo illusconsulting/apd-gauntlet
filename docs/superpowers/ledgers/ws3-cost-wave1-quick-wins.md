@@ -322,3 +322,86 @@ Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base com
   - Running the harness on copies of earlier runners gives the "from" side. At `856ea96` (the `v1.7.0` runner) it lists 24 CLI steps to general-purpose and 18 LLM dispatches. It also lists one `-retry-1` per lens (9), which only the harness causes: that runner does not await `parallel()`, so under the async stub every first lens receipt reads as missing. Without those 9 the total is 42, the audit's figure.
   - At `c275c9f` (WS1 + WS2) and on the `v1.7.1` runner, the harness lists the plan's 27 CLI labels, all to general-purpose, and 18 LLM dispatches (45 in all). So each 1.7.1 baseline run makes 27 general-purpose CLI dispatches, not 24. The plan's figures keep 1.7.0 as their "from" side, and A15.15 keeps A9.17's static counts.
   - The description bytes, measured as `test_always_on_description_budget` measures them, are 16,579 at `c275c9f` (A9.14) and 3,538 at this head. 3,538 is the Task 5 total as its review corrected it; 3,536 is the character count.
+
+## WS3 summary
+
+Final check on 2026-10-18 at `6bf1405`, before this entry. The branch is `feat/ws3-cost-wave1-quick-wins`, 29 commits on `c275c9f` (WS2, PR #54, not merged yet). Nothing is pushed, and `git worktree list` shows only the main checkout.
+
+### Commits by task
+
+| Task | Work | Ledger | Review fix |
+|---|---|---|---|
+| Ledger start | | `1bde416` | |
+| 1 | `4736891` | `0fab235` | |
+| 2 | `9930a32` | `726cf48` | |
+| 2a | `ef46786` | `710ea33` | |
+| 3 | `b370e1c` | `f7975a3` | `73657f4` |
+| 4 | `6728d34` | `a4cb6b3` | |
+| 5 | `13003a2` | `5640d91` | `0c0f7a1` |
+| 6 | `a239928` | `b6dae52` | |
+| 6a | `628b371` | `02ceb64` | |
+| 7 | `65cef67` | `194f3ff` | |
+| 8 | `d8acf38` | `1aa31bd` | `06a0954` |
+| 9 | none (Steps 2 to 5 are operator steps) | `f7a504d` | |
+| Whole-branch review | `1c09136`, `58c350b`, `652bf8d` | `6bf1405` | |
+
+All eleven tasks are accepted. Tasks 3, 5 and 8 took one review round each; the others took none. Of the four whole-branch reviews, two accepted and two asked for fixes, which are applied in `1c09136`, `58c350b` and `652bf8d`. Rulings holds every review ruling: Tasks 3, 5 and 8, and the whole branch. Tasks 1, 2, 2a, 4, 6, 6a, 7 and 9 had no review round, so they have no rulings. Deviations lists each task's departures from the plan, and Pending operator steps holds the full commands.
+
+### Quality gate at `6bf1405`
+
+- `ruff check tools/ tests/`: All checks passed!
+- `mypy tools/`: Success: no issues found in 82 source files
+- `python -m pytest -q -p no:cacheprovider`: 3425 passed, 1 skipped in 93.75s (0:01:33)
+- `apd-gauntlet lint-agents --agent-dir .claude/agents/`: Lint clean: 22 agents checked.
+- `apd-gauntlet lint-skills --skill-dir .claude/skills/`: Lint clean: 8 skills checked.
+- `npx -y markdownlint-cli2@0.23.2` on the CI globs (190 files): Summary: 0 issues in 0 files
+- `git status --porcelain` is empty, and `git ls-remote origin refs/heads/feat/ws3-cost-wave1-quick-wins` prints nothing.
+- Task 9 Step 1: `pytest tests/test_workflow_dispatch_trace.py` gives 61 passed. The "59 passed" under Task 9 Steps 3 to 5 was written before `652bf8d`, which adds two harness tests. The pinned counts are unchanged: 17 CLI and 17 LLM dispatches by default (5 with guard text), and 18 and 18 with capture (6).
+- Hard rules, checked over `c275c9f..HEAD`: `.gitignore` and `.superpowers/` are unchanged; nothing under `runs/`, `telemetry/`, `eval/local/` or `eval/results/` is tracked; and no added line holds an e-mail address or a person's or employer's name.
+
+### Pending operator steps, in order
+
+Every one of these needs live runs with telemetry. The full commands and expected results are under Pending operator steps above.
+
+1. Task 1 Step 6: SCP, `-ws3t1` against the last accepted runs on `next` before WS3.
+2. Task 3 Step 6: SCP, `-ws3t3` against `-ws3t1`. It also covers Task 2a.
+3. Task 4 Step 6: SCP, `-ws3t4` against `-ws3t3`, plus the repair exercise.
+4. Task 6 Step 6: SCP, `-ws3t6` against `-ws3t4`.
+5. Task 7 Step 6: SCP, `-ws3t7` against `-ws3t6`, plus the PBM `-off` run.
+6. Task 8 Step 6: SCP, `-ws3t8` against `-ws3t7`, with the `--excuse`, plus the excerpt-repair exercise.
+7. Task 9 Step 2: the milestone exit, `runs/<x>-ws3` against the 1.7.1 `runs/<x>-baseline`, plus the PBM `-off` run.
+8. Task 9 Steps 3 to 5: the CHANGELOG bullet "Cost wave 1, measured", its lint and its commit.
+
+Tasks 2, 2a, 5 and 6a have no operator step.
+
+What these steps assume, none of which can be done offline:
+
+- The Task 0.4 baseline: the master plan Task 1 set on 1.7.1, captured twice with telemetry and `usage.yaml` as `runs/<x>-baseline-r1` and `-r2`. Task 9 Step 2 compares against it.
+- WS2 merged on `next` (PR #54), so that `usage`, `compare-runs` and the attempts recording exist on the base. The consolidated plan's Task 3.2 then records the second baseline on `next` (`-next-baseline-r1`, `-r2`). The consolidated SCP step 1 says the first `<prev>` is the Task 0.4 baseline or that `-next-baseline` set, so one of them is Task 1's `<prev>`.
+- DEC-35 sets the SCP run-set size. One live 1.7.1 run took about 6.2 million subagent tokens (A15.10).
+
+Which code each per-task SCP runs: the steps above say "on this branch's head" because the plan's Global Constraints have one PR per task, so a PR's head is that task's state. On this single stacked branch, each `-ws3tN` set has to run on that task's last commit. Run on one head, every set measures the same code, and the chained `compare-runs` say nothing about any task. The last commit of each task is:
+
+- Task 1: `0fab235`
+- Task 3: `73657f4`
+- Task 4: `a4cb6b3`
+- Task 6: `b6dae52`
+- Task 7: `194f3ff` (it includes Task 6a, which changes no run output)
+- Task 8: `06a0954`
+
+The whole-branch fixes come after Task 9 and are not in those commits:
+
+- `58c350b` changes the `apd-cli-runner` body that every run from Task 1 on dispatches.
+- `1c09136` changes Task 8's strict severity for JSON-family inputs.
+
+Task 9 Step 2, on the WS3 head, measures both.
+
+### Open items for the PR
+
+1. The Task 8 cost-rule question (Rulings, Task 8 review and whole-branch review) has no ruling from the controller yet. Until it does, the plan's rule stands.
+2. The plugin-manifest CI job pins Claude Code 2.0.76, and that version's handling of the new `effort` frontmatter could not be checked offline.
+3. This branch carries every WS3 task in one stack on the unmerged WS2 head. The Global Constraints ask for one PR per task, with PRs that edit `.claude/workflows/apd-gauntlet.js` merged one at a time (Tasks 1, 3 and 7). This check cannot decide how to split or merge the branch. If it is split, the controller decides where the three whole-branch fixes go: `58c350b` touches Task 1's agent body, `652bf8d` Task 1's harness, and `1c09136` Task 8's check.
+
+### Completeness
+
+Every file, interface, test and doc change the plan names for Tasks 1 to 8, plus 2a and 6a, is on the branch. Each was checked at `6bf1405` by file, constant or test name; where the branch departs from the plan's text, Deviations records it. Task 9 Step 1 passes. The plan items not delivered are the operator steps listed above, all recorded as pending: every Step 6 SCP of Tasks 1, 3, 4, 6, 7 and 8, and Task 9 Steps 2 to 5. Nothing else the plan requires is missing.
