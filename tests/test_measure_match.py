@@ -5,6 +5,7 @@ import pathlib
 
 import pytest
 from apd_gauntlet.measure.match import (
+    TITLE_MIN_JACCARD,
     Match,
     MatchResult,
     asset_keys,
@@ -127,6 +128,24 @@ def test_title_jaccard_exactly_at_threshold_matches():
     c = {"c": rec("c", "ephemeral", "Refresh tokens rotate", ("a.md", "#x"))}
     (m,) = match_records(b, c).matched
     assert m.title_similarity == 0.5
+
+
+def test_title_threshold_is_one_half():
+    assert TITLE_MIN_JACCARD == 0.5
+
+
+@pytest.mark.parametrize(
+    ("baseline_title", "candidate_title"),
+    [
+        ("Refresh tokens never", "Refresh tokens rotate weekly"),            # Jaccard 2/5
+        ("alpha bravo charlie delta echo foxtrot",
+         "alpha bravo charlie delta golf hotel india"),                      # Jaccard 4/9
+    ],
+)
+def test_title_jaccard_below_threshold_does_not_match(baseline_title, candidate_title):
+    b = {"b": rec("b", "ephemeral", baseline_title, ("a.md", "#x"))}
+    c = {"c": rec("c", "ephemeral", candidate_title, ("a.md", "#x"))}
+    assert match_records(b, c) == MatchResult((), ("b",), ("c",))
 
 
 # --- review fixes (Task 1, second round) ------------------------------------

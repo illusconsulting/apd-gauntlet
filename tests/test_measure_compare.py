@@ -333,6 +333,44 @@ def test_headline_overlap_undefined_without_headlines(make_run):
     assert compare_pair(snapshot(headlines=()), snapshot(headlines=())).headline_overlap_pct is None
 
 
+# Whole-branch review: one shared member keeps a headline, and one shared pointer excuses.
+
+
+def test_headline_overlap_keeps_a_merged_headline_that_lost_one_member(make_run, edit):
+    # merged-4dd83f6a expands to {immut-e09e4945, nonrep-62124087} in both runs; the
+    # candidate's corpus no longer has nonrep-62124087, so only immut-e09e4945 maps across.
+    b, c = make_run("b"), make_run("c")
+    edit.drop(c, "nonrep-62124087")
+    assert compare_pair(load_run(b), load_run(c)).headline_overlap_pct == 100.0
+
+
+def test_headline_overlap_keeps_a_headline_the_candidate_narrowed():
+    def record(rid, title, artifact):
+        return {"id": rid, "apd_goal": "ephemeral", "severity": "high", "title": title,
+                "evidence": [{"artifact": artifact, "locator": "#x"}]}
+
+    findings = {"a": record("a", "Refresh tokens never rotate", "a.md"),
+                "b": record("b", "Session cookie lacks secure flag", "b.md")}
+    d = compare_pair(snapshot(findings, headlines=(frozenset({"a", "b"}),)),
+                     snapshot(findings, headlines=(frozenset({"a"}),)))
+    assert d.headline_overlap_pct == 100.0
+
+
+def test_a_lost_finding_whose_second_pointer_is_shared_is_reassigned():
+    lost = {"id": "conf-1", "apd_goal": "confidentiality", "severity": "high",
+            "title": "Lost one",
+            "evidence": [{"artifact": "a.md", "locator": "#1"},
+                         {"artifact": "b.md", "locator": "#2"}]}
+    new = {"id": "intg-2", "apd_goal": "integrity", "severity": "low",
+           "title": "Something else",
+           "evidence": [{"artifact": "b.md", "locator": "#2"},
+                        {"artifact": "c.md", "locator": "#3"}]}
+    d = compare_pair(snapshot({"conf-1": lost}), snapshot({"intg-2": new}))
+    assert [(x.id, x.excuse) for x in d.lost_critical_high] == [
+        ("conf-1", "evidence_reassigned:intg-2")]
+    assert unexcused_lost(d) == 0
+
+
 def test_blocked_rate_undefined_without_findings():
     assert blocked_rate_pct(snapshot()) is None
 
