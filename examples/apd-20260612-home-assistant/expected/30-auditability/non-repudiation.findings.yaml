@@ -413,7 +413,7 @@ finding:
     excerpt: 'jwt.encode({"iss": refresh_token.id ...}, refresh_token.jwt_key, algorithm="HS256")'
   - artifact: auth/auth_index.md
     locator: '#refresh-token-types, lines 49-51'
-    excerpt: Long-Lived Access Token (user-generated, long horizon) ... remain valid until a user deletes it
+    excerpt: "Long-lived Access Token: These are refresh tokens that back a long lived access token."
   control_mappings:
     nist_800_53r5:
     - AU-2
@@ -724,7 +724,7 @@ finding:
     excerpt: 'const { push_token: token } = req.body; if (!token) return res.status(403) ... checkRateLimit(token)'
   - artifact: mobile/mobile-apps-fcm-push-README.md
     locator: '#deploy-your-own, lines 27-47'
-    excerpt: forwards notifications ... without exposing device push tokens to the instance
+    excerpt: "Deploy your own ... Then deploy the Cloud Functions: ... firebase deploy"
   control_mappings:
     nist_800_53r5:
     - AU-2
@@ -922,10 +922,10 @@ finding:
   evidence:
   - artifact: api/rest.md
     locator: /api/logbook sample, lines 360-383
-    excerpt: '"when": "2016-...Z" # timestamp present; time-source discipline undocumented'
+    excerpt: "\"when\": \"2020-06-20T16:44:26.127295+00:00\""
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#deployment-topologies, lines 108-116'
-    excerpt: Home Assistant OS (appliance image) ... Supervised ... Container ... Core
+    excerpt: "Home Assistant OS (appliance image; ... Home Assistant Supervised ... Home Assistant Container ... Home Assistant Core"
   prerequisite_evidence:
   - Time-source specification for Core/Supervisor/os-agent — NTP topology, time authority, drift bounds, behavior on time-source failure, and audit timestamp precision (ms/us)
   - Whether timestamps are recorded in UTC with monotonic-on-write ordering across the Core/Supervisor/host-Docker tiers
@@ -1011,7 +1011,7 @@ finding:
     excerpt: 'def access_all_entities(self, key): return True # owner unconditional all-access'
   - artifact: auth/auth_index.md
     locator: '#owner, lines 27-29'
-    excerpt: The onboarding user is the owner (all permissions)
+    excerpt: "The user that is created during onboarding will be marked as \"owner\". ... will always have access to all permissions."
   prerequisite_evidence:
   - Design of the audit-read access path for any future audit stream — whether a separate audit-reader role exists distinct from operator/admin/owner
   - Whether audit reads are themselves recorded (audit-of-audit-access) and whether segregation of duties excludes actors from reading the audit of their own actions

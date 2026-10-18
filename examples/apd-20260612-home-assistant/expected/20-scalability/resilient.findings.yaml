@@ -668,7 +668,7 @@ finding:
     excerpt: Public relay route forwarding notifications to APNS/FCM
   - artifact: mobile/mobile-apps-fcm-push-README.md
     locator: lines 42-47
-    excerpt: forwards notifications without exposing device push tokens to the instance
+    excerpt: "Then deploy the Cloud Functions: ... firebase deploy"
   prerequisite_evidence: []
   control_mappings:
     nist_800_53r5:
@@ -879,7 +879,7 @@ finding:
   evidence:
   - artifact: org/SECURITY.md
     locator: full file (6 lines)
-    excerpt: Security-policy pointer; no embedded hardening or failure-mode content
+    excerpt: "(Security-policy pointer; no embedded hardening or failure-mode content)"
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: 'def apply_policy_deny_all(entity_id, key): return False'

@@ -1904,7 +1904,7 @@ finding:
   evidence:
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#trust-boundaries, lines 88-89'
-    excerpt: Supervisor controls the Docker socket ... the container-to-host-root boundary
+    excerpt: "Supervisor → Docker socket (host root) & → os-agent (D-Bus host ops) — the container-to-host-root boundary."
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.docker.manager.DockerAPI.__init__:L271-L279@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: Supervisor binds the Docker socket (/run/docker.sock)
@@ -2713,7 +2713,7 @@ finding:
   evidence:
   - artifact: org/SECURITY.md
     locator: full file (6 lines)
-    excerpt: Security-policy pointer; no embedded hardening or failure-mode content
+    excerpt: "(Security-policy pointer; no embedded hardening or failure-mode content)"
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.auth.permissions.util.compile_policy:L23-L52@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: 'def apply_policy_deny_all(entity_id, key): return False'
@@ -3027,7 +3027,7 @@ finding:
     excerpt: KeyStore.getInstance("AndroidCAStore")... trustManagerFactory.init(androidCaStore)
   - artifact: mobile/android-CLAUDE.md
     locator: run-config crown_jewels EXCLUDED note (attestation_tokens_and_jwts absent)
-    excerpt: no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere
+    excerpt: "(no Play Integrity / App Attest / DeviceCheck / SafetyNet anywhere)"
   control_mappings:
     nist_800_53r5:
     - IA-9
@@ -3327,7 +3327,7 @@ finding:
   evidence:
   - artifact: mobile/supervisor-apps-security.md
     locator: '#authenticating-a-user-when-using-ingress, lines 40-48'
-    excerpt: the supervisor then adds some headers identifying the user ... X-Remote-User-Id / X-Remote-User-Name
+    excerpt: "The supervisor then adds some headers identifying the user to every request: ... X-Remote-User-Id ... X-Remote-User-Name"
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.api.ingress._init_header:L320-L349@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: 'headers[HEADER_REMOTE_USER_ID] = session_data.user.id ... for name in request.headers: ... continue'
@@ -3631,10 +3631,10 @@ finding:
   evidence:
   - artifact: infra/supervisor-Dockerfile
     locator: lines 36-56 (build/install, no SBOM/provenance emission)
-    excerpt: uv pip install --no-cache -e ./supervisor && python3 -m compileall ./supervisor/supervisor
+    excerpt: "uv pip install --no-cache -e ./supervisor ... && python3 -m compileall ./supervisor/supervisor"
   - artifact: infra/addon-mosquitto-config.yaml
     locator: config.yaml (manifest declares role/mounts, no provenance)
-    excerpt: 'auth_api: true; map: [ssl, share]; startup: system'
+    excerpt: "auth_api: true ... map: - ssl - share ... startup: system"
   prerequisite_evidence:
   - CI/release pipeline configuration showing whether a CycloneDX/SPDX SBOM is generated and signed per release
   - Whether SLSA build-provenance / in-toto attestations are produced and verified for Core/Supervisor/add-on/mobile artifacts
@@ -3722,13 +3722,13 @@ finding:
   evidence:
   - artifact: mobile/supervisor-apps-security.md
     locator: '#making-a-secure-app, line 33'
-    excerpt: Sign published images (the supported publishing workflow can sign images with Cosign)
+    excerpt: "Sign published images (the supported [publishing workflow](/docs/apps/publishing) can sign images with Cosign)"
   - artifact: infra/supervisor-Dockerfile
     locator: line 1 (BUILD_FROM floating tag)
     excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0
   - artifact: infra/supervisor-Dockerfile
     locator: lines 36-48 (wheels install, no attestation)
-    excerpt: uv pip install --compile-bytecode --no-cache --no-build -r requirements.txt
+    excerpt: "uv pip install --compile-bytecode --no-cache --no-build ... -r requirements.txt"
   control_mappings:
     nist_800_53r5:
     - SI-7
@@ -4036,7 +4036,7 @@ finding:
   evidence:
   - artifact: infra/addon-mosquitto-build.yaml
     locator: lines 2-4 build_from base-debian tags
-    excerpt: 'build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie; amd64: ...:trixie'
+    excerpt: "build_from: aarch64: ghcr.io/home-assistant/aarch64-base-debian:trixie amd64: ghcr.io/home-assistant/amd64-base-debian:trixie"
   - artifact: infra/supervisor-Dockerfile
     locator: line 1 ARG BUILD_FROM
     excerpt: ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.14-alpine3.22-2026.05.0
@@ -4239,10 +4239,10 @@ finding:
   evidence:
   - artifact: api/rest.md
     locator: /api/logbook sample, lines 360-383
-    excerpt: '"when": "2016-...Z" # timestamp present; time-source discipline undocumented'
+    excerpt: "\"when\": \"2020-06-20T16:44:26.127295+00:00\""
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#deployment-topologies, lines 108-116'
-    excerpt: Home Assistant OS (appliance image) ... Supervised ... Container ... Core
+    excerpt: "Home Assistant OS (appliance image; ... Home Assistant Supervised ... Home Assistant Container ... Home Assistant Core"
   prerequisite_evidence:
   - Time-source specification for Core/Supervisor/os-agent — NTP topology, time authority, drift bounds, behavior on time-source failure, and audit timestamp precision (ms/us)
   - Whether timestamps are recorded in UTC with monotonic-on-write ordering across the Core/Supervisor/host-Docker tiers
@@ -4433,7 +4433,7 @@ finding:
     excerpt: 'def access_all_entities(self, key): return True # owner unconditional all-access'
   - artifact: auth/auth_index.md
     locator: '#owner, lines 27-29'
-    excerpt: The onboarding user is the owner (all permissions)
+    excerpt: "The user that is created during onboarding will be marked as \"owner\". ... will always have access to all permissions."
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.api.middleware.security.SecurityMiddleware.token_validation:L302-L375@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): ... else: _LOGGER.warning("%s no role for %s")'
@@ -4445,13 +4445,13 @@ finding:
     excerpt: 'const { push_token: token } = req.body; if (!token) return res.status(403) ... checkRateLimit(token)'
   - artifact: mobile/mobile-apps-fcm-push-README.md
     locator: '#deploy-your-own, lines 27-47'
-    excerpt: forwards notifications ... without exposing device push tokens to the instance
+    excerpt: "Deploy your own ... Then deploy the Cloud Functions: ... firebase deploy"
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.auth.AuthManager.async_create_access_token:L599-L617@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: 'jwt.encode({"iss": refresh_token.id ...}, refresh_token.jwt_key, algorithm="HS256")'
   - artifact: auth/auth_index.md
     locator: '#refresh-token-types, lines 49-51'
-    excerpt: Long-Lived Access Token (user-generated, long horizon) ... remain valid until a user deletes it
+    excerpt: "Long-lived Access Token: These are refresh tokens that back a long lived access token."
   merged_from:
   - intg-d6c5e666
   - intg-ebff194f
@@ -4583,13 +4583,13 @@ finding:
     excerpt: jwt.encode({...}, refresh_token.jwt_key, algorithm="HS256")
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#sensitive-data-inventory (presence/geolocation/lock/alarm)'
-    excerpt: 'Recorder history of entity state: presence, geolocation/zones, camera/voice events, lock/alarm state'
+    excerpt: "History / state DB (Recorder) — SQLite/MariaDB/PostgreSQL of entity state + history: presence, geolocation, camera/voice events, lock/alarm state"
   - artifact: code-evidence-index.yaml
     locator: code:iOS WebView (remote frontend) -> Core REST+WS API (user instance URL):L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
     excerpt: Target is the user-entered self-hosted instance URL (no fixed host)
   - artifact: api/native-app/setup.md
     locator: registration response, lines 74-79
-    excerpt: returns webhook_id, secret, cloudhook_url
+    excerpt: "\"cloudhook_url\": \"https://hooks.nabu.casa/randomlongstring123\", ... \"secret\": \"qwerty\", \"webhook_id\": \"abcdefgh\""
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.components.websocket_api.auth.AuthPhase.async_handle:L85-L123@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: registers revoke callback to drop the socket on token revocation
@@ -4787,7 +4787,7 @@ finding:
     excerpt: Public relay route forwarding notifications to APNS/FCM
   - artifact: mobile/mobile-apps-fcm-push-README.md
     locator: lines 42-47
-    excerpt: forwards notifications without exposing device push tokens to the instance
+    excerpt: "Then deploy the Cloud Functions: ... firebase deploy"
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: lines 20-22 (trust posture)
     excerpt: integrations are not sandboxed from each other and run with Core's full privilege
@@ -4906,25 +4906,25 @@ finding:
     excerpt: 'if patterns.role_access[app.hassio_role].match(request.path): ... else: _LOGGER.warning("%s no role for %s")'
   - artifact: org/SECURITY.md
     locator: whole file (6-line pointer; no audit/hardening content)
-    excerpt: security-policy pointer to website; no embedded audit or log-protection content
+    excerpt: "(security-policy pointer to website; no embedded audit or log-protection content)"
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.helpers.recorder.session_scope:L71-L72@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: '@contextmanager def session_scope(...): # Recorder DB session for entity-state history'
   - artifact: architecture/adr/0018-supported-databases.md
     locator: ADR-0018 supported databases (SQLite / MariaDB / PostgreSQL)
-    excerpt: supported recorder databases — SQLite, MariaDB, PostgreSQL
+    excerpt: "Limit DB support to the following: ... MariaDB ≥ 10.3 ... PostgreSQL ≥ 12 ... SQLite ≥ 3.40.1"
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: mode, json_data = json_helper.prepare_save_json(data, ...) ... write_method(path, json_data, self._private, mode=mode)
   - artifact: architecture/adr/0021-YAML-integration-configuration-deprecation-policy.md
     locator: ADR-0021 YAML integration configuration deprecation policy
-    excerpt: integration configuration migrates from YAML toward UI/.storage-managed config entries
+    excerpt: "If a migration (for example, using a config flow import) is possible, it becomes required to add a migration."
   - artifact: code-evidence-index.yaml
     locator: code:supervisor.backups.backup.Backup.set_password:L122-L353@7eaf69fcab6a9fd1607b6d7000cbe75b3c96b7b2
     excerpt: 'self._password: str | None = None ... def set_password(self, password): self._password = password or None'
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: §Sensitive-data inventory, backup artifact line
-    excerpt: full snapshots bundle config + recorder DB + secrets; backup password optional; weakest-protected copy
+    excerpt: "Backups — full snapshots (secrets + tokens + DB), frequently the weakest-protected copy."
   - artifact: code-evidence-index.yaml
     locator: code:Sources.App.Frontend.ExternalMessageBus.WebViewExternalMessageHandler.handleExternalMessage:L37-L76@8f26f9e7d5bb9ca7d55d563ceb685ed77a76a740
     excerpt: guard let incomingMessage = WebSocketMessage(dictionary) ... switch externalBusMessage { case .configGet ... case .tagRead ... }
@@ -4933,7 +4933,7 @@ finding:
     excerpt: window[CALLBACK_EXTERNAL_BUS] = (msg) => this.receiveMessage(msg)
   - artifact: auth/frontend-external-authentication.md
     locator: '#external-authentication, callback-name forgery warning'
-    excerpt: callback names must be verified to avoid forgery
+    excerpt: "Apps should verify the callback name matches the expected value to ensure the callback has not been forged."
   - artifact: code-evidence-index.yaml
     locator: code:homeassistant.helpers.storage.Store._write_prepared_data:L602-L618@28076bcad6158160647ac62c92f1ff5acd4851ca
     excerpt: 'write_method(path, json_data, self._private, mode=mode)  # plaintext UTF-8 JSON; 0600 only, NO encryption/MAC'

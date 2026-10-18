@@ -72,11 +72,14 @@ def main() -> None:
     ),
 )
 @click.option(
-    "--strict-excerpts",
-    is_flag=True,
+    "--strict-excerpts/--no-strict-excerpts",
+    default=True,
     help=(
-        "Make an evidence excerpt that is not verbatim in its cited inputs/ file an "
-        "ERROR (a WARNING by default). Ignored with --schema-only."
+        "An evidence excerpt that is not verbatim in its cited inputs/ file is an "
+        "ERROR by default (strict). --no-strict-excerpts makes it a WARNING, for runs "
+        "made before 2.0. A YAML or JSON input searched as plain text only stays a "
+        "WARNING, and so does a .jsonl, .ndjson, .ipynb, .geojson, .tfstate, .har, "
+        ".jsonc or .json5 input, which is never parsed. Ignored with --schema-only."
     ),
 )
 def validate(  # type: ignore[no-untyped-def]
@@ -1373,6 +1376,146 @@ def canonicalize_cmd(run_dir: Path) -> None:
     # canonicalize step rather than as a confusing downstream tier-gate error.
     if result.parse_errors:
         raise SystemExit(1)
+
+
+def _prepare_run_config(
+    run_dir: Path, domain_flags: tuple[str, ...]
+) -> tuple[list[str], str | None]:
+    """The domains (``--domain``, else ``.apd-run.yaml``) and framework version for prepare-run.
+
+    Each value becomes argv of an in-process command, where a leading ``-`` would parse as
+    an option, so it must match its run-config.schema.json pattern.
+    """
+    import re
+
+    config_path = run_dir / ".apd-run.yaml"
+    try:
+        loaded = (
+            yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            if config_path.is_file()
+            else None
+        )
+    except yaml.YAMLError as exc:
+        raise click.UsageError(f".apd-run.yaml is not valid YAML: {exc}") from exc
+    if loaded is None:
+        loaded = {}
+    if not isinstance(loaded, dict):
+        raise click.UsageError(".apd-run.yaml is not a mapping")
+    props = _resources.read_schema("run-config.schema.json")["properties"]
+    domain_pattern = props["domains"]["items"]["pattern"]
+    version_pattern = props["framework_version"]["pattern"]
+
+    if domain_flags:
+        source, domains = "--domain", list(domain_flags)
+    else:
+        source, raw = ".apd-run.yaml domains", loaded.get("domains")
+        if raw is not None and not isinstance(raw, list):
+            raise click.UsageError(f"{source} must be a list of domain pack names")
+        domains = raw or []
+    if not domains:
+        raise click.UsageError("no domains: pass --domain D or set domains in .apd-run.yaml")
+    for d in domains:
+        if not isinstance(d, str) or not re.fullmatch(domain_pattern, d):
+            raise click.UsageError(f"{source}: {d!r} is not a domain pack name ({domain_pattern})")
+
+    version = loaded.get("framework_version")
+    if version is not None and (
+        not isinstance(version, str) or not re.fullmatch(version_pattern, version)
+    ):
+        raise click.UsageError(
+            f".apd-run.yaml framework_version: {version!r} is not a quoted MAJOR.MINOR.PATCH"
+            f" version ({version_pattern})"
+        )
+    return domains, version
+
+
+@main.command("prepare-run")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--domain",
+    "domain_flags",
+    multiple=True,
+    help="Domain pack; repeat for several. Default: the domains in RUN_DIR/.apd-run.yaml.",
+)
+def prepare_run_cmd(run_dir: Path, domain_flags: tuple[str, ...]) -> None:
+    """Setup composite: scaffold validate, build-domain-skill, validate-domain.
+
+    Runs all three in order and exits with the first failing one's code. The framework
+    version comes from RUN_DIR/.apd-run.yaml when it sets one. Writes one
+    `prepare-run: <step> exit=<N>` line per step to stderr.
+    """
+    from .composite import prepare_run_steps, run_composite
+
+    domains, version = _prepare_run_config(run_dir, domain_flags)
+    raise SystemExit(run_composite("prepare-run", prepare_run_steps(run_dir, domains, version)))
+
+
+# The validate flag pair, passed through by the composites that end in a validate.
+_strict_excerpts_option = click.option(
+    "--strict-excerpts/--no-strict-excerpts",
+    default=True,
+    help=(
+        "Passed to the validate step: a non-verbatim inputs/ excerpt is an ERROR by "
+        "default; --no-strict-excerpts makes it a WARNING, for runs made before 2.0."
+    ),
+)
+
+
+@main.command("tier-gate")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--tier", required=True, help="Run subdir to gate, e.g. 10-trustworthiness.")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print only validate's JSON on stdout (canonicalize's output goes to stderr).",
+)
+@_strict_excerpts_option
+def tier_gate_cmd(run_dir: Path, tier: str, as_json: bool, strict_excerpts: bool) -> None:
+    """Canonicalize the whole run, then validate --tier; exit with the validate result.
+
+    Exit 0 clean, 1 on schema errors. A canonicalize failure is reported on its status
+    line but does not fail the gate.
+    """
+    from .composite import run_composite, tier_gate_steps
+
+    steps = tier_gate_steps(run_dir, tier, json_output=as_json, strict_excerpts=strict_excerpts)
+    raise SystemExit(run_composite("tier-gate", steps, gate="validate"))
+
+
+@main.command("post-tier4")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+def post_tier4_cmd(run_dir: Path) -> None:
+    """Synthesis composite: assemble-c4, canonicalize, rollup.
+
+    Runs all three in order and exits with the first failing one's code; the
+    `post-tier4: <step> exit=<N>` lines on stderr name which one failed.
+    """
+    from .composite import post_tier4_steps, run_composite
+
+    raise SystemExit(run_composite("post-tier4", post_tier4_steps(run_dir)))
+
+
+@main.command("closeout")
+@click.argument("run_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--record-attempts",
+    "attempts_json",
+    metavar="JSON",
+    default=None,
+    help="Passed to summarize --record-attempts (writes RUN_DIR/.apd-state/attempts.yaml).",
+)
+@_strict_excerpts_option
+def closeout_cmd(run_dir: Path, attempts_json: str | None, strict_excerpts: bool) -> None:
+    """Closeout composite: canonicalize, summarize, manual-audit-prompts, final validate.
+
+    Runs all four in order (the validate is --errors-only) and exits with the first
+    failing one's code. manual-audit-prompts writes 40-synthesis/manual-audit-prompts.md.
+    """
+    from .composite import closeout_steps, run_composite
+
+    steps = closeout_steps(run_dir, attempts_json, strict_excerpts=strict_excerpts)
+    raise SystemExit(run_composite("closeout", steps))
 
 
 @main.command("cluster-candidates")

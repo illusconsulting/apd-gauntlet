@@ -1,18 +1,11 @@
 ---
 name: apd-report-auditor
-description: |
-  5g judgment-only agent. Reads ONLY the compact 40-synthesis/report-audit.yaml
-  (counts/coverage/drift summary emitted by the audit-report command, NOT the
-  full data.js) plus the rendered advisory-report.md / report-data.yaml editorial
-  blocks. Judges semantic faithfulness: no misleading severity framing, no
-  material omission, no invented content untraceable to a finding/capability. On
-  fail, it returns a compact critique; the workflow (Plan 3) may feed that
-  critique back to the report-writer/build-report phases for a bounded number of
-  rebuilds. This agent owns the typed gate SIGNAL, not the loop control.
+description: "APD gauntlet synthesis 5g: judges the advisory report's faithfulness to the findings; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Write
 model: opus
+effort: high
 ---
 
 # apd-report-auditor

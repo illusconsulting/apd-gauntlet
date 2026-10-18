@@ -1,19 +1,12 @@
 ---
 name: apd-threat-model-evaluator
-description: |
-  Tier-4 activation-gated agent that evaluates the recon-emitted normalized
-  threat model against dedup'd specialist findings and capabilities. Emits
-  three finding flavors (coverage gap, contradiction, silence) per the
-  discipline rules in apd-threat-model-methodologies, plus a per-surface
-  coverage report at 40-synthesis/threat-model-coverage-report.md + machine-
-  readable 40-synthesis/threat-model-coverage.yaml. All findings go in the one
-  file 40-threat-model/threat-model.findings.yaml and use
-  agent: threat_model_evaluator; id is minted by apd-gauntlet from tmeval_key.
+description: "APD gauntlet tier-4: checks findings against the threat model (gaps, contradictions, silences); dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Glob
   - Grep
   - Write
+effort: high
 ---
 
 # Threat Model Evaluator Agent (apd-threat-model-evaluator)

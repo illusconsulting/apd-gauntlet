@@ -356,3 +356,47 @@ def test_run_config_repos_rejects_empty_array():
     }
     errors = list(Draft202012Validator(SCHEMA).iter_errors(data))
     assert errors, "empty repos[] must violate minItems:1"
+
+
+# --- WS3 Task 7: domain_improvement_capture opts in to Phase 5h -------------------------
+
+
+def _cfg(**kw):
+    return {"run_id": "r", "domains": ["pbm"], "framework_version": "2.0.0", **kw}
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_domain_capture_accepts_booleans(value):
+    assert not list(
+        Draft202012Validator(SCHEMA).iter_errors(_cfg(domain_improvement_capture=value)))
+
+
+@pytest.mark.parametrize("value", ["true", 1, None])
+def test_domain_capture_must_be_boolean(value):
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(_cfg(domain_improvement_capture=value)))
+    assert errors and "domain_improvement_capture" in str(errors[0].path)
+
+
+# --- beyond the plan's Task 7 tests ------------------------------------------------------
+
+
+def test_domain_capture_property_is_the_planned_one():
+    # R4: optional, boolean, default false.
+    assert SCHEMA["properties"]["domain_improvement_capture"] == {
+        "type": "boolean", "default": False,
+        "description": "Opt in to Phase 5h, the advisory domain-pack auditor. Absent or false "
+                       "skips it.",
+    }
+    assert "domain_improvement_capture" not in SCHEMA["required"]
+    keys = list(SCHEMA["properties"])
+    assert keys.index("domain_improvement_capture") == keys.index("infrastructure") + 1
+
+
+def test_domain_capture_absent_is_valid():
+    assert not list(Draft202012Validator(SCHEMA).iter_errors(_cfg()))
+
+
+@pytest.mark.parametrize("value", ["false", 0, "yes", [], {}])
+def test_domain_capture_rejects_other_non_booleans(value):
+    errors = list(Draft202012Validator(SCHEMA).iter_errors(_cfg(domain_improvement_capture=value)))
+    assert [list(e.path) for e in errors] == [["domain_improvement_capture"]]

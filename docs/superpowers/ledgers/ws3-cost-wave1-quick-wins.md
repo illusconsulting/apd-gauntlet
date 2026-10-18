@@ -1,0 +1,407 @@
+# WS3 execution ledger
+
+Plan: `docs/superpowers/plans/2026-10-10-ws3-cost-wave1-quick-wins.md`; base commit `c275c9f` (`feat/ws2-measurement-and-evaluation`, stacked on `origin/next` `c2be739`); started 2026-10-17.
+
+## Rulings
+
+- Task 3 review, applied: the retry is pinned as always-run. `test_rollup_failure_retry_carries_the_same_command` asserts `guard is False` on `post-tier4-retry-1`. With `alwaysRun: true` removed from that `pyStep` (the pre-task guarded `rollup-retry-1` state), it fails, and so does the new static `test_post_tier4_retry_repeats_the_first_call_options`.
+- Task 3 review, applied, a deviation from the plan's code block: the advisory log moves out of the `else if` and runs after the retry block. It names each of `assemble-c4` and `canonicalize` that the last post-tier4 receipt reports failed. The plan's form logged nothing when the retry fixed `rollup` but `assemble-c4` or `canonicalize` still failed on it. The text changes from the plan's `… failed — advisory, as before WS3.` to `post-tier4: <steps> failed — advisory; the run continues.`, because operators read it and a plan's workstream name means nothing to them. Only logging changes: no dispatch, label or retry condition does. Tests: `test_advisory_post_tier4_failures_are_logged` (four cases, all failing before the fix), `test_no_advisory_log_without_a_named_advisory_failure` and `test_runner_logs_name_no_workstream`. The CHANGELOG's Task 3 entry says so.
+- Task 3 review, harness: to let those tests read `log()` lines, `tests/js/workflow_dispatch_trace.mjs` also prints each one on stderr as `log: <message>` when `TRACE_LOGS` is set. Without it, stdout and stderr are as before, so the refusal tests that pin stderr's start and end are unaffected. `trace_raw` takes `logs=True` and drops an inherited `TRACE_LOGS` otherwise.
+- Task 3 review, declined: one shared options object for both post-tier4 calls. The plan writes two `pyStep('post-tier4', {…})` calls, and `test_post_tier4_outputs_label_includes_metrics` reads the first call's inline literal. The drift the reviewer points at is covered instead: the new static test checks that the two literals differ only in `label`, and the trace test pins the retry's guard.
+- Task 3 review, declined: `stepFailed` reading a failed receipt that names no step as a failed rollup. The plan's code specifies `named.length === 0 ||`, and its `test_rollup_fallback_keys_on_rollup_step` requires `{"post-tier4": [], "post-tier4-retry-1": []}` to reach the synthesizer. The reviewer marks the cost as accepted.
+- Task 3 review, no change: `pyStep`'s unused `noRunDir` and `positional` options stay, as Deviations already records.
+- Task 3 review, applied: `docs/architecture.md` (the skills paragraph and the Phase 0 lifecycle line) now says the runner runs `build-domain-skill` as a step of `prepare-run`. `docs/running-the-gauntlet.md` lists `rollup` as a step of `post-tier4`.
+- Task 3 review, declined: the double space in `plan_run`'s `prepare-run` outputs text when `domains` is empty. `run-config.schema.json` sets `domains` to `minItems: 1`, and `plan-run` validates `.apd-run.yaml` against it before it calls `build_plan` (`tools/apd_gauntlet/cli.py`, `plan_run_cmd`), so the CLI never builds that row. The old `validate-domain` row had the same text.
+- Task 5 review, applied: the CHANGELOG's byte figure. 3,536 was the character count; in UTF-8 bytes, as `test_always_on_description_budget` measures them, the manifest-listed set goes from 16,683 bytes (at `a4cb6b3`, 31 files) to 3,538 (30 files). The two differ because the `apd-domain` description holds an em dash (161 characters, 163 bytes). The entry now says the figures cover every listed description, not only the 27 rewritten ones (those alone go from 15,907 bytes to 3,121). The entry also says "contains a newline" instead of "spans lines", because the check reads the parsed value: a `>-` folded scalar written across several source lines parses to one line and passes. The byte figure in the Deviations bullet for the CHANGELOG is corrected too.
+- Task 5 review, applied, a behaviour fix beyond the plan: `lint-agents` now reports an empty `description:` as missing. Before, it parsed to `None`, `str(None)` passed both caps, and nothing was reported; `lint-skills` already checked `if not desc`. Pinned by `test_lint_agents_flags_an_empty_description_as_missing` (null and empty-string cases, both failing before the fix). Every shipped agent still lints clean.
+- Task 5 review, applied: `docs/extending-agents.md` names `apd-tier-repair` beside `apd-domain` as keeping its own description wording. Its description does not end with the fixed agent ending, and the plan leaves it untouched.
+- Task 5 review, applied: the `tests/test_workflow_apd_gauntlet.py` docstring drops "(mirrors tests/test_orchestrator_topology.py)", a file Task 5 deletes. Only the docstring changes. A10.6's intended `apd-orchestrator` mentions in that file (the negative guard `test_orchestrator_is_not_an_agenttype`) stay, and WS5 Task 15's grep does not scan the file.
+- Task 5 review, declined: flagging `\r`, U+2028 and U+2029 in a description. The plan's interface is "A description that contains a newline gets …". PyYAML reads a raw carriage return in the source as a line break, so only an escaped `"\r"` or a Unicode line separator would pass, and `test_description_is_the_planned_one_line` pins every rewritten description as a literal one-line string.
+- Task 5 review, declined: `pyproject.toml`'s `description` ("9 specialist agents plus intake, orchestrator, and synthesizer."). The file is outside Task 5's file list and WS5 Task 15's grep. The string was already wrong before Task 5: it named 12 agents while the plugin listed 23. It is a package-metadata follow-up, not a Task 5 regression.
+- Task 5 review, applied: `test_orchestrator_removed` reads `plugin.json` with `encoding="utf-8"`, like the other reads in the file. The plan's code omits it, and `plugin.json` holds an em dash in its `description`. The parsed `agents` list moves to a local for ruff (E501); the assertion is unchanged.
+- Task 5 review, declined: `tests/test_doc_domain_pack_authoring.py`'s `_ALLOWED = set()` and its skip branch, which can no longer run. Task 5's file list asks for exactly that form (`_ALLOWED = set()`, comment dropped), and the loop still checks every user doc.
+- Task 8 review, applied, a behaviour fix: `normalize_excerpt_text` is linear in a whitespace run's length. Item (a)'s pattern `\s+(?=[^\w\s])|(?<=[^\w\s])\s+` backtracked through a run at each of its positions. It took 0.004 s for 1,000 spaces, 0.40 s for 10,000 and 1.62 s for 20,000, which extrapolates to about an hour for 1,000,000. That cost repeats at every gate, on an untrusted `inputs/` file of up to 20 MiB. The function now collapses whitespace first, then drops the single space next to punctuation (`" (?=[^\w\s])|(?<=[^\w\s]) "`). Its output is the same on 300,000 random strings of ASCII and Unicode letters, whitespace (NBSP, em space and U+2028 among them), punctuation, `*` and backticks, and 20,000,000 spaces take 0.02 s. Pinned by `test_a_long_whitespace_run_is_normalized_in_linear_time` (a whole-text case and a parsed-scalar case, both timing out at 15 s on the committed pattern) and a mixed-run assertion in `test_normalize_folds_case_and_drops_whitespace_beside_punctuation`.
+- Task 8 review, applied with a different test shape: the review suggested a `PATHOLOGICAL` entry for the parsed-scalar path. The new test covers both paths in a child process that `subprocess.run(..., timeout=TIME_BOUND_S)` kills at the bound. On a regression, an in-process `PATHOLOGICAL` case would pin the suite for about an hour per normalization instead of failing. Once the child passes, the test also runs `check_excerpts_verbatim` in-process within the bound.
+- Task 8 review, applied, a behaviour fix beyond the plan's item (f) list: when the scalar walk stops at `_MAX_SCALAR_HAYSTACKS` (or the character cap) with values left unvisited, the input is now `whole_text_only`, so a miss there stays a warning under strict. Before, a parsed JSON under 1 MiB whose matching value the walk never reached gave an error, which a tier gate would send through repair and a lens re-run although the excerpt was verbatim. `_string_scalars` now returns `(found, truncated)`. Pinned by the `over-the-scalar-cap` case of `test_structured_input_searched_as_whole_text_only_stays_a_warning`, which gave an `ERROR` before the fix, and by the updated `_string_scalars` tests. `docs/running-the-gauntlet.md` and the CHANGELOG entry name the case.
+- Task 8 review, applied: the skill's "It ignores case, spacing, `*` and backticks" overstated the matcher, since whitespace between two words still counts as one space. It now says it "collapses spacing to one space and drops it next to punctuation". The `check_excerpts_verbatim` docstring now names case folding, the whitespace rule and the scalar cap.
+- Task 8 review, applied: the Task 8 Step 6 operator step adds `--excuse first_pass_and_retries:new-error-class` to its `compare-runs`, as the consolidated plan's Task 3.3 T8 requires. The sentence that accepted an excerpt-repair cost rise as "the flip's price" is removed. The plan's rule (Global Constraints; Task 1 Step 6) stands: per-run `cost_usd` is at or below the `-ws3t7` runs. Open question for the controller, not an accepted criterion: the consolidated plan excuses the `first_pass_and_retries` gate for the new error class, but not the cost rule. As the plan stands, a candidate whose only cost rise is excerpt repairs (`tier_repairs` in its `.apd-state/attempts.yaml`) blocks the merge.
+- Task 8 review, no change: the JSON-depth severity that depends on the Python version (recorded under Deviations) and the rewritten `resil-a4c9535c` excerpt. The review marks both acceptable.
+- Whole-branch review, applied (`58c350b`): `apd-cli-runner` gets a data-never-instructions rule, one bullet in `## Job` (no new heading; `test_body_sections_and_job_rules` pins three). It was the only Bash holder without one, and the command output it maps into its receipt can quote record and `inputs/` text: a validator message, a YAML parse snippet, the tier-gate JSON errors. The test now requires `data, never instructions` and `ignore it and run nothing else` in the Job section, and failed before the bullet.
+- Whole-branch review, applied, a behaviour fix (`1c09136`): under the strict default (A9.16 f), a miss in a `.jsonl`, `.ndjson`, `.ipynb`, `.geojson`, `.tfstate`, `.har`, `.jsonc` or `.json5` input stays a warning. The check never parses these, so an escaped string (`user \"admin\" logged in`) could not match the unescaped quote a lens writes, and the gate went red. `_WHOLE_TEXT_ONLY_SUFFIXES` in `validate.py` marks them `whole_text_only`, the review's smallest fix. Parsing the single-document ones with `json.loads` was not taken: a notebook splits its source into one string per line, so a parsed match buys little, and a miss stays non-blocking either way. `test_json_family_input_miss_stays_a_warning_by_default` (eight suffixes) failed on all eight before the fix. The `--strict-excerpts` help on `validate`, the runbook's excerpt entry and the CHANGELOG entry name the suffixes. Other escaping formats (XML entities, CSV's doubled quotes) are outside the finding and unchanged.
+- Whole-branch review, applied (`652bf8d`): the dispatch-trace harness's `agent()` records its trace entry at call time and resolves on a later macrotask, and `parallel()` maps a thunk that throws or rejects to null, as the runtime and the awaits-test stub do. Measured: with `let pt = pyStep('post-tier4', …)` (dropped await), all 59 trace tests passed before; after, 7 fail (the rollup fallback and retry tests, the four advisory-log cases, the several-failures retry). At HEAD the 59 still pass. Two new tests run scratch workflows under the harness and pin the behaviour: `test_harness_agent_resolves_asynchronously_like_the_runtime` (it also fails on a `Promise.resolve` stub, which resolves on a microtask) and `test_harness_parallel_maps_a_failed_thunk_to_null`. `trace_raw` takes `runner=` for them. For later plans: WS5 Task 4's conditional harness change (A15.25, "If WS3 Task 1's harness still stubs `parallel: (ts) => ts.map(…)`") no longer applies; the harness already awaits each thunk.
+- Whole-branch review, applied from the reviews' non-blocking notes: `docs/architecture.md`'s Run lifecycle block says each tier ends in `tier-gate`, not `validate`, and runbook step 4 (`docs/running-the-gauntlet.md`) lists `post-tier4` (`assemble-c4`, `canonicalize`, `rollup`) after the attack-path analyzer, the order the runner dispatches. Both were stale, not wrong. Each SCP step under Pending operator steps now says that under the consolidated form's `--strict` only result `pass` exits 0.
+- Whole-branch review, open items for the PR (no change here): (1) the Task 8 question above, whether an excerpt-repair cost rise is excused from the cost rule as the consolidated plan excuses the `first_pass_and_retries` gate, has no controller ruling. Until it gets one, the plan's rule stands and such a candidate blocks the merge. (2) The plugin-manifest CI job pins Claude Code 2.0.76 for `claude plugin validate`. The local 2.1.302 CLI accepts the manifest with the new `effort` frontmatter; 2.0.76's behaviour could not be checked offline.
+- Whole-branch review, notes recorded with no change (follow-ups, mostly code that predates WS3): the workflow ignores the `closeout` receipt, so a failed final validate or `manual-audit-prompts` still ends "complete"; the guard rule in the runner body makes guarded steps always re-run (safe, but the guard text is dead tokens), and an always-run step's `outputs` text never reaches the prompt; the tier-gate JSON mapping relies on the runner keeping validate's stdout apart from stderr (a subprocess test pins pure stdout; the live Task 3 SCP should confirm the runner does this); `AGENT_PHASES` (WS2) maps `apd-tier-repair` to `canonicalize` while repairs run in the tier-N phase; the receipt `errors` mapping under `errorsFromJson` is pinned by text only. Security follow-ups: `run-state-fallback` is still a general-purpose dispatch on the fallback path; `args.threat_model` reaches the Bash-holding `apd-threat-model-recon` prompt unchecked (its schema pattern allows `;` and `$(`); the runner's refusal checks only the `apd-gauntlet` prefix, not shell metacharacters; and `failingFiles` (WS1) does not anchor a repair path under the run directory.
+
+## Deviations
+
+- Task 1 (`4736891`), files beyond the plan's list, each needed to keep a WS2 test green:
+  - `docs/measuring-changes.md` gains the ``| `apd-cli-runner` | `cli-steps` |`` row, because `test_runbook_phase_table_matches_agent_phases` needs a row for every `AGENT_PHASES` entry. The sentence under the table now names `apd-cli-runner`.
+  - `tests/test_measure_usage.py::test_agent_phases_is_the_planned_table`, WS2's pin of the whole map, gains `apd-cli-runner`.
+  - `tests/test_workflow_runner_awaits.py`: `_recorded_attempts` found the summarize command as a prompt line that starts with `apd-gauntlet summarize`. It now reads the `COMMAND:` line. No dispatch label, parallel group or async helper changed, so `EXPECTED_GREEN_LABELS`, `LENS_GROUPS`, `ASYNC_HELPERS`, `PASS_THROUGH` and `CALLS` stay as they were (A15.21).
+  - `AGENT_PHASES` keeps `general-purpose: cli-steps`. 1.7 runs used that worker for CLI steps, and the synthesis fallback's `run-state-fallback` breadcrumb still runs on it.
+- Task 1, harness: `tests/js/workflow_dispatch_trace.mjs` prints the dispatch list on stdout even when the workflow throws. It then sets `process.exitCode = 3` and does not call `process.exit(3)`, because a pipe write can still be pending on macOS. The plan only says it exits 3 with the message on stderr. The extra output lets `test_refusal_names_the_key_and_comes_before_any_dispatch` check that a refusal comes before the first dispatch, which the Review Focus asks for.
+- Task 1, agent body: the plan's Job rule lists the extra receipt lines as "(`REPORT AUDIT`, WS1's verbatim `resume_plan` copy, WS1's JSON error mapping)". The body names them by their receipt keys (`report_audit`, `resume_plan`, `errors`), because `pyStep` keeps those lines as they stand and they start with those keys.
+- Task 1, agent body, the guard check: the agent has only Bash, and every command it runs must begin with `apd-gauntlet`, so it cannot list files. The body therefore judges the guard from the guard's own `apd-gauntlet validate` command. If that command does not show that every expected output exists and is valid, the step is NOT-DONE and the work command runs. The plan does not state this rule. It keeps the guard's "never skip on a partial file" direction: a guarded step re-runs an idempotent command rather than skipping on doubt.
+- Task 1, tests beyond the plan's:
+  - `tests/test_agent_apd_cli_runner.py`: the exact frontmatter block; the A9.8 pins that moved from `pyStep` to the body (`work command`, `short-circuited`, the always-run line, `RECEIPT AGENT`, the status and counts lines); the three sections and the Job rules; the manifest entry right after `apd-availability.md`; and the `docs/architecture.md` counts and row.
+  - `tests/test_workflow_dispatch_trace.py`: nine refusal cases that name the key and come before any dispatch (the plan's three, plus `r/../../x`, a leading `-`, an uppercase domain, a non-string domain, `1.7`, an empty framework version); identifiers that match the schema; the `--framework-version` flag left out when the key is absent; phase and guard in the trace; a failing `cluster-candidates` whose retry also goes to the runner; and the CI test job's SHA-pinned Node 22 step.
+  - The rewritten WS1 tests also pin the line order: the guard or always-run line, then `COMMAND:`, then `RECEIPT AGENT:`.
+- Task 1, A9.20: the plan places it in Task 1 (Files, `.github/workflows/python-tests.yml`), and it ships in `4736891`. The `test` job gains `actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0` with `node-version: "22"` before `pip install`. That is the SHA the `bundle-rebuild-diff` job already pins, so nothing was fetched to find it.
+- Task 2 (`9930a32`), `prepare-run` checks its values: each domain (from `--domain` or `.apd-run.yaml`) and `framework_version` must fully match its `run-config.schema.json` pattern, and a `.apd-run.yaml` that is not a mapping is refused. Each case raises `click.UsageError` (exit 2) naming the key before any step runs. The plan does not ask for this. The values become argv of in-process commands, where a leading `-` parses as an option: a config domain `--out=elsewhere` would redirect the `build-domain-skill` output. The workflow refuses the same values before its first dispatch (Task 1). An unquoted `framework_version: 1.4` loads as a float and is refused too.
+- Task 2, `run_composite` raises `ValueError` when `gate` names no step. `invoke` also returns the code that click returns in non-standalone mode for `ctx.exit(N)`, the one case the plan's three do not cover, and 0 when the command returns normally.
+- Task 2, the plan's test code is adapted for ruff with the assertions unchanged: `codes = lambda …` (E731) is the helper `_codes`, `l` (E741) is `line`, and lines over 100 characters are wrapped (E501, with a `CONF` path constant). `GOOD_ATTEMPTS` is imported from `test_summarize`, as the plan says.
+- Task 2, tests beyond the plan's: unparseable `.apd-run.yaml`; five refusal cases; `tier-gate --json` stdout is pure JSON in a real subprocess, where the runner reads it; the final status line of `tier-gate` and `post-tier4`; the `RuntimeError` traceback on stderr; `closeout` keeps `summarize`'s exit 2 for bad attempts JSON and still runs `validate`; the step builders' argv; one status line per step; the stdout redirect applies only to the flagged step; the unknown gate; and `invoke`'s exit codes for `--version`, an unknown command and a bad argument.
+- Task 2, docs: besides the four CLI reference lines, one sentence after the block states the status-line contract.
+- Task 2a (`ef46786`), commit message: neither the plan's Task 2a nor the consolidated plan's N19 gives a commit step, so the commit uses `feat(cli): run manual-audit-prompts at closeout`, in Task 2's style.
+- Task 2a, placement: "after `summarize`" puts the step between `summarize` and the final `validate`, so `closeout` runs `canonicalize`, `summarize`, `manual-audit-prompts`, `validate`. The final `validate` stays last because R1 calls it the "final `validate`", and Task 8's test reads `closeout_steps(...)[-1]` as the `validate` argv.
+- Task 2a, "always-run": a composite already runs every constituent whatever an earlier one returned, so no new option was needed. `closeout` keeps Task 2's exit rule (the first failing step's code), so a run without `40-synthesis/deduped-findings.yaml` now ends `closeout: failed manual-audit-prompts` (exit 1), where it ended `ok` before. A workflow run reaches closeout only after the decomposed apply or the synthesizer fallback has written that file (the workflow comment "deduped-findings/-capabilities exist via the decomposed apply OR the fallback"). On a run that has synthesis output, a missing file already fails the final `validate` (checked on a scratch copy of the claim-event-bus example).
+- Task 2a, files beyond the plan's list: `CHANGELOG.md`, because Task 2's Unreleased "Added" bullet lists closeout's steps and now names `manual-audit-prompts` and its output; and the `closeout` help text in `tools/apd_gauntlet/cli.py`, which now names four steps.
+- Task 2a, docs: "the docs row" is read both ways. The `closeout` row in the CLI reference names `manual-audit-prompts`, and the reference gains a `manual-audit-prompts <run-dir>` row, because the command had none.
+- Task 2a, tests beyond the plan's `test_closeout_runs_manual_audit_prompts`, which also checks that the example had no prompts file before the run and that the written file equals `render_prompts` of the run's deduped findings:
+  - Task 2's tests updated: `test_closeout_order_and_attempts` (first four status lines), `test_closeout_bad_attempts_keeps_the_summarize_code` (`manual-audit-prompts` still runs after `summarize` fails) and `test_step_builders_pass_the_run_dir_in_every_argv` (the closeout argv).
+  - New: `test_closeout_manual_audit_failure_is_named_and_validate_still_runs`, on the clean-run fixture, whose missing deduped findings are a real failure (no mock); and `test_runbook_closeout_row_names_manual_audit_prompts`.
+- Task 3 (`b370e1c`), files beyond the plan's list, each to keep a doc true after the switch:
+  - `docs/measuring-changes.md`, "Retries and audit iterations": it named the workflow's `summarize` step and showed `apd-gauntlet summarize runs/<id> --record-attempts`. It now names `closeout` and shows `apd-gauntlet closeout runs/<id> --record-attempts`, and the foreground-drive sentence names the `closeout` row. The phrases `test_runbook_attempts_section` pins are kept.
+  - `docs/running-the-gauntlet.md`, "A tier gate failed": its first sentence said the runner runs `canonicalize` and then `validate --tier`. It now names `tier-gate`. Runner step 4 is left alone, because the plan names steps 1, 3 and 5.
+  - `CHANGELOG.md`: Task 2's Added entry ended "The workflow does not run them yet."; that sentence is removed, and the new Changed entry describes the switch.
+- Task 3, `tests/test_workflow_runner_awaits.py` beyond the plan's `EXPECTED_GREEN_LABELS` and three slices. Without these changes the red gates would never fire, because the responder keys would not match a label, and no prompt would be logged:
+  - WS2's attempts helpers key on the `closeout` label (`SUMMARIZE_MARK` is now `CLOSEOUT_MARK`). `_recorded_attempts` runs the `closeout` command the prompt names. On an empty run directory the later closeout steps fail, so it checks the `closeout: summarize exit=0` status line and the attempts file, not exit 0.
+  - `test_attempts_count_the_tier_repair_loop` and `test_halted_run_records_no_attempts` key their red gates on `tier-gate-` labels, and the halted run checks that `closeout`, not `summarize`, was never dispatched.
+  - The red receipts' `agent` is `pystep:tier-gate`.
+- Task 3, Task 1 tests updated in `tests/test_workflow_dispatch_trace.py`:
+  - `test_schema_valid_identifiers_are_accepted` pins the `prepare-run … --domain pbm --domain fhir-r4` command.
+  - `test_absent_framework_version_omits_the_flag` is replaced by `test_prepare_run_reads_framework_version_from_the_run_config`: with or without the key, no CLI command carries `--framework-version`, because `prepare-run` reads it from `.apd-run.yaml`.
+  - `test_trace_records_phase_and_guard` uses the `tier-gate-10-trustworthiness` label.
+- Task 3, the plan's test code is adapted for ruff with the assertions unchanged: `labels = lambda fail: …` (E731) becomes the helper `_labels`, `l` (E741) becomes `label`, long lines are wrapped (E501), and `BAD`'s comment moves to the line above.
+- Task 3, `test_prepare_run_step_always_runs` also asserts that the workflow builds no `'--framework-version '` argument. It replaces the plan's two `build-domain-skill` tests, including the guard test whose bug (`--framework-version undefined`) can no longer occur.
+- Task 3, workflow: the `post-tier4-retry-1` dispatch writes out the plan's `/* same opts */` in full, with the first call's outputs (the old `rollup-retry-1` listed only `nist-coverage.yaml`). The `pyStep` body is unchanged: the `noRunDir` and `positional` options stay, though no caller sets them now, and only their comment changes. The `pyStep` header comment now describes the per-step errors.
+- Task 3, agent body: the per-step error rule is a paragraph in `## Final message (receipt only)`, before the closing schema sentence. A new heading would break `test_body_sections_and_job_rules`, which pins the three headings and the closing sentence.
+- Task 3, tests beyond the plan's:
+  - `tests/test_workflow_dispatch_trace.py`:
+    - the dispatch totals (18, 18, 36);
+    - every composite always runs;
+    - the JS `POST_TIER4_STEPS` equals `post_tier4_steps` names;
+    - a rollup retry that succeeds carries the same command and phase and calls no synthesizer;
+    - a lone `canonicalize` failure stays advisory;
+    - `rollup` named among several failures triggers the retry;
+    - the repair loop's `-after-repair` and `-after-rerun` gates both go through `tier-gate` with the tier's phase.
+  - `tests/test_cli_plan_run.py`: the tier-gate rows' refs, phases and gate text (`<ref>; on failure repair …`); `test_plan_run_composite_rows` (the `assemble-inventory` row right after `apd-intake`, `post-tier4` outputs with `c4-model.yaml` and `metrics.yaml`, `closeout` last, and no `build-domain-skill`, `validate-domain`, `rollup` or `summarize` row).
+  - `tests/test_agent_apd_cli_runner.py::test_composite_status_lines_become_one_error_per_failed_step`.
+- Task 4 (`6728d34`): the shipped change follows the plan. The one deviation is in the Step 6 operator procedure, which breaks a lens file in a copy of a finished run with an unquoted colon in a title and expects one `repair-…` dispatch when the runner is re-invoked. On a resumed run, that break re-runs the lens instead. `resume-plan` counts a lens step complete only when its files parse and pass their schema (WS1, `tools/apd_gauntlet/resume_plan.py`), so it reports the lens incomplete (`unparseable …: YAML parse error: mapping values are not allowed here`), and the runner dispatches the lens's first attempt before the tier gate. The pending step below breaks the file with an excerpt over 25 tokens instead. That file still parses and passes its schema, so `resume-plan` reports the lens complete. The tier gate's semantic pass rejects it (`evidence[0].excerpt has 29 tokens (max 25)`), and the repair template covers that error ("shorten it to a contiguous run of the same words; never paraphrase"). Both behaviours were checked with `resume-plan`, `validate --tier` and `tier-gate` on a scratch copy of the claim-event-bus example (`10-trustworthiness/integrity.findings.yaml`); no agent ran.
+- Task 5 (`13003a2`), files beyond the plan's list: `tests/test_agent_apd_cli_runner.py::test_architecture_doc_counts_and_lists_the_cli_runner` (Task 1) pinned the `docs/architecture.md` orchestrator paragraph ("A twenty-third file, `apd-orchestrator.md`" and "among the 22."). The plan deletes that paragraph, so the assert now checks that the doc names neither `apd-orchestrator` nor "twenty-third". The "22 agents" pins stay true: `.claude/agents/` now holds 22 files.
+- Task 5, `tests/test_lint_agents_receipt.py`: the test at the cited lines was `test_orchestrator_is_exempt`; it becomes `test_synthesizer_is_exempt` and writes `apd-synthesizer.md`, and the module docstring drops the orchestrator. The check that the orchestrator is no longer exempt (`RECEIPT_EXEMPT == {"apd-synthesizer"}`) lives in `tests/test_plugin_footprint.py`, because WS5 Task 15 Step 1 greps `tests/test_lint_agents_receipt.py` for `apd-orchestrator` and expects no hit. That grep will still list `tests/test_doc_domain_pack_authoring.py`, whose assertion has always carried the literal `"apd-orchestrator"`; that hit is the guard itself, not a surviving reference.
+- Task 5, linters: both caps share one helper, `lint_agents.description_errors(path, description, max_chars)`. The plan gives the two error texts but not whether both can fire; the newline check and the length check are independent, so a long multi-line description gets both errors. In `lint-skills` the cap runs before the existing 1536-character rule, which stays, so a 1600-character description gets both the `max 200` and the `1536` error (`test_lint_skills_flags_overlong_description` still passes).
+- Task 5, `docs/extending-agents.md` (the plan cites lines 9-13): the frontmatter template's `description: ...` becomes the lens template, and one paragraph after the code block states the 160- and 200-character caps, the reason, the 4,096-byte test, the double-quoted form and the two fixed endings.
+- Task 5, `CHANGELOG.md`: two "Changed" entries, one per change. The Unreleased section has no "Removed" heading, and no earlier release in the file uses one. The byte figure is 16,683 → 3,538 bytes, measured on this branch (3,536 is the character count: the `apd-domain` description holds an em dash): the plan's 16,579 is the WS1 + WS2 base, before Task 1 added `apd-cli-runner` (104 bytes).
+- Task 5, the plan's test code: `_norm`, `PLUGIN` and `REPO` are imported from `tests/test_plugin_manifest.py`, as the plan's helper note says. The `files = [...] + [...]` line is split into two statements for ruff (E501), with the assertion unchanged.
+- Task 5, tests beyond the plan's:
+  - `tests/test_plugin_footprint.py`: each of the 27 rewritten files carries exactly the planned description, as a double-quoted line; the planned set is every manifest-listed agent and skill except `apd-cli-runner`, `apd-tier-repair` and `apd-domain`; `RECEIPT_EXEMPT` is `{"apd-synthesizer"}`; no agent or skill file names `apd-orchestrator`.
+  - `tests/test_lint_agents.py`: the exact cap and one-line error texts (the one-line case uses a block scalar), a 160-character description passes, and the real agents lint clean with 22 files.
+  - `tests/test_lint_skills.py`: the exact cap error text, the one-line error for a block scalar, and a 200-character description passes.
+- Task 6 (`a239928`), one file beyond the plan's list: `tests/test_lint_agents.py`. Four of its tests (five cases) pin the exact `lint_agent_file` output for a fixture agent with no `effort`: `test_lint_agents_description_cap_error_text`, `test_lint_agents_one_line_error_text`, `test_lint_agents_accepts_a_description_at_the_cap` and both cases of `test_lint_agents_flags_an_empty_description_as_missing`. Once `effort` is required, each list gains `frontmatter missing 'effort'`. Each fixture now sets `effort: low`, and the assertions are unchanged. The file is added to the commit's `git add` list.
+- Task 6, the rules where the plan is silent. The rules live in one helper, `lint_agents.model_effort_errors(path, meta)`, and its errors come after the description errors and before the receipt error:
+  - The plan writes the `effort` error as `effort '{v}' is not one of …`. The `…` is the allowed list, so the text is `effort 'extreme' is not one of low, medium, high, xhigh, max`.
+  - An `effort:` key with no value, or an empty string, counts as missing, as Task 5's ruling does for `description`. A value that is not a string, or a wrong-case one such as `Low`, fails the allowed-value check.
+  - `model` is checked only when the key is present. A present `model` with no value, or one that is not a string, gets the `model … is not an alias or full model id` error. `FULL_MODEL_ID` is applied with `fullmatch`, because `$` also matches before a trailing newline.
+- Task 6, frontmatter placement: each new `effort:` line is the last line of the frontmatter. That puts it after `model:` in the six Opus agents, as Task 4 placed it in `apd-tier-repair`, and after `tools` in the 14 agents that set no `model`. No `model` line changed. `tests/test_lint_agent_apd_attack_path_analyzer.py` and `tests/test_lint_agent_apd_threat_model_author.py` are untouched and pass.
+- Task 6, the plan's test code: its snippet uses `AGENTS`, `_frontmatter` and `lint_agent_file` without defining or importing them. The test file defines `AGENTS` and a `_frontmatter` that uses `lint_agents.FRONTMATTER_PATTERN`, and it imports `lint_agent_file`. The `LENSES` list is wrapped for ruff (E501). The assertions are unchanged. The new constants are read through the module inside their test, so the plan's tests fail for the plan's reason (agents without `effort`, no rule) and not with an `ImportError` at collection.
+- Task 6, `docs/extending-agents.md`: the example frontmatter gains `effort: medium`, as the plan says. One short paragraph after the description paragraph also gives the allowed `effort` values, the lens value and the `model` rule, because `lint-agents` now rejects a file that the doc's old template would have produced.
+- Task 6, tests beyond the plan's, in `tests/test_agent_effort.py`:
+  - the three constants;
+  - the exact text of each of the three errors;
+  - every allowed `effort` value and every `model` alias lints clean, and so do three full model ids;
+  - an absent `model` lints clean;
+  - an empty `effort` is missing;
+  - three bad `effort` values and nine bad `model` values each give one error;
+  - a bare frontmatter gives the `name`, `description` and `effort` errors, in that order.
+- Task 6a (`628b371`), files beyond the plan's list, each because a test pins the exact `lint_agent_file` output for a fixture with no `tools`:
+  - `tests/test_agent_effort.py`: the `_lint` helper's fixture gains `tools: Read`, and `test_missing_effort_is_reported_with_the_other_frontmatter_errors` now lists the `tools` error between `description` and `effort`.
+  - `tests/test_validate_edge_cases.py::test_lint_agent_missing_name_and_description`: 4 errors become 5, and it asserts a `'tools'` error.
+  - In `tests/test_lint_agents.py`, the four Task 5 fixture tests that pin exact output gain `tools: Read`. Their assertions are unchanged.
+- Task 6a, docs: `docs/extending-agents.md` gets `tools: Read, Glob, Grep, Write` in the lens template and one paragraph on the rule and the `EXPECTED_TOOLS` pin. Without it, `lint-agents` would reject a file built from the old template (Task 6's reason). `CHANGELOG.md` gets one Unreleased "Changed" entry, as Tasks 5 and 6 did for their `lint-agents` rules.
+- Task 6a, the rules where the plan is silent:
+  - `lint_agents.parse_tools(value) -> frozenset[str] | None` reads both forms. `tools_errors(path, meta)` gives the errors, placed after the description errors and before the `effort` error, in frontmatter order.
+  - `test_every_agent_tool_set_is_pinned` parses through `lint_agents.parse_tools`. Every agent already sets `tools`, so a test-local parser would pass before the implementation. With the linter's parser, the test fails first (`AttributeError`), as the plan's red step expects, and the pin and the linter read both forms the same way.
+  - Absent, null, `""` and `[]` all count as missing (`frontmatter missing 'tools'`), as Tasks 5 and 6 rule for `description` and `effort`. An empty name (`Read,, Write`, a trailing comma, a blank list item), a non-string item, or any other type gives `tools must be a comma-separated string or a YAML list of tool names`.
+  - A comma inside parentheses does not split names, so `Agent(worker, researcher), Read` is two names. Names are not checked against a list of known tools: the codebase keeps none, and MCP tool names vary. The pin covers the real agents.
+- Task 6a, tests beyond the plan's two, in `tests/test_lint_agents.py`:
+  - the Bash holders are exactly `apd-cli-runner` and the four recorded agents;
+  - six well-formed values lint clean and parse to the expected set;
+  - nine malformed values give the exact error;
+  - `parse_tools` returns None for nine bad or empty values;
+  - error order: description, then `tools`, then `effort`.
+- Task 7 (`65cef67`), files beyond the plan's list: `docs/adapting-to-other-domains.md` §7 said "every gauntlet run captures the places it is still incomplete". It now names the key and says capture is off by default.
+- Task 7, `tests/test_workflow_apd_gauntlet.py::test_runner_uses_domains_list_not_singular`: its regex `args\.domain(?!s)`, which guards against the retired singular `args.domain`, also matched the plan's gate `args.domain_improvement_capture`. It is now `args\.domain\b`, with a self-check that it still matches `args.domain`.
+- Task 7, `tests/test_workflow_dispatch_trace.py::test_dispatch_totals_after_the_composites` (Task 3, beyond the plan) now expects 17, 17 and 34, the plan's "After Task 7, default" column. `CLI_LABELS` and `GUARDED` drop `domain-coverage-delta`, as the plan says.
+- Task 7, workflow choices where the plan is silent:
+  - Both branches of the gate call `phase('domain-coverage-delta')` and `phase('domain-improvements')`, so a skipped run still shows both phases, each with its skip line. The gate is one `if (args.domain_improvement_capture === true) { … } else { … }`; the then-branch keeps the two awaited calls (A15.24) with their options unchanged.
+  - The skip reason is `domain_improvement_capture is not true in .apd-run.yaml`, so the log lines read `domain-coverage-delta: skipped (…)` and `domain-improvements: skipped (…)`. Nothing reads the returned receipts, and `attempts.skipped` is unchanged: `run-attempts.schema.json` defines it as lenses.
+  - The type check sits after the `framework_version` check, before `const runDir`. It refuses every defined non-boolean, `null` included (the schema rejects `null` too), with `apd-gauntlet: args.domain_improvement_capture <JSON> is not a boolean; write true or false, unquoted, in .apd-run.yaml, or leave the key out (run-config.schema.json).` It does not reuse `refuseIdentifier`, whose text is about building a shell command.
+  - `skipReceipt` sits after `isSkip`. It neither dispatches nor reads a dispatch, so `CALLS`, `PASS_THROUGH` and `ASYNC_HELPERS` are unchanged (A15.21). The SKIP CONVENTION header paragraph gains one sentence on it (A9.15, A15.28), and the closeout comment says the `dimpr-` mint is a no-op when Phase 5h was skipped.
+- Task 7, `plan_run.render_markdown` adds the note when the plan holds no `apd-domain-auditor` row, as the apath note keys on its row. That is the same condition as `build_plan`'s `cfg.get("domain_improvement_capture") is True`.
+- Task 7, docs:
+  - `docs/running-the-gauntlet.md`: the new "Domain-improvement capture (opt-in)" subsection is a `###` under "Step 1: Scaffold the run", right before `## Code reconnaissance (optional)`, because it is about the scaffolded `.apd-run.yaml`. Runner step 5 and the foreground-drive paragraph also say the two steps run only when the run opts in.
+  - `docs/schema-evolution.md`: the 2.0 section's intro said its entries "add new schemas only. No existing schema changes". It now says "add new schemas, or an optional key to an existing one. No existing key changes", because the new entry adds a key to `run-config.schema.json`. The heading is unchanged.
+  - `docs/architecture.md`: besides the table row (≈ 44), the paragraph after the table now lists the domain auditor among four activation-gated agents (it said three, and that the auditor runs every run), and the agent list line names the opt-in.
+- Task 7, the plan's test code is adapted for ruff with the assertions unchanged: two lines over 100 characters are wrapped (E501). `_cfg` and `_scaffold` are defined as the plan's helper note says.
+- Task 7, tests beyond the plan's:
+  - `tests/test_run_config_schema.py`: the property equals the planned one exactly, is not required and follows `infrastructure`; an absent key is valid; five more non-boolean values (`"false"`, `0`, `"yes"`, `[]`, `{}`) each give one error at the key's path.
+  - `tests/test_init_run_config.py`: the template line appears once, exactly as planned, after the infrastructure skeleton and before the taxonomies block; uncommented, it loads as `True` and validates.
+  - `tests/test_cli_plan_run.py`: the opt-in rows sit between `apd-report-auditor` and `closeout` with their phases; the note and rows for absent, `false` and `true`; `build_plan` treats `"true"`, `1` and `"yes"` as off; `render_markdown`'s note follows the plan; `plan-run` exits 1 on the string `"true"`.
+  - `tests/test_workflow_dispatch_trace.py`: an explicit `false` traces the same as absent; with capture on, the two dispatches sit between `auditor-attempt-0` and `closeout` (agent, phase, guard, command), and the rest of the sequence is unchanged; the opted-in CLI labels and guarded set; both skip log lines (absent and `false`) and none with capture on; failed Phase 5h receipts do not halt the run; seven non-boolean values are refused with the exact message before any dispatch; `plan-run` matches the workflow's sequence with capture on.
+  - `tests/test_workflow_apd_gauntlet.py`: `skipReceipt` is the planned helper, verbatim; the then-branch keeps both awaited calls and the `domain-auditor` label, and the else-branch dispatches nothing; the gate text appears once; the type check sits after the identifier checks and before `const runDir`; the SKIP CONVENTION paragraph names `skipReceipt()` and the key.
+  - `tests/test_workflow_runner_awaits.py`: `_run_runner` takes an optional `args`; a node run with capture on dispatches the two steps in order, one at a time, between the audit loop and `closeout`; the default run logs both skips.
+- Task 8 (`d8acf38`), item (f): the plan names three cases that keep a miss a warning under strict: a YAML or JSON input over 1 MiB, a YAML input with aliases, and one nested more than 100 levels. A YAML or JSON input that fails to parse is a fourth. All four reach the same branch of `_ExcerptInput`, whose parsed values are never tried, and its new `whole_text_only` flag records that. JSON has no depth cap of its own (only YAML has `_MAX_YAML_DEPTH`). So JSON nested 3,000 levels is parsed on Python 3.12, where a miss is an error, and raises `RecursionError` on 3.10 and 3.11, where it stays a warning. `--strict` still turns every warning into an error. Both severities keep the message `evidence[{i}].excerpt not found verbatim in artifact '{artifact}'`.
+- Task 8, item (e), how the five WS1 tests changed:
+  - `test_paraphrase_warns_but_exits_zero` passes `--no-strict-excerpts`.
+  - In `test_errors_only_hides_the_warning`, `test_tier_gate_reports_excerpt_violations` and `test_tier_gate_json_carries_the_violation_by_severity`, the warning half passes `--no-strict-excerpts`, and the error half checks both the default and `--strict-excerpts`.
+  - `test_pathological_input_without_a_match_warns_and_never_fails_a_gate` passes `--no-strict-excerpts` in its gate loop. Its last check uses `--strict` in place of `--strict-excerpts`: under (f) the five YAML cases stay warnings with `--strict-excerpts`, and the result for `deep-json-3000` depends on the Python version. The new `test_unparsed_pathological_yaml_never_fails_a_strict_gate` checks the five YAML cases under the strict default.
+- Task 8, item (b), the Home Assistant example:
+  - Each of the 23 excerpts changed in its lens file and in its copy in `40-synthesis/deduped-findings.yaml` (22) or `deduped-capabilities.yaml` (1). The report reads those copies.
+  - `report-html/data.js` was rebuilt with `build-report --out` into a scratch directory, and only `data.js` was copied back. Its diff is the 22 finding excerpts. `meta.date` stays `2026-06-14`: the run declares no date, so the build used the day it ran.
+  - `build-manifest.txt` gets the new `deduped-findings.yaml` and `deduped-capabilities.yaml` hashes, so the `audit-report` check `source_hash_drift` stays clean. `app.js` and `vendor-licenses.txt` were not rebuilt: the example carries an older bundle, as the 1.7.1 release gate recorded.
+  - Twenty excerpts now quote the cited file, using text inside each locator's range. Three absence or summary notes are now wholly parenthesised: `resil-93866115` and `immut-165d9547` (`org/SECURITY.md`) and `auth-3794d338` (`mobile/android-CLAUDE.md`). No artifact, locator, title, severity or id changed.
+  - Not changed: the copies in `tests/fixtures/runs/c4-home-assistant` (a C4 fixture with no `inputs/`, not a committed example), `report-template/data.js` (generated development data) and the example's `00-context/context-brief.md` prose.
+  - After the change, all three examples, copied with their `inputs/`, give `validate --errors-only --strict-excerpts` exit 0. `audit-report` passes 23 of 23. `canonicalize` reports 0 records recanonicalized. `test_data_js_matches_golden[home-assistant]` passes.
+- Task 8, item (c): the skill has no section named "Evidence". The rule goes into rule 1 ("Evidence-pointer required") as two bullets: the excerpt is the cited file's own words, and an absence or summary note is wholly parenthesised. The self-check item "**Evidence.**" names the marker too.
+- Task 8, the plan's test code is adapted, with its assertions unchanged. The `gate` lambda is a nested `def` (ruff E731), long lines are wrapped (E501), and `REPO` is defined in the file. Tests that cite a new `inputs/` file add it to the fixture brief (`_list_in_brief`); without it the semantic pass reports `not in intake brief`.
+- Task 8, tests beyond the plan's, in `tests/test_validate_excerpts.py`:
+  - both composites carry the flag in `--json` mode and with `--record-attempts`, and only on their validate step; `closeout` is strict by default and takes the escape hatch;
+  - a broken excerpt in a copied example fails strict validation, the control for `test_committed_examples_validate_strict`;
+  - the normalizer folds case and drops whitespace next to punctuation, but not between two words;
+  - the two observed false positives (synthetic and in the real examples) now match, and a different word is still a miss;
+  - five whole-text-only cases stay warnings under the default, `--strict-excerpts` and the tier JSON, while a parsed YAML miss is an error;
+  - `add_excerpt_violations` splits one run's misses by severity, and its library default stays a warning.
+- Task 9, Steps 3 to 5 are not done here. Step 3 writes the CHANGELOG bullet "Cost wave 1, measured" from Step 2's live runs, and the task assignment makes Steps 2 and 3 operator steps. So `CHANGELOG.md` is unchanged. Step 4 would lint an unchanged file (it is linted in the QG anyway), and Step 5's commit (`docs(changelog): record measured cost wave 1 dispatch and cost deltas`) would have nothing to add, so it is not made. Reason: writing the bullet now with only its static values, or with placeholders, would put unmeasured figures under a "measured" heading. Task 9's only commit is this ledger entry. The operator does Steps 3 to 5 after Step 2 (see Pending operator steps).
+
+## Pending operator steps
+
+- Task 1 Step 6 (SCP, not performed: it needs live runs with telemetry). On this branch's head, run the master plan Task 1 set twice. Run the changed runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t1-r1` and `runs/<x>-ws3t1-r2`, with telemetry in `telemetry/<x>-ws3t1-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t1-r<k> --otel telemetry/<x>-ws3t1-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs <prev> runs/<x>-ws3t1 --gates eval/gates.yaml
+  ```
+
+  `<prev>` is the last accepted runs on `next` before WS3. The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`). In each `usage.yaml`, `by_agent` has `apd-cli-runner` and no `general-purpose`. The `cost_usd` that `compare-runs --json` reports per run is at or below `<prev>`. If a gate fails, do not merge. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the Task 1 harness measures 45 dispatches on a clean HA-shaped run: 27 to `apd-cli-runner` and 18 LLM dispatches, as the plan's "WS1 + WS2 base" column says.
+- Task 2: none. The plan says the task needs no operator step, because nothing dispatches the composites yet.
+- Task 2a: none. Nothing dispatches `closeout` until Task 3, so no run exercises the new step yet; Task 3's SCP covers it.
+- Task 3 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t3` and `<prev>` set to the `-ws3t1` runs. On this branch's head, run the master plan Task 1 set twice. Run the changed runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t3-r1` and `runs/<x>-ws3t3-r2`, with telemetry in `telemetry/<x>-ws3t3-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t3-r<k> --otel telemetry/<x>-ws3t3-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t1 runs/<x>-ws3t3 --gates eval/gates.yaml
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t1` runs. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the harness measures 36 dispatches on a clean HA-shaped run against 45 for `-ws3t1`: 18 CLI dispatches to `apd-cli-runner` (27 before), 6 of them with guard text (9 before), and 18 LLM dispatches. `pyStep(` call sites go from 32 to 24. These are the plan's "After Task 3" numbers, and `CLI_LABELS` is the plan's 18-label list. This SCP also covers Task 2a: each run that reaches closeout writes `40-synthesis/manual-audit-prompts.md` and `.apd-state/attempts.yaml`.
+- Task 4 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t4` and `<prev>` set to the `-ws3t3` runs. On this branch's head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t4-r1` and `runs/<x>-ws3t4-r2`, with telemetry in `telemetry/<x>-ws3t4-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t4-r<k> --otel telemetry/<x>-ws3t4-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t3 runs/<x>-ws3t4 --gates eval/gates.yaml
+  ```
+
+  Clean runs rarely repair, so also exercise one repair on a copy of a finished run. The break is an over-long excerpt, not the plan's unquoted colon (see Deviations, Task 4). The copy is not an `-rN` run, so `compare-runs` leaves it out:
+
+  ```bash
+  cp -R runs/<x>-ws3t4-r1 runs/<x>-ws3t4-repair
+  perl -pi -e 's/^run_id: .*/run_id: <x>-ws3t4-repair/' runs/<x>-ws3t4-repair/.apd-run.yaml
+  ```
+
+  In one lens file, for example `runs/<x>-ws3t4-repair/10-trustworthiness/integrity.findings.yaml`, lengthen one `evidence[].excerpt` past 25 tokens: join more exact words from the same cited file under `inputs/` with ` ... `, in the order they appear there. Before re-invoking, check the break:
+
+  ```bash
+  apd-gauntlet resume-plan runs/<x>-ws3t4-repair --json      # the lens: "complete": true
+  apd-gauntlet validate runs/<x>-ws3t4-repair --tier 10-trustworthiness   # exit 1: evidence[<i>].excerpt has <n> tokens (max 25)
+  ```
+
+  Re-invoke the runner by path on the copy, in a session whose telemetry goes to `telemetry/<x>-ws3t4-repair.otlp.jsonl`. Then:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t4-repair --otel telemetry/<x>-ws3t4-repair.otlp.jsonl
+  python -I -c "import sys; from pathlib import Path; from apd_gauntlet.measure.usage import iter_api_requests as it; print(sorted({r.effort or '-' for r in it(Path(sys.argv[1])) if r.agent.rpartition(':')[2] == 'apd-tier-repair'}))" telemetry/<x>-ws3t4-repair.otlp.jsonl
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t3` runs. If a gate fails, do not merge; attach the `--json` output to the PR. The repair run logs `resume: skipping integrity (outputs present and valid).`, then `tier-gate-10-trustworthiness` failing, one `repair-10-trustworthiness-integrity.findings.yaml` dispatch, `tier-gate-10-trustworthiness-after-repair` passing, and no `integrity-rerun` dispatch. Its `.apd-state/attempts.yaml` has `tier_gate_failures: [10-trustworthiness]`, `tier_repairs: {10-trustworthiness: 1}` and `lens_reruns: {}`. Its `usage.yaml` `by_agent` has `apd-tier-repair` (with any `<plugin>:` prefix) with `phase: canonicalize`, and the one-liner prints `['low']`: every `api_request` event of the repair carries `effort: "low"`. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, nothing in the dispatch counts changes: a clean HA-shaped run is still 36 dispatches (18 CLI, 18 LLM), and with the first tier gate red the harness lists `tier-gate-10-trustworthiness`, `repair-10-trustworthiness-integrity.findings.yaml` (agent `apd-tier-repair`), `tier-gate-10-trustworthiness-after-repair`, and no `-rerun` label.
+- Task 5: none. The plan gives this task no compare-runs step, because the workflow names every `agentType` and the descriptions change no run output; Task 9's measurement covers it.
+- Task 6 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t6` and `<prev>` set to the `-ws3t4` runs. Launch the session at the same effort as for the `-ws3t4` runs, so that only the frontmatter differs: same Claude Code version, provider and session model, with `CLAUDE_CODE_SUBAGENT_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` and `CLAUDE_CODE_EFFORT_LEVEL` unset. On this branch's head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t6-r1` and `runs/<x>-ws3t6-r2`, with telemetry in `telemetry/<x>-ws3t6-r<k>.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t6-r<k> --otel telemetry/<x>-ws3t6-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t4 runs/<x>-ws3t6 --gates eval/gates.yaml
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only. An optional check, not in the plan's step, shows that each agent ran at its frontmatter effort. It prints each agent's set of `effort` values:
+
+  ```bash
+  python -I -c "import sys, collections; from pathlib import Path; from apd_gauntlet.measure.usage import iter_api_requests as it; d = collections.defaultdict(set); [d[r.agent.rpartition(':')[2]].add(r.effort or '-') for r in it(Path(sys.argv[1]))]; print({a: sorted(e) for a, e in sorted(d.items())})" telemetry/<x>-ws3t6-r<k>.otlp.jsonl
+  ```
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t4` runs. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. In the optional check, each dispatched agent shows one value, the one in `tests/test_agent_effort.py::EXPECTED`. That is `['medium']` for the lenses, intake, code recon, the threat-model author, the attack-path analyzer, the report writer and the domain auditor. It is `['high']` for the threat-model evaluator, the cluster adjudicator and the report auditor, and `['low']` for `apd-cli-runner`. The synthesizer (`['high']`), the threat-model recon agent (`['low']`) and `apd-tier-repair` (`['low']`) appear only when they are dispatched. Statically, nothing in the dispatch counts changes, because Task 6 touches no workflow, label or `agentType`: a clean HA-shaped run is still 36 dispatches (18 CLI, 18 LLM).
+- Task 6a: none. The plan gives this task no operator step. It changes only the linter, tests and docs: no agent's `tools`, workflow, label or `agentType` changes, so no run output changes.
+- Task 7 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t7` and `<prev>` set to the `-ws3t6` runs. On this branch's head, run the master plan Task 1 set twice. Run the changed runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t7-r1` and `runs/<x>-ws3t7-r2`, with telemetry in `telemetry/<x>-ws3t7-r<k>.otlp.jsonl`. Before each private PBM candidate run, add `domain_improvement_capture: true` to its `.apd-run.yaml`, so it compares like for like with `<prev>`, where capture always ran. The public examples leave the key out (Global Constraints, "Comparison baseline"). Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t7-r<k> --otel telemetry/<x>-ws3t7-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t6 runs/<x>-ws3t7 --gates eval/gates.yaml
+  ```
+
+  Then record one extra PBM candidate run with the key absent, as `runs/<pbm>-ws3t7-off` (not an `-rN` run, so `compare-runs` leaves it out), with telemetry in `telemetry/<pbm>-ws3t7-off.otlp.jsonl`, and run:
+
+  ```bash
+  apd-gauntlet usage runs/<pbm>-ws3t7-off --otel telemetry/<pbm>-ws3t7-off.otlp.jsonl
+  python -I -c "import sys, statistics, yaml; c = lambda r: yaml.safe_load(open(r + '/.apd-state/usage.yaml', encoding='utf-8'))['totals']['cost_usd']; off = c(sys.argv[1]); med = statistics.median(c(r) for r in sys.argv[2:]); print(f'off={off:.4f} median={med:.4f} saving={med - off:.4f}')" runs/<pbm>-ws3t7-off runs/<pbm>-ws3t7-r1 runs/<pbm>-ws3t7-r2
+  ```
+
+  The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t6` runs. If a gate fails, do not merge; attach the `--json` output to the PR. The `-off` run logs `domain-coverage-delta: skipped (domain_improvement_capture is not true in .apd-run.yaml)` and the same line for `domain-improvements`. It writes no `40-synthesis/domain-improvements.yaml`, and its `usage.yaml` `by_agent` has no `apd-domain-auditor` (with or without a `<plugin>:` prefix). Record the printed saving, the `totals.cost_usd` saving against the `-ws3t7` PBM median, in the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, the harness measures 34 dispatches on a clean HA-shaped run without the key (17 CLI, 17 LLM) and 36 with `domain_improvement_capture: true` (18, 18), the plan's two "After Task 7" columns. The public examples without the key drop one CLI and one agent dispatch against `-ws3t6`. No `eval/gates.yaml` gate reads domain-improvement output, so the skip changes only their cost and dispatch counts.
+- Task 8 Step 6 (SCP, not performed: it needs live runs with telemetry). Same as Task 1 Step 6, with the suffix `-ws3t8` and `<prev>` set to the `-ws3t7` runs. On this branch's head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3t8-r1` and `runs/<x>-ws3t8-r2`, with telemetry in `telemetry/<x>-ws3t8-r<k>.otlp.jsonl`. The private PBM run sets `domain_improvement_capture: true` in its `.apd-run.yaml`, as from Task 7 on, and one extra PBM run with the key absent is recorded as `runs/<pbm>-ws3t8-off`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3t8-r<k> --otel telemetry/<x>-ws3t8-r<k>.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-ws3t7 runs/<x>-ws3t8 --gates eval/gates.yaml --excuse first_pass_and_retries:new-error-class
+  ```
+
+  The `--excuse` is the consolidated plan's (Task 3.3, T8: "SCP with `--excuse first_pass_and_retries:new-error-class`"). Under the strict default, a paraphrased first-pass excerpt is a new class of validator error. It raises `first_pass_validator_errors_delta` and `tier_repairs_delta`, two of the `first_pass_and_retries` checks in `eval/gates.yaml`. The excuse covers that gate only: every other gate, and the cost rule below, still apply. If that gate passes anyway, `compare-runs` says the excuse excused nothing. The `-ws3t7` runs predate the flip, so any `apd-gauntlet validate` of them takes `--no-strict-excerpts`. `usage` and `compare-runs` do not validate a run. The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/` and adds `--strict` to `compare-runs`. Under `--strict`, `pass_with_gaps` exits 1, so an operator who follows that form expects exit 0 with result `pass` only.
+
+  Then exercise an excerpt repair on a copy of a finished run. The copy is not an `-rN` run, so `compare-runs` leaves it out:
+
+  ```bash
+  cp -R runs/<x>-ws3t8-r1 runs/<x>-ws3t8-repair
+  perl -pi -e 's/^run_id: .*/run_id: <x>-ws3t8-repair/' runs/<x>-ws3t8-repair/.apd-run.yaml
+  ```
+
+  In one lens file, for example `runs/<x>-ws3t8-repair/10-trustworthiness/integrity.findings.yaml`, replace one `evidence[].excerpt` that cites a file under `inputs/` with a paraphrase of 25 tokens or fewer that is not in that file. Before re-invoking, check the break:
+
+  ```bash
+  apd-gauntlet resume-plan runs/<x>-ws3t8-repair --json      # the lens: "complete": true (parse and schema only)
+  apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only   # exit 1: ERROR ... evidence[<i>].excerpt not found verbatim in artifact '<file>'
+  apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only --no-strict-excerpts   # exit 0
+  ```
+
+  Re-invoke the runner by path on the copy, in a session whose telemetry goes to `telemetry/<x>-ws3t8-repair.otlp.jsonl`, then run `apd-gauntlet usage runs/<x>-ws3t8-repair --otel telemetry/<x>-ws3t8-repair.otlp.jsonl`.
+
+  Expected: every `compare-runs` exits 0 (`pass` or `pass_with_gaps`), and the `cost_usd` that `compare-runs --json` reports per run is at or below the `-ws3t7` runs. If a gate fails, do not merge; attach the `--json` output to the PR. The repair run logs `resume: skipping integrity (outputs present and valid).`, then `tier-gate-10-trustworthiness` failing with `not found verbatim`, one `repair-10-trustworthiness-integrity.findings.yaml` dispatch to `apd-tier-repair`, `tier-gate-10-trustworthiness-after-repair` passing, and no `integrity-rerun` dispatch. Its `.apd-state/attempts.yaml` has `tier_gate_failures: [10-trustworthiness]`, `tier_repairs: {10-trustworthiness: 1}` and `lens_reruns: {}`. Afterwards, `apd-gauntlet validate runs/<x>-ws3t8-repair --tier 10-trustworthiness --errors-only` exits 0, because the repaired excerpt is found verbatim. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers. Statically, nothing in the dispatch counts changes: Task 8 touches no workflow, label or `agentType`, and the workflow passes neither flag. A clean HA-shaped run is still 34 dispatches without the key and 36 with it.
+- Task 9 Step 2 (milestone exit, not performed: it needs live runs with telemetry). On the WS3 head, run the master plan Task 1 set twice. Run the runner by path, `Workflow({scriptPath: "<checkout>/.claude/workflows/apd-gauntlet.js", args: <the run's parsed .apd-run.yaml>})` (A15.12), as `runs/<x>-ws3-r1` and `runs/<x>-ws3-r2`, with telemetry in `telemetry/<x>-ws3-r<k>.otlp.jsonl` and the same session model, provider and environment as the baseline (SCP step 1). The private PBM run sets `domain_improvement_capture: true` in its `.apd-run.yaml`. Record one extra PBM run with the key absent as `runs/<pbm>-ws3-off` (not an `-rN` run, so `compare-runs` leaves it out), with telemetry in `telemetry/<pbm>-ws3-off.otlp.jsonl`. Then run, for each run and each example:
+
+  ```bash
+  apd-gauntlet usage runs/<x>-ws3-r<k> --otel telemetry/<x>-ws3-r<k>.otlp.jsonl
+  apd-gauntlet usage runs/<pbm>-ws3-off --otel telemetry/<pbm>-ws3-off.otlp.jsonl
+  apd-gauntlet compare-runs runs/<x>-baseline runs/<x>-ws3 --gates eval/gates.yaml --json
+  ```
+
+  `runs/<x>-baseline` is the 1.7.1 set from master plan Task 1 (A15.13), with the `usage.yaml` each run got when the baseline was captured (`docs/measuring-changes.md`, "Capture a baseline"). The command has no `--strict`, as the consolidated plan's milestone exits have none (A10.1, Phase 8 Step 1). The 1.7.1 runs record no `.apd-state/attempts.yaml`, so the `first_pass_and_retries` and `audit_iterations` gates are not available and a clean result reads `pass_with_gaps`, which exits 0. For the same reason Task 8's `--excuse` is not needed here. `usage` and `compare-runs` do not validate a run; any `apd-gauntlet validate` of a baseline directory takes `--no-strict-excerpts`. The consolidated plan's SCP form keeps telemetry under `~/apd-telemetry/`.
+
+  For each example and side (`<side>` is `baseline` or `ws3`), print the medians Step 2 asks for. Then print the `-off` saving:
+
+  ```bash
+  python -I -c "import sys, statistics, yaml; u = [yaml.safe_load(open(r + '/.apd-state/usage.yaml', encoding='utf-8')) for r in sys.argv[1:]]; m = lambda f: statistics.median(f(s) for s in u); a = lambda s, n: sum(v['requests'] for k, v in s['by_agent'].items() if k.rpartition(':')[2] == n); c = lambda s, k: s['by_phase'].get('cli-steps', {}).get(k, 0); print({**{k: m(lambda s, k=k: s['totals'][k]) for k in ('cost_usd', 'input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_creation_tokens')}, 'cli-steps requests': m(lambda s: c(s, 'requests')), 'cli-steps cost_usd': m(lambda s: c(s, 'cost_usd')), 'general-purpose requests': m(lambda s: a(s, 'general-purpose')), 'apd-cli-runner requests': m(lambda s: a(s, 'apd-cli-runner'))})" runs/<x>-<side>-r1 runs/<x>-<side>-r2
+  python -I -c "import sys, statistics, yaml; c = lambda r: yaml.safe_load(open(r + '/.apd-state/usage.yaml', encoding='utf-8'))['totals']['cost_usd']; off = c(sys.argv[1]); med = statistics.median(c(r) for r in sys.argv[2:]); print(f'off={off:.4f} median={med:.4f} saving={med - off:.4f}')" runs/<pbm>-ws3-off runs/<pbm>-ws3-r1 runs/<pbm>-ws3-r2
+  ```
+
+  The first prints the medians of `totals` (`cost_usd` and the four token counts), of `by_phase["cli-steps"]` (`requests` and `cost_usd`), and of the `requests` of `general-purpose` and of `apd-cli-runner`, each summed over any `<plugin>:` prefix. The second prints the `-off` run's `totals.cost_usd` and its saving against the median of the two WS3 PBM runs.
+
+  Expected: every `compare-runs` exits 0, and each example's WS3 median `totals.cost_usd` is below its 1.7.1 median (consolidated plan Task 3.3, T9). In the WS3 runs, `by_agent` has `apd-cli-runner` and no `general-purpose`, unless the synthesis fallback ran (its `run-state-fallback` breadcrumb is general-purpose). In the 1.7.1 runs the CLI steps ran on `general-purpose`. Both sides count them under `cli-steps` (`AGENT_PHASES`). The `-off` run logs both Phase 5h skip lines, and its `by_agent` has no `apd-domain-auditor`. If a gate fails, do not merge; attach the `--json` output to the PR. For the private PBM run, the ledger and the PR carry only gate ids, pass/fail and aggregate numbers.
+- Task 9 Steps 3 to 5 (not performed: they need Step 2's numbers). In `CHANGELOG.md`, add one bullet, "Cost wave 1, measured", under ``## Unreleased — 2.0 line (`next`)``, `### Changed`. Its static values are checked on this head:
+  - CLI dispatches per clean HA-shaped run: 24 (1.7.0; 27 on WS1+WS2) → 17 (18 with capture);
+  - general-purpose dispatches: 24 → 0;
+  - always-on description bytes: 16,579 → 3,538.
+
+  Add the measured values from Step 2. For each example, give the median cost on the 1.7.1 baseline and on WS3 and the percentage change, (WS3 − baseline) / baseline, set against the audit's modelled 10%. Give the `cli-steps` cost on each side and the PBM saving from leaving `domain_improvement_capture` off. Name the private review only as "the private PBM review" and give only aggregate numbers for it. Then run `npx -y markdownlint-cli2@0.23.2 CHANGELOG.md` (0 errors) and commit with the plan's message, `docs(changelog): record measured cost wave 1 dispatch and cost deltas`.
+
+  Where the static values come from:
+  - `pytest tests/test_workflow_dispatch_trace.py -v` (Step 1) gives 59 passed. It pins the WS3 side. By default a clean run makes 17 CLI and 17 LLM dispatches, and 5 of the CLI dispatches carry guard text. With capture on, it makes 18 and 18, and 6 carry guard text. Every dispatch names an `agentType`, so none goes to general-purpose.
+  - Running the harness on copies of earlier runners gives the "from" side. At `856ea96` (the `v1.7.0` runner) it lists 24 CLI steps to general-purpose and 18 LLM dispatches. It also lists one `-retry-1` per lens (9), which only the harness causes: that runner does not await `parallel()`, so under the async stub every first lens receipt reads as missing. Without those 9 the total is 42, the audit's figure.
+  - At `c275c9f` (WS1 + WS2) and on the `v1.7.1` runner, the harness lists the plan's 27 CLI labels, all to general-purpose, and 18 LLM dispatches (45 in all). So each 1.7.1 baseline run makes 27 general-purpose CLI dispatches, not 24. The plan's figures keep 1.7.0 as their "from" side, and A15.15 keeps A9.17's static counts.
+  - The description bytes, measured as `test_always_on_description_budget` measures them, are 16,579 at `c275c9f` (A9.14) and 3,538 at this head. 3,538 is the Task 5 total as its review corrected it; 3,536 is the character count.
+
+## WS3 summary
+
+Final check on 2026-10-18 at `6bf1405`, before this entry. The branch is `feat/ws3-cost-wave1-quick-wins`, 29 commits on `c275c9f` (WS2, PR #54, not merged yet). Nothing is pushed, and `git worktree list` shows only the main checkout.
+
+### Commits by task
+
+| Task | Work | Ledger | Review fix |
+|---|---|---|---|
+| Ledger start | | `1bde416` | |
+| 1 | `4736891` | `0fab235` | |
+| 2 | `9930a32` | `726cf48` | |
+| 2a | `ef46786` | `710ea33` | |
+| 3 | `b370e1c` | `f7975a3` | `73657f4` |
+| 4 | `6728d34` | `a4cb6b3` | |
+| 5 | `13003a2` | `5640d91` | `0c0f7a1` |
+| 6 | `a239928` | `b6dae52` | |
+| 6a | `628b371` | `02ceb64` | |
+| 7 | `65cef67` | `194f3ff` | |
+| 8 | `d8acf38` | `1aa31bd` | `06a0954` |
+| 9 | none (Steps 2 to 5 are operator steps) | `f7a504d` | |
+| Whole-branch review | `1c09136`, `58c350b`, `652bf8d` | `6bf1405` | |
+
+All eleven tasks are accepted. Tasks 3, 5 and 8 took one review round each; the others took none. Of the four whole-branch reviews, two accepted and two asked for fixes, which are applied in `1c09136`, `58c350b` and `652bf8d`. Rulings holds every review ruling: Tasks 3, 5 and 8, and the whole branch. Tasks 1, 2, 2a, 4, 6, 6a, 7 and 9 had no review round, so they have no rulings. Deviations lists each task's departures from the plan, and Pending operator steps holds the full commands.
+
+### Quality gate at `6bf1405`
+
+- `ruff check tools/ tests/`: All checks passed!
+- `mypy tools/`: Success: no issues found in 82 source files
+- `python -m pytest -q -p no:cacheprovider`: 3425 passed, 1 skipped in 93.75s (0:01:33)
+- `apd-gauntlet lint-agents --agent-dir .claude/agents/`: Lint clean: 22 agents checked.
+- `apd-gauntlet lint-skills --skill-dir .claude/skills/`: Lint clean: 8 skills checked.
+- `npx -y markdownlint-cli2@0.23.2` on the CI globs (190 files): Summary: 0 issues in 0 files
+- `git status --porcelain` is empty, and `git ls-remote origin refs/heads/feat/ws3-cost-wave1-quick-wins` prints nothing.
+- Task 9 Step 1: `pytest tests/test_workflow_dispatch_trace.py` gives 61 passed. The "59 passed" under Task 9 Steps 3 to 5 was written before `652bf8d`, which adds two harness tests. The pinned counts are unchanged: 17 CLI and 17 LLM dispatches by default (5 with guard text), and 18 and 18 with capture (6).
+- Hard rules, checked over `c275c9f..HEAD`: `.gitignore` and `.superpowers/` are unchanged; nothing under `runs/`, `telemetry/`, `eval/local/` or `eval/results/` is tracked; and no added line holds an e-mail address or a person's or employer's name.
+
+### Pending operator steps, in order
+
+Every one of these needs live runs with telemetry. The full commands and expected results are under Pending operator steps above.
+
+1. Task 1 Step 6: SCP, `-ws3t1` against the last accepted runs on `next` before WS3.
+2. Task 3 Step 6: SCP, `-ws3t3` against `-ws3t1`. It also covers Task 2a.
+3. Task 4 Step 6: SCP, `-ws3t4` against `-ws3t3`, plus the repair exercise.
+4. Task 6 Step 6: SCP, `-ws3t6` against `-ws3t4`.
+5. Task 7 Step 6: SCP, `-ws3t7` against `-ws3t6`, plus the PBM `-off` run.
+6. Task 8 Step 6: SCP, `-ws3t8` against `-ws3t7`, with the `--excuse`, plus the excerpt-repair exercise.
+7. Task 9 Step 2: the milestone exit, `runs/<x>-ws3` against the 1.7.1 `runs/<x>-baseline`, plus the PBM `-off` run.
+8. Task 9 Steps 3 to 5: the CHANGELOG bullet "Cost wave 1, measured", its lint and its commit.
+
+Tasks 2, 2a, 5 and 6a have no operator step.
+
+What these steps assume, none of which can be done offline:
+
+- The Task 0.4 baseline: the master plan Task 1 set on 1.7.1, captured twice with telemetry and `usage.yaml` as `runs/<x>-baseline-r1` and `-r2`. Task 9 Step 2 compares against it.
+- WS2 merged on `next` (PR #54), so that `usage`, `compare-runs` and the attempts recording exist on the base. The consolidated plan's Task 3.2 then records the second baseline on `next` (`-next-baseline-r1`, `-r2`). The consolidated SCP step 1 says the first `<prev>` is the Task 0.4 baseline or that `-next-baseline` set, so one of them is Task 1's `<prev>`.
+- DEC-35 sets the SCP run-set size. One live 1.7.1 run took about 6.2 million subagent tokens (A15.10).
+
+Which code each per-task SCP runs: the steps above say "on this branch's head" because the plan's Global Constraints have one PR per task, so a PR's head is that task's state. On this single stacked branch, each `-ws3tN` set has to run on that task's last commit. Run on one head, every set measures the same code, and the chained `compare-runs` say nothing about any task. The last commit of each task is:
+
+- Task 1: `0fab235`
+- Task 3: `73657f4`
+- Task 4: `a4cb6b3`
+- Task 6: `b6dae52`
+- Task 7: `194f3ff` (it includes Task 6a, which changes no run output)
+- Task 8: `06a0954`
+
+The whole-branch fixes come after Task 9 and are not in those commits:
+
+- `58c350b` changes the `apd-cli-runner` body that every run from Task 1 on dispatches.
+- `1c09136` changes Task 8's strict severity for JSON-family inputs.
+
+Task 9 Step 2, on the WS3 head, measures both.
+
+### Open items for the PR
+
+1. The Task 8 cost-rule question (Rulings, Task 8 review and whole-branch review) has no ruling from the controller yet. Until it does, the plan's rule stands.
+2. The plugin-manifest CI job pins Claude Code 2.0.76, and that version's handling of the new `effort` frontmatter could not be checked offline.
+3. This branch carries every WS3 task in one stack on the unmerged WS2 head. The Global Constraints ask for one PR per task, with PRs that edit `.claude/workflows/apd-gauntlet.js` merged one at a time (Tasks 1, 3 and 7). This check cannot decide how to split or merge the branch. If it is split, the controller decides where the three whole-branch fixes go: `58c350b` touches Task 1's agent body, `652bf8d` Task 1's harness, and `1c09136` Task 8's check.
+
+### Completeness
+
+Every file, interface, test and doc change the plan names for Tasks 1 to 8, plus 2a and 6a, is on the branch. Each was checked at `6bf1405` by file, constant or test name; where the branch departs from the plan's text, Deviations records it. Task 9 Step 1 passes. The plan items not delivered are the operator steps listed above, all recorded as pending: every Step 6 SCP of Tasks 1, 3, 4, 6, 7 and 8, and Task 9 Steps 2 to 5. Nothing else the plan requires is missing.

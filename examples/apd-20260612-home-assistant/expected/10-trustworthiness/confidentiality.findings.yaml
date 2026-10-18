@@ -256,7 +256,7 @@ finding:
     excerpt: Recorder DB session for entity-state history
   - artifact: 00-SYSTEM-OVERVIEW.md
     locator: '#sensitive-data-inventory (presence/geolocation/lock/alarm)'
-    excerpt: 'Recorder history of entity state: presence, geolocation/zones, camera/voice events, lock/alarm state'
+    excerpt: "History / state DB (Recorder) — SQLite/MariaDB/PostgreSQL of entity state + history: presence, geolocation, camera/voice events, lock/alarm state"
   - artifact: code-evidence-index.yaml
     locator: Recorder DB no encryption at rest (occupancy/geolocation)
     excerpt: physical_thief_with_stolen_device reads unencrypted recorder_history_db (presence/geolocation) at rest

@@ -63,3 +63,29 @@ def test_lint_skills_accepts_crlf_frontmatter(tmp_path) -> None:
     d.mkdir()
     (d / "SKILL.md").write_bytes(b"---\r\nname: foo\r\ndescription: x\r\n---\r\nbody\r\n")
     assert lint_skill_dir(d) == []
+
+
+def test_lint_skills_flags_description_over_budget(tmp_path) -> None:
+    d = _write_skill(tmp_path, "foo", "name: foo\ndescription: " + "x" * 201)
+    assert any("max 200" in e for e in lint_skill_dir(d))
+
+
+def test_lint_skills_description_cap_error_text(tmp_path) -> None:
+    from apd_gauntlet.lint_skills import MAX_SKILL_DESCRIPTION_CHARS
+
+    d = _write_skill(tmp_path, "foo", "name: foo\ndescription: " + "x" * 201)
+    assert MAX_SKILL_DESCRIPTION_CHARS == 200
+    assert lint_skill_dir(d) == [
+        f"{d / 'SKILL.md'}: description is 201 characters (max 200); it loads into every "
+        "session with the plugin enabled — keep one line"
+    ]
+
+
+def test_lint_skills_flags_multiline_description(tmp_path) -> None:
+    d = _write_skill(tmp_path, "foo", "name: foo\ndescription: |\n  a\n  b")
+    assert lint_skill_dir(d) == [f"{d / 'SKILL.md'}: description must be one line"]
+
+
+def test_lint_skills_accepts_a_description_at_the_cap(tmp_path) -> None:
+    d = _write_skill(tmp_path, "foo", "name: foo\ndescription: " + "x" * 200)
+    assert lint_skill_dir(d) == []

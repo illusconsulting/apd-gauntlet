@@ -1,6 +1,6 @@
 ---
 name: apd-finding-schema
-description: Canonical YAML schemas for APD gauntlet outputs — the `finding` record (gaps, risks, uncertainties, blocked-on-evidence) and the `capability` record (confirmed security capabilities with maturity). Use this whenever you are about to emit a finding or capability from a specialist agent, when the synthesizer dedups records, or when validating that an agent's output conforms to the contract. Includes validation rules, required-field semantics, ID conventions, and the lens_perspectives block used by the synthesizer to preserve merged content.
+description: "YAML contracts for APD gauntlet finding and capability records. Read through the agent's Required reading."
 ---
 
 # APD Finding and Capability Schema

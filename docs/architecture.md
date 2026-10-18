@@ -22,13 +22,14 @@ The gauntlet processes tiers in order. Tier 2 specialists may cite tier 1 findin
 
 See [ADR-0001](adrs/0001-three-tier-structure.md) for the full rationale.
 
-## The 21 agents
+## The 22 agents
 
-The gauntlet ships 21 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, the tier-gate repair agent, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
+The gauntlet ships 22 agents: intake, the nine specialists, the synthesizer and its three decomposed-synthesis agents (cluster adjudicator, report writer, report auditor), the always-on tier-0 threat-model author, the CLI step runner, the tier-gate repair agent, and the optional agents that the runner dispatches only when their preconditions are met. Coordination is not an agent — the deterministic `apd-gauntlet` workflow runner phases the run.
 
 | Role | Agent | Purpose |
 |---|---|---|
 | Coordinator | `.claude/workflows/apd-gauntlet.js` (the `apd-gauntlet` runner) | Phases the run, dispatches specialists via receipts, runs the decomposed synthesis + report audit |
+| CLI step runner | `apd-cli-runner` | Runs one `apd-gauntlet` command per CLI step (Bash only, Haiku, low effort) and returns its receipt |
 | Intake | `apd-intake` | Inventories artifacts, builds a PHI/PII data taxonomy, identifies evidence gaps, produces the context brief |
 | Specialist × 9 | `apd-confidentiality`, `apd-integrity`, `apd-availability`, `apd-distributed`, `apd-resilient`, `apd-ephemeral`, `apd-authenticity`, `apd-non-repudiation`, `apd-immutability` | Each analyzes input artifacts through one lens; emits findings and capabilities |
 | Synthesis (decomposed) | `apd-cluster-adjudicator`, `apd-report-writer`, `apd-report-auditor` | Adjudicate finding/capability clusters, author the advisory report, and audit it against the corpus — the runner drives these via receipts |
@@ -39,11 +40,9 @@ The gauntlet ships 21 agents: intake, the nine specialists, the synthesizer and 
 | Optional intake (v1.3+) | `apd-threat-model-recon` | Parses a *supplied* threat model into the sibling `00-context/threat-model-supplied-normalized.yaml` (the author owns the canonical baseline); recognized methodologies include STRIDE, LINDDUN, PASTA, and CSA MAESTRO (reduced-fidelity `methodology_hint: maestro`, L1–L7 layers mapped to APD goals) |
 | Optional synthesis (v1.3+) | `apd-threat-model-evaluator` | Emits coverage-gap, contradiction, and silence findings against the dedup'd specialist findings |
 | Optional synthesis (v1.4+) | `apd-attack-path-analyzer` | Enumerates BloodHound-style attack paths from declared attacker positions to declared crown jewels over a partial graph; recommends D3FEND counters on bottleneck edges that expose ATT&CK techniques |
-| Optional post-synthesis (v1.5+) | `apd-domain-auditor` | Captures domain-pack improvement opportunities into an advisory `domain-improvements.yaml` (non-blocking) |
+| Optional post-synthesis (v1.5+) | `apd-domain-auditor` | Captures domain-pack improvement opportunities into an advisory `domain-improvements.yaml` (non-blocking). Runs only when `.apd-run.yaml` sets `domain_improvement_capture: true` |
 
-Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). Three of the optional agents are truly **activation-gated** — the runner dispatches them only when a precondition holds, and skips them silently (or blocks, where the discipline rule demands it) otherwise: `apd-code-recon` (gated on `code_recon` enabled/auto and CBM reachable), `apd-threat-model-recon` (gated on a supplied `threat_model:`), and `apd-attack-path-analyzer` (gated on a declared crown jewel + attacker position). These declare their preconditions in `.apd-run.yaml` or the active domain pack. The remaining optional agents run unconditionally: `apd-threat-model-evaluator` is **no longer gated** (the always-on author guarantees a baseline threat model, so the evaluator runs on every run), and `apd-domain-auditor` runs every run as an advisory, non-blocking pass. Separately, `apd-threat-model-author` (v1.6+) is **always-on**: it is not optional and not gated — it authors the canonical baseline threat model on every run.
-
-A twenty-second file, `apd-orchestrator.md`, remains in [.claude/agents/](../.claude/agents/) as a **deprecated shim** — superseded by the `apd-gauntlet` workflow runner and retained only as a historical-topology reference; it is not a functional agent and is not counted among the 21.
+Each agent lives in [.claude/agents/](../.claude/agents/) as a markdown file with YAML frontmatter. The specialists are domain-neutral (the analytical checklist is the same regardless of industry); domain-specific calibration (severity rubric, common patterns, consequential-action surface) loads from the active domain pack — see [Adapting to other domains](adapting-to-other-domains.md). Four of the optional agents are truly **activation-gated** — the runner dispatches them only when a precondition holds, and skips them silently (or blocks, where the discipline rule demands it) otherwise: `apd-code-recon` (gated on `code_recon` enabled/auto and CBM reachable), `apd-threat-model-recon` (gated on a supplied `threat_model:`), `apd-attack-path-analyzer` (gated on a declared crown jewel + attacker position), and `apd-domain-auditor` (an advisory, non-blocking pass that runs only when `.apd-run.yaml` sets `domain_improvement_capture: true`; absent or `false`, the runner skips it and the `domain-coverage-delta` step before it). These declare their preconditions in `.apd-run.yaml` or the active domain pack. The remaining optional agent runs unconditionally: `apd-threat-model-evaluator` is **no longer gated** (the always-on author guarantees a baseline threat model, so the evaluator runs on every run). Separately, `apd-threat-model-author` (v1.6+) is **always-on**: it is not optional and not gated — it authors the canonical baseline threat model on every run.
 
 ## Execution model: foreground / in-session
 
@@ -84,7 +83,7 @@ The runner is **interactive**: every specialist it dispatches runs as a subagent
 - apd-synthesizer (fallback)
 - apd-threat-model-evaluator (always-on since v1.6, v1.3+)
 - apd-attack-path-analyzer (optional, v1.4+)
-- apd-domain-auditor (optional, v1.5+)
+- apd-domain-auditor (optional, v1.5+; opt-in via `domain_improvement_capture`)
 
 ## The skills
 
@@ -98,7 +97,7 @@ The five cross-cutting skills every specialist may load:
 | `apd-control-mappings` | NIST 800-53r5 mapping families per goal; MITRE ATT&CK mapping discipline; MITRE ATLAS adversarial-ML technique IDs (`AML.T####`) for AI/ML surfaces |
 | `apd-domain` | **Generated** at runtime from the active domain pack — contains the severity rubric, consequential actions, common patterns |
 
-Eight skills ship under [.claude/skills/](../.claude/skills/): the first four of the table above (`apd-framework`, `apd-finding-schema`, `apd-evidence-discipline`, `apd-control-mappings`), plus three agent-specific discipline skills — `apd-attack-path-discipline` (required reading for `apd-attack-path-analyzer`), `apd-threat-model-methodologies` (required reading for `apd-threat-model-recon` and `apd-threat-model-evaluator`), and `apd-c4-discipline` (required reading for `apd-code-recon` when it authors the grounded C4 architecture view) — and an empty `apd-domain` directory that the build step fills. `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs this in Phase 0). In addition to the full cross-goal `SKILL.md`, the build step emits nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md` — one per lens agent. Each sidecar contains only that goal's common-patterns section, which bounds context on multi-domain runs. The full `SKILL.md` is still loaded by the cross-goal consumers: `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`.
+Eight skills ship under [.claude/skills/](../.claude/skills/): the first four of the table above (`apd-framework`, `apd-finding-schema`, `apd-evidence-discipline`, `apd-control-mappings`), plus three agent-specific discipline skills — `apd-attack-path-discipline` (required reading for `apd-attack-path-analyzer`), `apd-threat-model-methodologies` (required reading for `apd-threat-model-recon` and `apd-threat-model-evaluator`), and `apd-c4-discipline` (required reading for `apd-code-recon` when it authors the grounded C4 architecture view) — and an empty `apd-domain` directory that the build step fills. `apd-domain` is produced by `apd-gauntlet build-domain-skill <pack...>` (the runner runs it in Phase 0, as a step of `apd-gauntlet prepare-run`). In addition to the full cross-goal `SKILL.md`, the build step emits nine goal-scoped sidecars at `.claude/skills/apd-domain/by-goal/<goal>.md` — one per lens agent. Each sidecar contains only that goal's common-patterns section, which bounds context on multi-domain runs. The full `SKILL.md` is still loaded by the cross-goal consumers: `apd-intake`, `apd-attack-path-analyzer`, and `apd-domain-auditor`.
 
 > The canonical home for the JSON Schemas and domain packs is `tools/apd_gauntlet/data/{schemas,domains}` (read via `apd_gauntlet.resources`); the repo-root `schemas/` and `domains/` are convenience symlinks.
 
@@ -107,12 +106,12 @@ Eight skills ship under [.claude/skills/](../.claude/skills/): the first four of
 ```
 Phase 0  Setup       → runner creates runs/<id>/{inputs,00-context,10-trustworthiness,20-scalability,30-auditability,40-synthesis}
                        (40-threat-model is created later by the evaluator)
-                       and runs `apd-gauntlet build-domain-skill <pack...>`
+                       and runs `apd-gauntlet prepare-run` (scaffold check, build-domain-skill, validate-domain)
 Phase 1  Intake      → apd-intake produces context-brief.md (frontmatter + typed artifact index + PHI inventory)
 Phase 2  Tier 1 (∥)  → confidentiality / integrity / availability emit findings.yaml + capabilities.yaml
-                       then `apd-gauntlet validate <run>` over tier-1 outputs
-Phase 3  Tier 2 (∥)  → distributed / resilient / ephemeral (read tier 1 outputs); validate
-Phase 4  Tier 3 (∥)  → authenticity / non-repudiation / immutability (read tier 1+2); validate
+                       then `apd-gauntlet tier-gate <run> --tier 10-trustworthiness` (canonicalize, validate tier 1)
+Phase 3  Tier 2 (∥)  → distributed / resilient / ephemeral (read tier 1 outputs); tier-gate
+Phase 4  Tier 3 (∥)  → authenticity / non-repudiation / immutability (read tier 1+2); tier-gate
 Phase 5  Synthesis   → synthesizer clusters (merge/link/separate), reconciles severities,
                        rolls up NIST/ATT&CK/APD coverage, produces advisory-report.md
 Phase 6  Closeout    → runner returns summary; advisory report has frontmatter (framework_version,

@@ -239,7 +239,7 @@ capability:
     excerpt: data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
   - artifact: api/native-app/sending-data.md
     locator: '#implementing-encryption, lines 93-95'
-    excerpt: mobile_app supports two way encrypted communication via Sodium
+    excerpt: "mobile_app supports two way encrypted communication via [Sodium](https://libsodium.gitbook.io/doc/)."
   - artifact: code-evidence-index.yaml
     locator: optional NaCl SecretBox webhook body AEAD
     excerpt: optional NaCl SecretBox webhook-body AEAD partially mitigates leaked_device_webhook_id payload tampering on mobile_app_webhook_api

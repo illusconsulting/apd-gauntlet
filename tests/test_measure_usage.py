@@ -77,6 +77,10 @@ def test_tier_repair_counts_under_canonicalize():
     assert phase_for("apd-tier-repair") == "canonicalize"
 
 
+def test_cli_runner_is_a_cli_step():
+    assert phase_for("apd-cli-runner") == phase_for("apd-gauntlet:apd-cli-runner") == "cli-steps"
+
+
 # --- beyond the plan's tests -------------------------------------------------------------
 
 
@@ -126,6 +130,7 @@ def test_agent_phases_is_the_planned_table():
         "apd-report-auditor": "synthesis-audit",
         "apd-domain-auditor": "domain-improvements",
         "apd-tier-repair": "canonicalize",
+        "apd-cli-runner": "cli-steps",
         "general-purpose": "cli-steps",
         "main": "session",
     })

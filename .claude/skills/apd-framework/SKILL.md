@@ -1,6 +1,6 @@
 ---
 name: apd-framework
-description: Canonical reference for the APD security architecture framework — three tiers (Assure Trustworthiness, Provide Scalability, Demonstrate Auditability) and nine security goals. Use this whenever you need to determine which APD goal a concern belongs to, resolve boundary calls between adjacent goals (e.g. Confidentiality vs Authenticity, Non-Repudiation vs Immutability), or understand the tier dependency structure used by the APD gauntlet. Required reading for every specialist agent in the gauntlet before emitting findings or capabilities.
+description: "The APD framework: three tiers, nine security goals and the boundary rules between goals. Read through the agent's Required reading."
 ---
 
 # APD Framework

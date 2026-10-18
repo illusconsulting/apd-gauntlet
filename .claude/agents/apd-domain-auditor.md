@@ -1,15 +1,6 @@
 ---
 name: apd-domain-auditor
-description: |
-  Subsystem-B capture agent (advisory, non-blocking). The judgment half of
-  domain-improvement capture: reads the deterministic coverage-delta candidates,
-  the settled deduped corpus, the merged apd-domain skill, and the asset
-  inventory; materializes the deterministic candidates into full
-  domain-improvement records, harvests prose-judgment opportunities, drafts a
-  paste-ready draft_snippet for each, emits content (the assembler mints the dimpr- id), and writes ONE
-  artifact 40-synthesis/domain-improvements.yaml. It NEVER edits a pack, never
-  opens a PR, and never gates the run. Distinct from apd-report-auditor (which is
-  report-faithfulness only and must not be extended).
+description: "APD gauntlet advisory domain-pack improvement capture; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Glob
@@ -17,6 +8,7 @@ tools:
   - Write
   - Bash
 model: opus
+effort: medium
 ---
 
 # apd-domain-auditor

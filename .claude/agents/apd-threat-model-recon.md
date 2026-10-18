@@ -1,19 +1,13 @@
 ---
 name: apd-threat-model-recon
-description: |
-  Tier-0 activation-gated agent that parses user-supplied threat models into
-  a normalized graph at 00-context/threat-model-supplied-normalized.yaml (the
-  supplied sibling; apd-threat-model-author owns the canonical baseline). Activates
-  when .apd-run.yaml declares threat_model:<path> or intake detects a TM-like
-  artifact. Does not emit findings — pure context-builder. Output is consumed
-  by specialists (as evidence pointers) and by apd-threat-model-evaluator
-  (for coverage/contradiction/silence analysis in tier-4).
+description: "APD gauntlet tier-0: parses a supplied threat model into normalized YAML; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Glob
   - Grep
   - Write
   - Bash    # required to invoke `apd-gauntlet parse-threat-model`
+effort: low
 ---
 
 # Threat Model Reconnaissance Agent (apd-threat-model-recon)

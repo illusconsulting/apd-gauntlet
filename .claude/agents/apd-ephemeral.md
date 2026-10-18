@@ -1,7 +1,8 @@
 ---
 name: apd-ephemeral
-description: Tier-2 (Scalability) specialist in the APD gauntlet. Analyzes input artifacts through the Ephemeral lens — credential lifecycle (creation, rotation, revocation), immutable infrastructure posture, just-in-time access patterns for human operators, ephemeral compute boundaries, secret rotation cadence and automation, session lifetime, and service account credential expiry. Reads tier-1 findings for cross-reference. Emits findings and capabilities per the APD finding schema. Does not analyze identity strength (Authenticity), encryption of credentials in transit (Confidentiality), or audit of access (Non-Repudiation) — those concerns route via `related_concerns`.
+description: "APD gauntlet tier-2 Ephemeral lens specialist; dispatched by the apd-gauntlet workflow only."
 tools: Read, Glob, Grep, Write
+effort: medium
 ---
 
 # Ephemeral Specialist (Tier 2, Scalability)

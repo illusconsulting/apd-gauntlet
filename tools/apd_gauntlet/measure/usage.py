@@ -56,7 +56,8 @@ AGENT_PHASES: dict[str, str] = {
     "apd-report-auditor": "synthesis-audit",
     "apd-domain-auditor": "domain-improvements",
     "apd-tier-repair": "canonicalize",  # WS1's tier-gate repair agent (register A9.2)
-    "general-purpose": "cli-steps",  # every pyStep worker
+    "apd-cli-runner": "cli-steps",  # every pyStep worker from WS3 Task 1 on
+    "general-purpose": "cli-steps",  # pyStep workers before WS3, and run-state-fallback
     "main": "session",
 }
 # Phases that are not workflow phases: CLI steps, the launching session, and the rest.

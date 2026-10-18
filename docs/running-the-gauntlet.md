@@ -39,7 +39,7 @@ plugin still requires the `apd-gauntlet` CLI on your `PATH`.
 The CLI exposes the following operator subcommands:
 
 ```
-apd-gauntlet validate <run-dir> [--strict-excerpts]   # three-pass validation
+apd-gauntlet validate <run-dir> [--no-strict-excerpts]   # three-pass validation; non-verbatim inputs/ excerpts are errors unless --no-strict-excerpts (runs made before 2.0)
 apd-gauntlet init-run <run-id> --inputs DIR --domain pbm [--domain api-security] ...
 apd-gauntlet build-domain-skill <pack...>        # compile one or more packs into the apd-domain skill
 apd-gauntlet validate-domain <pack...>           # validate one or more domain packs
@@ -47,12 +47,17 @@ apd-gauntlet validate-run-config <config>        # validate a .apd-run.yaml agai
 apd-gauntlet plan-run <run-dir>                  # emit the ordered foreground-drive checklist (CLI/AGENT steps) for a run
 apd-gauntlet resume-plan <run-dir> [--json]      # which agent steps are already complete (read-only; the runner resumes from it)
 apd-gauntlet canonicalize <run-dir>              # idempotent structural canonicalizer (envelope + deterministic IDs + cross-refs)
+apd-gauntlet prepare-run <run-dir> [--domain D]...  # setup: scaffold validate, build-domain-skill, validate-domain (domains from --domain or .apd-run.yaml; framework_version from .apd-run.yaml)
+apd-gauntlet tier-gate <run-dir> --tier DIR [--json] [--no-strict-excerpts]  # canonicalize the whole run, then validate the tier; exits with the validate result
+apd-gauntlet post-tier4 <run-dir>                # assemble-c4, canonicalize, rollup; exits with the first failing step's code
+apd-gauntlet closeout <run-dir> [--record-attempts JSON] [--no-strict-excerpts]  # canonicalize, summarize, manual-audit-prompts, final validate; exits with the first failing step's code
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
 apd-gauntlet mint-improvement-id ...             # print the canonical dimpr-<sha8> id for a domain-improvement record
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics
+apd-gauntlet manual-audit-prompts <run-dir>      # write 40-synthesis/manual-audit-prompts.md: runtime audit commands for each blocked finding (closeout runs it)
 apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
 apd-gauntlet lint-agents                         # validate agent file frontmatter
 apd-gauntlet parse-threat-model <path>           # parse a SUPPLIED threat model file into a normalized YAML graph
@@ -72,7 +77,7 @@ apd-gauntlet refresh-capec                       # refresh MITRE CAPEC reference
 apd-gauntlet refresh-crosswalks --csf2-json … --hipaa-json …  # ground the HIPAA + CSF 2.0 crosswalks against NIST CPRT exports
 ```
 
-`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `rollup`, `cluster-candidates`, `apply-clusters`, `audit-report` — are driven by the `apd-gauntlet` workflow runner, not invoked by operators.
+`build-domain-skill` and `validate-domain` take one or more space-separated pack names as positional arguments (e.g. `apd-gauntlet build-domain-skill pbm api-security`). By default, `build-domain-skill` also emits per-goal sidecars under `.claude/skills/apd-domain/by-goal/<goal>.md` — one slice per APD goal — which lens agents load to bound their context on multi-domain runs; pass `--full-only` to write only the full cross-goal `SKILL.md` and suppress the sidecars. The decomposed-synthesis subcommands — `cluster-candidates`, `apply-clusters`, `audit-report`, and `rollup` (a step of `post-tier4`) — are driven by the `apd-gauntlet` workflow runner, not invoked by operators. The composites `prepare-run`, `tier-gate`, `post-tier4` and `closeout` run every step even after one fails, and write one `<command>: <step> exit=<N>` line per step to stderr, then `<command>: ok` or `<command>: failed <steps>`.
 
 ## Step 1: Scaffold the run
 
@@ -105,6 +110,16 @@ domains:
 ```
 
 In a multi-domain run, the change is reviewed across all selected packs at once: `build-domain-skill` merges them into one `apd-domain` skill (union/dedup of crown jewels, attacker positions, and trust boundaries; concatenated per-pack pattern catalogs), and every specialist loads the merged calibration.
+
+### Domain-improvement capture (opt-in)
+
+Phase 5h captures the places where the selected domain packs are incomplete. It runs the `domain-coverage-delta` step and then the `apd-domain-auditor` agent, which writes `40-synthesis/domain-improvements.yaml`. The phase is advisory: it never gates the run. It is off by default, which saves one CLI dispatch and one agent dispatch per run. To turn it on, uncomment the line `init-run` writes into `.apd-run.yaml`, or add it:
+
+```yaml
+domain_improvement_capture: true
+```
+
+The value must be `true` or `false`, unquoted. When the key is absent or `false`, the runner dispatches neither step and logs `domain-coverage-delta: skipped` and `domain-improvements: skipped`. The run then has no `domain-improvements.yaml`, and its closeout summary has no domain-improvement line. `plan-run` leaves out both rows and adds a note naming the key. Any other value, such as the string `"true"`, fails `validate-run-config` and `plan-run`, and the runner refuses it before its first dispatch. See [Improving domain packs](improving-domain-packs.md) for what the phase captures and how to turn it into a pack patch.
 
 ## Code reconnaissance (optional)
 
@@ -396,13 +411,16 @@ not meant to be driven headlessly.
 >
 > For the explicit foreground drive, run the deterministic CLI phases yourself
 > (`resume-plan` first, whose step map tells you which agent steps to skip, then
-> `build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
-> `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the LLM
+> `prepare-run`, `assemble-inventory`, `validate`, `canonicalize`,
+> `author-threat-model`, `tier-gate` after each tier, `cluster-candidates`,
+> `apply-clusters`, `post-tier4`, `build-report`, `audit-report`,
+> `domain-coverage-delta` when the run opts in to domain-improvement capture, and
+> `closeout`) and dispatch the LLM
 > specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
 > the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
-> `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`,
-> `apd-domain-auditor`) as foreground agents, in the phase order below —
-> `apd-gauntlet plan-run` emits this exact list for you.
+> `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`, and
+> `apd-domain-auditor` when the run opts in) as foreground agents, in the phase
+> order below — `apd-gauntlet plan-run` emits this exact list for you.
 
 For the supported foreground-drive path, run `apd-gauntlet plan-run <run-dir>`:
 it reads the run's `.apd-run.yaml`, validates it, and emits the exact ordered
@@ -420,25 +438,36 @@ run end-to-end and branches only on the receipts its dispatched agents return.
 It:
 
 1. Calls `apd-gauntlet resume-plan` once to learn which agent steps are already
-   complete (none, on a fresh run), then builds the `apd-domain` skill from the
-   active pack(s) and validates them.
+   complete (none, on a fresh run), then runs `prepare-run`, which checks the
+   run's scaffold, builds the `apd-domain` skill from the active pack(s) and
+   validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
    agents when their preconditions are met). The code-recon and threat-model
    agents emit entries without ids, so the runner runs `canonicalize` after
    code-recon and again after the threat-model phase to mint the `cev-` and `tm-`
    ids before anything reads them.
-3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
-   each tier's validate gate, the runner runs `canonicalize` (idempotent
-   structural canonicalizer: normalizes envelopes, recomputes deterministic IDs,
-   rewrites cross-references) so the gate always sees canonical records.
-4. Runs the decomposed synthesis (cluster → adjudicate → apply → rollup),
-   dispatches the optional attack-path analyzer when activated, builds the
-   advisory report and HTML bundle, then runs the report completeness gate
+3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Each tier
+   ends in `tier-gate`, which canonicalizes the whole run (idempotent structural
+   canonicalizer: normalizes envelopes, recomputes deterministic IDs, rewrites
+   cross-references) and then validates the tier, so the gate always sees
+   canonical records. A failing gate goes through the repair loop described
+   under [A tier gate failed](#a-tier-gate-failed).
+4. Runs the decomposed synthesis (cluster → adjudicate → apply), dispatches
+   the optional attack-path analyzer when activated, runs `post-tier4`
+   (`assemble-c4`, `canonicalize`, `rollup`), builds the advisory report and
+   HTML bundle, then runs the report completeness gate
    (`audit-report`). The gate enforces 8 completeness checks (structural and
    editorial). A structural failure that is unresolved after two remediation
    attempts **blocks the run** — a degraded HTML report cannot ship silently.
    Editorial-only residuals are surfaced non-blocking.
-5. Returns the final summary at closeout.
+5. When `.apd-run.yaml` sets `domain_improvement_capture: true`, runs
+   `domain-coverage-delta` and dispatches `apd-domain-auditor` (Phase 5h,
+   advisory; see
+   [Domain-improvement capture (opt-in)](#domain-improvement-capture-opt-in)).
+   Then runs `closeout`, which mints the domain-improvement ids, records the
+   attempt counters and prints the summary (`summarize --record-attempts`),
+   writes `40-synthesis/manual-audit-prompts.md`, and runs the final
+   `validate`.
 
 The runner is resumable: re-running it against the same directory replays
 completed steps from cache within a session. In a fresh session the runner calls
@@ -535,7 +564,7 @@ Read the error message carefully — it cites the file, the record id, and the s
 
 - **Schema validation**: missing required fields, wrong enum values, malformed IDs. Fix the agent output; re-validate.
 - **Excerpt too long (semantic lint)**: trim the evidence excerpt to ≤ 25 whitespace-separated tokens.
-- **Excerpt not found verbatim**: a `WARNING` (an `ERROR` with `--strict-excerpts`) saying `evidence[N].excerpt not found verbatim in artifact '<file>'`. It means the excerpt is not in the input file the evidence cites, usually because the model paraphrased instead of quoting. Only citations of files under the run's `inputs/` directory are checked, in the whole-run pass and at tier gates; run-internal artifacts such as `00-context/` files are not. Whitespace, backticks and `*` are ignored on both sides, and `...` or `…` joins fragments that must each appear in the file, in order. An excerpt wholly in parentheses, such as `(absent in supplied TM)`, marks an absence and is not checked. A file over 20 MiB is skipped, and a YAML or JSON input over 1 MiB, or a YAML input that uses aliases or nests more than 100 levels, is searched as plain text only (its parsed values are not tried). On 1.7.1 the warning is visible in a manual `apd-gauntlet validate <run-dir>` run; the workflow's gates ignore warnings (they run `--errors-only`, and tier gates act only on errors), so the warning does not appear during a workflow run. To see it as an error, run `apd-gauntlet validate <run-dir> --strict-excerpts`. Fix the excerpt by copying the exact words from the cited file. A later release makes this an error by default.
+- **Excerpt not found verbatim**: an `ERROR` saying `evidence[N].excerpt not found verbatim in artifact '<file>'`. It means the excerpt is not in the input file the evidence cites, usually because the model paraphrased instead of quoting. Only citations of files under the run's `inputs/` directory are checked, in the whole-run pass and at tier gates; run-internal artifacts such as `00-context/` files are not. Case, backticks and `*` are ignored on both sides, so is whitespace next to punctuation, and any other run of whitespace counts as one space; `...` or `…` joins fragments that must each appear in the file, in order. An excerpt wholly in parentheses, such as `(absent in supplied TM)`, marks an absence or summary note and is not checked. A file over 20 MiB is skipped. A YAML or JSON input over 1 MiB, a YAML input that uses aliases or nests more than 100 levels, and one that does not parse are searched as plain text only (their parsed values are not tried), so a miss there stays a `WARNING`. So does a miss in a `.jsonl`, `.ndjson`, `.ipynb`, `.geojson`, `.tfstate`, `.har`, `.jsonc` or `.json5` input: the check never parses these, and their strings may be escaped. So does a miss in an input with more than 100,000 parsed strings, because only 100,000 of them are tried. On 2.0 an excerpt that quotes an `inputs/` file and is not in it is an error by default. During a workflow run the tier gate catches it: the gate fails, `apd-tier-repair` copies the exact words from the cited file into the rejected lens file, and the run halts only if the re-run lens still fails. A miss in a record no tier gate covers, such as the threat-model evaluator's, is an error in the final validate of `closeout`. Outside a run, fix the excerpt by copying the exact words from the cited file. To validate a run made before 2.0, pass `--no-strict-excerpts` to `validate`, `tier-gate` or `closeout`; the miss is then a `WARNING`, as on 1.7.1.
 - **ID mismatch (semantic lint)**: the deterministic ID didn't match the recomputed hash. Either the title or the first evidence locator changed; recompute and update.
 - **Unknown artifact**: the evidence cites an artifact that isn't in the intake brief's frontmatter. Either fix the citation or update the brief.
 - **maturity ≥ implemented without non-tech-plan evidence**: either downgrade to `designed` or add evidence from a non-tech-plan artifact (IaC, code, test report, runbook).
@@ -550,7 +579,7 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 
 ### A tier gate failed
 
-After each tier's lenses finish and `canonicalize` runs, the runner validates the tier with `apd-gauntlet validate <run-dir> --tier <tier-dir>`. That gate blocks the run: a failing tier never flows on to synthesis.
+After each tier's lenses finish, the runner runs `apd-gauntlet tier-gate <run-dir> --tier <tier-dir>`, which canonicalizes the run and then validates the tier. That gate blocks the run: a failing tier never flows on to synthesis.
 
 - A lens whose dispatch fails (an agent error or an interrupted subagent) is retried up to twice before the gate runs.
 - A schema or semantic failure at the gate gets one repair per failing file. A repair agent (`apd-tier-repair`, which has only the Read and Edit tools) receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.

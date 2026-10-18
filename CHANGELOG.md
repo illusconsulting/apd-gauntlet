@@ -157,9 +157,127 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   table and checks that the parser behind `parse-threat-model` reads the same
   entries. The runbook's "Behaviour-preserving transformations" section covers
   suites, the statuses and the allowlist rule.
+- **Composite commands `prepare-run`, `tier-gate`, `post-tier4` and
+  `closeout`.** Each runs existing commands in-process, in order, and runs
+  every step even after one fails. It writes one `<command>: <step> exit=<N>`
+  line per step to stderr, then `<command>: ok` or
+  `<command>: failed <steps>`. `prepare-run RUN_DIR [--domain D]...` runs the
+  scaffold `validate --schema-only`, `build-domain-skill` and
+  `validate-domain`. The domains come from `--domain` or else the run's
+  `.apd-run.yaml`, and `framework_version` from that file when it sets one; a
+  value that does not match `run-config.schema.json` is a usage error
+  (exit 2). `tier-gate RUN_DIR --tier DIR [--json]`
+  canonicalizes the whole run, then validates the tier, and exits with the
+  `validate` result (0 clean, 1 on errors). With `--json`, stdout carries only
+  `validate`'s JSON. `post-tier4 RUN_DIR` runs `assemble-c4`, `canonicalize`
+  and `rollup`. `closeout RUN_DIR [--record-attempts JSON]` runs
+  `canonicalize`, `summarize`, `manual-audit-prompts` and the final
+  `validate --errors-only`. Its `manual-audit-prompts` step writes
+  `40-synthesis/manual-audit-prompts.md`; until now nothing called that
+  command. `prepare-run`, `post-tier4` and `closeout` exit with the first
+  failing step's code.
 
 ### Changed
 
+- **CLI steps run on `apd-cli-runner`.** Every CLI step of the workflow now
+  runs on the new `apd-cli-runner` agent (Bash only, Haiku, low effort)
+  instead of a general-purpose agent on the session model. The agent's body
+  holds the static receipt contract, so each step's prompt is a few lines:
+  the idempotency guard or the always-run line, `COMMAND:`, `RECEIPT AGENT:`
+  and the step's own receipt lines. The agent refuses a command that does
+  not begin with `apd-gauntlet`. The workflow refuses, before its first
+  dispatch, a run id, domain or framework version that does not match
+  `run-config.schema.json`, because those values reach the agent's command
+  line. `usage` counts the agent under `cli-steps`.
+- **The workflow and `plan-run` run the composite commands: 9 fewer CLI
+  dispatches per run.** A clean run now makes 18 CLI dispatches instead of 27
+  (36 dispatches in all instead of 45). Setup runs one `prepare-run` in place
+  of the scaffold `validate`, `build-domain-skill` and `validate-domain`
+  steps; `prepare-run` reads `framework_version` from `.apd-run.yaml`. Each
+  tier ends in one `tier-gate --json` in place of `canonicalize` and
+  `validate --tier`, and so does each re-gate in the tier repair loop. One
+  `post-tier4` replaces `assemble-c4`, the tmeval `canonicalize` and `rollup`.
+  Its retry and the synthesizer's last-resort rollup fire only when `rollup`
+  itself failed; an `assemble-c4` or `canonicalize` failure stays advisory,
+  and the runner logs the failed step by name, also when the retry fixed
+  `rollup`. One `closeout` replaces the domain-improvement `canonicalize`,
+  `summarize --record-attempts` and the final `validate`, and now also writes
+  `40-synthesis/manual-audit-prompts.md`. The dispatch labels change to match
+  (`prepare-run`, `tier-gate-<tier>` with the `-after-repair` and
+  `-after-rerun` suffixes, `post-tier4`, `post-tier4-retry-1`, `closeout`).
+  The scaffold check, `validate-domain` and `rollup` no longer carry the
+  idempotency guard: every composite always runs. `apd-cli-runner` turns each
+  failed `<command>: <step> exit=<N>` status line into one receipt error named
+  by the step. `plan-run` lists the same CLI commands as the workflow, in the
+  same order, and gains the `assemble-inventory` row the workflow already ran.
+- **`apd-tier-repair` runs at low effort.** The agent that fixes a record file
+  a tier gate rejected now sets `effort: low` in its frontmatter, next to
+  `model: sonnet`. Its tools stay `Read` and `Edit`, and its repair prompt is
+  unchanged.
+- **Agent and skill descriptions are one line.** Claude Code loads the
+  description of every agent and skill the plugin lists into each session that
+  has the plugin enabled. The 20 agent and 7 skill descriptions that ran to
+  several sentences are now one line each, so all the listed descriptions
+  together take 3,538 bytes instead of 16,683. `lint-agents` rejects an agent
+  description over 160 characters, `lint-skills` rejects a skill description
+  over 200, and both reject a description that contains a newline.
+  `lint-agents` also reports an empty description as missing, as `lint-skills`
+  already did. The workflow names the agent of every step it dispatches, so no
+  run output changes.
+- **The deprecated `apd-orchestrator` agent is removed.** The `apd-gauntlet`
+  workflow runner replaced it, and the plugin had kept it only as a reference.
+  The plugin now lists 22 agents, and `lint-agents` no longer exempts it from
+  the receipt contract.
+- **Every agent sets `effort`.** The 20 agents that had no `effort` in their
+  frontmatter now set one. The nine lenses, intake, code recon, the
+  threat-model author, the attack-path analyzer, the report writer and the
+  domain auditor run at `medium`. The threat-model recon agent runs at `low`.
+  The threat-model evaluator, the cluster adjudicator, the report auditor and
+  the synthesizer run at `high`. No agent's `model` changes, and the agents
+  that set no `model` still set none. `lint-agents` now rejects an agent
+  without `effort` or with a value other than `low`, `medium`, `high`, `xhigh`
+  or `max`. It also rejects a `model` that is neither an alias (`sonnet`,
+  `opus`, `haiku`, `fable`, `inherit`) nor a full model id that starts with
+  `claude-`. `model` stays optional.
+- **`lint-agents` requires `tools`.** An agent with no `tools` in its
+  frontmatter gets every tool of the session, so `lint-agents` now rejects
+  one, and it reports an empty `tools` as missing. It reads `tools` as a
+  comma-separated string or as a YAML list, and it rejects a value that holds
+  an empty name or is neither form. Every agent already set `tools`, and none
+  changes. A test now pins each agent's tool set. The threat-model recon and
+  author agents, the attack-path analyzer and the domain auditor still hold
+  `Bash`.
+- **The domain auditor is opt-in (`domain_improvement_capture`).** Phase 5h,
+  the `domain-coverage-delta` step and the advisory `apd-domain-auditor`
+  agent, now runs only when `.apd-run.yaml` sets
+  `domain_improvement_capture: true`. `run-config.schema.json` gains the
+  optional boolean key, whose default is `false`. When it is absent or
+  `false`, the workflow dispatches neither step and logs both as skipped, so a
+  clean run makes 34 dispatches (17 CLI, 17 agent) instead of 36. `plan-run`
+  then leaves out both rows and adds a note naming the key, and the run has no
+  `domain-improvements.yaml`. A value that is not a boolean, such as the
+  string `"true"`, fails the schema, and the workflow refuses it before its
+  first dispatch. `init-run` writes the key as a commented line.
+- **Verbatim excerpts are strict by default.** An evidence excerpt that cites
+  a file under `inputs/` and is not in it is now an error in `validate`, at
+  tier gates and in the whole-run pass, where 1.7.1 warned. At a tier gate
+  the error goes through the repair loop: `apd-tier-repair` copies the exact
+  words from the cited file, and the run halts only if the re-run lens still
+  fails. `--strict-excerpts/--no-strict-excerpts` replaces the
+  `--strict-excerpts` flag on `validate`, and `tier-gate` and `closeout` take
+  the same pair; `--no-strict-excerpts` validates runs made before 2.0. The
+  matcher now ignores case and whitespace next to punctuation, which removes
+  two false positives in the committed examples (`**The client signs…` and a
+  JSON object broken across lines). A YAML or JSON input searched as plain
+  text only (over 1 MiB, with aliases, nested more than 100 levels or not
+  parseable) still gives a warning, and so does one with more than 100,000
+  parsed strings, of which only 100,000 are tried. So does a `.jsonl`,
+  `.ndjson`, `.ipynb`, `.geojson`, `.tfstate`, `.har`, `.jsonc` or `.json5`
+  input, which the check never parses, so an escaped string in it never fails
+  a gate. The Home Assistant
+  example's 23 remaining non-verbatim excerpts now quote their inputs, or,
+  for three absence notes, are wholly in parentheses, and
+  `apd-evidence-discipline` teaches that marker rule.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

@@ -1,6 +1,6 @@
 ---
 name: apd-attack-path-discipline
-description: Required discipline for the apd-attack-path-analyzer agent. Covers never-invent rules for nodes and edges, confidence floors severity rule, bounded-enumeration discipline, block-on-missing-crown-jewels rule, D3FEND-must-counter-ATT&CK mapping rule, and Mermaid diagram constraints. Required reading before emitting any apath-* finding or asset-graph node/edge.
+description: "Discipline rules for apd-attack-path-analyzer: never-invent nodes and edges, bounded enumeration, D3FEND counters. Read through the agent's Required reading."
 ---
 
 # APD Attack-Path Discipline

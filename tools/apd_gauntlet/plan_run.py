@@ -42,9 +42,16 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         tm-recon block (always).
       - apath: only when cfg["crown_jewels"] is a non-empty list.
       - tmeval: ALWAYS (the always-on authored baseline TM always exists).
+      - domain-coverage-delta and domain-improvements (Phase 5h): only when
+        cfg["domain_improvement_capture"] is True (the workflow's `=== true`).
+
+    The CLI rows use the composite commands the runner dispatches: ``prepare-run``
+    (setup), ``tier-gate`` (each tier), ``post-tier4`` (after tmeval/apath) and
+    ``closeout``.
     """
     run_dir = "runs/" + str(cfg.get("run_id", "<run-id>"))
-    domains = " ".join(cfg.get("domains") or [])
+    domains = list(cfg.get("domains") or [])
+    domain_flags = "".join(f" --domain {d}" for d in domains)
     plan: list[dict[str, str]] = []
 
     # 1 — setup. The runner's FIRST call is resume-plan: a read-only map of which
@@ -54,19 +61,24 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         _step("setup", "CLI", f"resume-plan {run_dir} --json",
               "step completion map (read-only); skip AGENT steps marked complete")
     )
+    # 1b — prepare-run: the scaffold validate, build-domain-skill and validate-domain in
+    # one command; framework_version comes from the run's .apd-run.yaml.
     plan.append(
-        _step("setup", "CLI", f"build-domain-skill {domains}".rstrip(),
-              ".claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)")
-    )
-    plan.append(
-        _step("setup", "CLI", f"validate-domain {domains}".rstrip(),
-              f"domain pack {domains} (read-only check)")
+        _step("setup", "CLI", f"prepare-run {run_dir}{domain_flags}",
+              f"{run_dir} scaffold (schema-only check); "
+              ".claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars); "
+              f"domain pack {' '.join(domains)} (read-only check)")
     )
 
     # 2 — intake
     plan.append(
         _step("intake", "AGENT", "apd-intake",
               "00-context/context-brief.md, 00-context/asset-inventory.yaml")
+    )
+    # 2a — mint the inventory ids before anything cites them and before the schema gate.
+    plan.append(
+        _step("intake", "CLI", f"assemble-inventory {run_dir}",
+              "00-context/asset-inventory.yaml (asset-/idn-/tb- ids minted; crosses wired)")
     )
     # 2b — FW-2: schema-gate 00-context right after intake so an invalid
     # asset-inventory (e.g. a data_classifications value outside the enum) is
@@ -115,21 +127,20 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
               "(and threat-model-supplied-normalized.yaml when a TM was supplied)")
     )
 
-    # 6/7/8 — the three parallel lens tiers, each canonicalize + tier gate.
+    # 6/7/8 — the three parallel lens tiers, each ending in tier-gate (canonicalize the
+    # whole run, then validate the tier; the row text is the workflow's command).
     for tier_dir, lenses in _TIERS:
         for lens in lenses:
             plan.append(
                 _step(tier_dir, "AGENT", f"apd-{lens}",
                       f"{tier_dir}/{lens}.findings.yaml, {tier_dir}/{lens}.capabilities.yaml")
             )
+        tier_gate = f"tier-gate {run_dir} --tier {tier_dir} --json"
         plan.append(
-            _step(tier_dir, "CLI", f"canonicalize {run_dir}",
-                  f"canonicalized lens records under {run_dir}")
-        )
-        plan.append(
-            _step(tier_dir, "CLI", f"validate {run_dir} --tier {tier_dir} --errors-only",
-                  f"tier {tier_dir} records (read-only gate)",
-                  gate=(f"validate {run_dir} --tier {tier_dir} --errors-only; on failure repair "
+            _step(tier_dir, "CLI", tier_gate,
+                  f"canonicalized records under {run_dir}; tier {tier_dir} records "
+                  "(read-only gate)",
+                  gate=(f"{tier_gate}; on failure repair "
                         "each failing file (tools/apd_gauntlet/data/prompts/repair.md), "
                         "re-run the lens if repair fails, then halt"))
         )
@@ -172,10 +183,11 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
                   "attack-path.findings.yaml, attack-path-report.md")
         )
 
-    # 15 — rollup (runs after tmeval/apath so coverage unions the tier-4 findings)
+    # 15 — post-tier4: assemble-c4, the tmeval canonicalize, then rollup (after
+    # tmeval/apath so the C4 model and the coverage union the tier-4 findings)
     plan.append(
-        _step("synthesis-rollup", "CLI", f"rollup {run_dir}",
-              "40-synthesis/nist-coverage.yaml, attack-exposure.yaml, "
+        _step("synthesis-rollup", "CLI", f"post-tier4 {run_dir}",
+              "40-synthesis/c4-model.yaml, nist-coverage.yaml, attack-exposure.yaml, "
               "apd-coverage-matrix.yaml, metrics.yaml")
     )
 
@@ -202,20 +214,24 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
               "semantic critique (GATE: pass/fail; semantic residual non-blocking)")
     )
 
-    # 19/20 — domain improvement capture (advisory)
-    plan.append(
-        _step("domain-coverage-delta", "CLI", f"domain-coverage-delta {run_dir}",
-              "40-synthesis/domain-coverage-delta.yaml")
-    )
-    plan.append(
-        _step("domain-improvements", "AGENT", "apd-domain-auditor",
-              "40-synthesis/domain-improvements.yaml")
-    )
+    # 19/20 — domain improvement capture (advisory; opt-in: only when the run config sets
+    # domain_improvement_capture: true)
+    if cfg.get("domain_improvement_capture") is True:
+        plan.append(
+            _step("domain-coverage-delta", "CLI", f"domain-coverage-delta {run_dir}",
+                  "40-synthesis/domain-coverage-delta.yaml")
+        )
+        plan.append(
+            _step("domain-improvements", "AGENT", "apd-domain-auditor",
+                  "40-synthesis/domain-improvements.yaml")
+        )
 
-    # 21 — closeout
+    # 21 — closeout: the dimpr canonicalize, summarize, manual-audit-prompts and the
+    # final validate
     plan.append(
-        _step("closeout", "CLI", f"summarize {run_dir}",
-              f"{run_dir} run summary (read-only)")
+        _step("closeout", "CLI", f"closeout {run_dir}",
+              "dimpr- ids minted; run summary; 40-synthesis/manual-audit-prompts.md; "
+              "whole-run final validate (read-only)")
     )
 
     return plan
@@ -254,6 +270,15 @@ def render_markdown(plan: list[dict[str, str]], cfg: dict[str, Any]) -> str:
             "> Note: the attack-path analysis phase is omitted for this run — it "
             "runs when the run-config or the domain pack declares a non-empty "
             "crown_jewels list."
+        )
+
+    # Phase 5h note: if the domain auditor was not emitted, tell the operator how to opt in.
+    if not any(s["ref"] == "apd-domain-auditor" for s in plan):
+        lines.append("")
+        lines.append(
+            "> Note: domain-improvement capture (Phase 5h) is off for this run — set "
+            "domain_improvement_capture: true in .apd-run.yaml to run the advisory "
+            "domain-pack auditor."
         )
 
     lines.append("")

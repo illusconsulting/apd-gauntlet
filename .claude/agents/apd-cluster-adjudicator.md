@@ -1,20 +1,11 @@
 ---
 name: apd-cluster-adjudicator
-description: |
-  5b judgment-only agent. Reads ONLY 40-synthesis/cluster-candidates.yaml (the
-  candidate groups + minimal per-record fields the cluster-candidates command
-  extracted — kilobytes, never the 18 raw files). For each candidate group,
-  decides the `decision` field merge|link|separate (bias to link on ambiguity). For
-  merges, authors the rewritten merged summary/detail/recommendation and the
-  per-lens lens_perspectives narrative, classifies finding-vs-capability
-  contradictions (compatible|contradicted|stale), and supplies chosen_severity
-  + rationale when elevating above the cluster max. Emits
-  40-synthesis/cluster-decisions.yaml. Does NOT compute merged ids, NIST/ATT&CK
-  unions, or write the deduped files — those are the apply-clusters command.
+description: "APD gauntlet synthesis 5b: merge, link or separate candidate clusters; dispatched by the apd-gauntlet workflow only."
 tools:
   - Read
   - Write
 model: opus
+effort: high
 ---
 
 # apd-cluster-adjudicator
