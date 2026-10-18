@@ -175,7 +175,7 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   `validate --errors-only`. Its `manual-audit-prompts` step writes
   `40-synthesis/manual-audit-prompts.md`; until now nothing called that
   command. `prepare-run`, `post-tier4` and `closeout` exit with the first
-  failing step's code. The workflow does not run them yet.
+  failing step's code.
 
 ### Changed
 
@@ -189,6 +189,26 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   dispatch, a run id, domain or framework version that does not match
   `run-config.schema.json`, because those values reach the agent's command
   line. `usage` counts the agent under `cli-steps`.
+- **The workflow and `plan-run` run the composite commands: 9 fewer CLI
+  dispatches per run.** A clean run now makes 18 CLI dispatches instead of 27
+  (36 dispatches in all instead of 45). Setup runs one `prepare-run` in place
+  of the scaffold `validate`, `build-domain-skill` and `validate-domain`
+  steps; `prepare-run` reads `framework_version` from `.apd-run.yaml`. Each
+  tier ends in one `tier-gate --json` in place of `canonicalize` and
+  `validate --tier`, and so does each re-gate in the tier repair loop. One
+  `post-tier4` replaces `assemble-c4`, the tmeval `canonicalize` and `rollup`.
+  Its retry and the synthesizer's last-resort rollup fire only when `rollup`
+  itself failed; an `assemble-c4` or `canonicalize` failure stays advisory.
+  One `closeout` replaces the domain-improvement `canonicalize`,
+  `summarize --record-attempts` and the final `validate`, and now also writes
+  `40-synthesis/manual-audit-prompts.md`. The dispatch labels change to match
+  (`prepare-run`, `tier-gate-<tier>` with the `-after-repair` and
+  `-after-rerun` suffixes, `post-tier4`, `post-tier4-retry-1`, `closeout`).
+  The scaffold check, `validate-domain` and `rollup` no longer carry the
+  idempotency guard: every composite always runs. `apd-cli-runner` turns each
+  failed `<command>: <step> exit=<N>` status line into one receipt error named
+  by the step. `plan-run` lists the same CLI commands as the workflow, in the
+  same order, and gains the `assemble-inventory` row the workflow already ran.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release

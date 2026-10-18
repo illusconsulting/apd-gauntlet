@@ -52,8 +52,10 @@ TIER_PHASES_VIA_RUNTIER = ["tier-1", "tier-2", "tier-3"]
 
 # Phases that are declared in meta.phases and referenced only via opts.phase in
 # pyStep (not via a direct `phase('X')` literal or a `runTier('X', ...)` call).
-# 'canonicalize' is dispatched 3× inside runTier as pyStep('canonicalize',
-# {phase:'canonicalize', ...}) — the phase group is advisory display only.
+# 'canonicalize' is the phase of the two context steps, canonicalize-code-evidence and
+# canonicalize-threat-model, dispatched as pyStep('canonicalize', {phase:'canonicalize',
+# ...}). The tier canonicalize runs inside the tier-gate composite (WS3 Task 3), whose
+# dispatch keeps the tier's phase. The phase group is advisory display only.
 PYSTEP_PHASE_REFS = ["canonicalize"]
 
 
@@ -107,8 +109,8 @@ def test_tier_phases_invoked_via_runtier() -> None:
 def test_every_meta_phase_is_emitted_one_way_or_the_other() -> None:
     """Union of the direct-literal set, the runTier tier set, and the pyStep
     phase-ref set == meta.phases.  'canonicalize' is in PYSTEP_PHASE_REFS because
-    it is dispatched via pyStep('canonicalize', {phase:'canonicalize', ...}) inside
-    runTier rather than via a direct phase() literal or a runTier() call."""
+    the context canonicalize steps dispatch pyStep('canonicalize', {phase:'canonicalize',
+    ...}) rather than a direct phase() literal or a runTier() call."""
     assert (
         set(DIRECT_PHASE_LITERALS) | set(TIER_PHASES_VIA_RUNTIER) | set(PYSTEP_PHASE_REFS)
         == set(EXPECTED_PHASES)
@@ -182,14 +184,20 @@ def test_referenced_commands_cover_the_pipeline() -> None:
     text = _text()
     # init-run is intentionally ABSENT: per design §4 the run is scaffolded
     # before the workflow runs (args IS .apd-run.yaml), so setup VALIDATES the
-    # existing scaffold via pyStep('validate', ...) rather than creating it.
-    for c in ("build-domain-skill", "validate-domain", "validate",
-              "cluster-candidates", "apply-clusters", "rollup", "build-report",
-              "audit-report", "summarize", "assemble-c4"):
+    # existing scaffold (inside prepare-run) rather than creating it.
+    for c in ("resume-plan", "prepare-run", "tier-gate", "post-tier4", "closeout",
+              "validate", "canonicalize", "cluster-candidates", "apply-clusters",
+              "build-report", "audit-report"):
         assert f"pyStep('{c}'" in text, f"pipeline command {c} not invoked via pyStep"
     assert "pyStep('init-run'" not in text, (
         "init-run must NOT be dispatched: the run is pre-scaffolded; setup validates it"
     )
+    # WS3 Task 3: these run inside the composites now, never as their own dispatch.
+    for gone in ("pyStep('build-domain-skill'", "pyStep('validate-domain'",
+                 "pyStep('assemble-c4'", "pyStep('rollup'", "pyStep('summarize'",
+                 "label: 'canonicalize-tmeval'", "label: 'canonicalize-dimpr'",
+                 "'canonicalize-' + tierDir"):
+        assert gone not in text, gone
 
 
 def test_receipt_constant_matches_schema_required() -> None:
@@ -324,35 +332,15 @@ def test_runner_uses_domains_list_not_singular() -> None:
         "runner still references singular args.domain"
 
 
-def test_build_domain_skill_step_always_runs() -> None:
-    """The build-domain-skill setup step must bypass the idempotent-skip guard so the
-    Python command itself decides freshness (pack-set staleness fix)."""
+def test_prepare_run_step_always_runs() -> None:
+    """The prepare-run setup step (scaffold validate, build-domain-skill, validate-domain)
+    must bypass the idempotent-skip guard so the Python commands themselves decide
+    freshness (pack-set staleness fix). prepare-run reads framework_version from the
+    run's .apd-run.yaml, so the workflow passes no --framework-version flag."""
     text = _text()
-    assert re.search(r"pyStep\('build-domain-skill'[\s\S]{0,400}?alwaysRun:\s*true", text), \
-        "build-domain-skill step must carry alwaysRun: true"
-
-
-def test_build_domain_skill_framework_version_flag_is_guarded() -> None:
-    """The --framework-version flag must be GUARDED on args.framework_version being
-    present. Unconditional `'--framework-version ' + args.framework_version` produces
-    the literal `--framework-version undefined` when the run-config omits the key,
-    which then crashes build_domain_skill at int('undefined') in _version_in_range.
-    When the key is absent the flag must be omitted so the CLI's own
-    `default=__version__` applies."""
-    text = _text()
-    m = re.search(r"pyStep\('build-domain-skill', \{[\s\S]*?\n\}\);", text)
-    assert m, "build-domain-skill pyStep block not found"
-    block = m.group(0)
-    # The buggy unconditional concat must be gone.
-    assert "cliArgs: '--framework-version ' + args.framework_version," not in block, (
-        "unconditional '--framework-version ' + args.framework_version yields "
-        "'--framework-version undefined' when args.framework_version is absent"
-    )
-    # The flag must be emitted only behind a presence guard on args.framework_version.
-    assert "args.framework_version ?" in block, (
-        "build-domain-skill must guard --framework-version on args.framework_version "
-        "(ternary), omitting the flag when the key is absent"
-    )
+    assert re.search(r"pyStep\('prepare-run'[\s\S]{0,400}?alwaysRun:\s*true", text), \
+        "prepare-run step must carry alwaysRun: true"
+    assert "'--framework-version '" not in text
 
 
 def test_phase_5h_names_in_meta_and_body() -> None:
@@ -406,23 +394,6 @@ def test_canonicalize_in_meta_phases() -> None:
     assert m, "phases:[...] array not found in meta"
     phases_blob = m.group(1)
     assert "canonicalize" in phases_blob, "'canonicalize' not found in meta.phases array"
-
-
-def test_canonicalize_pystep_uses_always_run() -> None:
-    text = _text()
-    run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
-    # locate the canonicalize pyStep block and confirm alwaysRun: true is within it
-    idx = run_tier.index("pyStep('canonicalize'")
-    block = run_tier[idx: run_tier.index("})", idx) + 2]
-    assert "alwaysRun: true" in block, block
-
-
-def test_canonicalize_precedes_tier_validate_gate() -> None:
-    text = _text()
-    # inside runTier, the canonicalize pyStep must appear before the tier gate call.
-    run_tier = text.split("function runTier", 1)[1].split("\nfunction ", 1)[0]
-    assert "pyStep('canonicalize'" in run_tier
-    assert run_tier.index("pyStep('canonicalize'") < run_tier.index("tierGate(")
 
 
 # ---------------------------------------------------------------------------
@@ -484,12 +455,12 @@ def test_rollup_last_resort_writes_metrics():
 # ---------------------------------------------------------------------------
 
 
-def test_rollup_outputs_label_includes_metrics():
+def test_post_tier4_outputs_label_includes_metrics():
     src = _text()
-    m = re.search(r"pyStep\('rollup',\s*\{[^}]*?\}\)", src, re.DOTALL)
-    assert m, "rollup pyStep dispatch not found"
+    m = re.search(r"pyStep\('post-tier4',\s*\{[^}]*?\}\)", src, re.DOTALL)
+    assert m, "post-tier4 pyStep dispatch not found"
     assert "metrics.yaml" in m.group(0), (
-        "rollup pyStep outputs label must list metrics.yaml"
+        "post-tier4 pyStep outputs label must list metrics.yaml"
     )
 
 
@@ -1060,23 +1031,14 @@ def test_report_stage_interruption_distinct_from_completeness_gate() -> None:
     assert "still FAILED a STRUCTURAL check" in text, "genuine structural gate must remain"
 
 
-def test_assemble_c4_wired_after_apath_before_canonicalize() -> None:
-    """assemble-c4 is the deterministic C4 assembler: it runs in the synthesis
-    flow after the tmeval/apath parallel barrier (so asset-graph.yaml exists)
-    and before the canonicalize-tmeval + rollup steps. Mirrors assemble-inventory."""
+def test_post_tier4_after_apath_before_report() -> None:
+    """post-tier4 runs assemble-c4 (the deterministic C4 assembler), the tmeval
+    canonicalize and rollup, in that order (pinned by tests/test_cli_composites.py). It
+    runs after the tmeval/apath parallel barrier, so asset-graph.yaml and the tmeval
+    findings exist, and before the report writer."""
     text = _text()
-    assert "pyStep('assemble-c4'" in text, "assemble-c4 must be dispatched via pyStep"
-    apath_close = text.index("phase('apath')")
-    c4_at = text.index("pyStep('assemble-c4'")
-    # Anchor on the canonicalize-tmeval label specifically: an earlier per-tier
-    # pyStep('canonicalize', ...) (label canonicalize-<tier>) precedes the apath
-    # barrier, so a bare text.index("pyStep('canonicalize'") would match THAT one.
-    canon_at = text.index("canonicalize-tmeval")
-    rollup_at = text.index("pyStep('rollup'")
-    assert apath_close < c4_at < canon_at, (
-        "assemble-c4 must run after the apath barrier and before canonicalize-tmeval"
-    )
-    assert c4_at < rollup_at, "assemble-c4 must run before rollup"
+    assert (text.index("phase('apath')") < text.index("pyStep('post-tier4'")
+            < text.index("phase('synthesis-report')"))
 
 
 def test_c4_tab_is_conditional_and_routed() -> None:
@@ -1351,7 +1313,7 @@ def test_resume_done_declared_next_to_run_dir() -> None:
 def test_resume_plan_is_first_setup_step() -> None:
     t = _text()
     assert t.index("phase('setup')") < t.index("pyStep('resume-plan'") < t.index(
-        "label: 'validate-scaffold'"
+        "label: 'prepare-run'"
     )
 
 
@@ -1364,7 +1326,7 @@ def test_resume_plan_precedes_every_dispatch() -> None:  # Review Focus 1: halt 
 
 def test_resume_plan_refusal_halts_and_failure_falls_back() -> None:  # Review Focus 1 and 5
     t = _text()
-    block = t[t.index("pyStep('resume-plan'"):t.index("label: 'validate-scaffold'")]
+    block = t[t.index("pyStep('resume-plan'"):t.index("label: 'prepare-run'")]
     # exit 3: the run is from another framework major -> halt before any dispatch.
     assert "/exit=3/" in block and "refusing to resume" in block
     # click's "No such command": an older (1.7.0) engine -> halt, tell the user to upgrade.
@@ -1426,7 +1388,7 @@ def test_repair_template_embedded_verbatim() -> None:
 
 def test_tier_gate_always_runs_and_reports_json_errors() -> None:
     body = _fn_body(_text(), "tierGate")
-    assert "pyStep('validate'" in body and "alwaysRun: true" in body
+    assert "pyStep('tier-gate'" in body and "alwaysRun: true" in body
     assert "errorsFromJson: true" in body and "' --json'" in body
 
 
@@ -1469,7 +1431,7 @@ def test_gate_helpers_are_defined_before_run_tier() -> None:
 # gates return a skip receipt.
 # ---------------------------------------------------------------------------
 
-READ_ONLY_GATES = ("intake-schema-gate", "validate-full-prephase5", "validate-final")
+READ_ONLY_GATES = ("intake-schema-gate", "validate-full-prephase5")
 
 
 def test_read_only_gates_always_run() -> None:
@@ -1479,6 +1441,11 @@ def test_read_only_gates_always_run() -> None:
         block = t[t.rindex("pyStep('validate'", 0, at):t.index("});", at)]
         assert "alwaysRun: true" in block, label
         assert "validateScope" not in block and "validateFlags" not in block, label
+    # The final validate runs inside closeout (WS3 Task 3, register A9.11).
+    at = t.index("pyStep('closeout'")
+    block = t[at:t.index("});", at)]
+    assert "alwaysRun: true" in block
+    assert "validateScope" not in block and "validateFlags" not in block
 
 
 def test_tmeval_instruction_names_canonical_inputs_and_output() -> None:
@@ -1652,7 +1619,7 @@ def test_attempts_counted_in_tiers_and_audit():
 
 def test_closeout_summarize_records_attempts_and_always_runs():
     text = RUNNER.read_text()
-    step = text[text.index("pyStep('summarize'"):]
+    step = text[text.index("pyStep('closeout'"):]
     step = step[:step.index("});")]
     assert "--record-attempts" in step and "alwaysRun: true" in step and "attempts.yaml" in step
 

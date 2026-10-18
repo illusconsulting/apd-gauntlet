@@ -17,6 +17,8 @@ from typing import Any
 
 import pytest
 import yaml
+from apd_gauntlet.composite import post_tier4_steps
+from apd_gauntlet.plan_run import build_plan
 
 REPO = Path(__file__).resolve().parent.parent
 RUNNER = REPO / ".claude" / "workflows" / "apd-gauntlet.js"
@@ -28,23 +30,27 @@ HA_SHAPED: dict[str, Any] = {
     "run_id": "r", "domains": ["pbm"], "code_recon": "enabled", "crown_jewels": ["phi_store"],
 }
 
-# Every CLI dispatch of a clean HA-shaped run on the WS1 + WS2 base, in order.
+# Every CLI dispatch of a clean HA-shaped run, in order. WS3 Task 3 runs the composites
+# prepare-run, tier-gate, post-tier4 and closeout: 9 fewer than the 27 of the WS1 + WS2 base.
 CLI_LABELS = [
     # setup and intake
-    "resume-plan", "validate-scaffold", "build-domain-skill", "validate-domain",
-    "assemble-inventory", "intake-schema-gate",
+    "resume-plan", "prepare-run", "assemble-inventory", "intake-schema-gate",
     # context
     "canonicalize-code-evidence", "author-threat-model-floor", "canonicalize-threat-model",
     # tiers
-    "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
-    "canonicalize-20-scalability", "validate-20-scalability",
-    "canonicalize-30-auditability", "validate-30-auditability", "validate-full-prephase5",
+    "tier-gate-10-trustworthiness", "tier-gate-20-scalability", "tier-gate-30-auditability",
+    "validate-full-prephase5",
     # synthesis
-    "cluster-candidates", "apply-clusters", "assemble-c4", "canonicalize-tmeval", "rollup",
+    "cluster-candidates", "apply-clusters", "post-tier4",
     "build-report-attempt-0", "audit-report-attempt-0",
     # Phase 5h and closeout
-    "domain-coverage-delta", "canonicalize-dimpr", "summarize", "validate-final",
+    "domain-coverage-delta", "closeout",
 ]
+# The composite dispatches, and the CLI dispatches that still carry the guard text.
+COMPOSITES = {"prepare-run", "tier-gate-10-trustworthiness", "tier-gate-20-scalability",
+              "tier-gate-30-auditability", "post-tier4", "closeout"}
+GUARDED = {"author-threat-model-floor", "cluster-candidates", "apply-clusters",
+           "build-report-attempt-0", "audit-report-attempt-0", "domain-coverage-delta"}
 
 
 def trace_raw(
@@ -97,6 +103,119 @@ def test_trace_rejects_shell_metacharacters(patch):
     assert r.returncode == 3 and "run-config.schema.json" in r.stderr
 
 
+# --- WS3 Task 3: the workflow runs the composite commands ------------------------------
+
+
+def _labels(fail: dict[str, list[str]] | None = None) -> list[str]:
+    return [d["label"] for d in trace(HA_SHAPED, fail)]
+
+
+def test_guard_text_only_on_mutating_cli_steps():
+    t = cli(trace(HA_SHAPED))
+    assert {d["label"] for d in t if d["guard"]} == GUARDED and not COMPOSITES & GUARDED
+
+
+def test_composite_commands_and_phase():
+    t = {d["label"]: d for d in trace(HA_SHAPED)}
+    assert t["prepare-run"]["command"] == "apd-gauntlet prepare-run runs/r --domain pbm"
+    assert t["tier-gate-20-scalability"]["command"] == (
+        "apd-gauntlet tier-gate runs/r --tier 20-scalability --json")
+    assert t["tier-gate-20-scalability"]["phase"] == "tier-2"
+    assert t["post-tier4"]["command"] == "apd-gauntlet post-tier4 runs/r"
+    assert t["closeout"]["command"].startswith("apd-gauntlet closeout runs/r --record-attempts '")
+
+
+def test_rollup_fallback_keys_on_rollup_step():
+    only_c4 = _labels({"post-tier4": ["assemble-c4"]})
+    assert "post-tier4-retry-1" not in only_c4 and "synthesizer-fallback-rollup" not in only_c4
+    rollup = _labels({"post-tier4": ["rollup"], "post-tier4-retry-1": ["rollup"]})
+    i = rollup.index("post-tier4")
+    assert rollup[i:i + 3] == ["post-tier4", "post-tier4-retry-1", "synthesizer-fallback-rollup"]
+    assert "synthesizer-fallback-rollup" in _labels({"post-tier4": [], "post-tier4-retry-1": []})
+
+
+# WS1's failingFiles needs a record-file path.
+BAD = "runs/r/10-trustworthiness/integrity.findings.yaml"
+
+
+def test_repair_loop_regates_through_tier_gate():
+    labels = _labels({"tier-gate-10-trustworthiness": [BAD]})
+    assert labels.index("tier-gate-10-trustworthiness") < labels.index(
+        "tier-gate-10-trustworthiness-after-repair")
+    assert not any(label.startswith("canonicalize-10-trustworthiness") for label in labels)
+
+
+def test_plan_run_matches_workflow_dispatch_sequence():
+    cfg = {"run_id": "apd-test-full", "domains": ["agentic-ai", "api-security"],
+           "code_recon": "enabled", "crown_jewels": ["a"]}
+    wf = [("CLI", d["command"].split()[1]) if d["agentType"] == "apd-cli-runner"
+          else ("AGENT", d["agentType"]) for d in trace(cfg)]
+    assert [(s["kind"], s["ref"].split()[0]) for s in build_plan(cfg)] == wf
+
+
+# --- beyond the plan's Task 3 tests ----------------------------------------------------
+
+
+def test_dispatch_totals_after_the_composites():
+    # The plan's "After Task 3" column: 18 CLI and 18 LLM dispatches on a clean run.
+    t = trace(HA_SHAPED)
+    assert (len(cli(t)), len(llm(t)), len(t)) == (18, 18, 36)
+
+
+def test_composites_always_run():
+    by_label = {d["label"]: d for d in cli(trace(HA_SHAPED))}
+    assert all(by_label[label]["guard"] is False for label in COMPOSITES)
+
+
+def test_post_tier4_steps_constant_matches_the_composite():
+    # stepFailed() reads a receipt error's path as a post-tier4 constituent name.
+    m = re.search(r"const POST_TIER4_STEPS = \[([^\]]*)\];", RUNNER.read_text(encoding="utf-8"))
+    assert m, "POST_TIER4_STEPS not found"
+    names = re.findall(r"'([^']+)'", m.group(1))
+    assert names == [s.name for s in post_tier4_steps(Path("runs/r"))] == [
+        "assemble-c4", "canonicalize", "rollup"]
+
+
+def test_rollup_failure_retry_carries_the_same_command():
+    t = trace(HA_SHAPED, {"post-tier4": ["rollup"]})
+    by_label = {d["label"]: d for d in t}
+    assert by_label["post-tier4-retry-1"]["command"] == "apd-gauntlet post-tier4 runs/r"
+    assert by_label["post-tier4-retry-1"]["phase"] == "synthesis-rollup"
+    assert "synthesizer-fallback-rollup" not in by_label  # the retry succeeded
+
+
+def test_canonicalize_failure_alone_is_advisory():
+    labels = _labels({"post-tier4": ["canonicalize"]})
+    assert "post-tier4-retry-1" not in labels and "synthesizer-fallback-rollup" not in labels
+    assert labels[labels.index("post-tier4") + 1] == "report-writer-attempt-0"
+
+
+def test_rollup_named_among_several_failures_triggers_the_retry():
+    labels = _labels({"post-tier4": ["assemble-c4", "rollup"]})
+    assert labels[labels.index("post-tier4") + 1] == "post-tier4-retry-1"
+
+
+def test_repair_regates_after_rerun_through_tier_gate():
+    labels = _labels({"tier-gate-10-trustworthiness": [BAD],
+                      "tier-gate-10-trustworthiness-after-repair": [BAD]})
+    at = labels.index("tier-gate-10-trustworthiness")
+    assert labels[at:at + 5] == [
+        "tier-gate-10-trustworthiness", "repair-10-trustworthiness-integrity.findings.yaml",
+        "tier-gate-10-trustworthiness-after-repair", "integrity-rerun",
+        "tier-gate-10-trustworthiness-after-rerun"]
+    by_label = {d["label"]: d for d in trace(HA_SHAPED, {"tier-gate-10-trustworthiness": [BAD]})}
+    assert by_label["tier-gate-10-trustworthiness-after-repair"]["command"] == (
+        "apd-gauntlet tier-gate runs/r --tier 10-trustworthiness --json")
+    assert by_label["tier-gate-10-trustworthiness-after-repair"]["phase"] == "tier-1"
+
+
+def test_prepare_run_reads_framework_version_from_the_run_config():
+    # args is the run's .apd-run.yaml, which prepare-run reads itself: no CLI command
+    # carries the flag, whether or not the key is set.
+    for cfg in (HA_SHAPED, {**HA_SHAPED, "framework_version": "1.7.1"}):
+        assert not any("--framework-version" in d["command"] for d in cli(trace(cfg)))
+
+
 # --- beyond the plan's tests -------------------------------------------------------------
 
 
@@ -127,19 +246,14 @@ def test_schema_valid_identifiers_are_accepted():
     commands = {d["label"]: d["command"] for d in cli(trace(cfg))}
     assert commands["resume-plan"] == (
         "apd-gauntlet resume-plan runs/apd-20260601_claim.event-bus --json")
-    assert commands["build-domain-skill"] == (
-        "apd-gauntlet build-domain-skill pbm fhir-r4 --framework-version 1.7.1")
-
-
-def test_absent_framework_version_omits_the_flag():
-    commands = {d["label"]: d["command"] for d in cli(trace(HA_SHAPED))}
-    assert commands["build-domain-skill"] == "apd-gauntlet build-domain-skill pbm"
+    assert commands["prepare-run"] == (
+        "apd-gauntlet prepare-run runs/apd-20260601_claim.event-bus --domain pbm --domain fhir-r4")
 
 
 def test_trace_records_phase_and_guard():
     by_label = {d["label"]: d for d in trace(HA_SHAPED)}
-    assert by_label["validate-10-trustworthiness"]["phase"] == "tier-1"
-    assert by_label["validate-10-trustworthiness"]["guard"] is False  # alwaysRun
+    assert by_label["tier-gate-10-trustworthiness"]["phase"] == "tier-1"
+    assert by_label["tier-gate-10-trustworthiness"]["guard"] is False  # alwaysRun
     assert by_label["cluster-candidates"]["guard"] is True
     assert by_label["intake"] == {"agentType": "apd-intake", "label": "intake",
                                   "phase": "intake", "guard": False, "command": None}

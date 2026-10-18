@@ -237,14 +237,18 @@ function guard(outputsList, validateScope, validateFlags) {
 // pyStep — dispatch the apd-cli-runner agent (.claude/agents/apd-cli-runner.md) to
 // run one CLI command behind the guard, returning a RECEIPT whose agent field carries
 // command identity ('pystep:<cmd>') and whose errors[0].message on nonzero exit is
-// 'exit=<N>; <stderr-tail>' so the script recovers both the command and code. The
+// 'exit=<N>; <stderr-tail>' so the script recovers both the command and code. A
+// composite (prepare-run, tier-gate, post-tier4, closeout) writes one
+// `<cmd>: <step> exit=<N>` line per constituent to stderr; the agent returns one error
+// per non-zero line, whose path is the step, so the script learns WHICH constituent
+// failed (stepFailed() reads them). The JSON error mapping wins for tier-gate. The
 // static receipt contract lives in that agent's body, so the prompt is only the guard
 // (or the always-run line), COMMAND:, RECEIPT AGENT: and this step's own receipt lines.
 // ---------------------------------------------------------------------------
 // opts.noRunDir: this command does NOT take the run dir as its positional
-//   (setup commands keyed by domain name, not run path).
-// opts.positional: the literal positional to use instead of runDir (e.g.
-//   args.domains.join(' ') for build-domain-skill/validate-domain).
+//   (a command keyed by name, not run path; no step sets it since prepare-run took
+//   over the domain-keyed setup commands).
+// opts.positional: the literal positional to use instead of runDir.
 // opts.validateScope / opts.validateFlags: the guard's positional path and any
 //   trailing option (e.g. '--tier 10-trustworthiness'); never embed flags in
 //   the scope string (I1).
@@ -352,7 +356,8 @@ function llmStep(agentType, instruction, opts) {
 function isErr(r) { return !r || r.status === 'error'; }
 
 // Attempt counters for compare-runs gates 4-5 (run-attempts.schema.json),
-// written by the closeout summarize step. Counts reflect this invocation only.
+// written by the closeout step (its summarize --record-attempts). Counts reflect this
+// invocation only.
 const attempts = {
   schema_version: 1, recorded_by: 'workflow',
   lens_retries: {}, first_pass_invalid: [], tier_gate_failures: [], skipped: [],
@@ -433,39 +438,26 @@ if (rp.status === 'ok' && rp.resume_plan && Array.isArray(rp.resume_plan.steps))
       ') — running every agent step.');
 }
 //
-// 0a — validate the pre-existing scaffold (schema-only; confirms .apd-run.yaml +
-// inputs/ are present and the run dir is well-formed). This pyStep targets the
-// run dir as its positional (the default).
-await pyStep('validate', {
-  phase: 'setup', label: 'validate-scaffold',
-  cliArgs: '--schema-only --errors-only',
-  outputs: runDir + '/.apd-run.yaml + runDir/inputs/ (pre-existing scaffold)',
-  validateScope: runDir,
-});
-// 0b — build-domain-skill takes BARE domain_name positionals (NOT the run dir),
-// so use noRunDir + positional=args.domains.join(' '). --framework-version is a flag.
-// alwaysRun bypasses the JS-side idempotency guard; the Python command is itself
-// idempotent and decides pack-set freshness.
-// Emits the full cross-goal SKILL.md (read by intake / attack-path / domain-auditor)
-// PLUS .claude/skills/apd-domain/by-goal/<goal>.md sidecars — one per lens agent,
-// goal-scoped to bound context on multi-domain runs (each lens reads only its own).
-// GUARD the --framework-version flag on args.framework_version being present: blindly
-// concatenating an absent value stringifies `undefined`, yielding the literal arg
-// `--framework-version undefined`, which crashes build_domain_skill at int('undefined').
-// When the key is absent, OMIT the flag so the CLI's own `default=__version__` applies.
-await pyStep('build-domain-skill', {
-  phase: 'setup', label: 'build-domain-skill',
-  noRunDir: true, positional: args.domains.join(' '),
-  cliArgs: args.framework_version ? ('--framework-version ' + args.framework_version) : '',
-  outputs: '.claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars)',
-  validateScope: runDir, alwaysRun: true,
-});
-// 0c — validate-domain also takes a BARE domain_name positional (read-only check).
-await pyStep('validate-domain', {
-  phase: 'setup', label: 'validate-domain',
-  noRunDir: true, positional: args.domains.join(' '),
-  outputs: 'domain pack ' + args.domains.join(',') + ' (read-only check)',
-  validateScope: runDir,
+// 0a — prepare-run: ONE composite CLI step (alwaysRun) that runs, in-process and in
+// order, the scaffold `validate --schema-only --errors-only` (confirms .apd-run.yaml +
+// inputs/ are present and the run dir is well-formed), `build-domain-skill <domains>`
+// and `validate-domain <domains>`. Every step runs even after one fails; stderr carries
+// one `prepare-run: <step> exit=<N>` line per step. The domains go in as --domain flags.
+// prepare-run reads framework_version from the run's .apd-run.yaml (which is `args`),
+// so no --framework-version flag is built here, and with the key absent the CLI's own
+// default applies. alwaysRun: build-domain-skill is itself idempotent and decides
+// pack-set freshness, and the two checks are read-only.
+// build-domain-skill emits the full cross-goal SKILL.md (read by intake / attack-path /
+// domain-auditor) PLUS .claude/skills/apd-domain/by-goal/<goal>.md sidecars — one per
+// lens agent, goal-scoped to bound context on multi-domain runs (each lens reads only
+// its own).
+await pyStep('prepare-run', {
+  phase: 'setup', label: 'prepare-run',
+  cliArgs: args.domains.map(function (d) { return '--domain ' + d; }).join(' '),
+  alwaysRun: true,
+  outputs: runDir + '/.apd-run.yaml + inputs/ (pre-existing scaffold, validated); ' +
+    '.claude/skills/apd-domain/SKILL.md + by-goal/<goal>.md (9 lens sidecars); ' +
+    'domain pack ' + args.domains.join(',') + ' (read-only check)',
 });
 
 // ===========================================================================
@@ -663,35 +655,35 @@ function repairPrompt(file, errorLines) {
     .split('{{ERRORS}}').join(errorLines.join('\n'));
 }
 
-// The tier-end gate. --tier SKIPS cross-file Pass 3 (the full pre-Phase-5 gate covers
-// that). The CLI joins --tier to the run dir, so the command is
-// `validate runs/<id> --tier <tierDir> --json`. alwaysRun: a gate that can skip itself
-// is not a gate. errorsFromJson: the receipt carries one error per failing file.
-// suffix is '' for the first gate, then '-after-repair' / '-after-rerun'.
+// The tier-end gate: ONE composite CLI step, `tier-gate runs/<id> --tier <tierDir>
+// --json`. It canonicalizes the WHOLE run (idempotent, structural-only: canonical
+// envelopes + deterministic ids, so the gate never fails on fabricated ids), then runs
+// `validate runs/<id> --tier <tierDir> --json` and exits with that validate result
+// alone; a canonicalize failure under a clean validate does not fail the gate. --tier
+// SKIPS cross-file Pass 3 (the full pre-Phase-5 gate covers that). With --json the
+// canonicalize summary goes to stderr, so stdout carries only validate's JSON.
+// alwaysRun: a gate that can skip itself is not a gate. errorsFromJson: the receipt
+// carries one error per failing file. suffix is '' for the first gate, then
+// '-after-repair' / '-after-rerun'.
 async function tierGate(phaseName, tierDir, suffix) {
-  return await pyStep('validate', {
-    phase: phaseName, label: 'validate-' + tierDir + suffix,
+  return await pyStep('tier-gate', {
+    phase: phaseName, label: 'tier-gate-' + tierDir + suffix,
     cliArgs: '--tier ' + tierDir + ' --json',
     alwaysRun: true, errorsFromJson: true,
-    outputs: 'tier ' + tierDir + ' records (read-only gate)',
+    outputs: 'canonicalized records under ' + runDir + '; tier ' + tierDir + ' records (read-only gate)',
   });
 }
 
-// Canonicalize the whole run (idempotent; alwaysRun, as before the first gate), then
-// gate the tier again under labels that carry the stage suffix. Returns the receipt.
+// Gate the tier again under labels that carry the stage suffix; tier-gate canonicalizes
+// the whole run first, so the repaired or re-run records are canonical. Returns the receipt.
 async function regate(phaseName, tierDir, suffix) {
-  await pyStep('canonicalize', {
-    phase: 'canonicalize', label: 'canonicalize-' + tierDir + suffix,
-    outputs: 'canonicalized lens records under ' + runDir,
-    alwaysRun: true,
-  });
   const gate = await tierGate(phaseName, tierDir, suffix);
   bailIfInterrupted(gate, phaseName);
   return gate;
 }
 
-// A red gate: one repair agent per failing file -> canonicalize + gate -> re-run the
-// lenses that own the files still red -> canonicalize + gate -> halt if still red.
+// A red gate: one repair agent per failing file -> tier-gate -> re-run the lenses
+// that own the files still red -> tier-gate -> halt if still red.
 // Returns when the tier is green. Throws when it cannot get it green.
 async function repairTierGate(phaseName, tierDir, lenses, gate) {
   bailIfInterrupted(gate, phaseName);
@@ -770,19 +762,9 @@ async function runTier(phaseName, tierDir, lenses) {
     }
     attempts.lens_retries[lens] = retries;
   }
-  // Canonicalize the whole run (idempotent, structural-only) so the tier gate
-  // below sees canonical envelopes + deterministic ids. alwaysRun bypasses the
-  // JS-side idempotency guard: that guard only runs `validate --schema-only`,
-  // which would NOT catch fabricated ids (a semantic-pass check), so it could
-  // wrongly skip canonicalize and let the tier gate fail. canonicalize is itself
-  // idempotent, so always running it is safe. Runs before EACH tier gate.
-  await pyStep('canonicalize', {
-    phase: 'canonicalize', label: 'canonicalize-' + tierDir,
-    outputs: 'canonicalized lens records under ' + runDir,
-    alwaysRun: true,
-  });
-  // Tier-end gate: blocking. A red gate is repaired file by file, then the owning
-  // lenses are re-run once, then the run halts naming the files (see above).
+  // Tier-end gate: blocking. tier-gate canonicalizes the whole run, then validates the
+  // tier. A red gate is repaired file by file, then the owning lenses are re-run once,
+  // then the run halts naming the files (see above).
   const gate = await tierGate(phaseName, tierDir, '');
   if (isErr(gate)) attempts.tier_gate_failures.push(tierDir);
   await repairTierGate(phaseName, tierDir, lenses, gate);
@@ -952,44 +934,42 @@ await parallel([
   },
 ]);
 
-// 5c.4 assemble-c4 (Python) — deterministic C4 model assembler. Runs HERE,
-// after the tmeval/apath barrier so 40-synthesis/asset-graph.yaml exists, and
-// BEFORE canonicalize/rollup. Mirrors assemble-inventory (ADR-0020 field
-// ownership): the agent-authored 00-context/c4-recon.yaml + asset-graph.yaml
-// are content-only; assemble-c4 is the SOLE minter of c4-/c4e- ids and the
-// finding_count/capability_count badge rollups it writes to
-// 40-synthesis/c4-model.yaml. It runs whenever asset-graph.yaml exists and
-// includes the L4/L3 code tiers only when 00-context/code-evidence-index.yaml
-// is present (the C4 scene then renders whatever c4-model.yaml contains).
-await pyStep('assemble-c4', {
-  phase: 'apath', label: 'assemble-c4',
-  outputs: runDir + '/40-synthesis/c4-model.yaml (c4-/c4e- ids minted; finding/capability badges rolled up)',
-  alwaysRun: true,
-});
-
-// 5c.5 canonicalize — mint tmeval-* ids from the evaluator's tmeval_key BEFORE
-// rollup. The evaluator now emits a structured tmeval_key (not a hand-computed
-// id); the assembler is the sole author of tmeval-<sha8>. This MUST run after the
-// tmeval/apath barrier and before rollup, which loads tmeval-* findings BY ID into
-// nist/attack/matrix coverage — an un-minted (id-less) tmeval finding would drop
-// out of the rollup. (apath-* records are out-of-scope here and pass through.)
-await pyStep('canonicalize', {
-  phase: 'tmeval', label: 'canonicalize-tmeval',
-  outputs: 'tmeval- ids minted under ' + runDir + '/40-threat-model/',
-  alwaysRun: true,
-});
-
-// 5d rollup (Python) — runs HERE, after tmeval/apath, in BOTH the decomposed and
-// fallback paths. synthesis/rollup.py `_load_deduped` unions the apath-* findings
-// (load_corpus pulls tmeval-* too), so nist/attack/matrix coverage now reflects
-// the tier-4 findings. After this, the FULL validate covers nist/attack/matrix.
+// post-tier4 — ONE composite CLI step, after the tmeval/apath barrier and before the
+// report. It runs, in-process and in order, and every step even after one fails:
+//  - assemble-c4: the deterministic C4 model assembler. asset-graph.yaml exists now.
+//    Mirrors assemble-inventory (ADR-0020 field ownership): the agent-authored
+//    00-context/c4-recon.yaml + asset-graph.yaml are content-only; assemble-c4 is the
+//    SOLE minter of c4-/c4e- ids and the finding_count/capability_count badge rollups it
+//    writes to 40-synthesis/c4-model.yaml. It includes the L4/L3 code tiers only when
+//    00-context/code-evidence-index.yaml is present.
+//  - canonicalize: mints the tmeval-* ids from the evaluator's tmeval_key (the assembler
+//    is the sole author of tmeval-<sha8>). rollup loads tmeval-* findings BY ID, so an
+//    un-minted (id-less) tmeval finding would drop out of the coverage.
+//  - rollup: runs here, after tmeval/apath, in BOTH the decomposed and fallback paths.
+//    synthesis/rollup.py `_load_deduped` unions the apath-* findings (load_corpus pulls
+//    tmeval-* too), so nist/attack/matrix coverage reflects the tier-4 findings.
+// stderr carries one `post-tier4: <step> exit=<N>` line per step, and the runner turns
+// each non-zero one into a receipt error whose path is the step. Only a failed rollup
+// is retried and then handed to the synthesizer: an assemble-c4 or canonicalize failure
+// stays advisory, as those steps were before the composite. A failed receipt that names
+// no step is read as a failed rollup.
+const POST_TIER4_STEPS = ['assemble-c4', 'canonicalize', 'rollup'];
+// True when receipt r failed and its errors name `step` (one of `steps`), or name none
+// of `steps` at all (an interrupted dispatch, or a receipt without the per-step errors).
+function stepFailed(r, step, steps) {
+  if (!isErr(r)) return false;
+  const named = ((r && r.errors) || []).filter(function (e) { return steps.indexOf(e.path) >= 0; });
+  return named.length === 0 || named.some(function (e) { return e.path === step; });
+}
 phase('synthesis-rollup');
-let rl = await pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup',
-  outputs: runDir + '/40-synthesis/nist-coverage.yaml, attack-exposure.yaml, apd-coverage-matrix.yaml, metrics.yaml (+ declared-taxonomy coverage files)' });
-if (isErr(rl)) {
-  rl = await pyStep('rollup', { phase: 'synthesis-rollup', label: 'rollup-retry-1',
-    outputs: runDir + '/40-synthesis/nist-coverage.yaml' });
-  if (isErr(rl)) {
+let pt = await pyStep('post-tier4', { phase: 'synthesis-rollup', label: 'post-tier4', alwaysRun: true,
+  outputs: runDir + '/40-synthesis/c4-model.yaml, nist-coverage.yaml, attack-exposure.yaml, ' +
+    'apd-coverage-matrix.yaml, metrics.yaml (+ declared-taxonomy coverage files)' });
+if (stepFailed(pt, 'rollup', POST_TIER4_STEPS)) {
+  pt = await pyStep('post-tier4', { phase: 'synthesis-rollup', label: 'post-tier4-retry-1', alwaysRun: true,
+    outputs: runDir + '/40-synthesis/c4-model.yaml, nist-coverage.yaml, attack-exposure.yaml, ' +
+      'apd-coverage-matrix.yaml, metrics.yaml (+ declared-taxonomy coverage files)' });
+  if (stepFailed(pt, 'rollup', POST_TIER4_STEPS)) {
     // Last resort: the deterministic rollup failed twice. Have the synthesizer
     // write the coverage rollups directly (deduped corpus + apath findings) so
     // build-report's required nist/attack/matrix inputs exist.
@@ -1003,6 +983,8 @@ if (isErr(rl)) {
       '40-threat-model/threat-model.findings.yaml tmeval-*), then STOP.',
       { agentType: 'apd-synthesizer', phase: 'synthesis-rollup', label: 'synthesizer-fallback-rollup' });
   }
+} else if (isErr(pt)) {
+  log('post-tier4: assemble-c4/canonicalize failed — advisory, as before WS3.');
 }
 
 // ===========================================================================
@@ -1139,27 +1121,23 @@ await llmStep('apd-domain-auditor',
   'are no opportunities). ADVISORY — this never gates the run.',
   { phase: 'domain-improvements', label: 'domain-auditor' });
 
-// 5h-iii canonicalize — mint dimpr-<sha8> ids from the domain-auditor's records
-// (it now emits content only; the assembler is the sole id author). Runs before
-// the closeout validate, whose _validate_domain_improvements_cross_refs recomputes
-// and would flag an un-minted (id-less) record.
-await pyStep('canonicalize', {
-  phase: 'domain-improvements', label: 'canonicalize-dimpr',
-  outputs: 'dimpr- ids minted in ' + runDir + '/40-synthesis/domain-improvements.yaml',
-  alwaysRun: true,
-});
-
 // ===========================================================================
 // PHASE 6 — closeout.
 // ===========================================================================
 phase('closeout');
-// Write the attempt counters to .apd-state/attempts.yaml before the summary.
-// alwaysRun: the idempotency guard would otherwise skip summarize, whose old output
-// was not a file, and the attempts would never be written.
-await pyStep('summarize', { phase: 'closeout', label: 'summarize', alwaysRun: true,
+// closeout — ONE composite CLI step that runs, in-process and in order, and every step
+// even after one fails:
+//  - canonicalize: mints the dimpr-<sha8> ids from the domain-auditor's records (it
+//    emits content only; the assembler is the sole id author), before the final
+//    validate, whose _validate_domain_improvements_cross_refs recomputes and would flag
+//    an un-minted (id-less) record;
+//  - summarize --record-attempts: writes the attempt counters to .apd-state/attempts.yaml
+//    before the summary;
+//  - manual-audit-prompts: writes 40-synthesis/manual-audit-prompts.md;
+//  - the final validate --errors-only (read-only assertion).
+// alwaysRun: the idempotency guard would otherwise skip the step, whose summary is not a
+// file, and the attempts would never be written.
+await pyStep('closeout', { phase: 'closeout', label: 'closeout', alwaysRun: true,
   cliArgs: "--record-attempts '" + JSON.stringify(attempts) + "'",
   outputs: runDir + '/.apd-state/attempts.yaml' });
-await pyStep('validate', { phase: 'closeout', label: 'validate-final',
-  cliArgs: '--errors-only', outputs: 'whole-run final clean (read-only assertion)',
-  alwaysRun: true });
 log('apd-gauntlet runner: complete for ' + args.run_id + '.');

@@ -56,4 +56,12 @@ errors: on nonzero exit, [{path: "<cmd>", message: "exit=<N>; <stderr-tail>"}]
 `<cmd>` is the RECEIPT AGENT value after `pystep:`, `<N>` is the exit code and
 `<stderr-tail>` is the last lines of stderr. A refusal is
 `errors: [{path: "<cmd>", message: "refused: not an apd-gauntlet command"}]`.
+
+A composite command (`prepare-run`, `tier-gate`, `post-tier4`, `closeout`) runs
+several steps and writes one status line `<cmd>: <step> exit=<N>` per step to
+stderr. When stderr has lines `<cmd>: <step> exit=<N>`, return one errors entry
+for each such line whose N is not 0, in the order printed, as
+`{path: "<step>", message: "exit=<N>; <stderr-tail>"}`,
+in place of the single default entry. The JSON error mapping (the `errors`
+line), when the prompt carries one, takes precedence over this rule.
 The receipt conforms to `schemas/agent-receipt.schema.json`.

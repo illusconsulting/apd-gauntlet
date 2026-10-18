@@ -178,6 +178,8 @@ def test_plan_run_phase_names_consistent_with_workflow(tmp_path):
         f"plan-run CLI steps the runner never runs: {plan_cmds - workflow_cmds}"
     )
     assert "resume-plan" in plan_cmds & workflow_cmds
+    # Both run the same commands: every command the runner runs has a plan-run row.
+    assert {s["ref"].split()[0] for s in plan if s["kind"] == "CLI"} == workflow_cmds
 
 
 def test_plan_run_code_recon_step_mentions_cross_repo(tmp_path):
@@ -205,8 +207,16 @@ def test_plan_run_tier_gates_name_the_repair_path(tmp_path):
     plan = json.loads(
         CliRunner().invoke(main, ["plan-run", "--json", str(_write_run(tmp_path, FULL_CFG))]).output
     )
-    gates = [s for s in plan if s["ref"].startswith("validate ") and "--tier" in s["ref"]]
+    gates = [s for s in plan if s["ref"].startswith("tier-gate ")]
     assert len(gates) == 3 and all("repair.md" in s["gate"] and "halt" in s["gate"] for s in gates)
+    # The row text is the command the workflow runs (register A8.9), and the gate text
+    # leads with it.
+    assert [s["ref"] for s in gates] == [
+        f"tier-gate runs/apd-test-full --tier {d} --json"
+        for d in ("10-trustworthiness", "20-scalability", "30-auditability")]
+    assert all(s["gate"].startswith(s["ref"] + "; on failure repair ") for s in gates)
+    assert [s["phase"] for s in gates] == [
+        "10-trustworthiness", "20-scalability", "30-auditability"]
 
 
 def _plan(tmp_path, cfg):
@@ -238,3 +248,37 @@ def test_plan_run_context_canonicalize_rows_follow_their_producers(tmp_path):
     refs = [s["ref"] for s in plan]
     last = max(i for i, s in enumerate(plan) if s["phase"] == "canonicalize")
     assert refs.index("apd-threat-model-author") + 1 == last
+
+
+def test_plan_run_cli_rows_use_composites(tmp_path):
+    cli = [s["ref"] for s in _plan(tmp_path, FULL_CFG) if s["kind"] == "CLI"]
+    assert [r.split()[0] for r in cli] == [
+        "resume-plan", "prepare-run", "assemble-inventory", "validate",
+        "canonicalize", "author-threat-model", "canonicalize", "tier-gate", "tier-gate",
+        "tier-gate", "validate", "cluster-candidates", "apply-clusters", "post-tier4",
+        "build-report", "audit-report", "domain-coverage-delta", "closeout"]
+    assert cli[1] == "prepare-run runs/apd-test-full --domain agentic-ai --domain api-security"
+
+
+# --- beyond the plan's Task 3 tests --------------------------------------------------------
+
+
+def test_plan_run_composite_rows(tmp_path):
+    plan = _plan(tmp_path, FULL_CFG)
+    rows = {s["ref"].split()[0]: s for s in plan if s["kind"] == "CLI"}
+    assert rows["prepare-run"]["phase"] == "setup"
+    assert rows["assemble-inventory"] == {
+        "phase": "intake", "kind": "CLI", "ref": "assemble-inventory runs/apd-test-full",
+        "outputs": "00-context/asset-inventory.yaml (asset-/idn-/tb- ids minted; crosses wired)",
+        "gate": ""}
+    refs = [s["ref"] for s in plan]
+    assert refs.index("apd-intake") + 1 == refs.index("assemble-inventory runs/apd-test-full")
+    assert rows["post-tier4"]["ref"] == "post-tier4 runs/apd-test-full"
+    assert rows["post-tier4"]["phase"] == "synthesis-rollup"
+    assert "c4-model.yaml" in rows["post-tier4"]["outputs"]
+    assert "metrics.yaml" in rows["post-tier4"]["outputs"]
+    assert rows["closeout"]["ref"] == "closeout runs/apd-test-full"
+    assert rows["closeout"]["phase"] == "closeout"
+    assert plan[-1] is rows["closeout"]
+    for gone in ("build-domain-skill", "validate-domain", "rollup", "summarize"):
+        assert gone not in rows, gone

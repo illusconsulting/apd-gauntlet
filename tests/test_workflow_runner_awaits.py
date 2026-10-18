@@ -67,7 +67,7 @@ RESUME_REFUSAL: dict[str, Any] = {
 # and ships with the non-blocking semantic residual.
 EXPECTED_GREEN_LABELS = [
     # setup
-    "resume-plan", "validate-scaffold", "build-domain-skill", "validate-domain",
+    "resume-plan", "prepare-run",
     # intake
     "intake", "assemble-inventory", "intake-schema-gate",
     # code-recon (code_recon=auto)
@@ -75,19 +75,20 @@ EXPECTED_GREEN_LABELS = [
     # threat-model-author (tm-recon is skipped: no threat_model)
     "author-threat-model-floor", "threat-model-author",
     "canonicalize-threat-model",
-    # tier-1/2/3: the lens fan-out, then canonicalize, then the tier gate
+    # tier-1/2/3: the lens fan-out, then the tier gate (canonicalize, then validate)
     "confidentiality", "integrity", "availability",
-    "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
+    "tier-gate-10-trustworthiness",
     "distributed", "resilient", "ephemeral",
-    "canonicalize-20-scalability", "validate-20-scalability",
+    "tier-gate-20-scalability",
     "authenticity", "non-repudiation", "immutability",
-    "canonicalize-30-auditability", "validate-30-auditability",
+    "tier-gate-30-auditability",
     "validate-full-prephase5",
     # decomposed synthesis
     "cluster-candidates", "adjudicate", "apply-clusters",
-    # tmeval (apath has no crown jewels), then assemble-c4 .. build
+    # tmeval (apath has no crown jewels), then post-tier4 (assemble-c4, canonicalize,
+    # rollup) .. build
     "tmeval",
-    "assemble-c4", "canonicalize-tmeval", "rollup",
+    "post-tier4",
     "report-writer-attempt-0", "build-report-attempt-0",
     # audit loop, cap N=2
     "audit-report-attempt-0", "auditor-attempt-0",
@@ -95,9 +96,9 @@ EXPECTED_GREEN_LABELS = [
     "audit-report-attempt-1", "auditor-attempt-1",
     "report-writer-attempt-2", "build-report-attempt-2",
     "audit-report-attempt-2", "auditor-attempt-2",
-    # domain improvements, closeout
-    "domain-coverage-delta", "domain-auditor", "canonicalize-dimpr",
-    "summarize", "validate-final",
+    # domain improvements, closeout (canonicalize, summarize, manual-audit-prompts, validate)
+    "domain-coverage-delta", "domain-auditor",
+    "closeout",
 ]
 
 # The groups the runner dispatches in parallel, by label, written out by hand. Two
@@ -326,7 +327,7 @@ def test_green_run_dispatches_in_order_one_group_at_a_time(tmp_path: pathlib.Pat
 
 def test_failed_lens_is_retried_after_the_fan_out(tmp_path: pathlib.Path) -> None:
     # The lens and its first retry both fail, so the second retry must wait for the
-    # first one, and canonicalize must wait for the second.
+    # first one, and the tier gate must wait for the second.
     failed = {"agent": "apd-integrity", "status": "error", "outputs": [], "counts": {}}
     jsonschema.validate(failed, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
     result = _run_runner(
@@ -334,10 +335,10 @@ def test_failed_lens_is_retried_after_the_fan_out(tmp_path: pathlib.Path) -> Non
     )
     labels = _labels(result)
     at = labels.index("confidentiality")
-    assert labels[at:at + 7] == [
+    assert labels[at:at + 6] == [
         "confidentiality", "integrity", "availability",
         "integrity-retry-1", "integrity-retry-2",
-        "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
+        "tier-gate-10-trustworthiness",
     ], labels
     assert "integrity-retry-3" not in labels, labels
     assert result["maxInFlight"] <= LARGEST_PARALLEL_GROUP, result["maxInFlight"]
@@ -352,10 +353,10 @@ def test_rejected_lens_dispatch_becomes_null_and_is_retried(tmp_path: pathlib.Pa
     result = _run_runner(tmp_path, _responder(reject=("integrity",)))
     labels = _labels(result)
     at = labels.index("confidentiality")
-    assert labels[at:at + 6] == [
+    assert labels[at:at + 5] == [
         "confidentiality", "integrity", "availability",
         "integrity-retry-1",
-        "canonicalize-10-trustworthiness", "validate-10-trustworthiness",
+        "tier-gate-10-trustworthiness",
     ], labels
     assert "integrity-retry-2" not in labels, labels
     assert "tier 10-trustworthiness: lens integrity failed; retry 1/2." in result["logs"]
@@ -366,7 +367,7 @@ def test_rejected_lens_dispatch_becomes_null_and_is_retried(tmp_path: pathlib.Pa
 
 def test_red_tier_gate_is_repaired_before_the_next_tier(tmp_path: pathlib.Path) -> None:
     red = {
-        "agent": "pystep:validate", "status": "error", "outputs": [], "counts": {},
+        "agent": "pystep:tier-gate", "status": "error", "outputs": [], "counts": {},
         "errors": [
             {"path": "runs/r1/10-trustworthiness/confidentiality.findings.yaml",
              "message": "fnd-1 title: longer than 200 characters"},
@@ -375,15 +376,14 @@ def test_red_tier_gate_is_repaired_before_the_next_tier(tmp_path: pathlib.Path) 
         ],
     }
     jsonschema.validate(red, json.loads(RECEIPT_SCHEMA.read_text(encoding="utf-8")))
-    result = _run_runner(tmp_path, _responder({"validate-10-trustworthiness": red}))
+    result = _run_runner(tmp_path, _responder({"tier-gate-10-trustworthiness": red}))
     labels = _labels(result)
-    at = labels.index("validate-10-trustworthiness")
-    assert labels[at:at + 6] == [
-        "validate-10-trustworthiness",
+    at = labels.index("tier-gate-10-trustworthiness")
+    assert labels[at:at + 5] == [
+        "tier-gate-10-trustworthiness",
         "repair-10-trustworthiness-confidentiality.findings.yaml",
         "repair-10-trustworthiness-integrity.capabilities.yaml",
-        "canonicalize-10-trustworthiness-after-repair",
-        "validate-10-trustworthiness-after-repair",
+        "tier-gate-10-trustworthiness-after-repair",
         "distributed",
     ], labels
     repairs = [d for d in result["dispatches"] if d["label"].startswith("repair-")]
@@ -550,14 +550,14 @@ def test_no_other_function_is_async() -> None:
 
 
 # ---------------------------------------------------------------------------
-# WS2 Task 7: the attempts the closeout summarize step records (node). The runner
-# counts lens retries, first-pass failures, skips, tier repairs and audit iterations,
-# and the summarize worker is told to pass them to `summarize --record-attempts`.
-# These tests run the command that worker is given.
+# WS2 Task 7: the attempts the closeout step records (node). The runner counts lens
+# retries, first-pass failures, skips, tier repairs and audit iterations, and the
+# closeout worker is told to pass them to `closeout --record-attempts`, whose summarize
+# step writes them (WS3 Task 3). These tests run the command that worker is given.
 # ---------------------------------------------------------------------------
 
-# The responder logs the closeout summarize prompt after this mark.
-SUMMARIZE_MARK = "summarize prompt:\n"
+# The responder logs the closeout prompt after this mark.
+CLOSEOUT_MARK = "closeout prompt:\n"
 LENSES = [lens for group in LENS_GROUPS for lens in group]
 FAILED_INTEGRITY: dict[str, Any] = {
     "agent": "apd-integrity", "status": "error", "outputs": [], "counts": {},
@@ -567,32 +567,34 @@ FAILED_INTEGRITY: dict[str, Any] = {
 def _recording_responder(
     by_label: dict[str, Any] | None = None, reject: tuple[str, ...] = ()
 ) -> str:
-    """_responder, which also logs the prompt of the dispatch labelled `summarize`."""
+    """_responder, which also logs the prompt of the dispatch labelled `closeout`."""
     return (
         "function (prompt, opts, n) {\n"
-        f"  if (opts.label === 'summarize') {{ log({json.dumps(SUMMARIZE_MARK)} + prompt); }}\n"
+        f"  if (opts.label === 'closeout') {{ log({json.dumps(CLOSEOUT_MARK)} + prompt); }}\n"
         f"  return ({_responder(by_label, reject)})(prompt, opts, n);\n"
         "}"
     )
 
 
 def _recorded_attempts(tmp_path: pathlib.Path, result: dict[str, Any]) -> dict[str, Any]:
-    """Run the command the summarize prompt names, split as a shell splits it, against an
-    empty run directory, and return the attempts.yaml it writes. The file must hold
-    exactly the object the command passed."""
-    prompts = [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
+    """Run the command the closeout prompt names, split as a shell splits it, against an
+    empty run directory, and return the attempts.yaml its summarize step writes. The
+    file must hold exactly the object the command passed."""
+    prompts = [line for line in result["logs"] if line.startswith(CLOSEOUT_MARK)]
     assert len(prompts) == 1, result["logs"]
     # The apd-cli-runner runs the prompt's COMMAND: line (WS3 Task 1).
     commands = [line[len("COMMAND: "):] for line in prompts[0].splitlines()
-                if line.startswith("COMMAND: apd-gauntlet summarize ")]
+                if line.startswith("COMMAND: apd-gauntlet closeout ")]
     assert len(commands) == 1, prompts[0]
     argv = shlex.split(commands[0])
-    assert argv[:4] == ["apd-gauntlet", "summarize", "runs/r1", "--record-attempts"], argv
+    assert argv[:4] == ["apd-gauntlet", "closeout", "runs/r1", "--record-attempts"], argv
     assert len(argv) == 5, argv
     run = tmp_path / "run"
     run.mkdir()
-    r = CliRunner().invoke(main, ["summarize", str(run), *argv[3:]])
-    assert r.exit_code == 0, r.output
+    r = CliRunner().invoke(main, ["closeout", str(run), *argv[3:]])
+    # An empty run directory has no synthesis output, so later closeout steps fail;
+    # the summarize step, which records the attempts, must not.
+    assert "closeout: summarize exit=0" in r.stderr.splitlines(), r.output
     written = yaml.safe_load((run / ".apd-state" / "attempts.yaml").read_text(encoding="utf-8"))
     assert written == json.loads(argv[4])
     recorded: dict[str, Any] = written
@@ -601,7 +603,7 @@ def _recorded_attempts(tmp_path: pathlib.Path, result: dict[str, Any]) -> dict[s
 
 def _red_gate(tier_dir: str, files: list[str]) -> dict[str, Any]:
     gate = {
-        "agent": "pystep:validate", "status": "error", "outputs": [], "counts": {},
+        "agent": "pystep:tier-gate", "status": "error", "outputs": [], "counts": {},
         "errors": [{"path": f"runs/r1/{tier_dir}/{f}", "message": "fnd-1 title: too long"}
                    for f in files],
     }
@@ -612,7 +614,7 @@ def _red_gate(tier_dir: str, files: list[str]) -> dict[str, Any]:
 def test_green_run_records_attempts_at_closeout(tmp_path: pathlib.Path) -> None:
     result = _run_runner(tmp_path, _recording_responder())
     assert result["outcome"]["returned"], result["outcome"]
-    (prompt,) = [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
+    (prompt,) = [line for line in result["logs"] if line.startswith(CLOSEOUT_MARK)]
     assert "Always run this command; this step has no idempotency check and no skip." in prompt
     # The schema-less auditor never answers "GATE: pass" here, so all three audit
     # attempts run.
@@ -673,9 +675,9 @@ def test_attempts_count_the_tier_repair_loop(tmp_path: pathlib.Path) -> None:
                       ["confidentiality.findings.yaml", "integrity.capabilities.yaml"])
     red_3 = _red_gate("30-auditability", ["immutability.findings.yaml"])
     result = _run_runner(tmp_path, _recording_responder({
-        "validate-10-trustworthiness": red_1,
-        "validate-10-trustworthiness-after-repair": red_1,
-        "validate-30-auditability": red_3,
+        "tier-gate-10-trustworthiness": red_1,
+        "tier-gate-10-trustworthiness-after-repair": red_1,
+        "tier-gate-30-auditability": red_3,
     }))
     labels = _labels(result)
     assert {"confidentiality-rerun", "integrity-rerun"} <= set(labels), labels
@@ -701,13 +703,13 @@ def test_audit_iterations_stop_at_the_passing_attempt(
 
 def test_halted_run_records_no_attempts(tmp_path: pathlib.Path) -> None:
     # A tier that is still red after the lens re-run halts the run before closeout, so
-    # summarize is never dispatched and no attempts file is written.
+    # closeout is never dispatched and no attempts file is written.
     red = _red_gate("10-trustworthiness", ["confidentiality.findings.yaml"])
     result = _run_runner(tmp_path, _recording_responder({
-        "validate-10-trustworthiness": red,
-        "validate-10-trustworthiness-after-repair": red,
-        "validate-10-trustworthiness-after-rerun": red,
+        "tier-gate-10-trustworthiness": red,
+        "tier-gate-10-trustworthiness-after-repair": red,
+        "tier-gate-10-trustworthiness-after-rerun": red,
     }))
     assert result["outcome"]["threw"], result["outcome"]
-    assert "summarize" not in _labels(result)
-    assert not [line for line in result["logs"] if line.startswith(SUMMARIZE_MARK)]
+    assert "closeout" not in _labels(result)
+    assert not [line for line in result["logs"] if line.startswith(CLOSEOUT_MARK)]

@@ -248,11 +248,11 @@ cost is close to zero.
 ## Retries and audit iterations
 
 The workflow runner counts its lens retries, tier repairs and report-audit
-attempts while it runs. At closeout its `summarize` step writes them to
-`<run>/.apd-state/attempts.yaml`:
+attempts while it runs. At closeout it passes them to the `closeout` command,
+whose `summarize` step writes them to `<run>/.apd-state/attempts.yaml`:
 
 ```bash
-apd-gauntlet summarize runs/<id> --record-attempts '<json>'
+apd-gauntlet closeout runs/<id> --record-attempts '<json>'
 ```
 
 `summarize` checks the object against `run-attempts.schema.json`, writes the
@@ -282,7 +282,7 @@ earlier invocation are not counted. `compare-runs` therefore reads gates 4 and
 a configuration, run it from setup to closeout in one invocation.
 
 A foreground drive, where you work through the `plan-run` checklist yourself,
-records no attempts: its `summarize` step has no `--record-attempts`, so no
+records no attempts: its `closeout` step has no `--record-attempts`, so no
 file is written, and gates 4 and 5 read `not_available` for that run, as for a
 1.7 run.
 

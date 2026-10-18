@@ -401,8 +401,10 @@ not meant to be driven headlessly.
 >
 > For the explicit foreground drive, run the deterministic CLI phases yourself
 > (`resume-plan` first, whose step map tells you which agent steps to skip, then
-> `build-domain-skill`, `canonicalize`, `validate`, `cluster-candidates`,
-> `apply-clusters`, `rollup`, `build-report`, `audit-report`) and dispatch the LLM
+> `prepare-run`, `assemble-inventory`, `validate`, `canonicalize`,
+> `author-threat-model`, `tier-gate` after each tier, `cluster-candidates`,
+> `apply-clusters`, `post-tier4`, `build-report`, `audit-report`,
+> `domain-coverage-delta` and `closeout`) and dispatch the LLM
 > specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
 > the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
 > `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`,
@@ -425,17 +427,20 @@ run end-to-end and branches only on the receipts its dispatched agents return.
 It:
 
 1. Calls `apd-gauntlet resume-plan` once to learn which agent steps are already
-   complete (none, on a fresh run), then builds the `apd-domain` skill from the
-   active pack(s) and validates them.
+   complete (none, on a fresh run), then runs `prepare-run`, which checks the
+   run's scaffold, builds the `apd-domain` skill from the active pack(s) and
+   validates them.
 2. Dispatches `apd-intake` (plus the optional code-recon and threat-model-recon
    agents when their preconditions are met). The code-recon and threat-model
    agents emit entries without ids, so the runner runs `canonicalize` after
    code-recon and again after the threat-model phase to mint the `cev-` and `tm-`
    ids before anything reads them.
-3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Before
-   each tier's validate gate, the runner runs `canonicalize` (idempotent
-   structural canonicalizer: normalizes envelopes, recomputes deterministic IDs,
-   rewrites cross-references) so the gate always sees canonical records.
+3. Dispatches the three tier-1 specialists, then tier-2, then tier-3. Each tier
+   ends in `tier-gate`, which canonicalizes the whole run (idempotent structural
+   canonicalizer: normalizes envelopes, recomputes deterministic IDs, rewrites
+   cross-references) and then validates the tier, so the gate always sees
+   canonical records. A failing gate goes through the repair loop described
+   under [A tier gate failed](#a-tier-gate-failed).
 4. Runs the decomposed synthesis (cluster → adjudicate → apply → rollup),
    dispatches the optional attack-path analyzer when activated, builds the
    advisory report and HTML bundle, then runs the report completeness gate
@@ -443,7 +448,10 @@ It:
    editorial). A structural failure that is unresolved after two remediation
    attempts **blocks the run** — a degraded HTML report cannot ship silently.
    Editorial-only residuals are surfaced non-blocking.
-5. Returns the final summary at closeout.
+5. Runs `closeout`, which mints the domain-improvement ids, records the
+   attempt counters and prints the summary (`summarize --record-attempts`),
+   writes `40-synthesis/manual-audit-prompts.md`, and runs the final
+   `validate`.
 
 The runner is resumable: re-running it against the same directory replays
 completed steps from cache within a session. In a fresh session the runner calls
@@ -555,7 +563,7 @@ Read the contradiction annex. A contradiction means a finding asserts a property
 
 ### A tier gate failed
 
-After each tier's lenses finish and `canonicalize` runs, the runner validates the tier with `apd-gauntlet validate <run-dir> --tier <tier-dir>`. That gate blocks the run: a failing tier never flows on to synthesis.
+After each tier's lenses finish, the runner runs `apd-gauntlet tier-gate <run-dir> --tier <tier-dir>`, which canonicalizes the run and then validates the tier. That gate blocks the run: a failing tier never flows on to synthesis.
 
 - A lens whose dispatch fails (an agent error or an interrupted subagent) is retried up to twice before the gate runs.
 - A schema or semantic failure at the gate gets one repair per failing file. A repair agent (`apd-tier-repair`, which has only the Read and Edit tools) receives the validator errors for that file and edits only that file; its prompt is `tools/apd_gauntlet/data/prompts/repair.md`.

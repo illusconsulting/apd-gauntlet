@@ -57,7 +57,8 @@ def test_frontmatter_is_exactly_the_planned_block():
 def test_body_contract():
     body = _body()
     for phrase in ("COMMAND:", "begin with `apd-gauntlet`", "refused: not an apd-gauntlet command",
-                   "exit=<N>; <stderr-tail>", "schemas/agent-receipt.schema.json"):
+                   "exit=<N>; <stderr-tail>", "schemas/agent-receipt.schema.json",
+                   "`<cmd>: <step> exit=<N>`"):
         assert phrase in body, phrase
 
 
@@ -84,6 +85,18 @@ def test_body_sections_and_job_rules():
         assert phrase in job, phrase
     assert body.rstrip().endswith("`schemas/agent-receipt.schema.json`.")
     assert body.endswith("\n") and not body.endswith("\n\n")
+
+
+def test_composite_status_lines_become_one_error_per_failed_step():
+    # WS3 Task 3: a composite writes `<cmd>: <step> exit=<N>` per constituent to stderr.
+    # The receipt names each failed constituent, so the workflow can tell a rollup
+    # failure from an assemble-c4 one; the JSON error mapping wins where the prompt has it.
+    final = _body().split("## Final message (receipt only)", 1)[1]
+    for phrase in ("`<cmd>: <step> exit=<N>`", "N is not 0",
+                   '{path: "<step>", message: "exit=<N>; <stderr-tail>"}',
+                   "in place of the single default entry", "JSON error mapping",
+                   "takes precedence"):
+        assert phrase in final, phrase
 
 
 def test_lints_clean():
