@@ -82,6 +82,27 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   positives to the findings left. It reports precision, strict precision
   (findings no label judged count against it), recall and F1 per goal and in
   total, and severity agreement. It refuses labels with `unreviewed` items.
+- **`eval freeze` and ADR-0028: frozen tunables for held-out evaluation.**
+  `apd-gauntlet eval freeze [--root DIR] [--new-heldout-set]` records the
+  SHA-256 of every tunables file (`tools/apd_gauntlet/data/decide/thresholds.yaml`
+  and each `tools/apd_gauntlet/data/*/context-params.yaml`) and of the whole
+  set in `eval/frozen.yaml`. Held-out evaluation checks it first and refuses
+  when a tunables file was added, removed or changed since the freeze. The
+  check compares content, not modification times, which a git checkout
+  resets. The command writes nothing when the tunables are unchanged. Once a
+  held-out result under `eval/results/` records the frozen hash, it refuses to
+  re-freeze changed tunables (exit 1) until `--new-heldout-set` says a new
+  held-out set exists, which raises the file's `generation`. It also exits 1
+  when the frozen file or a held-out result cannot be read, or the file cannot
+  be written.
+  [ADR-0028](docs/adrs/0028-committed-calibration-and-frozen-evaluation.md)
+  amends [ADR-0017](docs/adrs/0017-local-only-accuracy-benchmark.md): the 2.0
+  line commits aggregate calibration statistics (each `thresholds.yaml` entry's
+  threshold, precision, recall, `n` and labels hash), `eval/gates.yaml`,
+  `eval/frozen.yaml`, and corpus manifests and labels over committed fixtures
+  or pinned public repositories. Results, private labels, usage and attempts
+  files, and runs stay local. The ADR also records the freeze protocol: dev
+  and held-out sets disjoint, tuning on dev only, freeze before held-out runs.
 
 ### Changed
 

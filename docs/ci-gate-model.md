@@ -20,7 +20,7 @@ would leak a sensitive review. We resolve it with two tracks.
 | Track | What it measures | Where it runs | Fixtures it uses | Committed? |
 |---|---|---|---|---|
 | **CI-enforceable** | Structural, schema, and unit correctness. Does a committed synthetic artifact validate? Does a refactor stay byte-stable? Does the cache carry provenance? | Every PR, for everyone, via `.github/workflows/validate.yml` and `.github/workflows/python-tests.yml`. | Hand-authored synthetic fixtures only: `examples/apd-20260601-claim-event-bus/expected/`, `examples/apd-20260602-acme-mobile-banking/expected/`, `examples/apd-20260612-home-assistant/expected/`, the negative fixtures under `tests/fixtures/invalid/`, and `tests/fixtures/`. | Yes — these are synthetic, no real-subject data. |
-| **Locally measured** | Holistic accuracy and insight: false-uncertainty promotion rate, redundancy collapsed, chokepoint-finding count, etc. | The maintainer's own machine, against a gitignored real run. | The maintainer's own run output (`40-synthesis/metrics.yaml`, produced by `compute_metrics`, `tools/apd_gauntlet/synthesis/metrics.py`). | **No.** All outputs of all real runs stay fully out-of-band — including bare metric counts and the baseline `B0`. Nothing run-derived is ever committed. |
+| **Locally measured** | Holistic accuracy and insight: false-uncertainty promotion rate, redundancy collapsed, chokepoint-finding count, etc. | The maintainer's own machine, against a gitignored real run. | The maintainer's own run output (`40-synthesis/metrics.yaml`, produced by `compute_metrics`, `tools/apd_gauntlet/synthesis/metrics.py`). | **No.** All outputs of all real runs stay fully out-of-band — including bare metric counts and the baseline `B0`. Nothing run-derived is ever committed, except the aggregate calibration statistics that ADR-0028 allows (below). |
 
 ## Version target: held at 1.7.0
 
@@ -53,6 +53,19 @@ repository** (a private note). Run-over-run deltas are judged against `B0`. No
 part of this — not the run, not the report, not even a bare count — is committed.
 See [Local accuracy benchmark (out-of-band)](running-the-gauntlet.md#local-accuracy-benchmark-out-of-band)
 and [ADR-0017](adrs/0017-local-only-accuracy-benchmark.md).
+
+**One exception, for calibration and frozen evaluation
+([ADR-0028](adrs/0028-committed-calibration-and-frozen-evaluation.md)).** The
+2.0 line commits aggregate calibration statistics, which carry no subject data:
+each `tools/apd_gauntlet/data/decide/thresholds.yaml` entry written by
+`calibrate` (threshold, precision, recall, `n`, `labels_sha256`, and the
+provider and model it was calibrated on). It also commits `eval/gates.yaml`,
+`eval/frozen.yaml` (the tunables hash that `eval freeze` records) and corpus
+manifests and labels over committed fixtures or public repositories pinned by
+commit. Held-out runs are refused when the tunables changed after the freeze.
+Everything else stays local as before: `eval/results/`, `eval/local/`
+(manifests and labels over private runs), every run's
+`.apd-state/usage.yaml` and `attempts.yaml`, and the runs themselves.
 
 ## See also
 

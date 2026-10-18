@@ -1884,5 +1884,54 @@ def eval_label_template_cmd(run_dir: Path, entry_id: str, out_file: Path) -> Non
     click.echo(f"wrote {out_file}: {len(doc['items'])} items to review (verdict unreviewed)")
 
 
+@eval_group.command("freeze")
+@click.option(
+    "--root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help="The repository whose tunables are frozen.",
+)
+@click.option(
+    "--new-heldout-set",
+    is_flag=True,
+    help=(
+        "Re-freeze after a held-out run used the frozen tunables. Give it only once "
+        "you have a new held-out set; the generation goes up by one."
+    ),
+)
+def eval_freeze_cmd(root: Path, new_heldout_set: bool) -> None:
+    """Freeze the tunables: record their SHA-256 in ROOT/eval/frozen.yaml.
+
+    The tunables are the decision thresholds and every context-params.yaml under
+    tools/apd_gauntlet/data/. Tune them on the dev set, freeze, then run the
+    held-out set: 'eval run --set heldout' refuses when a tunables file changed
+    after the freeze. Exits 0 when the file is written or unchanged, and 1 when
+    the tunables changed after a held-out run used them (pass --new-heldout-set
+    once you have a new held-out set, ADR-0028), a held-out result or the
+    frozen file cannot be read, or the file cannot be written.
+    """
+    from .eval.freeze import FreezeError, freeze, read_frozen
+
+    try:
+        before = read_frozen(root)
+        path = freeze(root, new_heldout_set=new_heldout_set)
+        after = read_frozen(root)
+    except FreezeError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from None
+    if after is None:  # freeze always leaves the file in place
+        raise click.ClickException(f"{path} missing after freeze")
+    state = f"generation {after.generation}, tunables {after.tunables_sha256[:8]}, " + (
+        f"{len(after.files)} files"
+    )
+    if after == before:
+        click.echo(f"{path} unchanged: {state}")
+        return
+    click.echo(f"wrote {path}: {state}")
+    for name in after.files:
+        click.echo(f"  {name}")
+
+
 if __name__ == "__main__":
     main()
