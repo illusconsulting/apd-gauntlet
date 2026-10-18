@@ -42,6 +42,8 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
         tm-recon block (always).
       - apath: only when cfg["crown_jewels"] is a non-empty list.
       - tmeval: ALWAYS (the always-on authored baseline TM always exists).
+      - domain-coverage-delta and domain-improvements (Phase 5h): only when
+        cfg["domain_improvement_capture"] is True (the workflow's `=== true`).
 
     The CLI rows use the composite commands the runner dispatches: ``prepare-run``
     (setup), ``tier-gate`` (each tier), ``post-tier4`` (after tmeval/apath) and
@@ -212,15 +214,17 @@ def build_plan(cfg: dict[str, Any]) -> list[dict[str, str]]:
               "semantic critique (GATE: pass/fail; semantic residual non-blocking)")
     )
 
-    # 19/20 — domain improvement capture (advisory)
-    plan.append(
-        _step("domain-coverage-delta", "CLI", f"domain-coverage-delta {run_dir}",
-              "40-synthesis/domain-coverage-delta.yaml")
-    )
-    plan.append(
-        _step("domain-improvements", "AGENT", "apd-domain-auditor",
-              "40-synthesis/domain-improvements.yaml")
-    )
+    # 19/20 — domain improvement capture (advisory; opt-in: only when the run config sets
+    # domain_improvement_capture: true)
+    if cfg.get("domain_improvement_capture") is True:
+        plan.append(
+            _step("domain-coverage-delta", "CLI", f"domain-coverage-delta {run_dir}",
+                  "40-synthesis/domain-coverage-delta.yaml")
+        )
+        plan.append(
+            _step("domain-improvements", "AGENT", "apd-domain-auditor",
+                  "40-synthesis/domain-improvements.yaml")
+        )
 
     # 21 — closeout: the dimpr canonicalize, summarize, manual-audit-prompts and the
     # final validate
@@ -266,6 +270,15 @@ def render_markdown(plan: list[dict[str, str]], cfg: dict[str, Any]) -> str:
             "> Note: the attack-path analysis phase is omitted for this run — it "
             "runs when the run-config or the domain pack declares a non-empty "
             "crown_jewels list."
+        )
+
+    # Phase 5h note: if the domain auditor was not emitted, tell the operator how to opt in.
+    if not any(s["ref"] == "apd-domain-auditor" for s in plan):
+        lines.append("")
+        lines.append(
+            "> Note: domain-improvement capture (Phase 5h) is off for this run — set "
+            "domain_improvement_capture: true in .apd-run.yaml to run the advisory "
+            "domain-pack auditor."
         )
 
     lines.append("")

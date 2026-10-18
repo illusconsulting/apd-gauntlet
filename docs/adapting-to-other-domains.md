@@ -222,7 +222,7 @@ The configured floor is 10 years from CMS Part D, *unless* a covered signed arti
 
 ## 7. Evolving a pack from runs
 
-Once a pack is in use, every gauntlet run captures the places it is still incomplete into `runs/<id>/40-synthesis/domain-improvements.yaml` and offers a deterministic command to turn chosen gaps into a reviewable patch. See [improving-domain-packs.md](improving-domain-packs.md) for the read → draft → review → `git apply` → re-validate workflow. The capture is advisory and non-blocking; you always own the apply and the commit.
+Once a pack is in use, a gauntlet run that sets `domain_improvement_capture: true` in its `.apd-run.yaml` captures the places the pack is still incomplete into `runs/<id>/40-synthesis/domain-improvements.yaml`, and a deterministic command turns chosen gaps into a reviewable patch. Capture is off by default. See [improving-domain-packs.md](improving-domain-packs.md) for the read → draft → review → `git apply` → re-validate workflow. The capture is advisory and non-blocking; you always own the apply and the commit.
 
 ## 8. Submitting the pack
 

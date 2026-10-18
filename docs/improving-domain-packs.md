@@ -3,9 +3,9 @@
 A gauntlet run reveals where the active domain pack(s) are *incomplete* — a harm
 with no matching severity clause, a crown jewel present in the run but declared by
 no selected pack, a consequential action not enumerated. Subsystem B captures those
-gaps on **every** run as typed, pack-attributed *domain-improvement opportunities*,
-then lets you turn the ones you choose into a validated, reviewable, `git apply`-able
-patch against `domains/<pack>/`.
+gaps, on the runs that **opt in**, as typed, pack-attributed *domain-improvement
+opportunities*, then lets you turn the ones you choose into a validated, reviewable,
+`git apply`-able patch against `domains/<pack>/`.
 
 This guide covers the full loop: how capture works, what an opportunity record
 contains, how opportunities are attributed to the right pack under a multi-domain
@@ -13,11 +13,28 @@ run, and the read -> draft -> review -> apply workflow.
 
 ## 1. The capture -> draft -> apply loop
 
-Two clean halves: **NOTICE** (automatic, every run) and **ACT** (you trigger it).
+Two clean halves: **NOTICE** (automatic, on every run that opts in) and **ACT**
+(you trigger it).
 
-**NOTICE — capture, every run (advisory, non-blocking).** A dedicated workflow
-phase (Phase 5h, after the synthesis audit loop and before closeout) emits
-`runs/<id>/40-synthesis/domain-improvements.yaml`. Capture is hybrid:
+**NOTICE — capture, opt-in (advisory, non-blocking).** Capture is off by default.
+To turn it on for a run, set this key in the run's `.apd-run.yaml` before you start
+the run (`init-run` writes the line commented out):
+
+```yaml
+domain_improvement_capture: true
+```
+
+The value must be the boolean `true` or `false`, unquoted. The runner refuses any
+other value before its first dispatch, and `validate-run-config` and `plan-run`
+reject it against `run-config.schema.json`. When capture is off, the runner
+dispatches neither capture step: it logs `domain-coverage-delta: skipped` and
+`domain-improvements: skipped`, writes no `domain-improvements.yaml`, and the
+closeout summary has no domain-improvement line. `plan-run` leaves out both rows and
+prints a note naming the key.
+
+When capture is on, a dedicated workflow phase (Phase 5h, after the synthesis audit
+loop and before closeout) emits `runs/<id>/40-synthesis/domain-improvements.yaml`.
+Capture is hybrid:
 
 - A deterministic Python pre-pass (`apd-gauntlet domain-coverage-delta`) computes
   mechanical coverage deltas — assets, identities, and trust boundaries in
@@ -35,7 +52,8 @@ no opportunities emits `improvements: []` and the closeout reports
 `N domain-improvement opportunities captured; run apd-gauntlet
 draft-domain-improvements <run> to draft pack edits.`
 
-**ACT — draft, on demand.** When you choose to act, run:
+**ACT — draft, on demand.** On a run that captured opportunities, when you choose
+to act, run:
 
 ```bash
 apd-gauntlet draft-domain-improvements runs/<id>

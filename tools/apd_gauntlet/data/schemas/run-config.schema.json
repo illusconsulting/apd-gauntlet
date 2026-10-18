@@ -115,6 +115,11 @@
           }
         }
       }
+    },
+    "domain_improvement_capture": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt in to Phase 5h, the advisory domain-pack auditor. Absent or false skips it."
     }
   }
 }

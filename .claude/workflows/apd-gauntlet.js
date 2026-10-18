@@ -50,7 +50,10 @@
 // schema_valid:true}. A guarded pyStep worker whose outputs are already present and
 // valid returns one output entry per expected output PLUS the sentinel
 // {path:'<phase>.skipped', schema_valid:true} (see guard()). An alwaysRun pyStep has
-// no skip at all: its worker always runs the command. The script does not need to
+// no skip at all: its worker always runs the command. A phase the run config leaves
+// off (Phase 5h, unless domain_improvement_capture is true) dispatches nothing:
+// skipReceipt() logs the skip and returns a receipt whose only output is the sentinel
+// {path:'<phase>.skipped', schema_valid:true}. The script does not need to
 // distinguish skip from fresh — both are ok.
 
 export const meta = {
@@ -192,6 +195,15 @@ for (let i = 0; i < args.domains.length; i++) {
 if (args.framework_version !== undefined &&
     (typeof args.framework_version !== 'string' || !FRAMEWORK_VERSION_RE.test(args.framework_version))) {
   refuseIdentifier('args.framework_version', args.framework_version);
+}
+// domain_improvement_capture (run-config.schema.json: optional boolean, default false)
+// opts in to Phase 5h, which runs only when it is exactly true. Any other defined value,
+// such as the string "true", is refused here rather than silently read as off.
+if (args.domain_improvement_capture !== undefined &&
+    typeof args.domain_improvement_capture !== 'boolean') {
+  throw new Error('apd-gauntlet: args.domain_improvement_capture ' +
+    JSON.stringify(args.domain_improvement_capture) + ' is not a boolean; write true or ' +
+    'false, unquoted, in .apd-run.yaml, or leave the key out (run-config.schema.json).');
 }
 
 // String concat only — no FS.
@@ -366,6 +378,13 @@ const attempts = {
 };
 function isSkip(r) {
   return !!r && (r.outputs || []).some(function (o) { return /\.skipped$/.test(o.path); });
+}
+// The receipt of a phase the run config leaves off: it logs the skip and returns the
+// '<phase>.skipped' sentinel (see SKIP CONVENTION above) without dispatching anything.
+function skipReceipt(phaseName, reason) {
+  log(phaseName + ': skipped (' + reason + ')');
+  return { agent: 'skip:' + phaseName, status: 'ok',
+    outputs: [{ path: phaseName + '.skipped', schema_valid: true }], counts: {} };
 }
 
 // A null/undefined receipt means the DISPATCH did not complete — e.g. a subagent
@@ -1101,31 +1120,42 @@ for (let i = 0; i <= 2; i++) {
 // ===========================================================================
 
 // ===========================================================================
-// PHASE 5h — domain-improvement capture (Subsystem B). ADVISORY / NON-BLOCKING.
+// PHASE 5h — domain-improvement capture (Subsystem B). ADVISORY / NON-BLOCKING / OPT-IN.
+// Runs only when the run config sets domain_improvement_capture: true (absent or false
+// is the default). Otherwise both phases are skipped with no dispatch: skipReceipt()
+// logs each skip and returns the '<phase>.skipped' sentinel receipt.
 // Runs AFTER the 5g audit loop and BEFORE closeout, over the SETTLED corpus.
 // Never gates the run, never touches the HTML report. Empty-but-valid artifact
 // when there are no opportunities. Neither step is wrapped in isErr()/throw.
 // ===========================================================================
-phase('domain-coverage-delta');
-// 5h-i — deterministic coverage-delta pre-pass (Python). Best-effort: a failure
-// here does NOT halt the run; the agent can still harvest judgment opportunities.
-await pyStep('domain-coverage-delta', {
-  phase: 'domain-coverage-delta', label: 'domain-coverage-delta',
-  outputs: runDir + '/40-synthesis/domain-coverage-delta.yaml' });
+const DOMAIN_CAPTURE_OFF = 'domain_improvement_capture is not true in .apd-run.yaml';
+if (args.domain_improvement_capture === true) {
+  phase('domain-coverage-delta');
+  // 5h-i — deterministic coverage-delta pre-pass (Python). Best-effort: a failure
+  // here does NOT halt the run; the agent can still harvest judgment opportunities.
+  await pyStep('domain-coverage-delta', {
+    phase: 'domain-coverage-delta', label: 'domain-coverage-delta',
+    outputs: runDir + '/40-synthesis/domain-coverage-delta.yaml' });
 
-phase('domain-improvements');
-// 5h-ii — apd-domain-auditor (LLM) reads the delta + settled findings + the merged
-// apd-domain skill + asset-inventory; writes domain-improvements.yaml. Advisory:
-// NOT wrapped in isErr()/HALT; a single best-effort dispatch, and the run proceeds
-// to closeout regardless of its status.
-await llmStep('apd-domain-auditor',
-  'Capture domain-improvement opportunities for this run. Read ' +
-  '40-synthesis/domain-coverage-delta.yaml + 40-synthesis/deduped-findings.yaml + ' +
-  '.claude/skills/apd-domain/SKILL.md + 00-context/asset-inventory.yaml; emit ' +
-  '40-synthesis/domain-improvements.yaml (an empty-but-valid {schema_version:1, ' +
-  'generated_by:domain-auditor, examined_domains:[...], improvements:[]} when there ' +
-  'are no opportunities). ADVISORY — this never gates the run.',
-  { phase: 'domain-improvements', label: 'domain-auditor' });
+  phase('domain-improvements');
+  // 5h-ii — apd-domain-auditor (LLM) reads the delta + settled findings + the merged
+  // apd-domain skill + asset-inventory; writes domain-improvements.yaml. Advisory:
+  // NOT wrapped in isErr()/HALT; a single best-effort dispatch, and the run proceeds
+  // to closeout regardless of its status.
+  await llmStep('apd-domain-auditor',
+    'Capture domain-improvement opportunities for this run. Read ' +
+    '40-synthesis/domain-coverage-delta.yaml + 40-synthesis/deduped-findings.yaml + ' +
+    '.claude/skills/apd-domain/SKILL.md + 00-context/asset-inventory.yaml; emit ' +
+    '40-synthesis/domain-improvements.yaml (an empty-but-valid {schema_version:1, ' +
+    'generated_by:domain-auditor, examined_domains:[...], improvements:[]} when there ' +
+    'are no opportunities). ADVISORY — this never gates the run.',
+    { phase: 'domain-improvements', label: 'domain-auditor' });
+} else {
+  phase('domain-coverage-delta');
+  skipReceipt('domain-coverage-delta', DOMAIN_CAPTURE_OFF);
+  phase('domain-improvements');
+  skipReceipt('domain-improvements', DOMAIN_CAPTURE_OFF);
+}
 
 // ===========================================================================
 // PHASE 6 — closeout.
@@ -1136,7 +1166,8 @@ phase('closeout');
 //  - canonicalize: mints the dimpr-<sha8> ids from the domain-auditor's records (it
 //    emits content only; the assembler is the sole id author), before the final
 //    validate, whose _validate_domain_improvements_cross_refs recomputes and would flag
-//    an un-minted (id-less) record;
+//    an un-minted (id-less) record. When Phase 5h was skipped there is no
+//    domain-improvements.yaml, and the mint is a no-op;
 //  - summarize --record-attempts: writes the attempt counters to .apd-state/attempts.yaml
 //    before the summary;
 //  - manual-audit-prompts: writes 40-synthesis/manual-audit-prompts.md;

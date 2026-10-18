@@ -147,6 +147,8 @@ def scaffold_run(
         "#     terraform: []\n"
         "#     helm: []\n"
         "#     cert_secret_managers: []\n"
+        "# domain_improvement_capture: true  "
+        "# opt in to Phase 5h (advisory domain-pack auditor); default off\n"
     )
     if effective_taxonomies:
         taxonomies_block = (

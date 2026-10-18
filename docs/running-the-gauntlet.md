@@ -111,6 +111,16 @@ domains:
 
 In a multi-domain run, the change is reviewed across all selected packs at once: `build-domain-skill` merges them into one `apd-domain` skill (union/dedup of crown jewels, attacker positions, and trust boundaries; concatenated per-pack pattern catalogs), and every specialist loads the merged calibration.
 
+### Domain-improvement capture (opt-in)
+
+Phase 5h captures the places where the selected domain packs are incomplete. It runs the `domain-coverage-delta` step and then the `apd-domain-auditor` agent, which writes `40-synthesis/domain-improvements.yaml`. The phase is advisory: it never gates the run. It is off by default, which saves one CLI dispatch and one agent dispatch per run. To turn it on, uncomment the line `init-run` writes into `.apd-run.yaml`, or add it:
+
+```yaml
+domain_improvement_capture: true
+```
+
+The value must be `true` or `false`, unquoted. When the key is absent or `false`, the runner dispatches neither step and logs `domain-coverage-delta: skipped` and `domain-improvements: skipped`. The run then has no `domain-improvements.yaml`, and its closeout summary has no domain-improvement line. `plan-run` leaves out both rows and adds a note naming the key. Any other value, such as the string `"true"`, fails `validate-run-config` and `plan-run`, and the runner refuses it before its first dispatch. See [Improving domain packs](improving-domain-packs.md) for what the phase captures and how to turn it into a pack patch.
+
 ## Code reconnaissance (optional)
 
 The framework can include an optional code-grounded view of the system under review, produced by `apd-code-recon` using the DeusData [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (CBM) graph. When enabled, specialists may cite call-graph and symbol evidence in addition to document evidence, which is particularly load-bearing for findings under Non-Repudiation (audit log coverage), Authenticity (identity-verification call paths), and Distributed (outbound-edge topology).
@@ -404,12 +414,13 @@ not meant to be driven headlessly.
 > `prepare-run`, `assemble-inventory`, `validate`, `canonicalize`,
 > `author-threat-model`, `tier-gate` after each tier, `cluster-candidates`,
 > `apply-clusters`, `post-tier4`, `build-report`, `audit-report`,
-> `domain-coverage-delta` and `closeout`) and dispatch the LLM
+> `domain-coverage-delta` when the run opts in to domain-improvement capture, and
+> `closeout`) and dispatch the LLM
 > specialists/judges (`apd-intake`, `apd-code-recon`, `apd-threat-model-author`,
 > the nine lenses, `apd-cluster-adjudicator`, `apd-threat-model-evaluator`,
-> `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`,
-> `apd-domain-auditor`) as foreground agents, in the phase order below —
-> `apd-gauntlet plan-run` emits this exact list for you.
+> `apd-attack-path-analyzer`, `apd-report-writer`, `apd-report-auditor`, and
+> `apd-domain-auditor` when the run opts in) as foreground agents, in the phase
+> order below — `apd-gauntlet plan-run` emits this exact list for you.
 
 For the supported foreground-drive path, run `apd-gauntlet plan-run <run-dir>`:
 it reads the run's `.apd-run.yaml`, validates it, and emits the exact ordered
@@ -448,7 +459,11 @@ It:
    editorial). A structural failure that is unresolved after two remediation
    attempts **blocks the run** — a degraded HTML report cannot ship silently.
    Editorial-only residuals are surfaced non-blocking.
-5. Runs `closeout`, which mints the domain-improvement ids, records the
+5. When `.apd-run.yaml` sets `domain_improvement_capture: true`, runs
+   `domain-coverage-delta` and dispatches `apd-domain-auditor` (Phase 5h,
+   advisory; see
+   [Domain-improvement capture (opt-in)](#domain-improvement-capture-opt-in)).
+   Then runs `closeout`, which mints the domain-improvement ids, records the
    attempt counters and prints the summary (`summarize --record-attempts`),
    writes `40-synthesis/manual-audit-prompts.md`, and runs the final
    `validate`.

@@ -42,6 +42,7 @@ RECEIPT_SCHEMA = REPO / "schemas" / "agent-receipt.schema.json"
 
 # The run-config the harness passes as `args`: no threat model and no crown jewels, so
 # tm-recon is skipped and the apath thunk dispatches nothing; code_recon=auto runs it.
+# No domain_improvement_capture, so Phase 5h is skipped with no dispatch.
 ARGS = {"run_id": "r1", "domains": ["pbm"], "framework_version": "1.7.1", "code_recon": "auto"}
 
 # A success receipt that is valid for the RECEIPT shape (checked against the schema).
@@ -96,8 +97,8 @@ EXPECTED_GREEN_LABELS = [
     "audit-report-attempt-1", "auditor-attempt-1",
     "report-writer-attempt-2", "build-report-attempt-2",
     "audit-report-attempt-2", "auditor-attempt-2",
-    # domain improvements, closeout (canonicalize, summarize, manual-audit-prompts, validate)
-    "domain-coverage-delta", "domain-auditor",
+    # Phase 5h is skipped (ARGS do not opt in), then closeout (canonicalize, summarize,
+    # manual-audit-prompts, validate)
     "closeout",
 ]
 
@@ -219,7 +220,9 @@ def _responder(
     )
 
 
-def _run_runner(tmp_path: pathlib.Path, responder: str) -> dict[str, Any]:
+def _run_runner(
+    tmp_path: pathlib.Path, responder: str, args: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Execute the REAL, WHOLE runner under node against the stub runtime in _HARNESS.
 
     The script is read as-is; only the `export` keyword of `export const meta` is dropped,
@@ -228,7 +231,8 @@ def _run_runner(tmp_path: pathlib.Path, responder: str) -> dict[str, Any]:
     the dispatches ({label, agentType, overlap}, in dispatch order, where overlap lists
     the labels still in flight when that dispatch went out), the log lines, the maximum
     number of dispatches in flight, and the outcome: whether the script finished, returned
-    or threw (and the message), with the dispatch counts at the moment it finished."""
+    or threw (and the message), with the dispatch counts at the moment it finished.
+    `args` replaces ARGS as the run-config."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node not available")
@@ -240,7 +244,7 @@ def _run_runner(tmp_path: pathlib.Path, responder: str) -> dict[str, Any]:
     )
     script = (
         _HARNESS.replace("__RESPONDER__", responder)
-        .replace("__ARGS__", json.dumps(ARGS))
+        .replace("__ARGS__", json.dumps(ARGS if args is None else args))
         .replace("__BODY__", body)
     )
     path = tmp_path / "run_runner.cjs"
@@ -323,6 +327,31 @@ def test_green_run_dispatches_in_order_one_group_at_a_time(tmp_path: pathlib.Pat
     # Every dispatch had resolved by the time the script finished: nothing was left behind.
     assert outcome["dispatchedAtFinish"] == outcome["resolvedAtFinish"] == len(labels), outcome
     assert "apd-gauntlet runner: complete for r1." in result["logs"]
+
+
+def test_opted_in_phase_5h_dispatches_in_order(tmp_path: pathlib.Path) -> None:
+    # WS3 Task 7: with domain_improvement_capture true, Phase 5h's two dispatches go out
+    # one at a time between the audit loop and closeout, each awaited.
+    result = _run_runner(
+        tmp_path, _responder(), {**ARGS, "domain_improvement_capture": True})
+    at = EXPECTED_GREEN_LABELS.index("closeout")
+    assert _labels(result) == (
+        EXPECTED_GREEN_LABELS[:at] + ["domain-coverage-delta", "domain-auditor"]
+        + EXPECTED_GREEN_LABELS[at:])
+    _assert_overlaps_within(result, LENS_GROUPS)
+    assert _overlap_of(result, "domain-auditor") == []
+    assert _overlap_of(result, "closeout") == []
+    outcome = result["outcome"]
+    assert outcome["finished"] and outcome["returned"] and not outcome["threw"], outcome
+    assert not [m for m in result["logs"] if ": skipped (" in m], result["logs"]
+
+
+def test_skipped_phase_5h_logs_and_dispatches_nothing(tmp_path: pathlib.Path) -> None:
+    result = _run_runner(tmp_path, _responder())
+    assert [m for m in result["logs"] if ": skipped (" in m] == [
+        "domain-coverage-delta: skipped (domain_improvement_capture is not true in .apd-run.yaml)",
+        "domain-improvements: skipped (domain_improvement_capture is not true in .apd-run.yaml)",
+    ]
 
 
 def test_failed_lens_is_retried_after_the_fan_out(tmp_path: pathlib.Path) -> None:

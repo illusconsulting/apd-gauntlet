@@ -33,6 +33,8 @@ HA_SHAPED: dict[str, Any] = {
 
 # Every CLI dispatch of a clean HA-shaped run, in order. WS3 Task 3 runs the composites
 # prepare-run, tier-gate, post-tier4 and closeout: 9 fewer than the 27 of the WS1 + WS2 base.
+# WS3 Task 7 makes Phase 5h opt-in, and HA_SHAPED does not set domain_improvement_capture,
+# so domain-coverage-delta is not dispatched.
 CLI_LABELS = [
     # setup and intake
     "resume-plan", "prepare-run", "assemble-inventory", "intake-schema-gate",
@@ -44,14 +46,14 @@ CLI_LABELS = [
     # synthesis
     "cluster-candidates", "apply-clusters", "post-tier4",
     "build-report-attempt-0", "audit-report-attempt-0",
-    # Phase 5h and closeout
-    "domain-coverage-delta", "closeout",
+    # closeout
+    "closeout",
 ]
 # The composite dispatches, and the CLI dispatches that still carry the guard text.
 COMPOSITES = {"prepare-run", "tier-gate-10-trustworthiness", "tier-gate-20-scalability",
               "tier-gate-30-auditability", "post-tier4", "closeout"}
 GUARDED = {"author-threat-model-floor", "cluster-candidates", "apply-clusters",
-           "build-report-attempt-0", "audit-report-attempt-0", "domain-coverage-delta"}
+           "build-report-attempt-0", "audit-report-attempt-0"}
 
 
 def trace_raw(
@@ -105,7 +107,7 @@ def test_cli_steps_go_to_cli_runner():
 
 
 def test_llm_dispatch_count_unchanged():
-    assert len(llm(trace(HA_SHAPED))) == 18
+    assert len(llm(trace(HA_SHAPED))) == 17
 
 
 @pytest.mark.parametrize("patch", [{"run_id": "r; touch x"}, {"domains": ["pbm", "$(id)"]},
@@ -169,9 +171,10 @@ def test_plan_run_matches_workflow_dispatch_sequence():
 
 
 def test_dispatch_totals_after_the_composites():
-    # The plan's "After Task 3" column: 18 CLI and 18 LLM dispatches on a clean run.
+    # The plan's "After Task 7, default" column: 17 CLI and 17 LLM dispatches on a clean
+    # run ("After Task 3" was 18 and 18; Phase 5h is now opt-in).
     t = trace(HA_SHAPED)
-    assert (len(cli(t)), len(llm(t)), len(t)) == (18, 18, 36)
+    assert (len(cli(t)), len(llm(t)), len(t)) == (17, 17, 34)
 
 
 def test_composites_always_run():
@@ -343,3 +346,87 @@ def test_repair_dispatches_tier_repair_agent():
     t = trace(HA_SHAPED, {"tier-gate-10-trustworthiness": [BAD]})
     repair = [d for d in t if d["label"].startswith("repair-10-trustworthiness-")]
     assert [d["agentType"] for d in repair] == ["apd-tier-repair"]
+
+
+# --- WS3 Task 7: Phase 5h runs only when domain_improvement_capture is true -------------
+
+
+def test_domain_capture_default_off_and_opt_in():
+    off, on = trace(HA_SHAPED), trace({**HA_SHAPED, "domain_improvement_capture": True})
+    assert not {"domain-coverage-delta", "domain-auditor"} & {d["label"] for d in off}
+    assert {"domain-coverage-delta", "domain-auditor"} <= {d["label"] for d in on}
+    assert (len(cli(off)), len(llm(off)), len(cli(on)), len(llm(on))) == (17, 17, 18, 18)
+    assert trace_raw({**HA_SHAPED, "domain_improvement_capture": "true"}).returncode == 3
+
+
+# --- beyond the plan's Task 7 tests ------------------------------------------------------
+
+CAPTURE_REFUSAL_END = (
+    "is not a boolean; write true or false, unquoted, in .apd-run.yaml, or leave the key "
+    "out (run-config.schema.json).")
+
+
+def test_explicit_false_is_the_default():
+    assert trace({**HA_SHAPED, "domain_improvement_capture": False}) == trace(HA_SHAPED)
+
+
+def test_opted_in_phase_5h_runs_between_the_audit_and_closeout():
+    t = trace({**HA_SHAPED, "domain_improvement_capture": True})
+    labels = [d["label"] for d in t]
+    at = labels.index("domain-coverage-delta")
+    assert labels[at - 1:at + 3] == [
+        "auditor-attempt-0", "domain-coverage-delta", "domain-auditor", "closeout"]
+    delta, auditor = t[at], t[at + 1]
+    assert delta["agentType"] == "apd-cli-runner" and delta["guard"] is True
+    assert delta["command"] == "apd-gauntlet domain-coverage-delta runs/r"
+    assert delta["phase"] == "domain-coverage-delta"
+    assert auditor["agentType"] == "apd-domain-auditor"
+    assert auditor["phase"] == "domain-improvements"
+    # Everything else is the default run's sequence.
+    assert [x for x in labels if x not in {"domain-coverage-delta", "domain-auditor"}] == [
+        d["label"] for d in trace(HA_SHAPED)]
+
+
+def test_opted_in_cli_labels_and_guard_text():
+    t = cli(trace({**HA_SHAPED, "domain_improvement_capture": True}))
+    assert [d["label"] for d in t] == CLI_LABELS[:-1] + ["domain-coverage-delta", "closeout"]
+    assert {d["label"] for d in t if d["guard"]} == GUARDED | {"domain-coverage-delta"}
+
+
+@pytest.mark.parametrize("capture", [None, False])
+def test_skipped_phase_5h_logs_both_skips(capture):
+    cfg = HA_SHAPED if capture is None else {**HA_SHAPED, "domain_improvement_capture": capture}
+    skips = [m for m in run_logs(cfg) if ": skipped (" in m]
+    reason = " (domain_improvement_capture is not true in .apd-run.yaml)"
+    assert skips == ["domain-coverage-delta: skipped" + reason,
+                     "domain-improvements: skipped" + reason]
+
+
+def test_opted_in_phase_5h_logs_no_skip():
+    logs = run_logs({**HA_SHAPED, "domain_improvement_capture": True})
+    assert not [m for m in logs if ": skipped (" in m], logs
+
+
+def test_advisory_phase_5h_failures_do_not_halt_the_run():
+    t = trace({**HA_SHAPED, "domain_improvement_capture": True},
+              {"domain-coverage-delta": [], "domain-auditor": []})
+    assert [d["label"] for d in t][-3:] == ["domain-coverage-delta", "domain-auditor", "closeout"]
+
+
+@pytest.mark.parametrize("value", ["true", "false", 1, 0, None, [], {}])
+def test_non_boolean_capture_is_refused_before_any_dispatch(value):
+    r = trace_raw({**HA_SHAPED, "domain_improvement_capture": value})
+    assert r.returncode == 3, r.stderr
+    assert r.stderr == (
+        "apd-gauntlet: args.domain_improvement_capture " + json.dumps(value) + " "
+        + CAPTURE_REFUSAL_END), r.stderr
+    assert json.loads(r.stdout) == [], "the runner dispatched before refusing the run config"
+
+
+def test_plan_run_matches_workflow_dispatch_sequence_with_capture():
+    cfg = {"run_id": "apd-test-full", "domains": ["agentic-ai", "api-security"],
+           "code_recon": "enabled", "crown_jewels": ["a"], "domain_improvement_capture": True}
+    wf = [("CLI", d["command"].split()[1]) if d["agentType"] == "apd-cli-runner"
+          else ("AGENT", d["agentType"]) for d in trace(cfg)]
+    assert [(s["kind"], s["ref"].split()[0]) for s in build_plan(cfg)] == wf
+    assert ("AGENT", "apd-domain-auditor") in wf

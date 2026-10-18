@@ -76,9 +76,9 @@ When a field or behavior is deprecated:
 
 ## v2.0.0 — Measurement and evaluation (additive)
 
-Additive on the 2.0 line (`next`): these entries add new schemas only. No
-existing schema changes, no record `schema_version` is bumped, and no
-`framework_compat` range changes.
+Additive on the 2.0 line (`next`): these entries add new schemas, or an
+optional key to an existing one. No existing key changes, no record
+`schema_version` is bumped, and no `framework_compat` range changes.
 
 ### 2026-10-17 — run-attempts (new)
 
@@ -136,6 +136,18 @@ also refuses a duplicate entry id and any run directory (compared after
 resolving links and `..`) or `(repo.url, repo.commit)` pair that appears in
 both sets. `eval.corpus.load_labels` checks a labels file against the schema.
 Both raise `CorpusError` naming the file, with each schema message's JSON path.
+
+### 2026-10-18 — run-config `domain_improvement_capture` (new optional key)
+
+`run-config.schema.json` gains an optional boolean, `domain_improvement_capture`,
+whose default is `false`. It opts a run in to Phase 5h, the advisory domain-pack
+auditor: the workflow runs `domain-coverage-delta` and dispatches
+`apd-domain-auditor` only when the key is `true`, and `plan-run` lists the two
+steps only then. A config without the key stays valid and now skips Phase 5h,
+which 1.7 ran on every run. A value that is not a boolean, such as the string
+`"true"`, fails the schema, and the workflow refuses it before its first
+dispatch. `init-run` writes the key as a commented line. A 1.7 engine rejects a
+config that sets the key, because the schema's `additionalProperties` is false.
 
 ## v1.7.1 — Context ids minted by canonicalize
 

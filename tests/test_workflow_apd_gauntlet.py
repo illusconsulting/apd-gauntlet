@@ -328,8 +328,11 @@ def test_intake_always_emits_asset_inventory() -> None:
 def test_runner_uses_domains_list_not_singular() -> None:
     text = _text()
     assert "args.domains" in text, "runner must read args.domains"
-    assert re.search(r"args\.domain(?!s)", text) is None, \
+    # \b: the identifier args.domain itself, not a longer key such as
+    # args.domain_improvement_capture (WS3 Task 7).
+    assert re.search(r"args\.domain\b", text) is None, \
         "runner still references singular args.domain"
+    assert re.search(r"args\.domain\b", "args.domain + x") is not None
 
 
 def test_prepare_run_step_always_runs() -> None:
@@ -379,6 +382,76 @@ def test_report_path_unchanged_by_5h() -> None:
     text = _text()
     assert "i <= 2" in text  # audit loop cap unchanged
     assert "report-data" in text  # report path still wired
+
+
+# ---------------------------------------------------------------------------
+# WS3 Task 7 — Phase 5h is opt-in (domain_improvement_capture)
+# ---------------------------------------------------------------------------
+
+
+def _meta_phases(text: str) -> list[str]:
+    m = re.search(r"phases:\s*\[(.*?)\]", text, re.DOTALL)
+    assert m, "phases:[...] array not found in meta"
+    return re.findall(r"'([^']+)'", m.group(1))
+
+
+def test_phase_5h_is_gated_on_domain_capture() -> None:
+    text = _text()
+    assert "args.domain_improvement_capture === true" in text
+    assert "skipReceipt('domain-coverage-delta'" in text
+    assert "skipReceipt('domain-improvements'" in text
+    phases = _meta_phases(text)
+    assert "domain-coverage-delta" in phases and "domain-improvements" in phases
+
+
+# --- beyond the plan's Task 7 tests ------------------------------------------------------
+
+SKIP_RECEIPT = """function skipReceipt(phaseName, reason) {
+  log(phaseName + ': skipped (' + reason + ')');
+  return { agent: 'skip:' + phaseName, status: 'ok',
+    outputs: [{ path: phaseName + '.skipped', schema_valid: true }], counts: {} };
+}"""
+
+
+def _capture_gate(text: str) -> tuple[str, str]:
+    """The (then, else) branches of the Phase 5h gate."""
+    start = text.index("if (args.domain_improvement_capture === true) {")
+    else_at = text.index("} else {", start)
+    end = text.index("\n}\n", else_at)
+    return text[start:else_at], text[else_at:end]
+
+
+def test_skip_receipt_is_the_planned_helper() -> None:
+    text = _text()
+    assert text.count("function skipReceipt(") == 1
+    assert SKIP_RECEIPT in text
+
+
+def test_capture_steps_stay_awaited_inside_the_gate() -> None:
+    on, off = _capture_gate(_text())
+    assert "await pyStep('domain-coverage-delta', {" in on
+    assert "await llmStep('apd-domain-auditor'," in on
+    assert "label: 'domain-auditor'" in on
+    assert on.index("phase('domain-coverage-delta')") < on.index("phase('domain-improvements')")
+    # The off branch dispatches nothing: it only logs the two skips.
+    assert "pyStep(" not in off and "llmStep(" not in off and "agent(" not in off
+    assert off.index("skipReceipt('domain-coverage-delta'") < off.index(
+        "skipReceipt('domain-improvements'")
+    assert _text().count("args.domain_improvement_capture === true") == 1
+
+
+def test_capture_type_check_sits_with_the_identifier_checks() -> None:
+    text = _text()
+    check = text.index("typeof args.domain_improvement_capture !== 'boolean'")
+    assert text.index("refuseIdentifier('args.framework_version'") < check
+    assert check < text.index("const runDir =") < text.index("phase('setup')")
+
+
+def test_skip_convention_documents_the_run_config_skip() -> None:
+    text = _text()
+    header = text[text.index("// SKIP CONVENTION:"):text.index("export const meta")]
+    assert "skipReceipt()" in header and "domain_improvement_capture" in header
+    assert "'<phase>.skipped'" in header
 
 
 # ---------------------------------------------------------------------------

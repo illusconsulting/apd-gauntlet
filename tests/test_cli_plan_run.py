@@ -12,8 +12,10 @@ import json
 import pathlib
 import re
 
+import pytest
 import yaml
 from apd_gauntlet.cli import main
+from apd_gauntlet.plan_run import build_plan, render_markdown
 from click.testing import CliRunner
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -27,15 +29,17 @@ BASE_CFG = {
 }
 
 # A fully-featured config exercising every gate (code_recon enabled, crown_jewels
-# present, threat_model absent), synthesized into a tmp run dir so the tests do NOT
-# depend on any gitignored runs/ directory (those are absent in CI). plan-run only
-# reads the run dir's .apd-run.yaml, so a config-only scaffold is sufficient.
+# present, threat_model absent, domain-improvement capture opted in), synthesized into a
+# tmp run dir so the tests do NOT depend on any gitignored runs/ directory (those are
+# absent in CI). plan-run only reads the run dir's .apd-run.yaml, so a config-only
+# scaffold is sufficient.
 FULL_CFG = {
     "run_id": "apd-test-full",
     "domains": ["agentic-ai", "api-security"],
     "framework_version": "1.6.0",
     "code_recon": "enabled",
     "crown_jewels": ["tool_execution_capability", "pii_profile_store"],
+    "domain_improvement_capture": True,
 }
 
 
@@ -282,3 +286,68 @@ def test_plan_run_composite_rows(tmp_path):
     assert plan[-1] is rows["closeout"]
     for gone in ("build-domain-skill", "validate-domain", "rollup", "summarize"):
         assert gone not in rows, gone
+
+
+# --- WS3 Task 7: Phase 5h runs only when domain_improvement_capture is true -------------
+
+
+def test_plan_run_domain_capture_default_off(tmp_path):
+    run_dir = _write_run(tmp_path, BASE_CFG)
+    plan = json.loads(CliRunner().invoke(main, ["plan-run", "--json", str(run_dir)]).output)
+    assert not any(s["phase"] in {"domain-coverage-delta", "domain-improvements"} for s in plan)
+    assert "domain_improvement_capture: true" in CliRunner().invoke(
+        main, ["plan-run", str(run_dir)]).output
+
+
+# --- beyond the plan's Task 7 tests ------------------------------------------------------
+
+CAPTURE_NOTE = (
+    "> Note: domain-improvement capture (Phase 5h) is off for this run — set "
+    "domain_improvement_capture: true in .apd-run.yaml to run the advisory domain-pack "
+    "auditor."
+)
+PHASE_5H = {"domain-coverage-delta", "domain-improvements"}
+
+
+def test_plan_run_domain_capture_opt_in_rows(tmp_path):
+    plan = _plan(tmp_path, dict(BASE_CFG, domain_improvement_capture=True))
+    refs = [s["ref"] for s in plan]
+    delta = refs.index("domain-coverage-delta runs/apd-test")
+    assert refs[delta:delta + 3] == [
+        "domain-coverage-delta runs/apd-test", "apd-domain-auditor", "closeout runs/apd-test"]
+    assert [plan[delta]["phase"], plan[delta + 1]["phase"]] == [
+        "domain-coverage-delta", "domain-improvements"]
+    assert refs[delta - 1] == "apd-report-auditor"
+
+
+@pytest.mark.parametrize(("value", "on"), [(None, False), (False, False), (True, True)])
+def test_plan_run_domain_capture_note_and_rows(tmp_path, value, on):
+    cfg = dict(BASE_CFG) if value is None else dict(BASE_CFG, domain_improvement_capture=value)
+    run_dir = _write_run(tmp_path, cfg)
+    out = CliRunner().invoke(main, ["plan-run", str(run_dir)])
+    assert out.exit_code == 0, out.output
+    assert (CAPTURE_NOTE in out.output) is not on
+    assert ("apd-domain-auditor" in out.output) is on
+    plan = _plan(tmp_path, cfg)
+    assert any(s["phase"] in PHASE_5H for s in plan) is on
+
+
+def test_build_plan_domain_capture_gate_needs_the_boolean_true():
+    # The gate is `is True`, as in the workflow (`=== true`); plan-run validates
+    # .apd-run.yaml first, so a string never reaches build_plan from the CLI.
+    for value in ("true", 1, "yes"):
+        plan = build_plan(dict(BASE_CFG, domain_improvement_capture=value))
+        assert not any(s["phase"] in PHASE_5H for s in plan), value
+
+
+def test_render_markdown_note_follows_the_plan():
+    cfg = dict(BASE_CFG, domain_improvement_capture=True)
+    assert CAPTURE_NOTE not in render_markdown(build_plan(cfg), cfg)
+    assert CAPTURE_NOTE in render_markdown(build_plan(BASE_CFG), BASE_CFG)
+
+
+def test_plan_run_rejects_a_string_capture_flag(tmp_path):
+    run_dir = _write_run(tmp_path, dict(BASE_CFG, domain_improvement_capture="true"))
+    result = CliRunner().invoke(main, ["plan-run", str(run_dir)])
+    assert result.exit_code == 1, result.output
+    assert "Schema error: 'true' is not of type 'boolean'" in result.output

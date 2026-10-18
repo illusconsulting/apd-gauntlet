@@ -302,3 +302,49 @@ def test_scaffold_run_emits_commented_infrastructure_skeleton(tmp_path):
     assert "infrastructure" not in cfg
     errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
     assert errors == [], [e.message for e in errors]
+
+
+# --- WS3 Task 7: the scaffold documents the domain-capture opt-in ------------------------
+
+
+def _scaffold(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    return scaffold_run("run-dic", inputs, ["pbm"], tmp_path / "runs")
+
+
+def test_scaffold_run_documents_domain_capture_opt_in(tmp_path):
+    text = (_scaffold(tmp_path) / ".apd-run.yaml").read_text()
+    assert "# domain_improvement_capture: true" in text
+    assert "domain_improvement_capture" not in yaml.safe_load(text)
+
+
+# --- beyond the plan's Task 7 tests ------------------------------------------------------
+
+DOMAIN_CAPTURE_LINE = (
+    "# domain_improvement_capture: true  "
+    "# opt in to Phase 5h (advisory domain-pack auditor); default off\n"
+)
+
+
+def test_scaffold_run_domain_capture_line_is_the_planned_one(tmp_path):
+    inputs = tmp_path / "in"
+    inputs.mkdir()
+    (inputs / "tech_plan.md").write_text("# Plan\n")
+    run_dir = scaffold_run("run-dic", inputs, ["pbm"], tmp_path / "runs", taxonomies=["cwe"])
+    text = (run_dir / ".apd-run.yaml").read_text()
+    assert text.count(DOMAIN_CAPTURE_LINE) == 1
+    # It closes the fixed template: after the infrastructure skeleton, before the
+    # taxonomies block.
+    assert text.index("#     cert_secret_managers: []\n") < text.index(DOMAIN_CAPTURE_LINE)
+    assert text.index(DOMAIN_CAPTURE_LINE) < text.index("taxonomies:\n")
+
+
+def test_uncommented_domain_capture_line_opts_in_and_validates(tmp_path):
+    text = (_scaffold(tmp_path) / ".apd-run.yaml").read_text()
+    cfg = yaml.safe_load(
+        text.replace("# domain_improvement_capture:", "domain_improvement_capture:"))
+    assert cfg["domain_improvement_capture"] is True
+    errors = list(Draft202012Validator(RUN_CONFIG_SCHEMA).iter_errors(cfg))
+    assert errors == [], [e.message for e in errors]

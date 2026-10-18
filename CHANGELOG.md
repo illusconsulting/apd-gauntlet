@@ -247,6 +247,17 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   changes. A test now pins each agent's tool set. The threat-model recon and
   author agents, the attack-path analyzer and the domain auditor still hold
   `Bash`.
+- **The domain auditor is opt-in (`domain_improvement_capture`).** Phase 5h,
+  the `domain-coverage-delta` step and the advisory `apd-domain-auditor`
+  agent, now runs only when `.apd-run.yaml` sets
+  `domain_improvement_capture: true`. `run-config.schema.json` gains the
+  optional boolean key, whose default is `false`. When it is absent or
+  `false`, the workflow dispatches neither step and logs both as skipped, so a
+  clean run makes 34 dispatches (17 CLI, 17 agent) instead of 36. `plan-run`
+  then leaves out both rows and adds a note naming the key, and the run has no
+  `domain-improvements.yaml`. A value that is not a boolean, such as the
+  string `"true"`, fails the schema, and the workflow refuses it before its
+  first dispatch. `init-run` writes the key as a commented line.
 - **Version tracks the stable line (1.7.1) until the first 2.0 pre-release.**
   The first 2.0 pre-release (`2.0.0a1`, plugin `2.0.0-alpha.1`) has not been
   cut. When it is, it publishes to PyPI as a pre-release
