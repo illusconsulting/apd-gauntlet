@@ -136,11 +136,16 @@ def post_tier4_steps(run_dir: Path) -> list[SubStep]:
 
 
 def closeout_steps(run_dir: Path, record_attempts: str | None = None) -> list[SubStep]:
-    """The dimpr ``canonicalize``, ``summarize``, then the final ``validate``."""
+    """The dimpr ``canonicalize``, ``summarize``, ``manual-audit-prompts``, the final ``validate``.
+
+    ``manual-audit-prompts`` writes ``40-synthesis/manual-audit-prompts.md`` from the
+    blocked deduped findings.
+    """
     run = str(run_dir)
     attempts = ("--record-attempts", record_attempts) if record_attempts is not None else ()
     return [
         SubStep("canonicalize", ("canonicalize", run)),
         SubStep("summarize", ("summarize", run, *attempts)),
+        SubStep("manual-audit-prompts", ("manual-audit-prompts", run)),
         SubStep("validate", ("validate", run, "--errors-only")),
     ]

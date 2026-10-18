@@ -26,6 +26,7 @@ from apd_gauntlet.composite import (
     run_composite,
     tier_gate_steps,
 )
+from apd_gauntlet.manual_audit import render_prompts
 from click.testing import CliRunner
 from test_summarize import GOOD as GOOD_ATTEMPTS
 
@@ -217,14 +218,45 @@ def test_closeout_order_and_attempts(ceb):
     attempts = json.dumps(GOOD_ATTEMPTS)
     r = CliRunner().invoke(main, ["closeout", str(ceb), "--record-attempts", attempts])
     assert r.exit_code == 0 and (ceb / ".apd-state/attempts.yaml").is_file()
-    assert [line.split()[1] for line in _status(r, "closeout")[:3]] == [
-        "canonicalize", "summarize", "validate"]
+    assert [line.split()[1] for line in _status(r, "closeout")[:4]] == [
+        "canonicalize", "summarize", "manual-audit-prompts", "validate"]
+
+
+def test_closeout_runs_manual_audit_prompts(ceb):
+    prompts = ceb / "40-synthesis/manual-audit-prompts.md"
+    assert not prompts.exists()  # the committed example has none: closeout writes it
+    r = CliRunner().invoke(main, ["closeout", str(ceb)])
+    assert r.exit_code == 0, r.output
+    assert _status(r, "closeout") == [
+        "closeout: canonicalize exit=0", "closeout: summarize exit=0",
+        "closeout: manual-audit-prompts exit=0", "closeout: validate exit=0", "closeout: ok"]
+    deduped = yaml.safe_load((ceb / "40-synthesis/deduped-findings.yaml").read_text("utf-8"))
+    assert prompts.read_text(encoding="utf-8") == render_prompts(deduped["finding"])
+
+
+def test_closeout_manual_audit_failure_is_named_and_validate_still_runs(bare):
+    # clean-run has no deduped-findings.yaml, so manual-audit-prompts exits 1 there.
+    r = CliRunner().invoke(main, ["closeout", str(bare)])
+    assert r.exit_code == 1
+    assert {"closeout: manual-audit-prompts exit=1", "closeout: validate exit=0"} <= set(
+        _status(r, "closeout")
+    )
+    assert _status(r, "closeout")[-1] == "closeout: failed manual-audit-prompts"
 
 
 def test_closeout_bad_attempts_keeps_the_summarize_code(ceb):
     r = CliRunner().invoke(main, ["closeout", str(ceb), "--record-attempts", "{nope"])
     assert r.exit_code == 2 and "closeout: validate exit=0" in _status(r, "closeout")
+    assert "closeout: manual-audit-prompts exit=0" in _status(r, "closeout")
     assert _status(r, "closeout")[-1] == "closeout: failed summarize"
+
+
+def test_runbook_closeout_row_names_manual_audit_prompts():
+    lines = (REPO / "docs/running-the-gauntlet.md").read_text(encoding="utf-8").splitlines()
+    closeout = [line for line in lines if line.startswith("apd-gauntlet closeout ")]
+    assert len(closeout) == 1
+    assert "summarize, manual-audit-prompts, final validate" in closeout[0]
+    assert any(line.startswith("apd-gauntlet manual-audit-prompts <run-dir>") for line in lines)
 
 
 # --- step builders, run_composite and invoke ------------------------------------------
@@ -249,7 +281,7 @@ def test_step_builders_pass_the_run_dir_in_every_argv(tmp_path):
         ("assemble-c4", str(run)), ("canonicalize", str(run)), ("rollup", str(run))]
     assert [s.argv for s in closeout_steps(run, '{"a": 1}')] == [
         ("canonicalize", str(run)), ("summarize", str(run), "--record-attempts", '{"a": 1}'),
-        ("validate", str(run), "--errors-only")]
+        ("manual-audit-prompts", str(run)), ("validate", str(run), "--errors-only")]
     assert closeout_steps(run)[1].argv == ("summarize", str(run))
 
 

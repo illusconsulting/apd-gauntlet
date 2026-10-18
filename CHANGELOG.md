@@ -171,9 +171,11 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   `validate` result (0 clean, 1 on errors). With `--json`, stdout carries only
   `validate`'s JSON. `post-tier4 RUN_DIR` runs `assemble-c4`, `canonicalize`
   and `rollup`. `closeout RUN_DIR [--record-attempts JSON]` runs
-  `canonicalize`, `summarize` and the final `validate --errors-only`.
-  `prepare-run`, `post-tier4` and `closeout` exit with the first failing
-  step's code. The workflow does not run them yet.
+  `canonicalize`, `summarize`, `manual-audit-prompts` and the final
+  `validate --errors-only`. Its `manual-audit-prompts` step writes
+  `40-synthesis/manual-audit-prompts.md`; until now nothing called that
+  command. `prepare-run`, `post-tier4` and `closeout` exit with the first
+  failing step's code. The workflow does not run them yet.
 
 ### Changed
 

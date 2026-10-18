@@ -50,13 +50,14 @@ apd-gauntlet canonicalize <run-dir>              # idempotent structural canonic
 apd-gauntlet prepare-run <run-dir> [--domain D]...  # setup: scaffold validate, build-domain-skill, validate-domain (domains from --domain or .apd-run.yaml; framework_version from .apd-run.yaml)
 apd-gauntlet tier-gate <run-dir> --tier DIR [--json]  # canonicalize the whole run, then validate the tier; exits with the validate result
 apd-gauntlet post-tier4 <run-dir>                # assemble-c4, canonicalize, rollup; exits with the first failing step's code
-apd-gauntlet closeout <run-dir> [--record-attempts JSON]  # canonicalize, summarize, final validate; exits with the first failing step's code
+apd-gauntlet closeout <run-dir> [--record-attempts JSON]  # canonicalize, summarize, manual-audit-prompts, final validate; exits with the first failing step's code
 apd-gauntlet assemble-inventory <run-dir>        # mint asset-/idn-/tb- inventory ids + wire trust-boundary crosses (by name)
 apd-gauntlet assemble-c4 <run-dir>               # mint the grounded C4 architecture model (c4-/c4e- ids; ADR-0021)
 apd-gauntlet draft-domain-improvements <run-dir> # draft a pack patch from a run's captured opportunities
 apd-gauntlet mint-improvement-id ...             # print the canonical dimpr-<sha8> id for a domain-improvement record
 apd-gauntlet domain-coverage-delta <run-dir>     # deterministic pack-coverage gaps for a run
 apd-gauntlet summarize <run-dir>                 # finding/capability statistics
+apd-gauntlet manual-audit-prompts <run-dir>      # write 40-synthesis/manual-audit-prompts.md: runtime audit commands for each blocked finding (closeout runs it)
 apd-gauntlet check-ids <yaml-file>               # verify deterministic record IDs
 apd-gauntlet lint-agents                         # validate agent file frontmatter
 apd-gauntlet parse-threat-model <path>           # parse a SUPPLIED threat model file into a normalized YAML graph

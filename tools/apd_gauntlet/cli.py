@@ -1491,9 +1491,10 @@ def post_tier4_cmd(run_dir: Path) -> None:
     help="Passed to summarize --record-attempts (writes RUN_DIR/.apd-state/attempts.yaml).",
 )
 def closeout_cmd(run_dir: Path, attempts_json: str | None) -> None:
-    """Closeout composite: canonicalize, summarize, final validate --errors-only.
+    """Closeout composite: canonicalize, summarize, manual-audit-prompts, final validate.
 
-    Runs all three in order and exits with the first failing one's code.
+    Runs all four in order (the validate is --errors-only) and exits with the first
+    failing one's code. manual-audit-prompts writes 40-synthesis/manual-audit-prompts.md.
     """
     from .composite import closeout_steps, run_composite
 
