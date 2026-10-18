@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import copy
+import errno
 import importlib
+import pathlib
 import sys
 
 import apd_gauntlet.eval as eval_pkg
@@ -288,12 +290,56 @@ def test_matching_uses_the_runs_asset_graph(make_run, edit, tmp_path):
     assert result.counts["unjudged.confidentiality"] == 1
 
 
+def test_false_positive_matching_uses_the_runs_asset_graph(make_run, edit, tmp_path):
+    run = make_run("r")
+    base = load_run(run).findings["conf-98a543cd"]
+    near = {**copy.deepcopy(base), "id": "conf-aaaa0001",
+            "title": "Envelope keys never rotate offline"}
+    far = {**copy.deepcopy(base), "id": "conf-bbbb0002",
+           "title": "Envelope keys never rotate quarterly"}
+    for twin in (near, far):
+        edit.add_finding(run, "10-trustworthiness/twins.findings.yaml", twin)
+    edit.drop(run, "conf-98a543cd")
+    graph_file = run / "40-synthesis/asset-graph.yaml"
+    graph = yaml.safe_load(graph_file.read_text(encoding="utf-8"))
+    graph["edges"].append({**graph["edges"][0], "edge_id": "edge-00000001",
+                           "finding_id": "conf-aaaa0001"})
+    graph_file.write_text(yaml.safe_dump(graph, sort_keys=False), encoding="utf-8")
+    data = label_template(run, "ceb")
+    for it in data["items"]:
+        it["verdict"] = "true_positive"
+    data["items"] = [i for i in data["items"] if i["id"] not in ("conf-aaaa0001", "conf-bbbb0002")]
+    for title in ("Envelope keys never rotate", "Envelope keys offline plaintext"):
+        data["items"].append({
+            "verdict": "false_positive", "apd_goal": "confidentiality", "severity": "high",
+            "title": title, "evidence": [{"artifact": "tech_plan.md", "locator": "§3 paragraph 4"}],
+        })
+    labels = write_labels(tmp_path / "l.yaml", data)
+    result = evaluate_findings(entry_for(run, labels), labels)
+    # The first label's title matches both twins equally (0.8); the second matches only
+    # conf-aaaa0001 (0.5). The edge gives conf-aaaa0001 a graph: asset key the labels
+    # lack, so the first label takes conf-bbbb0002 although its id sorts second, and the
+    # second label is left conf-aaaa0001.
+    assert result.counts["fp.confidentiality"] == 2
+    assert result.counts["unjudged.confidentiality"] == 0 and result.notes == ()
+
+
 def test_false_positive_labels_count_under_the_run_goal(make_run, tmp_path):
     overrides = {rid: {"verdict": "false_positive"} for rid in ("auth-8d386c2f", "nonrep-62124087")}
     entry, labels = labelled(make_run, tmp_path, **overrides)
     c = evaluate_findings(entry, labels).counts
     assert c["fp.authenticity"] == 1 and c["fp.non_repudiation"] == 1
     assert c["tp.authenticity"] == 3 and c["tp.non_repudiation"] == 2
+
+
+def test_a_finding_judged_false_positive_is_not_unjudged(make_run, tmp_path):
+    entry, labels = labelled(make_run, tmp_path, **{"conf-98a543cd": {"verdict": "false_positive"}})
+    result = evaluate_findings(entry, labels)
+    c = result.counts
+    assert c["fp.confidentiality"] == 1 and c["unjudged.confidentiality"] == 0
+    assert sum(c[f"unjudged.{g}"] for g in GOALS) == 0
+    assert result.metrics["precision_strict.confidentiality"] == 0.75
+    assert result.metrics["precision_strict.all"] == 0.95
 
 
 def test_unmatched_false_positive_label_is_a_note(make_run, edit, tmp_path):
@@ -465,6 +511,22 @@ def test_template_refuses_a_finding_that_cannot_be_a_label(make_run, edit):
     assert message.index("avail-ce35b2ed") < message.index("conf-98a543cd")
 
 
+@pytest.mark.parametrize(("evidence", "problem"), [
+    (
+        ["tech_plan.md §3 paragraph 4", {"artifact": "iac/kms.tf", "locator": "resource k"}],
+        "$.items[6].evidence[0]: 'tech_plan.md §3 paragraph 4' is not of type 'object'",
+    ),
+    ("tech_plan.md §3 paragraph 4", "$.items[6].evidence: 'tech_plan.md §3 paragraph 4' "
+                                    "is not of type 'array'"),
+])
+def test_template_refuses_evidence_that_is_not_a_pointer(make_run, edit, evidence, problem):
+    run = make_run("r")
+    edit.finding(run, "conf-98a543cd", evidence=evidence)
+    with pytest.raises(ValueError) as exc:
+        label_template(run, "ceb")
+    assert f"finding conf-98a543cd: {problem}" in str(exc.value)
+
+
 def test_template_round_trips_through_load_labels(make_run, tmp_path):
     data = label_template(make_run("r"), "ceb")
     labels = write_labels(tmp_path / "t.yaml", data)
@@ -510,6 +572,38 @@ def test_cli_unwritable_parent_exits_1(make_run, tmp_path):
     r = CliRunner().invoke(main, args)
     assert r.exit_code == 1 and "cannot write" in r.output
     assert "Traceback" not in r.output
+
+
+def test_cli_removes_a_partly_written_file(make_run, tmp_path, monkeypatch):
+    real_open = pathlib.Path.open
+
+    class Full:
+        """A file handle that writes a few characters, then runs out of space."""
+
+        def __init__(self, handle):
+            self.handle = handle
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.handle.close()
+
+        def write(self, text):
+            self.handle.write(text[:20])
+            self.handle.flush()
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+    def open_(self, mode="r", *args, **kwargs):
+        handle = real_open(self, mode, *args, **kwargs)
+        return Full(handle) if mode == "x" else handle
+
+    out = tmp_path / "l.yaml"
+    args = ["eval", "label-template", str(make_run("r")), "--entry", "ceb", "--out", str(out)]
+    monkeypatch.setattr(pathlib.Path, "open", open_)
+    r = CliRunner().invoke(main, args)
+    assert r.exit_code == 1 and f"{out}: cannot write: No space left on device" in r.output
+    assert not out.exists()
 
 
 def test_cli_invalid_entry_exits_2(make_run, tmp_path):

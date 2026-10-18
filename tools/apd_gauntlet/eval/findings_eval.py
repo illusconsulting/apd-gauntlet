@@ -15,19 +15,15 @@ tie a label copied from a finding takes that same finding.
 """
 from __future__ import annotations
 
-import functools
 import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, ValidationError
-
 from ..measure.match import match_records
 from ..measure.runs import RunLoadError, RunSnapshot, is_run_dir, load_run
 from ..resources import read_schema
-from ..validate import build_registry
-from .corpus import CORPUS_SCHEMA, LABELS_SCHEMA, CorpusEntry, Labels
+from .corpus import CORPUS_SCHEMA, LABELS_SCHEMA, CorpusEntry, Labels, _order, _validator
 from .evaluators import EVALUATORS, EvalResult, register
 
 NAME = "findings"
@@ -192,33 +188,24 @@ def evaluate_findings(entry: CorpusEntry, labels: Labels) -> EvalResult:
     )
 
 
-@functools.cache
-def _labels_validator() -> Draft202012Validator:
-    return Draft202012Validator(read_schema(LABELS_SCHEMA), registry=build_registry())
-
-
-def _order(err: ValidationError) -> tuple[tuple[int, int, str], ...]:
-    """Document order: list indexes as numbers, so ``[10]`` sorts after ``[2]``."""
-    return tuple(
-        (0, part, "") if isinstance(part, int) else (1, 0, str(part))
-        for part in err.absolute_path
-    )
+def _pointer(ev: Any) -> Any:
+    """An evidence item's ``artifact`` and ``locator``; a non-mapping is kept for the check."""
+    if isinstance(ev, Mapping):
+        return {"artifact": ev.get("artifact"), "locator": ev.get("locator")}
+    return ev
 
 
 def _template_item(rid: str, finding: Mapping[str, Any]) -> dict[str, Any]:
     raw = finding.get("evidence")
-    evidence = raw if isinstance(raw, list) else []
     return {
         "id": rid,
         "verdict": "unreviewed",
         "apd_goal": finding.get("apd_goal"),
         "severity": finding.get("severity"),
         "title": finding.get("title"),
-        "evidence": [
-            {"artifact": ev.get("artifact"), "locator": ev.get("locator")}
-            for ev in evidence
-            if isinstance(ev, Mapping)
-        ],
+        # Evidence that is not a list of mappings is copied as it is, so the schema
+        # check names it rather than the template dropping it.
+        "evidence": [_pointer(ev) for ev in raw] if isinstance(raw, list) else raw,
     }
 
 
@@ -228,7 +215,8 @@ def label_template(run_dir: Path, entry_id: str) -> dict[str, Any]:
     Items are in id order and copy the finding's id, ``apd_goal``, ``severity``,
     title and evidence pointers (``artifact`` and ``locator``, no excerpt).
     ``ValueError`` when ``entry_id`` is not a corpus entry id, the run is missing
-    or fails to load, or a finding cannot become a valid labels item.
+    or fails to load, or a finding cannot become a valid labels item (evidence that
+    is not a list of mappings included).
     """
     if not _ENTRY_ID.fullmatch(entry_id):
         raise ValueError(
@@ -239,7 +227,9 @@ def label_template(run_dir: Path, entry_id: str) -> dict[str, Any]:
     doc: dict[str, Any] = {
         "schema_version": 1, "kind": "findings", "entry": entry_id, "items": items,
     }
-    errors = sorted(_labels_validator().iter_errors(doc), key=lambda e: (_order(e), e.message))
+    errors = sorted(
+        _validator(LABELS_SCHEMA).iter_errors(doc), key=lambda e: (_order(e), e.message)
+    )
     problems: dict[str, None] = {}
     for err in errors:
         path = list(err.absolute_path)

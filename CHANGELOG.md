@@ -75,7 +75,8 @@ and `docs/superpowers/plans/2026-10-10-local-apps-plan{1,2,3}-*.md`.
   verdict to `true_positive` or `false_positive`, corrects the goal or
   severity where the run got them wrong, and adds true positives the run
   missed. The command never overwrites `FILE` (exit 1), and exits 2 when `ID`
-  is not a corpus entry id or the run cannot be read. The `findings`
+  is not a corpus entry id, the run cannot be read, or a finding cannot become
+  a valid labels item. The `findings`
   evaluator, registered in the evaluator registry, matches the true positives
   to the run's findings with the `compare-runs` matcher, then the false
   positives to the findings left. It reports precision, strict precision
