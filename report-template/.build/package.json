@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-dom": "19.3.0",
     "cytoscape": "3.34.3",
     "cytoscape-dagre": "4.0.1",
